@@ -122,7 +122,6 @@ async function loadSystemData(db, collectionFn, getDocsFn) {
         }));
 
         window._systemData.loaded = true;
-        console.log("🟢 System Data carregado no cliente.");
 
         // Disparar evento para scripts antigos saberem que os dados chegaram
         document.dispatchEvent(new Event('systemDataLoaded'));
@@ -361,7 +360,6 @@ function buildClassTestsFromFirebase() {
         // Se não tem nem Firebase nem fallback, a classe simplesmente não aparece em CLASS_TESTS
     }
 
-    console.log(`✅ Testes de classe carregados: ${fromFirebase} do Firebase, ${fromFallback} do fallback`);
 }
 
 /**
@@ -486,7 +484,6 @@ function buildClassModulesFromFirebase() {
         }).filter(Boolean); // Remover nulls (módulos não encontrados)
     }
 
-    console.log(`✅ Módulos de classe carregados: ${totalModules} módulo(s)`);
 
     // Registrar entradas MODULE_LIMIT no TARGET_MAP do mechanics-engine
     if (typeof populateTargetMapFromClassModules === 'function') {
@@ -551,7 +548,11 @@ function buildSkillsFromFirebase() {
             custoEvolucao: s.custoEvolucao || 4,
             id: s.id,
             mecanicaIds: Array.isArray(s.mecanicaIds) ? s.mecanicaIds : [],
-            todoPersonagem: s.todoPersonagem !== false  // Default true for backward compat
+            // Perícia "exclusivo" SEM o flag é exclusiva de ninguém: entra na ficha
+            // só pelo pericClasse da classe. O default true valia para as categorias
+            // base (todas cadastradas com true) e vazava as exclusivas cadastradas por
+            // script — as 3 rúnicas do Runimago apareciam para todo personagem.
+            todoPersonagem: cat === 'exclusivo' ? s.todoPersonagem === true : s.todoPersonagem !== false
         });
 
         // Build SKILL_LIMITERS
@@ -574,14 +575,6 @@ function buildSkillsFromFirebase() {
     for (const cat of Object.keys(window.SKILLS)) {
         window.SKILLS[cat].sort((a, b) => a.name.localeCompare(b.name));
     }
-
-    console.log('✅ Perícias carregadas do Firebase:', {
-        mental: window.SKILLS.mental.length,
-        fisico: window.SKILLS.fisico.length,
-        social: window.SKILLS.social.length,
-        combate: window.SKILLS.combate.length,
-        exclusivo: window.SKILLS.exclusivo.length
-    });
 }
 
 /**
@@ -827,7 +820,6 @@ function buildClassPeculiaritiesFromFirebase() {
         }
     }
 
-    console.log(`✅ Peculiaridades de classe carregadas: ${total} peculiaridade(s)`);
 }
 
 /**
@@ -850,7 +842,6 @@ function buildTribesFromFirebase() {
         };
     }
 
-    console.log(`✅ Tribos construídas: ${Object.keys(window.TRIBES).length} tribo(s)`);
 }
 
 /**
@@ -874,7 +865,6 @@ function populateTribesSelect() {
         el.appendChild(opt);
     });
 
-    console.log(`✅ Select de tribos populado: ${tribos.length} tribos`);
 }
 
 /**
@@ -934,7 +924,6 @@ function buildDerivedValuesFromFirebase() {
         };
     });
 
-    console.log(`✅ Valores Derivados carregados: ${window.DERIVED_VALUES.length}`);
     return window.DERIVED_VALUES;
 }
 
@@ -978,7 +967,6 @@ function buildVitalStatsFromFirebase() {
         };
     });
 
-    console.log(`✅ Status Vitais carregados: ${window.VITAL_STATS.length}`);
     return window.VITAL_STATS;
 }
 
@@ -1038,7 +1026,6 @@ function buildAurasFromFirebase() {
         }
     }
 
-    console.log('✅ Auras carregadas do Firebase:', window.AURAS.length, '| Mapeamentos dotKey:', Object.keys(window.AURA_BY_DOTKEY).length);
 }
 
 /**

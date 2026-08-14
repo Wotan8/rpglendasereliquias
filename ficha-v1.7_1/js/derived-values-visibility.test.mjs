@@ -11,14 +11,28 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-/* Extrai só renderDerivedValuesGrid do arquivo (o resto do módulo depende do DOM
-   inteiro). Paramos na primeira linha que fecha a função na coluna 0. */
+/* Extrai do arquivo só renderDerivedValuesGrid e os ajudantes que ela chama (o
+   resto do módulo depende do DOM inteiro). Paramos na primeira linha que fecha
+   a função na coluna 0. */
 // Normaliza CRLF: o recorte procura o fecho da função como '\n}\n', e o arquivo
 // vira CRLF toda vez que alguém o salva por um editor do Windows.
 const src = readFileSync(new URL('./derived-values.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
-const ini = src.indexOf('function renderDerivedValuesGrid()');
-const fim = src.indexOf('\n}\n', ini) + 3;
-assert.ok(ini > 0 && fim > ini, 'renderDerivedValuesGrid não encontrada');
+const trecho = (nome) => {
+  const ini = src.indexOf(`function ${nome}(`);
+  assert.ok(ini > 0, `${nome} não encontrada em derived-values.js`);
+  const fim = src.indexOf('\n}\n', ini) + 3;
+  assert.ok(fim > ini, `fecho de ${nome} não encontrado`);
+  return src.slice(ini, fim);
+};
+
+const CODIGO = [
+  // quem decide o que aparece
+  '_dvColetarVinculos', '_dvResolverPec', '_dvVinculosDoPersonagem', '_dvAgruparEmBlocos',
+  'renderDerivedValuesGrid',
+  // quem monta cada campo da grid
+  '_dvAfixo', '_dvCriarLabel', '_dvCriarInputMaximo', '_dvCriarInputAtual',
+  '_dvLinhaAtualMax', '_dvLinhaValor', '_dvCriarCampo', '_dvRestaurarAtuais',
+].map(trecho).join('\n');
 
 const DV_EXCLUSIVO = { id: 'dvOlfato', key: 'olfato', nome: 'Percepção Olfativa', todoPersonagem: false, ordem: 1, blocoId: 'sentidos', blocoNome: 'Sentidos' };
 const DV_UNIVERSAL = { id: 'dvAltura', key: 'altura', nome: 'Altura', todoPersonagem: true, ordem: 2, blocoId: 'porte', blocoNome: 'Porte' };
@@ -70,7 +84,7 @@ function visiveis({ raca = '', classe = '', tribo = '', individuais = [] } = {})
   Object.assign(sandbox, { _dynamicDerivedKeys: new Set() });
 
   vm.createContext(sandbox);
-  vm.runInContext(`${src.slice(ini, fim)}\nrenderDerivedValuesGrid();`, sandbox);
+  vm.runInContext(`${CODIGO}\nrenderDerivedValuesGrid();`, sandbox);
   const keys = sandbox._dynamicDerivedKeys || new Set();
   return sandbox.window.DERIVED_VALUES.filter(dv => keys.has(dv.key)).map(dv => dv.nome);
 }

@@ -68,6 +68,86 @@ function gatherDerivedFields() {
 /* ===== RENDER DERIVED VALUES GRID (DYNAMIC FROM FIREBASE) ===== */
 
 /**
+ * Lê o `derivedValueIds` de um cadastro (raça, classe ou peculiaridade) e
+ * despeja no acumulador. Cada entrada é o id cru ou `{ id, valorInicial }`.
+ */
+function _dvColetarVinculos(cadastro, ids, iniciais) {
+    if (!cadastro?.derivedValueIds) return;
+    cadastro.derivedValueIds.forEach(entrada => {
+        const ehObj = typeof entrada === 'object' && entrada !== null;
+        const dvId = ehObj ? entrada.id : entrada;
+        ids.add(dvId);
+        if (ehObj && entrada.valorInicial) iniciais[dvId] = entrada.valorInicial;
+    });
+}
+
+/** Resolve o cadastro completo de uma peculiaridade (id cru ou objeto). */
+function _dvResolverPec(pecObj) {
+    if (typeof _resolvePeculiaridade === 'function') return _resolvePeculiaridade(pecObj);
+    const pId = typeof pecObj === 'object' ? pecObj.id : pecObj;
+    return (window._systemData?.peculiarities || []).find(p => p.id === pId) || null;
+}
+
+/**
+ * Quais Valores Derivados este personagem enxerga, e com que constante inicial.
+ * Cinco fontes vinculam VD: a raça, a classe e as peculiaridades das QUATRO
+ * origens (raça, classe, tribo e individuais).
+ * Devolve `{ ids, iniciais }` — a ordem de preenchimento define quem vence o
+ * `valorInicial` quando duas fontes trazem o mesmo VD (raça < classe < pec).
+ */
+function _dvVinculosDoPersonagem() {
+    const ids = new Set();
+    const iniciais = {};   // dvId -> valorInicial
+
+    const racaNome = document.getElementById('selRaca')?.value || '';
+    const classeNome = document.getElementById('selClasse')?.value || '';
+    const triboNome = document.getElementById('selTribo')?.value || '';
+
+    if (racaNome) {
+        _dvColetarVinculos((window._systemData?.races || []).find(r => r.nome === racaNome), ids, iniciais);
+    }
+    if (classeNome) {
+        _dvColetarVinculos((window._systemData?.classes || []).find(c => c.nome === classeNome), ids, iniciais);
+    }
+
+    const daPeculiaridades = (lista) => (lista || [])
+        .forEach(pecObj => _dvColetarVinculos(_dvResolverPec(pecObj), ids, iniciais));
+
+    if (racaNome) daPeculiaridades(window.RACES?.[racaNome]?.peculiaridades);
+    // window.CLASS_PECULIARITIES[nome] JÁ É o array de peculiaridades — não há
+    // window.CLASSES nesta página (o loader nunca criou esse global), então a
+    // versão anterior deixava todo VD trazido por peculiaridade de classe invisível.
+    if (classeNome) daPeculiaridades(window.CLASS_PECULIARITIES?.[classeNome]);
+    if (triboNome) daPeculiaridades(window.TRIBES?.[triboNome]?.peculiaridades);
+    daPeculiaridades(window.state?.peculiaridadesIndividuais);
+
+    return { ids, iniciais };
+}
+
+/** Agrupa os VDs aplicáveis em blocos já ordenados ("Geral" sempre por último). */
+function _dvAgruparEmBlocos(dvs) {
+    const porId = new Map();
+    dvs.forEach(dv => {
+        const bId = dv.blocoId || 'geral';
+        if (!porId.has(bId)) {
+            porId.set(bId, {
+                id: bId,
+                nome: dv.blocoNome || (bId === 'geral' ? 'Geral' : bId),
+                ordem: (dv.blocoOrdem !== undefined && dv.blocoOrdem !== '') ? Number(dv.blocoOrdem) : 999,
+                dvs: []
+            });
+        }
+        porId.get(bId).dvs.push(dv);
+    });
+
+    return Array.from(porId.values()).sort((a, b) => {
+        if (a.id === 'geral') return 1;
+        if (b.id === 'geral') return -1;
+        return a.ordem - b.ordem;
+    });
+}
+
+/**
  * Renderiza a grid de Valores Derivados baseada nos dados do Firebase.
  * Filtra por: todoPersonagem=true OU vinculado à raça/classe selecionada.
  */
@@ -83,94 +163,13 @@ function renderDerivedValuesGrid() {
         return;
     }
 
-    // Determinar quais DVs são aplicáveis ao personagem
-    const racaNome = document.getElementById('selRaca')?.value || '';
-    const classeNome = document.getElementById('selClasse')?.value || '';
-
-    // IDs e valores iniciais de DVs vinculados à raça selecionada
-    const raceDVIds = new Set();
-    const raceDVInitials = {};  // dvId -> valorInicial
-    if (racaNome && window._systemData?.races) {
-        const raceData = window._systemData.races.find(r => r.nome === racaNome);
-        if (raceData?.derivedValueIds) {
-            raceData.derivedValueIds.forEach(item => {
-                const isObj = typeof item === 'object' && item !== null;
-                const dvId = isObj ? item.id : item;
-                raceDVIds.add(dvId);
-                if (isObj && item.valorInicial) {
-                    raceDVInitials[dvId] = item.valorInicial;
-                }
-            });
-        }
-    }
-
-    // IDs de valores derivados vinculados à classe selecionada
-    const classDVIds = new Set();
-    const classDVInitials = {};  // dvId -> valorInicial
-    if (classeNome && window._systemData?.classes) {
-        const classData = window._systemData.classes.find(c => c.nome === classeNome);
-        if (classData?.derivedValueIds) {
-            classData.derivedValueIds.forEach(item => {
-                const isObj = typeof item === 'object' && item !== null;
-                const dvId = isObj ? item.id : item;
-                classDVIds.add(dvId);
-                if (isObj && item.valorInicial) {
-                    classDVInitials[dvId] = item.valorInicial;
-                }
-            });
-        }
-    }
-
-    // IDs de valores derivados vinculados às peculiaridades ativas
-    const pecDVIds = new Set();
-    const pecDVInitials = {};
-    const processPecDV = (pecList) => {
-        if (!pecList) return;
-        pecList.forEach(pecObj => {
-            let pecData = null;
-            if (typeof _resolvePeculiaridade === 'function') {
-                pecData = _resolvePeculiaridade(pecObj);
-            } else {
-                const pId = typeof pecObj === 'object' ? pecObj.id : pecObj;
-                pecData = (window._systemData?.peculiarities || []).find(p => p.id === pId);
-            }
-            if (pecData?.derivedValueIds) {
-                pecData.derivedValueIds.forEach(item => {
-                    const isObj = typeof item === 'object' && item !== null;
-                    const dvId = isObj ? item.id : item;
-                    pecDVIds.add(dvId);
-                    if (isObj && item.valorInicial) {
-                        pecDVInitials[dvId] = item.valorInicial;
-                    }
-                });
-            }
-        });
-    };
-
-    if (racaNome && window.RACES?.[racaNome]?.peculiaridades) {
-        processPecDV(window.RACES[racaNome].peculiaridades);
-    }
-    // window.CLASS_PECULIARITIES[nome] JÁ É o array de peculiaridades — não há
-    // window.CLASSES nesta página (o loader nunca criou esse global), então a
-    // versão anterior deixava todo VD trazido por peculiaridade de classe invisível.
-    if (classeNome && window.CLASS_PECULIARITIES?.[classeNome]) {
-        processPecDV(window.CLASS_PECULIARITIES[classeNome]);
-    }
-    const triboNome = document.getElementById('selTribo')?.value || '';
-    if (triboNome && window.TRIBES?.[triboNome]?.peculiaridades) {
-        processPecDV(window.TRIBES[triboNome].peculiaridades);
-    }
-    if (window.state?.peculiaridadesIndividuais) {
-        processPecDV(window.state.peculiaridadesIndividuais);
-    }
+    const { ids: vinculados, iniciais } = _dvVinculosDoPersonagem();
 
     // Filtrar: universais OU vinculados à raça/classe/peculiaridades
-    const applicableDVs = allDVs.filter(dv =>
-        dv.todoPersonagem || raceDVIds.has(dv.id) || classDVIds.has(dv.id) || pecDVIds.has(dv.id)
-    );
+    const applicableDVs = allDVs.filter(dv => dv.todoPersonagem || vinculados.has(dv.id));
 
     // Guardar mapa de valores iniciais para uso no recalcAll
-    window._dvInitialValues = { ...raceDVInitials, ...classDVInitials, ...pecDVInitials };
+    window._dvInitialValues = iniciais;
 
     // Ordenar por ordem
     applicableDVs.sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
@@ -181,28 +180,7 @@ function renderDerivedValuesGrid() {
     // Renderizar grid
     grid.innerHTML = '';
 
-    // Agrupar por Blocos
-    const blocksMap = new Map();
-
-    applicableDVs.forEach(dv => {
-        const bId = dv.blocoId || 'geral';
-        if (!blocksMap.has(bId)) {
-            blocksMap.set(bId, {
-                id: bId,
-                nome: dv.blocoNome || (bId === 'geral' ? 'Geral' : bId),
-                ordem: (dv.blocoOrdem !== undefined && dv.blocoOrdem !== '') ? Number(dv.blocoOrdem) : 999,
-                dvs: []
-            });
-        }
-        blocksMap.get(bId).dvs.push(dv);
-    });
-
-    const blocksArray = Array.from(blocksMap.values());
-    blocksArray.sort((a, b) => {
-        if (a.id === 'geral') return 1;
-        if (b.id === 'geral') return -1;
-        return a.ordem - b.ordem;
-    });
+    const blocksArray = _dvAgruparEmBlocos(applicableDVs);
 
     blocksArray.forEach(block => {
         const blockContainer = document.createElement('div');
@@ -222,153 +200,7 @@ function renderDerivedValuesGrid() {
         const blockGrid = document.createElement('div');
         blockGrid.className = 'combat-grid';
 
-        block.dvs.forEach(dv => {
-            const miniField = document.createElement('div');
-        miniField.className = 'mini-field';
-        miniField.dataset.dvId = dv.id;
-        miniField.dataset.dvKey = dv.key;
-
-        // Label com ícone + nome curto
-        const label = document.createElement('label');
-        label.className = 'dv-label';
-        if (dv.descricao || (dv.mechPreviews && dv.mechPreviews.length) || dv.arredondaMesa) {
-            label.classList.add('has-tooltip');
-        }
-        label.textContent = `${dv.icone} ${dv.nome}`;
-        label.dataset.dvId = dv.id;
-
-        // DV escopado por item: o número aqui é a BASE do personagem; o total
-        // com cada item equipado sai na aba Combate → Ataques e Efeitos Ativos.
-        if (dv.escopoItem) {
-            miniField.classList.add('dv-escopo-item');
-            const tag = document.createElement('span');
-            tag.className = 'dv-escopo-tag';
-            tag.textContent = '🎒 base';
-            tag.title = 'Valor base do personagem. O total com cada item equipado aparece na aba Combate → Ataques e Efeitos Ativos.';
-            label.appendChild(tag);
-        }
-
-        // Input Máximo (calculado)
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.id = `dv_${dv.key}_display`;
-        input.className = 'derived-field';
-        input.value = '0';
-
-        if (!dv.campoEditavel) {
-            if (window.isCreator) {
-                input.style.border = '2px solid #f59e0b';
-                input.title = '🛡️ Modo Criador: edição livre';
-                input.addEventListener('input', () => {
-                    if (!state.derivedOverrides) state.derivedOverrides = {};
-                    state.derivedOverrides[dv.key] = input.value;
-                    if (typeof scheduleAutosave === 'function') scheduleAutosave();
-                });
-            } else {
-                input.readOnly = true;
-            }
-        }
-
-        miniField.appendChild(label);
-
-        // === Campo Atual / Máx ===
-        if (dv.campoAtual) {
-            const atualRow = document.createElement('div');
-            atualRow.className = 'dv-atual-row';
-
-            // Input Atual (editável)
-            const atualInput = document.createElement('input');
-            atualInput.type = 'text';
-            atualInput.id = `dv_${dv.key}_atual`;
-            atualInput.dataset.key = `dv_${dv.key}_atual`;
-            atualInput.className = 'dv-atual-input';
-            atualInput.placeholder = '0';
-            atualInput.value = '0';
-            atualInput.addEventListener('input', () => {
-                if (!state.dvAtual) state.dvAtual = {};
-                // Sem clamp automático: o valor digitado pelo jogador é preservado.
-                // Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
-                state.dvAtual[dv.key] = atualInput.value;
-                if (typeof scheduleAutosave === 'function') scheduleAutosave();
-            });
-
-            // Separador /
-            const sep = document.createElement('span');
-            sep.className = 'dv-atual-sep';
-            sep.textContent = '/';
-
-            // Máximo é readOnly no modo Atual/Máx
-            input.readOnly = true;
-            input.classList.add('dv-atual-max');
-
-            // Prefixo antes do row, sufixo depois
-            if (dv.prefixo || dv.sufixo) {
-                const outerRow = document.createElement('div');
-                outerRow.className = 'dv-value-row';
-                input.classList.add('dv-input-inline');
-                atualInput.classList.add('dv-input-inline');
-
-                if (dv.prefixo) {
-                    const prefixSpan = document.createElement('span');
-                    prefixSpan.className = 'dv-affix';
-                    prefixSpan.textContent = dv.prefixo;
-                    outerRow.appendChild(prefixSpan);
-                }
-                outerRow.appendChild(atualInput);
-                outerRow.appendChild(sep);
-                outerRow.appendChild(input);
-                if (dv.sufixo) {
-                    const suffixSpan = document.createElement('span');
-                    suffixSpan.className = 'dv-affix';
-                    suffixSpan.textContent = dv.sufixo;
-                    outerRow.appendChild(suffixSpan);
-                }
-                miniField.appendChild(outerRow);
-            } else {
-                atualRow.appendChild(atualInput);
-                atualRow.appendChild(sep);
-                atualRow.appendChild(input);
-                miniField.appendChild(atualRow);
-            }
-        }
-        // === Campo normal (sem Atual) ===
-        else {
-            const hasPrefixOrSuffix = !!(dv.prefixo || dv.sufixo);
-            if (hasPrefixOrSuffix) {
-                const valueRow = document.createElement('div');
-                valueRow.className = 'dv-value-row';
-
-                if (!dv.campoEditavel && window.isCreator) {
-                    valueRow.style.border = '2px solid #f59e0b';
-                    input.style.border = 'none';
-                }
-
-                input.classList.add('dv-input-inline');
-
-                if (dv.prefixo) {
-                    const prefixSpan = document.createElement('span');
-                    prefixSpan.className = 'dv-affix';
-                    prefixSpan.textContent = dv.prefixo;
-                    valueRow.appendChild(prefixSpan);
-                }
-
-                valueRow.appendChild(input);
-
-                if (dv.sufixo) {
-                    const suffixSpan = document.createElement('span');
-                    suffixSpan.className = 'dv-affix';
-                    suffixSpan.textContent = dv.sufixo;
-                    valueRow.appendChild(suffixSpan);
-                }
-
-                miniField.appendChild(valueRow);
-            } else {
-                miniField.appendChild(input);
-            }
-        }
-
-        blockGrid.appendChild(miniField);
-        });
+        block.dvs.forEach(dv => blockGrid.appendChild(_dvCriarCampo(dv)));
 
         blockContainer.appendChild(blockGrid);
         grid.appendChild(blockContainer);
@@ -386,23 +218,173 @@ function renderDerivedValuesGrid() {
         }
     }
 
-    // Restaurar valores de state.dvAtual nos campos "Atual" recém-criados
-    if (state.dvAtual) {
-        for (const [dvKey, val] of Object.entries(state.dvAtual)) {
-            const atualEl = document.getElementById(`dv_${dvKey}_atual`);
-            if (atualEl && val !== undefined && val !== '') {
-                atualEl.value = val;
-            }
-        }
-    }
+    _dvRestaurarAtuais();
 
     // Setup tooltips after rendering
     initDerivedTooltips();
 }
 
+/** Span de prefixo/sufixo do campo (ex.: "m", "kg", "+"). */
+function _dvAfixo(texto) {
+    const span = document.createElement('span');
+    span.className = 'dv-affix';
+    span.textContent = texto;
+    return span;
+}
+
+/** Label do campo: ícone + nome, marca de tooltip e etiqueta de escopo por item. */
+function _dvCriarLabel(dv, miniField) {
+    const label = document.createElement('label');
+    label.className = 'dv-label';
+    if (dv.descricao || (dv.mechPreviews && dv.mechPreviews.length) || dv.arredondaMesa) {
+        label.classList.add('has-tooltip');
+    }
+    label.textContent = `${dv.icone} ${dv.nome}`;
+    label.dataset.dvId = dv.id;
+
+    // DV escopado por item: o número aqui é a BASE do personagem; o total
+    // com cada item equipado sai na aba Combate → Ataques e Efeitos Ativos.
+    if (dv.escopoItem) {
+        miniField.classList.add('dv-escopo-item');
+        const tag = document.createElement('span');
+        tag.className = 'dv-escopo-tag';
+        tag.textContent = '🎒 base';
+        tag.title = 'Valor base do personagem. O total com cada item equipado aparece na aba Combate → Ataques e Efeitos Ativos.';
+        label.appendChild(tag);
+    }
+    return label;
+}
+
+/** Input do Máximo (calculado). Só o Criador digita num campo não editável. */
+function _dvCriarInputMaximo(dv) {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = `dv_${dv.key}_display`;
+    input.className = 'derived-field';
+    input.value = '0';
+
+    if (dv.campoEditavel) return input;
+
+    if (window.isCreator) {
+        input.style.border = '2px solid #f59e0b';
+        input.title = '🛡️ Modo Criador: edição livre';
+        input.addEventListener('input', () => {
+            if (!state.derivedOverrides) state.derivedOverrides = {};
+            state.derivedOverrides[dv.key] = input.value;
+            if (typeof scheduleAutosave === 'function') scheduleAutosave();
+        });
+    } else {
+        input.readOnly = true;
+    }
+    return input;
+}
+
+/** Input do Atual (editável pelo jogador), gravado em state.dvAtual. */
+function _dvCriarInputAtual(dv) {
+    const atualInput = document.createElement('input');
+    atualInput.type = 'text';
+    atualInput.id = `dv_${dv.key}_atual`;
+    atualInput.dataset.key = `dv_${dv.key}_atual`;
+    atualInput.className = 'dv-atual-input';
+    atualInput.placeholder = '0';
+    atualInput.value = '0';
+    atualInput.addEventListener('input', () => {
+        if (!state.dvAtual) state.dvAtual = {};
+        // Sem clamp automático: o valor digitado pelo jogador é preservado.
+        // Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
+        state.dvAtual[dv.key] = atualInput.value;
+        if (typeof scheduleAutosave === 'function') scheduleAutosave();
+    });
+    return atualInput;
+}
+
+/** Linha "Atual / Máx". Com prefixo ou sufixo os afixos abraçam o par inteiro. */
+function _dvLinhaAtualMax(dv, input) {
+    const atualInput = _dvCriarInputAtual(dv);
+
+    const sep = document.createElement('span');
+    sep.className = 'dv-atual-sep';
+    sep.textContent = '/';
+
+    // Máximo é readOnly no modo Atual/Máx
+    input.readOnly = true;
+    input.classList.add('dv-atual-max');
+
+    if (!dv.prefixo && !dv.sufixo) {
+        const atualRow = document.createElement('div');
+        atualRow.className = 'dv-atual-row';
+        atualRow.appendChild(atualInput);
+        atualRow.appendChild(sep);
+        atualRow.appendChild(input);
+        return atualRow;
+    }
+
+    const outerRow = document.createElement('div');
+    outerRow.className = 'dv-value-row';
+    input.classList.add('dv-input-inline');
+    atualInput.classList.add('dv-input-inline');
+
+    if (dv.prefixo) outerRow.appendChild(_dvAfixo(dv.prefixo));
+    outerRow.appendChild(atualInput);
+    outerRow.appendChild(sep);
+    outerRow.appendChild(input);
+    if (dv.sufixo) outerRow.appendChild(_dvAfixo(dv.sufixo));
+    return outerRow;
+}
+
+/** Linha do campo simples. Sem prefixo nem sufixo é o input pelado. */
+function _dvLinhaValor(dv, input) {
+    if (!dv.prefixo && !dv.sufixo) return input;
+
+    const valueRow = document.createElement('div');
+    valueRow.className = 'dv-value-row';
+
+    // A moldura do Modo Criador passa para a linha; o input fica sem borda.
+    if (!dv.campoEditavel && window.isCreator) {
+        valueRow.style.border = '2px solid #f59e0b';
+        input.style.border = 'none';
+    }
+
+    input.classList.add('dv-input-inline');
+    if (dv.prefixo) valueRow.appendChild(_dvAfixo(dv.prefixo));
+    valueRow.appendChild(input);
+    if (dv.sufixo) valueRow.appendChild(_dvAfixo(dv.sufixo));
+    return valueRow;
+}
+
+/** Um campo da grid: label + (Atual/Máx) ou (valor único). */
+function _dvCriarCampo(dv) {
+    const miniField = document.createElement('div');
+    miniField.className = 'mini-field';
+    miniField.dataset.dvId = dv.id;
+    miniField.dataset.dvKey = dv.key;
+
+    const input = _dvCriarInputMaximo(dv);
+    miniField.appendChild(_dvCriarLabel(dv, miniField));
+    miniField.appendChild(dv.campoAtual ? _dvLinhaAtualMax(dv, input) : _dvLinhaValor(dv, input));
+    return miniField;
+}
+
+/** Devolve aos campos "Atual" recém-criados o que o jogador tinha digitado. */
+function _dvRestaurarAtuais() {
+    if (!state.dvAtual) return;
+    for (const [dvKey, val] of Object.entries(state.dvAtual)) {
+        const atualEl = document.getElementById(`dv_${dvKey}_atual`);
+        if (atualEl && val !== undefined && val !== '') atualEl.value = val;
+    }
+}
+
 /* ===== TOOLTIPS FLUTUANTES (Valores Derivados + Status Vitais + Perícias) ===== */
 
 let _dvTooltipEl = null;
+
+/** Liga mostrar/esconder do tooltip num elemento — mouse e toque. */
+function _dvLigarTooltip(el) {
+    el.addEventListener('mouseenter', showDvTooltip);
+    el.addEventListener('mouseleave', hideDvTooltip);
+    el.addEventListener('touchstart', showDvTooltip, { passive: true });
+    el.addEventListener('touchend', hideDvTooltip);
+}
 
 function _ensureTooltipEl() {
     if (!_dvTooltipEl) {
@@ -418,10 +400,7 @@ function initDerivedTooltips() {
 
     // Vincular eventos nos labels de Valores Derivados
     document.querySelectorAll('.dv-label.has-tooltip').forEach(label => {
-        label.addEventListener('mouseenter', showDvTooltip);
-        label.addEventListener('mouseleave', hideDvTooltip);
-        label.addEventListener('touchstart', showDvTooltip, { passive: true });
-        label.addEventListener('touchend', hideDvTooltip);
+        _dvLigarTooltip(label);
     });
 }
 
@@ -459,10 +438,7 @@ function initVitalStatsTooltips() {
         label.dataset.tooltipBound = '1';
         label.classList.add('has-tooltip');
         label.dataset.tooltipType = 'vital';
-        label.addEventListener('mouseenter', showDvTooltip);
-        label.addEventListener('mouseleave', hideDvTooltip);
-        label.addEventListener('touchstart', showDvTooltip, { passive: true });
-        label.addEventListener('touchend', hideDvTooltip);
+        _dvLigarTooltip(label);
     });
 }
 
@@ -478,10 +454,7 @@ function initSkillTooltips() {
         if (nameEl.dataset.tooltipBound) return;
         nameEl.dataset.tooltipBound = '1';
         nameEl.dataset.tooltipType = 'skill';
-        nameEl.addEventListener('mouseenter', showDvTooltip);
-        nameEl.addEventListener('mouseleave', hideDvTooltip);
-        nameEl.addEventListener('touchstart', showDvTooltip, { passive: true });
-        nameEl.addEventListener('touchend', hideDvTooltip);
+        _dvLigarTooltip(nameEl);
     });
 
     // Verificar skills SEM has-tooltip mas que são afetadas por mecânicas externas
@@ -495,10 +468,7 @@ function initSkillTooltips() {
                 nameEl.classList.add('has-tooltip');
                 nameEl.dataset.tooltipBound = '1';
                 nameEl.dataset.tooltipType = 'skill';
-                nameEl.addEventListener('mouseenter', showDvTooltip);
-                nameEl.addEventListener('mouseleave', hideDvTooltip);
-                nameEl.addEventListener('touchstart', showDvTooltip, { passive: true });
-                nameEl.addEventListener('touchend', hideDvTooltip);
+                _dvLigarTooltip(nameEl);
             }
         });
     }
@@ -544,216 +514,144 @@ function initAttributeTooltips() {
         nameEl.classList.add('has-tooltip');
         nameEl.dataset.tooltipBound = '1';
         nameEl.dataset.tooltipType = 'attribute';
-        nameEl.addEventListener('mouseenter', showDvTooltip);
-        nameEl.addEventListener('mouseleave', hideDvTooltip);
-        nameEl.addEventListener('touchstart', showDvTooltip, { passive: true });
-        nameEl.addEventListener('touchend', hideDvTooltip);
+        _dvLigarTooltip(nameEl);
     });
 }
 
-function showDvTooltip(e) {
-    const label = e.currentTarget;
-    if (!_dvTooltipEl) return;
+/* ----- Peças de HTML do tooltip (as mesmas nos quatro tipos) ----- */
 
-    let html = '';
-    const tooltipType = label.dataset.tooltipType;
+const _dvDesc = (texto) => texto ? `<div class="dv-tooltip-desc">${_escHtml(texto)}</div>` : '';
 
-    if (tooltipType === 'vital') {
-        // === Status Vital ===
-        const key = label.dataset.vitalKey;
-        const vs = (window.VITAL_STATS || []).find(v => v.key === key);
-        if (!vs) return;
-        if (vs.descricao) {
-            html += `<div class="dv-tooltip-desc">${_escHtml(vs.descricao)}</div>`;
-        }
-        // Mecânicas vinculadas
-        if (vs.mechPreviews && vs.mechPreviews.length) {
-            html += '<div class="dv-tooltip-mechs">';
-            html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>';
-            vs.mechPreviews.forEach(preview => {
-                html += `<div class="dv-tooltip-mech-item">• ${_escHtml(preview)}</div>`;
-            });
-            html += '</div>';
-        }
-        // Buscar TODAS as mecânicas que afetam este vital stat
-        // Usar variantes de nome para cobrir aliases no TARGET_MAP
-        const propNames = [`${vs.nome} Máxima`, `${vs.nome} Máximo`, vs.nome];
-        const linkedIds = vs.mecanicaIds || [];
-        let extras = [];
-        for (const propName of propNames) {
-            const found = typeof getAffectingMechanics === 'function'
-                ? getAffectingMechanics(propName, { skipLinked: linkedIds })
-                : [];
-            for (const f of found) {
-                if (!extras.some(e => e.preview === f.preview && e.fonte === f.fonte)) {
-                    extras.push(f);
-                }
-            }
-        }
-        if (extras.length > 0) {
-            html += '<div class="dv-tooltip-mechs dv-tooltip-extras">';
-            html += '<div class="dv-tooltip-mechs-title">🔗 Outras fontes que afetam:</div>';
-            extras.forEach(item => {
-                html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
-            });
-            html += '</div>';
-        }
+/** Bloco "⚙️ Mecânicas Vinculadas" — lista simples de previews. */
+function _dvBlocoVinculadas(previews) {
+    if (!previews || !previews.length) return '';
+    return '<div class="dv-tooltip-mechs">'
+        + '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>'
+        + previews.map(p => `<div class="dv-tooltip-mech-item">• ${_escHtml(p)}</div>`).join('')
+        + '</div>';
+}
 
-    } else if (tooltipType === 'attribute') {
-        // === Atributo ===
-        const attrKey = label.dataset.attrKey;
-        const fullName = ATTRIBUTE_FULL_NAMES[attrKey] || attrKey;
-        const desc = ATTRIBUTE_DESCRIPTIONS[attrKey];
-        if (desc) {
-            html += `<div class="dv-tooltip-desc">${_escHtml(desc)}</div>`;
-        }
-        // Buscar mecânicas que afetam este atributo (por abreviação e nome completo)
-        if (typeof getAffectingMechanics === 'function') {
-            let extras = [];
-            const lookups = [attrKey, fullName];
-            for (const propName of lookups) {
-                const found = getAffectingMechanics(propName, { skipLinked: [] });
-                for (const f of found) {
-                    if (!extras.some(e => e.preview === f.preview && e.fonte === f.fonte)) {
-                        extras.push(f);
-                    }
-                }
-            }
-            if (extras.length > 0) {
-                html += '<div class="dv-tooltip-mechs">';
-                html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas que afetam:</div>';
-                extras.forEach(item => {
-                    html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
-                });
-                html += '</div>';
-            }
-        }
+/** Bloco de mecânicas externas — cada linha nomeia a fonte antes do preview. */
+function _dvBlocoFontes(titulo, itens, classeExtra = '') {
+    if (!itens || !itens.length) return '';
+    return `<div class="dv-tooltip-mechs${classeExtra}">`
+        + `<div class="dv-tooltip-mechs-title">${titulo}</div>`
+        + itens.map(i => `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(i.fonte)}:</span> ${_escHtml(i.preview)}</div>`).join('')
+        + '</div>';
+}
 
-    } else if (tooltipType === 'skill') {
-        // === Perícia ===
-        const skillName = label.textContent.trim();
-        const allSkills = window.SKILLS || {};
-        let skill = null;
-        for (const cat of Object.values(allSkills)) {
-            skill = cat.find(s => s.name === skillName);
-            if (skill) break;
+/**
+ * Mecânicas de fora que afetam a propriedade, procurando por cada variante de
+ * nome (o TARGET_MAP guarda aliases tipo "X Máxima"/"X Máximo") e juntando o
+ * resultado sem repetir o mesmo par fonte+preview.
+ */
+function _dvMecanicasQueAfetam(nomes, linkedIds = []) {
+    if (typeof getAffectingMechanics !== 'function') return [];
+    const achadas = [];
+    for (const nome of nomes) {
+        for (const f of getAffectingMechanics(nome, { skipLinked: linkedIds })) {
+            if (!achadas.some(a => a.preview === f.preview && a.fonte === f.fonte)) achadas.push(f);
         }
-        if (!skill) return;
-        if (skill.descricao) {
-            html += `<div class="dv-tooltip-desc">${_escHtml(skill.descricao)}</div>`;
-        }
-        // Mecânicas vinculadas à perícia
-        const linkedMechIds = skill.mecanicaIds || [];
-        if (linkedMechIds.length > 0) {
-            const linkedPreviews = linkedMechIds.map(mid => {
-                const m = (window._systemData?.mechanics || []).find(m => m.id === mid);
-                if (!m) return null;
-                return typeof generatePreviewText === 'function'
-                    ? generatePreviewText(m) : (m.descricao || '');
-            }).filter(Boolean);
-            if (linkedPreviews.length > 0) {
-                html += '<div class="dv-tooltip-mechs">';
-                html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>';
-                linkedPreviews.forEach(preview => {
-                    html += `<div class="dv-tooltip-mech-item">• ${_escHtml(preview)}</div>`;
-                });
-                html += '</div>';
-            }
-        }
-        // Buscar TODAS as mecânicas que afetam esta perícia
-        const extras = typeof getAffectingMechanics === 'function'
-            ? getAffectingMechanics(skillName, { skipLinked: linkedMechIds })
-            : [];
-        if (extras.length > 0) {
-            html += '<div class="dv-tooltip-mechs dv-tooltip-extras">';
-            html += '<div class="dv-tooltip-mechs-title">🔗 Outras fontes que afetam:</div>';
-            extras.forEach(item => {
-                html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
-            });
-            html += '</div>';
-        }
+    }
+    return achadas;
+}
 
-    } else if (tooltipType === 'peculiaridade') {
-        // === Peculiaridade ===
-        const pecKey = label.dataset.pecKey;
-        const raceKey = label.dataset.raceKey;
-        if (typeof buildPeculiarityTooltipHTML === 'function') {
-            html = buildPeculiarityTooltipHTML(pecKey, raceKey);
-        }
+const _DV_OUTRAS_FONTES = '🔗 Outras fontes que afetam:';
 
-    } else {
-        // === Valor Derivado (padrão) ===
-        const dvId = label.dataset.dvId;
-        const dv = (window.DERIVED_VALUES || []).find(d => d.id === dvId);
-        if (!dv) return;
-        if (dv.descricao) {
-            html += `<div class="dv-tooltip-desc">${_escHtml(dv.descricao)}</div>`;
-        }
-        // Valor exato de um VD que exibe arredondado na mesa (ex.: Blindagem).
-        if (dv.arredondaMesa) {
-            const exato = Number(state.derived?.[dv.key] || 0);
-            if (!Number.isInteger(exato)) {
-                html += `<div class="dv-tooltip-exato">Valor exato: <strong>`
-                     + `${_escHtml(exato.toFixed(2).replace('.', ','))}</strong>`
-                     + ` &middot; na mesa vale ${dvValorDeMesa(exato)}</div>`;
-            }
-        }
-        // Constante de Criação (modificador definido no slider da Véspera da Partida)
-        const creationMod = state.derivedModifiers?.[dvId];
-        if (creationMod && creationMod !== 0) {
-            const sign = creationMod > 0 ? '+' : '';
-            const fmtMod = Number.isInteger(creationMod) ? String(creationMod) : creationMod.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-            html += `<div class="dv-tooltip-creation-const">🎯 Constante de Criação: <span class="dv-tooltip-creation-val">${sign}${fmtMod}</span></div>`;
-        }
-        // Mecânicas vinculadas
-        if (dv.mechPreviews && dv.mechPreviews.length) {
-            html += '<div class="dv-tooltip-mechs">';
-            html += '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>';
-            dv.mechPreviews.forEach(preview => {
-                html += `<div class="dv-tooltip-mech-item">• ${_escHtml(preview)}</div>`;
-            });
-            html += '</div>';
-        }
-        // Buscar TODAS as mecânicas que afetam este DV
-        const linkedIds = dv.mecanicaIds || [];
-        // Tentar com nome e variantes (com/sem sufixos Máxima/Máximo)
-        const propNames = [dv.nome, `${dv.nome} (Máximo)`, `${dv.nome} Máxima`, `${dv.nome} Máximo`];
-        let extras = [];
-        for (const propName of propNames) {
-            const found = typeof getAffectingMechanics === 'function'
-                ? getAffectingMechanics(propName, { skipLinked: linkedIds })
-                : [];
-            for (const f of found) {
-                if (!extras.some(e => e.preview === f.preview && e.fonte === f.fonte)) {
-                    extras.push(f);
-                }
-            }
-        }
-        if (extras.length > 0) {
-            html += '<div class="dv-tooltip-mechs dv-tooltip-extras">';
-            html += '<div class="dv-tooltip-mechs-title">🔗 Outras fontes que afetam:</div>';
-            extras.forEach(item => {
-                html += `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(item.fonte)}:</span> ${_escHtml(item.preview)}</div>`;
-            });
-            html += '</div>';
+/* ----- Um construtor de conteúdo por tipo de tooltip ----- */
+
+function _dvTooltipVital(label) {
+    const vs = (window.VITAL_STATS || []).find(v => v.key === label.dataset.vitalKey);
+    if (!vs) return '';
+    // Variantes de nome cobrem os aliases do TARGET_MAP.
+    const extras = _dvMecanicasQueAfetam(
+        [`${vs.nome} Máxima`, `${vs.nome} Máximo`, vs.nome], vs.mecanicaIds || []);
+    return _dvDesc(vs.descricao)
+        + _dvBlocoVinculadas(vs.mechPreviews)
+        + _dvBlocoFontes(_DV_OUTRAS_FONTES, extras, ' dv-tooltip-extras');
+}
+
+function _dvTooltipAtributo(label) {
+    const attrKey = label.dataset.attrKey;
+    const fullName = ATTRIBUTE_FULL_NAMES[attrKey] || attrKey;
+    // Procura pela abreviação e pelo nome completo.
+    const extras = _dvMecanicasQueAfetam([attrKey, fullName]);
+    return _dvDesc(ATTRIBUTE_DESCRIPTIONS[attrKey])
+        + _dvBlocoFontes('⚙️ Mecânicas que afetam:', extras);
+}
+
+function _dvTooltipPericia(label) {
+    const skillName = label.textContent.trim();
+    const skill = Object.values(window.SKILLS || {})
+        .map(cat => cat.find(s => s.name === skillName)).find(Boolean);
+    if (!skill) return '';
+
+    const linkedMechIds = skill.mecanicaIds || [];
+    const linkedPreviews = linkedMechIds.map(mid => {
+        const m = (window._systemData?.mechanics || []).find(x => x.id === mid);
+        if (!m) return null;
+        return typeof generatePreviewText === 'function' ? generatePreviewText(m) : (m.descricao || '');
+    }).filter(Boolean);
+
+    const extras = _dvMecanicasQueAfetam([skillName], linkedMechIds);
+    return _dvDesc(skill.descricao)
+        + _dvBlocoVinculadas(linkedPreviews)
+        + _dvBlocoFontes(_DV_OUTRAS_FONTES, extras, ' dv-tooltip-extras');
+}
+
+function _dvTooltipPeculiaridade(label) {
+    return typeof buildPeculiarityTooltipHTML === 'function'
+        ? buildPeculiarityTooltipHTML(label.dataset.pecKey, label.dataset.raceKey)
+        : '';
+}
+
+function _dvTooltipValorDerivado(label) {
+    const dvId = label.dataset.dvId;
+    const dv = (window.DERIVED_VALUES || []).find(d => d.id === dvId);
+    if (!dv) return '';
+
+    let html = _dvDesc(dv.descricao);
+
+    // Valor exato de um VD que exibe arredondado na mesa (ex.: Blindagem).
+    if (dv.arredondaMesa) {
+        const exato = Number(state.derived?.[dv.key] || 0);
+        if (!Number.isInteger(exato)) {
+            html += `<div class="dv-tooltip-exato">Valor exato: <strong>`
+                 + `${_escHtml(exato.toFixed(2).replace('.', ','))}</strong>`
+                 + ` &middot; na mesa vale ${dvValorDeMesa(exato)}</div>`;
         }
     }
 
-    if (!html) {
-        // Mesmo sem mecânicas vinculadas, verificar fontes externas
-        // para habilitar tooltip quando só há fontes externas
-        return;
+    // Constante de Criação (modificador definido no slider da Véspera da Partida)
+    const creationMod = state.derivedModifiers?.[dvId];
+    if (creationMod && creationMod !== 0) {
+        const sign = creationMod > 0 ? '+' : '';
+        const fmtMod = Number.isInteger(creationMod) ? String(creationMod) : creationMod.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+        html += `<div class="dv-tooltip-creation-const">🎯 Constante de Criação: <span class="dv-tooltip-creation-val">${sign}${fmtMod}</span></div>`;
     }
 
-    _dvTooltipEl.innerHTML = html;
-    _dvTooltipEl.style.display = 'block';
+    // Variantes de nome cobrem os aliases com/sem sufixo Máxima/Máximo.
+    const extras = _dvMecanicasQueAfetam(
+        [dv.nome, `${dv.nome} (Máximo)`, `${dv.nome} Máxima`, `${dv.nome} Máximo`], dv.mecanicaIds || []);
 
-    // Posicionar
+    return html
+        + _dvBlocoVinculadas(dv.mechPreviews)
+        + _dvBlocoFontes(_DV_OUTRAS_FONTES, extras, ' dv-tooltip-extras');
+}
+
+const _DV_TOOLTIP_POR_TIPO = {
+    vital: _dvTooltipVital,
+    attribute: _dvTooltipAtributo,
+    skill: _dvTooltipPericia,
+    peculiaridade: _dvTooltipPeculiaridade,
+};
+
+/** Encosta o tooltip no label e puxa de volta se estourar a janela. */
+function _dvPosicionarTooltip(label) {
     const rect = label.getBoundingClientRect();
     _dvTooltipEl.style.left = rect.left + 'px';
     _dvTooltipEl.style.top = (rect.bottom + 6) + 'px';
 
-    // Ajustar se sair da tela
     requestAnimationFrame(() => {
         const tipRect = _dvTooltipEl.getBoundingClientRect();
         if (tipRect.right > window.innerWidth - 10) {
@@ -763,6 +661,20 @@ function showDvTooltip(e) {
             _dvTooltipEl.style.top = (rect.top - tipRect.height - 6) + 'px';
         }
     });
+}
+
+function showDvTooltip(e) {
+    const label = e.currentTarget;
+    if (!_dvTooltipEl) return;
+
+    // Sem `data-tooltip-type` o label é de Valor Derivado — é o caso mais comum.
+    const construir = _DV_TOOLTIP_POR_TIPO[label.dataset.tooltipType] || _dvTooltipValorDerivado;
+    const html = construir(label);
+    if (!html) return;   // nada a dizer: o tooltip continua escondido
+
+    _dvTooltipEl.innerHTML = html;
+    _dvTooltipEl.style.display = 'block';
+    _dvPosicionarTooltip(label);
 }
 
 function hideDvTooltip() {
@@ -777,47 +689,119 @@ function _escHtml(str) {
 
 /* ===== RECALC ALL — Status Vitais (mecânicas) + Dinâmicos (Firebase) ===== */
 
-function recalcAll() {
-    // Re-avaliar equações de mecânicas de valores derivados com valores atuais
-    // Algumas mecânicas vinculadas a DVs usam equações com referências à ficha
-    // (atributos, perícias) e precisam ser recalculadas a cada chamada de recalcAll
-    if (typeof resolveDerivedValueMechanicsLive === 'function'
-        && typeof _getDynamicMechContributions === 'function') {
-        // Subtrair APENAS as contribuições dinâmicas anteriores (equações com ref à ficha),
-        // preservando bônus de outras fontes (ex: peculiaridades raciais, mecânicas fixas)
-        const prevContributions = _getDynamicMechContributions();
-        const bonuses = state.mechanicBonuses || {};
-        for (const [key, contribution] of Object.entries(prevContributions)) {
-            if (key.startsWith('SET:') || key.startsWith('BASE_SET:')) {
-                // Para SET, remover a chave inteira (são overrides absolutos)
-                delete bonuses[key];
-            } else if (key.startsWith('MULT:') || key.startsWith('DIV:') || key.startsWith('BASE_MULT:') || key.startsWith('BASE_DIV:')) {
-                // Para MULT e DIV dinâmicos, desfazer dividindo pela contribuição anterior
-                if (contribution && contribution !== 0) {
-                    bonuses[key] = (bonuses[key] || 1) / contribution;
-                } else {
-                    delete bonuses[key];
-                }
-            } else {
-                // Para + e -, subtrair a contribuição anterior
-                bonuses[key] = (bonuses[key] || 0) - contribution;
-            }
+/**
+ * Zera o que a passada anterior deixou de contribuição DINÂMICA (mecânicas de VD
+ * cuja equação referencia a ficha) e re-resolve com os valores de agora. Só as
+ * dinâmicas saem: bônus fixos de peculiaridade racial e afins ficam de pé.
+ */
+function _dvDesfazerContribuicoesDinamicas() {
+    if (typeof resolveDerivedValueMechanicsLive !== 'function'
+        || typeof _getDynamicMechContributions !== 'function') return;
+
+    const bonuses = state.mechanicBonuses || {};
+    for (const [key, contribution] of Object.entries(_getDynamicMechContributions())) {
+        if (key.startsWith('SET:') || key.startsWith('BASE_SET:')) {
+            // SET é override absoluto: não há o que subtrair, some a chave inteira
+            delete bonuses[key];
+        } else if (key.startsWith('MULT:') || key.startsWith('DIV:') || key.startsWith('BASE_MULT:') || key.startsWith('BASE_DIV:')) {
+            // × e ÷ se desfazem dividindo pela contribuição anterior
+            if (contribution && contribution !== 0) bonuses[key] = (bonuses[key] || 1) / contribution;
+            else delete bonuses[key];
+        } else {
+            // + e − se desfazem subtraindo
+            bonuses[key] = (bonuses[key] || 0) - contribution;
         }
-        // Re-resolver equações dinâmicas com valores atuais de state.dots
-        resolveDerivedValueMechanicsLive();
     }
+    resolveDerivedValueMechanicsLive();
+}
+
+/** Criador editou o campo à mão: o valor digitado manda, sem recalcular nada. */
+function _dvUsarOverride(dvKey, overrideVal) {
+    const displayEl = document.getElementById(`dv_${dvKey}_display`);
+    if (displayEl && displayEl.value !== String(overrideVal)) displayEl.value = overrideVal;
+    if (!state.derived) state.derived = {};
+    state.derived[dvKey] = parseFloat(String(overrideVal).replace(',', '.')) || 0;
+}
+
+/** Calcula um Valor Derivado, escreve no campo e guarda em state.derived. */
+function _dvRecalcularUm(dvKey, bonuses, limits) {
+    const overrideVal = state.derivedOverrides?.[dvKey];
+    if (overrideVal !== undefined && overrideVal !== '') return _dvUsarOverride(dvKey, overrideVal);
+
+    const dvDef = (window.DERIVED_VALUES || []).find(d => d.key === dvKey);
+    const initials = window._dvInitialValues || {};
+    const initialConstant = (dvDef && initials[dvDef.id]) ? initials[dvDef.id] : 0;
+
+    // A constante inicial de Raça/Classe/Tribo entra como BASE, antes dos
+    // modificadores gerais: sem isso um "×1,1 na Altura" (Gigantismo)
+    // multiplicaria 0 em vez de multiplicar a altura da raça.
+    let value = _applyMechanicModifiers(dvKey, 0, bonuses, limits, initialConstant);
+
+    // A constante da Véspera da Partida (Criar Personagem) entra SEMPRE depois das mecânicas
+    if (dvDef && state.derivedModifiers?.[dvDef.id]) value += state.derivedModifiers[dvDef.id];
+
+    const displayEl = document.getElementById(`dv_${dvKey}_display`);
+    if (displayEl) displayEl.value = dvFormatarExibicao(value, dvDef);
+
+    // Campo "Atual": o max é informativo, sem clampar o que o jogador digitou.
+    // Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
+    if (dvDef?.campoAtual) {
+        const atualEl = document.getElementById(`dv_${dvKey}_atual`);
+        if (atualEl) atualEl.max = value;
+    }
+
+    // Atualizar também o campo hardcoded, se existir (ex: ENER_MAX)
+    if (DERIVED_FIELDS_MAP[dvKey]) updateDerivedField(dvKey, value);
+
+    if (!state.derived) state.derived = {};
+    state.derived[dvKey] = value;
+
+    // VD espelho (Blindagem Cortante, Blindagem Vermelha...): nasce igual ao
+    // geral e só interessa quando alguma peça vestida foge do padrão. Igual
+    // ao espelhado, some da grid — senão são dezesseis linhas repetindo o
+    // mesmo número. Diferente, marca se é fraqueza ou resistência.
+    _dvAplicarEspelho(dvDef, dvKey, value);
+}
+
+/**
+ * Teto e bloqueio de mecânica truncam o state.dots de atributos e perícias — o
+ * valor guardado não pode ficar acima do que o efetivo permite.
+ */
+function _dvTruncarDotsPorLimite(limits) {
+    const truncar = (field, novoValor) => {
+        state.dots[field] = novoValor;
+        const dotsEl = document.querySelector(`.dots5[data-attr="${field}"]`);
+        if (dotsEl && typeof refreshDots === 'function') refreshDots(dotsEl, field);
+    };
+
+    for (const [field, limit] of Object.entries(limits)) {
+        if (!field.startsWith('attr_') && !field.startsWith('sk_')) continue;
+        const atual = state.dots[field] || 0;
+
+        if (limit.tipo === 'bloqueio') {
+            if (atual > 0) truncar(field, 0);
+        } else if ((limit.tipo === 'maximo' || limit.tipo === 'clamp') && limit.max != null) {
+            // O teto vale sobre o EFETIVO: desconta o piso e o bônus de mecânica
+            // para achar quanto o jogador ainda pode ter de pontos próprios.
+            const floorBonus = (limit.tipo === 'clamp' && limit.min != null) ? limit.min : 0;
+            const mechBonus = state.mechanicBonuses?.[field] || 0;
+            const teto = Math.max(0, limit.max - floorBonus - mechBonus);
+            if (atual > teto) truncar(field, teto);
+        }
+    }
+}
+
+function recalcAll() {
+    _dvDesfazerContribuicoesDinamicas();
 
     const bonuses = state.mechanicBonuses || {};
     const limits = state.mechanicLimits || {};
 
     // 1) Calcular Status Vitais (via mecânicas do Firebase — base 0)
-    for (const [key, mapping] of Object.entries(DERIVED_FIELDS_MAP)) {
+    for (const key of Object.keys(DERIVED_FIELDS_MAP)) {
         // Se este key está renderizado na grid dinâmica, pular
         if (_dynamicDerivedKeys.has(key)) continue;
-
-        let value = 0; // Base 0 — mecânicas definem o cálculo
-        value = _applyMechanicModifiers(key, value, bonuses, limits);
-        updateDerivedField(key, value);
+        updateDerivedField(key, _applyMechanicModifiers(key, 0, bonuses, limits));
     }
 
     // 2) Calcular valores derivados dinâmicos (Firebase-driven)
@@ -829,100 +813,14 @@ function recalcAll() {
         ..._dynamicDerivedKeys,
         ...(window.DERIVED_VALUES || []).map(d => d.key),
     ]);
-    for (const dvKey of dvKeysToCalc) {
-        // Se Criador fez override manual, preservar o valor editado
-        const overrideVal = state.derivedOverrides?.[dvKey];
-        if (overrideVal !== undefined && overrideVal !== '') {
-            const displayEl = document.getElementById(`dv_${dvKey}_display`);
-            if (displayEl && displayEl.value !== String(overrideVal)) {
-                displayEl.value = overrideVal;
-            }
-            if (!state.derived) state.derived = {};
-            state.derived[dvKey] = parseFloat(String(overrideVal).replace(',', '.')) || 0;
-            continue;
-        }
-
-        let value = 0;
-        let initialConstant = 0;
-
-        // Usar valorInicial de raça/classe como constante (se definido)
-        const initials = window._dvInitialValues || {};
-        const dvDef = (window.DERIVED_VALUES || []).find(d => d.key === dvKey);
-        if (dvDef && initials[dvDef.id]) {
-            initialConstant = initials[dvDef.id];
-        }
-
-        // Aplicar mecânicas (bônus, penalidades, equações, multiplicadores).
-        // A constante inicial de Raça/Classe/Tribo entra como BASE, antes dos
-        // modificadores gerais: sem isso um "×1,1 na Altura" (Gigantismo)
-        // multiplicaria 0 em vez de multiplicar a altura da raça.
-        value = _applyMechanicModifiers(dvKey, value, bonuses, limits, initialConstant);
-
-        // Aplicar modificador constante da Véspera da Partida (Criar Personagem) SEMPRE após as mecânicas
-        if (dvDef && state.derivedModifiers && state.derivedModifiers[dvDef.id]) {
-            value += state.derivedModifiers[dvDef.id];
-        }
-
-        // Atualizar campo na grid dinâmica
-        const displayEl = document.getElementById(`dv_${dvKey}_display`);
-        if (displayEl) {
-            displayEl.value = dvFormatarExibicao(value, dvDef);
-        }
-
-        // Se DV tem campoAtual, atualizar o atributo max (informativo) — sem clampar o valor atual.
-        // O valor digitado pelo jogador é preservado.
-        // Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
-        if (dvDef && dvDef.campoAtual) {
-            const atualEl = document.getElementById(`dv_${dvKey}_atual`);
-            if (atualEl) {
-                atualEl.max = value;
-            }
-        }
-
-        // Atualizar também o campo hardcoded, se existir (ex: ENER_MAX)
-        if (DERIVED_FIELDS_MAP[dvKey]) {
-            updateDerivedField(dvKey, value);
-        }
-
-        // Guardar em state.derived para referências cruzadas
-        if (!state.derived) state.derived = {};
-        state.derived[dvKey] = value;
-
-        // VD espelho (Blindagem Cortante, Blindagem Vermelha...): nasce igual ao
-        // geral e só interessa quando alguma peça vestida foge do padrão. Igual
-        // ao espelhado, some da grid — senão são dezesseis linhas repetindo o
-        // mesmo número. Diferente, marca se é fraqueza ou resistência.
-        _dvAplicarEspelho(dvDef, dvKey, value);
-    }
+    for (const dvKey of dvKeysToCalc) _dvRecalcularUm(dvKey, bonuses, limits);
 
     // Bloco cujos VDs sumiram todos (as 16 Blindagens espelho, quando nenhuma
     // peça vestida foge do padrão) fica com o título órfão e nada embaixo.
     _dvOcultarBlocosVazios();
 
     // 3) Aplicar limites em atributos e perícias (teto trunca state.dots)
-    for (const [field, limit] of Object.entries(limits)) {
-        if (field.startsWith('attr_') || field.startsWith('sk_')) {
-            if (limit.tipo === 'bloqueio') {
-                // Bloqueio: force to 0
-                if ((state.dots[field] || 0) > 0) {
-                    state.dots[field] = 0;
-                    const dotsEl = document.querySelector(`.dots5[data-attr="${field}"]`);
-                    if (dotsEl && typeof refreshDots === 'function') refreshDots(dotsEl, field);
-                }
-            } else if ((limit.tipo === 'maximo' || limit.tipo === 'clamp') && limit.max != null) {
-                // Teto: cap state.dots at (max - floor - bonus) so effective doesn't exceed max
-                const floorBonus = ((limit.tipo === 'clamp') && limit.min != null) ? limit.min : 0;
-                const mechBonus = state.mechanicBonuses?.[field] || 0;
-                const rawCap = limit.max - floorBonus - mechBonus;
-                const currentVal = state.dots[field] || 0;
-                if (currentVal > Math.max(0, rawCap)) {
-                    state.dots[field] = Math.max(0, rawCap);
-                    const dotsEl = document.querySelector(`.dots5[data-attr="${field}"]`);
-                    if (dotsEl && typeof refreshDots === 'function') refreshDots(dotsEl, field);
-                }
-            }
-        }
-    }
+    _dvTruncarDotsPorLimite(limits);
 
     // 4) Aplicar bônus de mecânicas em campos DOM (field:xxx, ex: blindagem, tamanho)
     _applyFieldBonuses(bonuses);
@@ -1008,9 +906,10 @@ function _applyMechanicModifiers(key, value, bonuses, limits, baseExtra = 0) {
     // Limites
     const limit = limits[bonusKey];
     if (limit) {
+        // Teto e piso são independentes — 'clamp' traz os dois de uma vez.
         if (limit.tipo === 'bloqueio') value = 0;
-        if (limit.tipo === 'maximo' && limit.max != null) value = Math.min(value, limit.max);
-        if (limit.tipo === 'minimo' && limit.min != null) value = Math.max(value, limit.min);
+        if (limit.max != null) value = Math.min(value, limit.max);
+        if (limit.min != null) value = Math.max(value, limit.min);
     }
 
     return value;
@@ -1083,6 +982,70 @@ function _applyFieldBonuses(bonuses) {
     }
 }
 
+/** Piso e teto visuais que a mecânica impõe a um dotKey. Sem mecânica: 0 a 5. */
+function _dvPisoETeto(limit) {
+    if (!limit) return { piso: 0, teto: 5 };
+    if (limit.tipo === 'bloqueio') return { piso: 0, teto: 0 };
+    const ehPiso = limit.tipo === 'minimo' || limit.tipo === 'clamp';
+    const ehTeto = limit.tipo === 'maximo' || limit.tipo === 'clamp';
+    return {
+        piso: (ehPiso && limit.min != null) ? limit.min : 0,
+        teto: (ehTeto && limit.max != null) ? limit.max : 5,
+    };
+}
+
+/** Apaga todo estado visual da bolinha antes de repintar. */
+function _dvLimparDot(d) {
+    d.classList.remove('filled', 'bonus', 'floor', 'capped', 'aura-filled');
+    d.style.removeProperty('--aura-color');
+}
+
+/**
+ * Pintura padrão: piso primeiro, depois os pontos do jogador, depois o bônus.
+ * O que passa do teto vira bolinha inativa.
+ */
+function _dvPintarDots(container, { piso, teto, baseVal, bonus }) {
+    container.querySelectorAll('.dot').forEach(d => {
+        const val = +d.dataset.val;
+        _dvLimparDot(d);
+        if (val > teto) return d.classList.add('capped');
+
+        if (val <= piso) d.classList.add('filled', 'floor');
+        else if (val <= piso + baseVal) d.classList.add('filled');
+        else if (val <= piso + baseVal + bonus) d.classList.add('filled', 'bonus');
+    });
+}
+
+/**
+ * Pintura com Aura: a régua dá voltas. As bolinhas mostram só a posição DENTRO
+ * do grau atual, tingidas com a cor daquele grau.
+ */
+function _dvPintarDotsComAura(container, key, auraInfo, { piso, baseVal, bonus, baseDots }) {
+    const auraCeiling = (auraInfo.grauDesbloqueado + 1) * baseDots;
+    const nivel = Math.min(baseVal + piso + bonus, auraCeiling);
+    const grauAtual = nivel > 0 ? Math.floor((nivel - 1) / baseDots) : 0;
+    const posNoGrau = nivel > 0 ? ((nivel - 1) % baseDots) + 1 : 0;
+    const cor = typeof getAuraColorForGrade === 'function' ? getAuraColorForGrade(auraInfo.aura, grauAtual) : null;
+
+    container.querySelectorAll('.dot').forEach(d => {
+        const val = +d.dataset.val;
+        _dvLimparDot(d);
+        if (val > baseDots) return d.classList.add('capped');
+
+        if (val <= posNoGrau) {
+            d.classList.add('filled');
+            if (cor) {
+                d.classList.add('aura-filled');
+                d.style.setProperty('--aura-color', cor);
+            }
+        }
+    });
+
+    if (typeof _updateGradeIndicator === 'function') {
+        _updateGradeIndicator(container, key, grauAtual, auraInfo, baseDots, nivel);
+    }
+}
+
 /**
  * Aplica visualmente os bônus de mecânicas (sk_* e attr_*) nos dots.
  */
@@ -1090,19 +1053,11 @@ function applyMechanicBonusesToDots() {
     const bonuses = state.mechanicBonuses || {};
     const limits = state.mechanicLimits || {};
 
-    // Collect all dotKeys that need processing (bonuses + limits)
-    const allKeys = new Set();
-    for (const key of Object.keys(bonuses)) {
-        if (key.startsWith('sk_') || key.startsWith('attr_')) allKeys.add(key);
-    }
-    for (const key of Object.keys(limits)) {
-        if (key.startsWith('sk_') || key.startsWith('attr_')) allKeys.add(key);
-    }
-
-    // Also process ALL dot containers to clear stale visual states
-    document.querySelectorAll('.dots5[data-attr]').forEach(c => {
-        allKeys.add(c.dataset.attr);
-    });
+    // Todo dotKey com bônus ou limite, MAIS todos os que estão na tela — estes
+    // últimos para apagar pintura velha de quem perdeu o efeito.
+    const allKeys = new Set([...Object.keys(bonuses), ...Object.keys(limits)]
+        .filter(k => k.startsWith('sk_') || k.startsWith('attr_')));
+    document.querySelectorAll('.dots5[data-attr]').forEach(c => allKeys.add(c.dataset.attr));
 
     for (const key of allKeys) {
         const container = document.querySelector(`.dots5[data-attr="${key}"]`);
@@ -1110,82 +1065,15 @@ function applyMechanicBonusesToDots() {
 
         const baseVal = state.dots[key] || 0;
         const bonus = bonuses[key] || 0;
-        const limit = limits[key];
+        const { piso, teto } = _dvPisoETeto(limits[key]);
 
-        // Calculate floor and ceiling
-        let floorVal = 0;
-        let ceiling = 5;
-        if (limit) {
-            if (limit.tipo === 'bloqueio') {
-                ceiling = 0;
-                floorVal = 0;
-            } else {
-                if ((limit.tipo === 'minimo' || limit.tipo === 'clamp') && limit.min != null) {
-                    floorVal = limit.min;
-                }
-                if ((limit.tipo === 'maximo' || limit.tipo === 'clamp') && limit.max != null) {
-                    ceiling = limit.max;
-                }
-            }
-        }
-
-        // === AURA SYSTEM: check for aura on this dotKey ===
         const auraInfo = typeof getAuraInfoForDot === 'function' ? getAuraInfoForDot(key) : null;
-        const baseDots = typeof getPropertyBaseDots === 'function' ? getPropertyBaseDots(key) : ceiling;
+        const baseDots = typeof getPropertyBaseDots === 'function' ? getPropertyBaseDots(key) : teto;
 
         if (auraInfo && auraInfo.grauDesbloqueado > 0) {
-            // Aura active: use grade-cycling visual
-            const auraCeiling = (auraInfo.grauDesbloqueado + 1) * baseDots;
-            const totalLevel = baseVal + floorVal + bonus;
-            const clampedLevel = Math.min(totalLevel, auraCeiling);
-            const currentGrade = clampedLevel > 0 ? Math.floor((clampedLevel - 1) / baseDots) : 0;
-            const posInGrade = clampedLevel > 0 ? ((clampedLevel - 1) % baseDots) + 1 : 0;
-            const auraColor = typeof getAuraColorForGrade === 'function' ? getAuraColorForGrade(auraInfo.aura, currentGrade) : null;
-
-            container.querySelectorAll('.dot').forEach(d => {
-                const val = +d.dataset.val;
-                d.classList.remove('filled', 'bonus', 'floor', 'capped', 'aura-filled');
-                d.style.removeProperty('--aura-color');
-
-                if (val > baseDots) {
-                    d.classList.add('capped');
-                    return;
-                }
-
-                if (val <= posInGrade) {
-                    d.classList.add('filled');
-                    if (auraColor) {
-                        d.classList.add('aura-filled');
-                        d.style.setProperty('--aura-color', auraColor);
-                    }
-                }
-            });
-
-            // Update grade indicator
-            if (typeof _updateGradeIndicator === 'function') {
-                _updateGradeIndicator(container, key, currentGrade, auraInfo, baseDots, clampedLevel);
-            }
+            _dvPintarDotsComAura(container, key, auraInfo, { piso, baseVal, bonus, baseDots });
         } else {
-            // Standard (non-aura) visual
-            // Apply ceiling visual: hide dots above ceiling
-            container.querySelectorAll('.dot').forEach(d => {
-                const val = +d.dataset.val;
-                d.classList.remove('filled', 'bonus', 'floor', 'capped', 'aura-filled');
-                d.style.removeProperty('--aura-color');
-
-                if (val > ceiling) {
-                    d.classList.add('capped');
-                    return;
-                }
-
-                if (val <= floorVal) {
-                    d.classList.add('filled', 'floor');
-                } else if (val <= floorVal + baseVal) {
-                    d.classList.add('filled');
-                } else if (val <= floorVal + baseVal + bonus) {
-                    d.classList.add('filled', 'bonus');
-                }
-            });
+            _dvPintarDots(container, { piso, teto, baseVal, bonus });
         }
     }
 }
@@ -1319,14 +1207,7 @@ function initDerivedListeners() {
     renderDerivedValuesGrid();
 
     // Restaurar valores de state.dvAtual (campos "Atual" editáveis de DVs)
-    if (state.dvAtual) {
-        for (const [dvKey, val] of Object.entries(state.dvAtual)) {
-            const atualEl = document.getElementById(`dv_${dvKey}_atual`);
-            if (atualEl && val !== undefined && val !== '') {
-                atualEl.value = val;
-            }
-        }
-    }
+    _dvRestaurarAtuais();
 }
 
 /**

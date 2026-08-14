@@ -138,7 +138,6 @@ async function loadCharacterItems(charId) {
         const items = await _firestoreQuery('items', 'characterId', '==', charId);
         window._inventoryState.items = items;
         window._inventoryState.loaded = true;
-        console.log(`✅ Inventário carregado: ${items.length} item(ns)`);
         renderEquippedItems();
         renderInventoryTab();
         // Re-aplicar TODAS as mecânicas para que Regras de Item (itemRules)
@@ -168,7 +167,6 @@ async function loadInventoryCatalog() {
         if (window._systemData?.itemRules) {
             window._inventoryState.itemRules = window._systemData.itemRules.filter(r => r.publicado !== false && r.ativo !== false);
         }
-        console.log(`✅ Catálogo: ${window._inventoryState.catalog.length} template(s), ${window._inventoryState.itemRules.length} regra(s)`);
     } catch (e) {
         console.error('❌ Erro ao carregar catálogo:', e);
     }
@@ -450,9 +448,7 @@ function applyEquippedItemsMechanics() {
 
     // 2) Regras globais de item (aplicam independente de ter itens equipados)
     const rules = window._inventoryState.itemRules || [];
-    console.log(`🔧 [ItemRules] ${rules.length} regra(s) de item carregadas, ${equipped.length} item(ns) equipado(s)`);
     for (const rule of rules) {
-        console.log(`🔧 [ItemRule] "${rule.nome}": mecanicaIds =`, rule.mecanicaIds);
         if (rule.mecanicaIds) {
             for (const mechId of rule.mecanicaIds) {
                 const mech = mechanicsById[mechId];
@@ -460,18 +456,14 @@ function applyEquippedItemsMechanics() {
                     console.warn(`⚠️ [ItemRule] Mecânica "${mechId}" NÃO encontrada no cache de ${Object.keys(mechanicsById).length} mecânicas`);
                     continue;
                 }
-                console.log(`🔧 [ItemRule] Aplicando mecânica "${mech.nome}" (tipo=${mech.tipo}, duracao=${mech.duracao})`);
                 if (mech.config?.calculos) {
                     for (const calc of mech.config.calculos) {
                         const targetKey = typeof TARGET_MAP !== 'undefined' ? TARGET_MAP[calc.alvo] : 'TARGET_MAP_UNDEFINED';
-                        console.log(`🔧 [ItemRule]   calc: alvo="${calc.alvo}" → targetKey="${targetKey}", op="${calc.operacao}"`);
                         if (Array.isArray(calc.equacao)) {
                             for (const term of calc.equacao) {
                                 if (term.tipo === 'ficha') {
                                     const resolved = typeof _resolveSheetRef === 'function' ? _resolveSheetRef(term.ref, 1) : 'FUNC_NOT_FOUND';
-                                    console.log(`🔧 [ItemRule]   term: tipo=ficha, ref="${term.ref}" → resolved=${resolved}`);
                                 } else {
-                                    console.log(`🔧 [ItemRule]   term: tipo=${term.tipo}, valor=${term.valor}`);
                                 }
                             }
                         }
@@ -1093,8 +1085,6 @@ function _getCompatibleSlots(item) {
         if (partsToLoad && partsToLoad.length > 0) {
             if (!window.state) window.state = {};
             window.state.partesDoCorpo = JSON.parse(JSON.stringify(partsToLoad));
-            console.log('🔧 partesDoCorpo restaurado via fallback no _getCompatibleSlots:',
-                window.state.partesDoCorpo.length, 'partes');
         }
     }
 
@@ -1218,8 +1208,6 @@ window.openEquipModal = function(itemId) {
         }
         if (partsToLoad && partsToLoad.length > 0) {
             window.state.partesDoCorpo = JSON.parse(JSON.stringify(partsToLoad));
-            console.log('🔧 partesDoCorpo restaurado via fallback no openEquipModal:',
-                window.state.partesDoCorpo.length, 'partes');
             if (typeof scheduleAutosave === 'function') scheduleAutosave();
         }
     }
@@ -1522,12 +1510,10 @@ window.confirmEquip = async function(itemId) {
         updateData.slotsOcupados = slotsExtras;
         updateData.slotAnatomico2 = otherHand;
 
-        console.log('⬆️ Equipando item:', itemId, 'Slot:', slotKey, 'Estado:', stateKey, 'Data:', updateData);
 
         await _firestoreSetDoc('items', itemId, updateData);
         Object.assign(item, updateData);
 
-        console.log('✅ Item equipado com sucesso:', item.nome);
 
         closeEquipModal();
         renderEquippedItems();
@@ -1572,12 +1558,10 @@ window.unequipItem = async function(itemId) {
             updateData.ownerId = user.uid;
         }
 
-        console.log('⬇️ Desequipando item:', itemId, item?.nome);
 
         await _firestoreSetDoc('items', itemId, updateData);
         if (item) Object.assign(item, updateData);
 
-        console.log('✅ Item desequipado com sucesso:', item?.nome);
 
         renderEquippedItems();
         renderInventoryTab();
@@ -1741,6 +1725,7 @@ window.usarItem = async function(itemId) {
     if (typeof recalcAll === 'function') recalcAll();
     if (typeof scheduleAutosave === 'function') scheduleAutosave();
 
+    // Único log de rotina que ficou: resume, na mesa, o que o consumível fez.
     console.log(`🧪 Usou "${item.nome}": ${efeitos.join(', ') || 'sem efeito'}`);
 };
 

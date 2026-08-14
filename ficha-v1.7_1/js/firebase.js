@@ -28,7 +28,6 @@ try {
     db = initializeFirestore(app, {
         localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
     });
-    console.log('💾 Firestore: cache offline (IndexedDB) ativado.');
 } catch (e) {
     console.warn('💾 Firestore: cache offline indisponível, usando memória.', e);
     db = getFirestore(app);
@@ -91,7 +90,6 @@ function enableCreatorExpEditing() {
         el.style.border = '2px solid #f59e0b';
         el.title = '🛡️ Modo Criador: edição livre de EXP';
     });
-    console.log('🛡️ Modo Criador: edição livre de EXP habilitada');
 }
 
 // ===== INDICADOR DE SAVE =====
@@ -156,7 +154,6 @@ async function loadFromFirebase(charId) {
         const snap = await getDoc(docRef);
         if (snap.exists()) {
             const data = snap.data();
-            console.log('✅ Ficha v1.7 carregada do Firebase (char/' + charId + ')');
             // Marcar que Firebase carregou (impede loadFromStorage no initApp)
             window._firebaseLoaded = true;
             // Inicializar UI antes de carregar dados
@@ -185,7 +182,6 @@ async function loadFromFirebase(charId) {
             }
             return true;
         } else {
-            console.log('📝 Nenhuma ficha v1.7 encontrada no Firebase. Criando nova...');
             return false;
         }
     } catch (err) {
@@ -261,7 +257,6 @@ window.saveToFirebase = async function () {
         // --- LÓGICA DE UPLOAD DE IMAGEM ---
         // Se a imagem for Base64 (novo upload), enviar pro Storage
         if (data.charImg && data.charImg.startsWith('data:image')) {
-            console.log(`📤 Detectada imagem nova (Tamanho: ${data.charImg.length} bytes). Iniciando upload para Storage...`);
 
             try {
                 const storageRef = ref(storage, `char-images/${window.currentUser.uid}/${window.currentCharacterId}.jpg`);
@@ -271,7 +266,6 @@ window.saveToFirebase = async function () {
 
                 // Obter URL pública
                 const downloadURL = await getDownloadURL(storageRef);
-                console.log('✅ Imagem enviada com sucesso. URL:', downloadURL);
 
                 // Atualizar o objeto data e o state global com a URL
                 data.charImg = downloadURL;
@@ -333,7 +327,6 @@ window.saveToFirebase = async function () {
         }
 
         showSaveIndicator('✅ Salvo na nuvem!', 'saved');
-        console.log('✅ Ficha v1.7 salva no Firebase (Tamanho payload: ' + payloadSize + ' bytes)');
     } catch (err) {
         console.error('❌ Erro ao salvar no Firebase:', err);
         showSaveIndicator('❌ Erro ao salvar!', 'error');
@@ -381,7 +374,6 @@ window.updateSharedNoteInFirebase = async function(ownerId, noteData) {
             if (idx !== -1) {
                 notes[idx] = noteData;
                 await setDoc(docRef, { notes }, { merge: true });
-                console.log('✅ Nota compartilhada atualizada no documento do dono.');
             }
         }
     } catch (e) {
@@ -417,7 +409,6 @@ async function syncSessionCount(charId) {
         const charData = charSnap.data();
         const mesaId = charData.mesaId;
         if (!mesaId) {
-            console.log('📅 Personagem sem mesa vinculada — sessões não sincronizadas.');
             return;
         }
 
@@ -440,9 +431,7 @@ async function syncSessionCount(charId) {
                 sessoesEl.value = maxSession;
                 // Disparar evento 'change' para que o listener de EXP por sessão detecte a mudança
                 sessoesEl.dispatchEvent(new Event('change', { bubbles: true }));
-                console.log(`📅 Sessões sincronizadas com a mesa: ${currentVal} → ${maxSession}`);
             } else {
-                console.log(`📅 Sessões já sincronizadas: ${maxSession}`);
             }
         }
     } catch (err) {
@@ -459,7 +448,6 @@ onAuthStateChanged(auth, async (user) => {
 
     if (user) {
         window.currentUser = user;
-        console.log('✅ Usuário logado:', user.email);
 
         // Determinar ID do personagem
         const urlParams = new URLSearchParams(window.location.search);
@@ -493,7 +481,6 @@ onAuthStateChanged(auth, async (user) => {
                                 const mesaSnap = await getDoc(mesaRef);
                                 if (mesaSnap.exists() && mesaSnap.data().createdBy === user.email) {
                                     isMestreOfMesa = true;
-                                    console.log('✅ Acesso concedido: Mestre da mesa vinculada ao personagem.');
                                 }
                             }
                         } catch (mesaErr) {
@@ -541,9 +528,6 @@ onAuthStateChanged(auth, async (user) => {
             buildTribesFromFirebase();
             if (typeof populateTribesSelect === 'function') populateTribesSelect();
 
-            console.log('✅ RACES construído do Firebase:', Object.keys(window.RACES));
-            console.log('✅ TRIBES construído do Firebase:', Object.keys(window.TRIBES || {}));
-            console.log('✅ CLASS_PECULIARITIES construído do Firebase:', Object.keys(window.CLASS_PECULIARITIES || {}));
 
             // Build auras
             if (typeof buildAurasFromFirebase === 'function') buildAurasFromFirebase();
@@ -609,7 +593,6 @@ onAuthStateChanged(auth, async (user) => {
         } catch (e) { /* ignore */ }
     } else {
         // Não logado → redirecionar
-        console.log('❌ Não autenticado. Redirecionando...');
         window.location.href = '../index.html';
     }
 });

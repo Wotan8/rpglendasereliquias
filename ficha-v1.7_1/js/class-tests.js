@@ -189,7 +189,6 @@ function renderMainTests(classeKey) {
         colorBtn.onmousedown = (e) => e.stopPropagation();
 
         colorBtn.onclick = (e) => {
-            console.log('Color button clicked via handler');
             e.stopPropagation();
             e.preventDefault();
             showColorPicker(e, t.id);
@@ -347,7 +346,6 @@ function toggleGlobalColorMode() {
 }
 
 function showColorPicker(event, testId) {
-    console.log('showColorPicker called for', testId);
     event.stopPropagation();
     event.preventDefault();
 
@@ -373,7 +371,6 @@ function showColorPicker(event, testId) {
         circle.style.backgroundColor = opt.hex;
         circle.title = opt.label;
         circle.onclick = (e) => {
-            console.log('Color selected:', opt.name);
             e.stopPropagation();
             e.preventDefault();
             applyTestColor(testId, opt.name);

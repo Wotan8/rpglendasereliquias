@@ -1,4 +1,3 @@
-console.log("🧩 mechanics-engine v2.1 — cadeias + multi-booleano ATIVOS");
 /* ===== MECHANICS ENGINE — Interpreta mecânicas do Firebase ===== */
 
 /**
@@ -140,7 +139,6 @@ function populateTargetMapFromSkills() {
             }
         }
     }
-    console.log('✅ TARGET_MAP atualizado com perícias do Firebase (incluindo de classe)');
 }
 
 /**
@@ -174,7 +172,6 @@ function populateTargetMapFromDerivedValues() {
             TARGET_MAP[`${dv.nome} (Máximo)`] = `DERIVED:${dv.key}`;
         }
     }
-    console.log('✅ TARGET_MAP atualizado com valores derivados do Firebase');
 }
 
 /**
@@ -195,7 +192,6 @@ function populateTargetMapFromVitalStats() {
         let baseKey = vs.key.replace(/_MAX$/i, '').replace(/_MAXIMO$/i, '').toLowerCase();
         TARGET_MAP[`${vs.nome} Atual`] = `ATUAL:${baseKey}_atual`;
     }
-    console.log('✅ TARGET_MAP atualizado com status vitais do Firebase');
 }
 
 /**
@@ -207,7 +203,6 @@ function populateTargetMapFromBodyParts() {
     for (const bp of window._systemData.bodyParts) {
         TARGET_MAP[`Parte do Corpo: ${bp.nome}`] = `slot_${bp.id}`;
     }
-    console.log('✅ TARGET_MAP atualizado com partes do corpo do Firebase');
 }
 
 /**
@@ -217,16 +212,11 @@ function populateTargetMapFromBodyParts() {
  */
 function populateTargetMapFromClassModules() {
     if (!window._classModules) return;
-    let count = 0;
-    for (const classeNome of Object.keys(window._classModules)) {
-        for (const mod of window._classModules[classeNome]) {
-            if (mod.mecanicaLimiteId) {
-                TARGET_MAP['Limite: ' + mod.titulo] = 'MODULE_LIMIT:' + mod.id;
-                count++;
-            }
+    for (const modulosDaClasse of Object.values(window._classModules)) {
+        for (const mod of modulosDaClasse) {
+            if (mod.mecanicaLimiteId) TARGET_MAP['Limite: ' + mod.titulo] = 'MODULE_LIMIT:' + mod.id;
         }
     }
-    if (count > 0) console.log(`✅ TARGET_MAP atualizado com ${count} limite(s) de módulo`);
 }
 
 /**
@@ -583,7 +573,6 @@ function _concederEquipamentosDeMecanica(mech, config, parentPec) {
         if (typeof renderEquippedItems === 'function') renderEquippedItems();
         if (typeof recalcInventoryPressure === 'function') recalcInventoryPressure();
         if (typeof scheduleAutosave === 'function') scheduleAutosave();
-        console.log(`🎒 Mecânica "${mech.nome}" concedeu ${lista.length} equipamento(s) como Item(ns) Solto(s).`);
     })();
 }
 
@@ -976,7 +965,6 @@ function _meEvalBoolVerif(v, mech) {
         const reqs = (Array.isArray(v.classesReq) ? v.classesReq : []).filter(Boolean);
         const charClasses = _meGetCharacterClasses();
         const resultado = _meHasAllClasses(reqs);
-        console.log(`⚔️ Booleano (classe) "${mech?.nome || '?'}": personagem [${charClasses.join(', ') || '—'}] precisa de [${reqs.join(', ') || '—'}] → ${resultado}`);
         return { resultado, valA: charClasses.length, valB: reqs.length, op: '>=', modo: 'classe', charClasses, classesReq: reqs };
     }
     if (v.modoVerificacao === 'equipamento') {
@@ -987,7 +975,6 @@ function _meEvalBoolVerif(v, mech) {
         const qtdMin = eqQ.length > 0 ? resolveEquation(eqQ) : 1;
         const counts = reqs.map(r => _meCountEquipReq(r));
         const resultado = reqs.length > 0 && counts.every(c => c >= qtdMin);
-        console.log(`🎒 Booleano (equipamento) "${mech?.nome || '?'}": [${reqs.map((r, i) => `${_meReqNome(r)}=${counts[i]}`).join(', ')}] ≥ ${qtdMin} cada → ${resultado}`);
         return { resultado, valA: counts.length ? Math.min(...counts) : 0, valB: qtdMin, op: '>=', modo: 'equipamento', counts };
     }
     const eqA = Array.isArray(v.equacaoA) ? v.equacaoA : [];
@@ -1571,7 +1558,6 @@ function resolveDerivedValueMechanicsLive() {
                 const val = resolveCalcValue(calc);
                 const op = calc.operacao;
 
-                console.log(`🔧 DV Mech "${mech.nome}": ${op}${val} → ${alvo} (${field})`);
 
                 if (op === '+') {
                     state.mechanicBonuses[field] = (state.mechanicBonuses[field] || 0) + val;
@@ -1913,7 +1899,6 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
 
         if (!state.booleanResults) state.booleanResults = {};
         state.booleanResults[mech.id] = { valorSaida, resultadoBooleano, valA, valB, op, modo: first.modo, resultados, operadorLogico };
-        console.log(`🔀 Booleano "${mech.nome}": [${resultados.map(r => r.resultado ? '✅' : '❌').join(operadorLogico === 'ou' ? ' OU ' : ' E ')}] → ${resultadoBooleano} (saída: ${valorSaida})`);
 
         // Registrar a mensagem do resultado (texto bruto de Verdadeiro/Falso)
         _mePushMsg(mech, resultadoBooleano ? (config.valorVerdadeiro ?? '') : (config.valorFalso ?? ''), resultadoBooleano);
@@ -1928,7 +1913,6 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
         const resultado = resolveChainedConditional(config);
         if (!state.chainedResults) state.chainedResults = {};
         state.chainedResults[mech.id] = resultado;
-        console.log(`🔗 Cond. Encadeada "${mech.nome}": valor ${resultado.valorEquacao} → "${resultado.valorSaida}" (condição #${resultado.condicaoIndex >= 0 ? resultado.condicaoIndex + 1 : 'padrão'})`);
 
         // Registrar a mensagem da faixa (condição) que casou — ou o valor padrão
         _mePushMsg(mech, resultado.valorSaida, resultado.condicaoIndex >= 0);
@@ -2829,7 +2813,6 @@ function applyExpModification(valor, qualExp, fonte, gatilho) {
         expTotalEl.value = newTotal;
     }
 
-    console.log(`⭐ EXP Modificado: ${valor > 0 ? '+' : ''}${valor} ${qualExp} — Fonte: ${fonte} — Gatilho: ${gatilho}`);
     if (typeof scheduleAutosave === 'function') scheduleAutosave();
     return true;
 }
@@ -2909,7 +2892,6 @@ function collectAllExpMechanics() {
                 // Only trigger if session count increased
                 if (newVal > oldVal) {
                     const increment = newVal - oldVal;
-                    console.log(`📅 Sessões incrementadas: ${oldVal} → ${newVal} (+${increment})`);
                     _applySessionExpTriggers(increment);
                 }
             });

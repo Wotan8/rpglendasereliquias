@@ -74,7 +74,6 @@ window.initApp = function () {
     // definirá _dataReady ao final. Liberar aqui causaria race condition com scheduleAutosave().
     if (!window._dataReady && !window._firebaseLoaded) {
         window._dataReady = true;
-        console.log('✅ _dataReady = true (initApp fallback — nenhum dado carregado).');
     }
 };
 
@@ -84,18 +83,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const hasFirebase = document.querySelector('script[src*="firebase.js"]') !== null;
     if (!hasFirebase) {
         if (!_appInitialized) {
-            console.log('⚠️ Firebase não incluído no HTML, inicializando em modo estritamente offline...');
             window.initApp();
         }
     } else {
-        console.log('⏳ Firebase detectado. Aguardando inicialização remota...');
     }
 });
 
 // Listener opcional para forçar re-render se os dados do sistema chegarem depois da inicialização
 document.addEventListener('systemDataReady', () => {
     if (_appInitialized) {
-        console.log('🔄 Dados do sistema prontos pós-inicialização. Re-renderizando...');
         if (typeof initSkills === 'function') initSkills();
         if (typeof recalcAll === 'function') recalcAll();
     }

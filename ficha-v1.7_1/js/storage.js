@@ -4,7 +4,6 @@ let saveTimeout = null;
 function scheduleAutosave() {
     // GUARD: Nunca salvar antes dos dados estarem carregados!
     if (!window._dataReady) {
-        console.log('⏳ scheduleAutosave BLOQUEADO — dados ainda não carregados.');
         return;
     }
     if (saveTimeout) clearTimeout(saveTimeout);
@@ -144,7 +143,6 @@ function gatherData() {
 function saveToStorage() {
     // GUARD: Nunca salvar antes dos dados estarem carregados!
     if (!window._dataReady) {
-        console.log('⏳ saveToStorage BLOQUEADO — dados ainda não carregados.');
         return;
     }
     const d = gatherData(); try { const storageKey = 'lr_ficha_v17_' + (window.currentCharacterId || 'default'); localStorage.setItem(storageKey, JSON.stringify(d)); document.querySelectorAll('#classResourcesGrid [data-key]').forEach(el => { localStorage.setItem('lr_' + el.dataset.key, el.value); }); } catch (e) { }
@@ -200,8 +198,6 @@ function loadFromData(d) {
         // Restore partesDoCorpo
         if (d.partesDoCorpo && d.partesDoCorpo.length > 0) {
             state.partesDoCorpo = d.partesDoCorpo;
-            console.log('✅ partesDoCorpo carregado do documento:', state.partesDoCorpo.length, 'parte(s)',
-                state.partesDoCorpo.map(bp => bp.nome || bp.id).join(', '));
         } else {
             // Fallback for characters without body parts: load from race, else standard parts
             state.partesDoCorpo = [];
@@ -243,7 +239,6 @@ function loadFromData(d) {
                 }
                 if (migrated.length > 0) {
                     state.conditions = migrated;
-                    console.log(`🔄 Migradas ${migrated.length} condição(ões) do formato antigo.`);
                 }
             }
         }
@@ -326,7 +321,6 @@ function loadFromData(d) {
 
         // === DESBLOQUEAR SAVES — dados totalmente carregados ===
         window._dataReady = true;
-        console.log('✅ _dataReady = true — saves desbloqueados.');
     } catch (e) { console.error('loadFromData error:', e); }
 }
 

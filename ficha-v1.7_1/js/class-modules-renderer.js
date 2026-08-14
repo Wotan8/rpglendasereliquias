@@ -850,7 +850,6 @@ async function _cmConsumirEquipamentos(consumos) {
                 } catch (e) { console.error('❌ Erro ao remover item consumido:', e); }
             }
         }
-        console.log(`🔥 Consumido: ${c.nome} ×${c.qtd}`);
     }
     if (typeof renderInventoryTab === 'function') renderInventoryTab();
     if (typeof renderEquippedItems === 'function') renderEquippedItems();
@@ -1185,7 +1184,6 @@ function _cmAplicarMecanicasBotao(field, btnEl) {
     } else {
         _cmToastBotao(btnEl, header);
     }
-    console.log(`⚡ Botão de módulo aplicou mecânicas: ${nomes.join(', ')}`);
 }
 
 /** Toast empilhado: cabeçalho + mensagem de cada mecânica da cadeia, na ordem
@@ -2067,7 +2065,6 @@ function _cmApplyMechanicCost(mechId) {
         applyMechanicToSheet(mech, null, true);
         if (typeof recalcAll === 'function') recalcAll();
         if (typeof scheduleAutosave === 'function') scheduleAutosave();
-        console.log(`💸 Custo condicional pago: ${mech.nome}`);
     }
 }
 

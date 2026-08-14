@@ -362,7 +362,6 @@ window.CharLogger = (function () {
                     changes: e.changes || []
                 }));
             }
-            console.log(`📜 CharLogger: ${entries.length} log(s) registrado(s).`);
         } catch (err) {
             console.warn('⚠️ CharLogger: falha ao gravar log:', err);
         }
@@ -374,7 +373,6 @@ window.CharLogger = (function () {
     function prime(data) {
         _prev = pick(data);
         _primed = true;
-        console.log('📜 CharLogger: snapshot inicial registrado.');
     }
 
     /** Prime a partir do gatherData() atual (chamado após o load da UI). */
