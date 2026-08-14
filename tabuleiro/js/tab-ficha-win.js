@@ -143,19 +143,7 @@ function focar(win) {
 }
 
 // ===== DOM da janela =====
-function criarJanela(tipo, id, chave) {
-    const el = document.createElement('div');
-    el.className = 'tb-fwin';
-    const mob = window.innerWidth < 700;
-    const n = WINS.size;
-    if (mob) {
-        el.style.left = '3vw'; el.style.top = (64 + n * 26) + 'px';
-        el.style.width = '94vw'; el.style.height = '72vh';
-    } else {
-        el.style.left = Math.min(96 + n * 34, window.innerWidth - 420) + 'px';
-        el.style.top = Math.min(64 + n * 34, window.innerHeight - 300) + 'px';
-    }
-    el.innerHTML = `
+const HTML_JANELA = `
         <div class="tb-fwin-head">
             <span class="tb-fwin-titulo"></span>
             <button class="tb-mini-btn" data-fechar title="Fechar">✕</button>
@@ -165,20 +153,26 @@ function criarJanela(tipo, id, chave) {
             <button class="tb-fwin-aba" data-aba="inv">🎒 Inventário <span class="tb-fwin-inv-n"></span></button>
         </div>
         <div class="tb-fwin-body"></div>`;
-    document.body.appendChild(el);
 
-    const win = {
-        el, tipo, id, chave, aba: 'combate', itens: null,
-        abertos: new Set(),       // itens com o detalhe expandido
-        contAbertos: new Set(),   // contêineres abertos
-        pendente: false, unsubItems: null,
-    };
+/** Onde a próxima janela nasce: no celular ocupa a tela, no desktop escalona. */
+function posicionarNova(el, n) {
+    if (window.innerWidth < 700) {
+        el.style.left = '3vw'; el.style.top = (64 + n * 26) + 'px';
+        el.style.width = '94vw'; el.style.height = '72vh';
+        return;
+    }
+    el.style.left = Math.min(96 + n * 34, window.innerWidth - 420) + 'px';
+    el.style.top = Math.min(64 + n * 34, window.innerHeight - 300) + 'px';
+}
 
-    // Motor de inventário compartilhado com a Ficha de NPC do Painel do Mestre
-    // (shared/inventario-motor.js): ele desenha e detecta o alvo do arrasto;
-    // as escritas continuam aqui, no ritmo e nos docs do Tabuleiro.
-    win.inv = {
-        raiz: el,
+/**
+ * Contexto do motor de inventário compartilhado com a Ficha de NPC do Painel do
+ * Mestre (shared/inventario-motor.js): ele desenha e detecta o alvo do arrasto;
+ * as escritas continuam aqui, no ritmo e nos docs do Tabuleiro.
+ */
+function ctxInventario(win) {
+    return {
+        raiz: win.el,
         get itens() { return win.itens || []; },
         get sys() { return _sys; },
         abertos: win.abertos,
@@ -201,8 +195,10 @@ function criarJanela(tipo, id, chave) {
             qtd: (iid, d) => setQtd(win, iid, d),
         },
     };
+}
 
-    // Arrastar pelo cabeçalho (mesmo padrão da janela de Combate)
+/** Arrastar a janela pelo cabeçalho (mesmo padrão da janela de Combate). */
+function ligarArrastoDaJanela(el) {
     const head = el.querySelector('.tb-fwin-head');
     let drag = null;
     head.addEventListener('pointerdown', e => {
@@ -216,30 +212,34 @@ function criarJanela(tipo, id, chave) {
         el.style.top = Math.max(0, Math.min(drag.t + e.clientY - drag.y, window.innerHeight - 48)) + 'px';
     });
     head.addEventListener('pointerup', () => drag = null);
+}
 
+/** Um clique na janela: fechar, trocar de aba, mexer em vital/condição, ou inventário. */
+function tratarClique(win, e) {
+    if (e.target.closest('[data-fechar]')) return fechar(win);
+    const aba = e.target.closest('[data-aba]');
+    if (aba) { win.aba = aba.dataset.aba; return render(win); }
+    const vd = e.target.closest('[data-vdelta]');
+    if (vd) return setVital(win, vd.dataset.sig, valorVital(win, vd.dataset.sig).cur + Number(vd.dataset.vdelta));
+    if (e.target.closest('[data-condadd]')) return escolherCondicao((cond, tpl) => addCondicao(win, cond, tpl));
+    const crm = e.target.closest('[data-condrm]');
+    if (crm) return rmCondicao(win, Number(crm.dataset.condrm));
+    tratarCliqueInv(win.inv, e);
+}
+
+/** Digitação num campo da janela: vital, nível de perícia de NPC ou modificador. */
+function tratarInput(win, t) {
+    if (t.matches('[data-vcur]')) return setVital(win, t.dataset.sig, parseFloat(String(t.value).replace(',', '.')) || 0);
+    if (t.matches('[data-pernivel]')) return setPericiaNpc(win, Number(t.dataset.pernivel), parseInt(t.value) || 0);
+    if (t.matches('[data-mod]') && t.type !== 'checkbox') return setCampoMod(win, t);
+}
+
+/** Toda a delegação de eventos da janela num lugar só. */
+function ligarEventos(win) {
+    const el = win.el;
     el.addEventListener('pointerdown', () => { if ([...WINS.values()].at(-1) !== win) focar(win); }, true);
-
-    el.addEventListener('click', e => {
-        if (e.target.closest('[data-fechar]')) { fechar(win); return; }
-        const aba = e.target.closest('[data-aba]');
-        if (aba) { win.aba = aba.dataset.aba; render(win); return; }
-        const vd = e.target.closest('[data-vdelta]');
-        if (vd) { setVital(win, vd.dataset.sig, valorVital(win, vd.dataset.sig).cur + Number(vd.dataset.vdelta)); return; }
-        if (e.target.closest('[data-condadd]')) {
-            escolherCondicao((cond, tpl) => addCondicao(win, cond, tpl));
-            return;
-        }
-        const crm = e.target.closest('[data-condrm]');
-        if (crm) { rmCondicao(win, Number(crm.dataset.condrm)); return; }
-        tratarCliqueInv(win.inv, e);
-    });
-
-    el.addEventListener('input', e => {
-        const t = e.target;
-        if (t.matches('[data-vcur]')) { setVital(win, t.dataset.sig, parseFloat(String(t.value).replace(',', '.')) || 0); return; }
-        if (t.matches('[data-pernivel]')) { setPericiaNpc(win, Number(t.dataset.pernivel), parseInt(t.value) || 0); return; }
-        if (t.matches('[data-mod]') && t.type !== 'checkbox') { setCampoMod(win, t); return; }
-    });
+    el.addEventListener('click', e => tratarClique(win, e));
+    el.addEventListener('input', e => tratarInput(win, e.target));
     el.addEventListener('change', e => {
         if (e.target.matches('[data-mod]') && e.target.type === 'checkbox') setCampoMod(win, e.target);
     });
@@ -248,12 +248,30 @@ function criarJanela(tipo, id, chave) {
     el.addEventListener('focusout', () => {
         if (win.pendente) { win.pendente = false; render(win); }
     });
-
     // Arrastar-e-soltar do inventário (item → contêiner / raiz / mapa / pilha)
     el.addEventListener('pointerdown', e => {
         const grab = e.target.closest?.('[data-grab]');
         if (grab) iniciarArrasto(win.inv, grab, e);
     });
+}
+
+function criarJanela(tipo, id, chave) {
+    const el = document.createElement('div');
+    el.className = 'tb-fwin';
+    posicionarNova(el, WINS.size);
+    el.innerHTML = HTML_JANELA;
+    document.body.appendChild(el);
+
+    const win = {
+        el, tipo, id, chave, aba: 'combate', itens: null,
+        abertos: new Set(),       // itens com o detalhe expandido
+        contAbertos: new Set(),   // contêineres abertos
+        pendente: false, unsubItems: null,
+    };
+    win.inv = ctxInventario(win);
+
+    ligarArrastoDaJanela(el);
+    ligarEventos(win);
 
     // Resize nativo da janela não repinta nada — só o compacto precisa ser
     // re-medido (era o furo: estreitar a janela nunca recolhia os nomes).
@@ -453,31 +471,72 @@ function slotsDoCorpo(partes) {
 
 /** Picker de equipar — mesmas opções da ficha: slot anatômico + estado,
  *  desabilitando ocupado/não permitido; slots extras via EquipSlots. */
-function abrirEquipar(win, itemId) {
-    const item = (win.itens || []).find(x => x.id === itemId);
-    if (!item || !_sys) return;
-    const partes = partesDoCorpo(win);
-    const slots = slotsDoCorpo(partes);
-    const chaves = Object.keys(slots);
-    if (!chaves.length) { toast('⚠️ A ficha não tem partes do corpo definidas', 'warning'); return; }
-
+/** Slots do corpo, com os já tomados e os que a peça não aceita desabilitados. */
+function optsSlotEquipar(item, slots, itens, itemId) {
     const ES = window.EquipSlots;
-    const ocupados = new Set((win.itens || []).filter(i => i.equipado && i.id !== itemId)
+    const ocupados = new Set(itens.filter(i => i.equipado && i.id !== itemId)
         .flatMap(i => ES ? ES.slotsDoItem(i) : [i.slotAnatomico]).filter(Boolean));
     const permitidas = Array.isArray(item.equipavelEm) && item.equipavelEm.length ? new Set(item.equipavelEm) : null;
-    const optsSlot = chaves.map(k => {
+
+    return Object.keys(slots).map(k => {
         const s = slots[k];
         const bloq = permitidas && !permitidas.has(s.partId);
         const ocup = ocupados.has(k);
         return `<option value="${esc(k)}" ${bloq || ocup ? 'disabled' : ''}>${esc(s.icon)} ${esc(s.label)}${ocup ? ' (ocupado)' : ''}${bloq ? ' (não permitido)' : ''}</option>`;
     }).join('');
+}
+
+/** Estados de equipe; a `formaEquipar` da peça tranca os que não servem. */
+function optsEstadoEquipar(item) {
     const forma = item.formaEquipar;
-    const optsEstado = Object.entries(ESTADO_EQUIP).map(([v, rot]) => {
+    return Object.entries(ESTADO_EQUIP).map(([v, rot]) => {
         const [ic, f] = FORMA_EQUIP[v];
         const bloq = forma && f !== forma;
         return `<option value="${v}" ${bloq ? 'disabled' : ''} ${!bloq && forma ? 'selected' : ''}>${ic} ${rot}</option>`;
     }).join('');
+}
 
+/**
+ * Grava o equipar. Cobertura extra (armadura de várias peças) ocupa o que
+ * estiver livre e nunca impede; só a 2ª mão da arma de duas mãos é requisito.
+ */
+async function confirmarEquipar(win, item, slots, partes) {
+    const ES = window.EquipSlots;
+    const slot = document.getElementById('tbEqSlot')?.value;
+    const estado = document.getElementById('tbEqEstado')?.value;
+    if (!slot || !estado) return false;
+
+    const maos = Number(document.getElementById('tbEqMaos')?.value) || (ES ? ES.maosDoItem(item) : 1);
+    const plano = ES
+        ? ES.planejarEquipar({ ...item, maosUsadas: maos }, slot, win.itens || [], slots, {
+            catalog: _sys.equipment,
+            labelParte: pid => partes.find(b => b.id === pid)?.nome || pid,
+        })
+        : { extras: [], maoExtra: null, faltaMao: null };
+
+    if (plano.faltaMao) {
+        toast(`⚠️ Falta ${plano.faltaMao} livre para empunhar esta arma`, 'warning');
+        return false;
+    }
+    try {
+        await updateDoc(doc(db, 'items', item.id), {
+            equipado: true, slotAnatomico: slot, slotsOcupados: plano.extras,
+            slotAnatomico2: plano.maoExtra, maosUsadas: maos,
+            estadoEquip: estado, parentItemId: null,
+        });
+        toast(`🎽 ${esc(item.nome || 'Item')} equipado`);
+        return true;
+    } catch (err) { errWrite(err); return false; }
+}
+
+function abrirEquipar(win, itemId) {
+    const item = (win.itens || []).find(x => x.id === itemId);
+    if (!item || !_sys) return;
+    const partes = partesDoCorpo(win);
+    const slots = slotsDoCorpo(partes);
+    if (!Object.keys(slots).length) { toast('⚠️ A ficha não tem partes do corpo definidas', 'warning'); return; }
+
+    const ES = window.EquipSlots;
     document.getElementById('tbFwinEquip')?.remove();
     const ov = document.createElement('div');
     ov.id = 'tbFwinEquip';
@@ -487,8 +546,8 @@ function abrirEquipar(win, itemId) {
             <button class="tb-mini-btn" data-eqx title="Cancelar">✕</button></div>
         <div class="tb-fwin-equip-corpo">
             <div class="tb-form-grid tb-form-grid-1">
-                <label>Slot anatômico<select id="tbEqSlot">${optsSlot}</select></label>
-                <label>Estado<select id="tbEqEstado">${optsEstado}</select></label>
+                <label>Slot anatômico<select id="tbEqSlot">${optsSlotEquipar(item, slots, win.itens || [], itemId)}</select></label>
+                <label>Estado<select id="tbEqEstado">${optsEstadoEquipar(item)}</select></label>
                 ${ES && ES.escolheMaos(item) ? `<label>✋ Mãos<select id="tbEqMaos">
                     <option value="1" ${Number(item.maosUsadas) === 2 ? '' : 'selected'}>🤚 1 Mão</option>
                     <option value="2" ${Number(item.maosUsadas) === 2 ? 'selected' : ''}>🤲 2 Mãos</option>
@@ -501,33 +560,7 @@ function abrirEquipar(win, itemId) {
     ov.addEventListener('click', async e => {
         if (e.target === ov || e.target.closest('[data-eqx]')) { ov.remove(); return; }
         if (!e.target.closest('[data-eqok]')) return;
-        const slot = document.getElementById('tbEqSlot')?.value;
-        const estado = document.getElementById('tbEqEstado')?.value;
-        if (!slot || !estado) return;
-        // Cobertura extra (armadura de várias peças) ocupa o que estiver livre e
-        // nunca impede o equipar; só a 2ª mão da arma de duas mãos é requisito.
-        const maos = Number(document.getElementById('tbEqMaos')?.value)
-            || (ES ? ES.maosDoItem(item) : 1);
-        let plano = { extras: [], maoExtra: null, faltaMao: null };
-        if (ES) {
-            plano = ES.planejarEquipar({ ...item, maosUsadas: maos }, slot, win.itens || [], slots, {
-                catalog: _sys.equipment,
-                labelParte: pid => partes.find(b => b.id === pid)?.nome || pid,
-            });
-        }
-        if (plano.faltaMao) {
-            toast(`⚠️ Falta ${plano.faltaMao} livre para empunhar esta arma`, 'warning');
-            return;
-        }
-        try {
-            await updateDoc(doc(db, 'items', itemId), {
-                equipado: true, slotAnatomico: slot, slotsOcupados: plano.extras,
-                slotAnatomico2: plano.maoExtra, maosUsadas: maos,
-                estadoEquip: estado, parentItemId: null,
-            });
-            ov.remove();
-            toast(`🎽 ${esc(item.nome || 'Item')} equipado`);
-        } catch (err) { errWrite(err); }
+        if (await confirmarEquipar(win, item, slots, partes)) ov.remove();
     });
 }
 
@@ -727,17 +760,30 @@ function secaoValores(blocos) {
 // dvsVinculadosChar / dvAplicaChar moraram aqui; foram para tab-hud.js quando o
 // HUD do token e o card do combate passaram a filtrar pela MESMA regra da ficha.
 
+/**
+ * Junta chips nos blocos do registro. O bloco fica com a MENOR ordem que
+ * apareceu — um VD sem `blocoOrdem` não empurra o bloco para o fim.
+ * Usado pelas duas fontes (personagem e NPC), que só diferem em de onde
+ * tiram os números.
+ */
+function agrupadorDeBlocos() {
+    const blocos = new Map();
+    return {
+        add(nome, ordem, chipHtml) {
+            const b = blocos.get(nome) || { nome, ordem, chips: [] };
+            b.ordem = Math.min(b.ordem, ordem);
+            b.chips.push(chipHtml);
+            blocos.set(nome, b);
+        },
+        ordenados: () => [...blocos.values()].sort((a, b) => a.ordem - b.ordem),
+    };
+}
+
 /** VDs do personagem: SÓ os vinculados (regra da ficha), nos blocos do registro. */
 function blocosChar(ch, vinc) {
     const dt = ch.derivedTotals || {};
     const { vitais } = idx();
-    const blocos = new Map();
-    const add = (nome, ordem, chipHtml) => {
-        const b = blocos.get(nome) || { nome, ordem, chips: [] };
-        b.ordem = Math.min(b.ordem, ordem);
-        b.chips.push(chipHtml);
-        blocos.set(nome, b);
-    };
+    const { add, ordenados } = agrupadorDeBlocos();
     const usados = new Set();
     for (const dv of _sys.derivedValues) {                    // ordem do registro
         const k = normChave(dv.nome);
@@ -752,7 +798,7 @@ function blocosChar(ch, vinc) {
         usados.add(k);
         add(dv.blocoNome || 'Geral', dv.blocoOrdem ?? 999, chip(dv.icone, dv.nome, fmtDV(dt[k], dv), dv.descricao));
     }
-    return [...blocos.values()].sort((a, b) => a.ordem - b.ordem);
+    return ordenados();
 }
 
 /** VDs do NPC (espelhos legados + overrides + extras), agrupados e SEM duplicar:
@@ -760,13 +806,7 @@ function blocosChar(ch, vinc) {
 function blocosNpc(n) {
     const vd = n.valoresDer || {};
     const { porChave, vitais } = idx();
-    const blocos = new Map();
-    const add = (nome, ordem, chipHtml) => {
-        const b = blocos.get(nome) || { nome, ordem, chips: [] };
-        b.ordem = Math.min(b.ordem, ordem);
-        b.chips.push(chipHtml);
-        blocos.set(nome, b);
-    };
+    const { add, ordenados } = agrupadorDeBlocos();
     const vistos = new Set(['VITALIDADE', 'ENERGIA', 'SANIDADE']);
     for (const [sig, rot, icone] of [['PERC', 'Percepção', '👁️'], ['INI', 'Iniciativa', '⚡'], ['REA', 'Reação', '🌀'], ['BLD', 'Blindagem', '🛡️']]) {
         if (vd[sig] == null || vd[sig] === '') continue;
@@ -789,7 +829,7 @@ function blocosNpc(n) {
         vistos.add(chave);
         add('Extras', 9999, chip('📎', x.nome, x.valor ?? ''));
     }
-    return [...blocos.values()].sort((a, b) => a.ordem - b.ordem);
+    return ordenados();
 }
 
 /* ---- ⚔️ Ataques ---- */
@@ -1151,11 +1191,29 @@ function htmlModulos(win, fonte) {
 }
 
 /* ---- Corpo da aba Combate ---- */
+/** Grade dos 9 atributos. `ler(sig)` diz de onde sai o número em cada fonte:
+ *  o NPC guarda por sigla, o personagem guarda em dots.attr_xxx. */
+const htmlAtributos = (ler) => ATRIBUTOS.map(([sig, rot]) =>
+    `<div class="tb-fwin-atr" title="${rot}"><span>${sig}</span><b>${fmtN(ler(sig))}</b></div>`).join('');
+
+/**
+ * Espinha da aba Combate. Personagem e NPC mostram as MESMAS seções, na mesma
+ * ordem — só mudam de onde vêm os números. `extra` é o que só uma das duas tem
+ * (as peculiaridades do NPC).
+ */
+function htmlCombateBase(win, fonte, { blocos, atrs, pericias, extra = '' }) {
+    return secaoValores(blocos)
+        + detalhe('⚔️ Ataques', htmlAtaques(win, fonte), true)
+        + detalhe('📦 Habilidades & Módulos', htmlModulos(win, fonte), true)
+        + detalhe('💪 Atributos', atrs ? `<div class="tb-fwin-atrs">${atrs}</div>` : '')
+        + detalhe('🎯 Perícias', pericias)
+        + extra;
+}
+
 function htmlCombateNpc(win, n) {
     if (!_sys) return CARREGANDO;
 
-    const atrs = ATRIBUTOS.map(([sig, rot]) =>
-        `<div class="tb-fwin-atr" title="${rot}"><span>${sig}</span><b>${fmtN(n.atributos?.[sig] ?? 0)}</b></div>`).join('');
+    const atrs = htmlAtributos(sig => n.atributos?.[sig] ?? 0);
     const pers = (n.periciasEstruturadas || []).map((ps, i) => {
         const s = _sys.skills.find(x => x.id === ps.refId);
         return s ? { idx: i, nome: s.nome, desc: s.descricao, nivel: ps.nivel || 0 } : null;
@@ -1173,19 +1231,18 @@ function htmlCombateNpc(win, n) {
         return chip(reg?.icone || '🧬', nome, p?.nivel ? 'Nv ' + p.nivel : '', reg?.descricao || '');
     }).join('');
 
-    return secaoValores(blocosNpc(n))
-        + detalhe('⚔️ Ataques', htmlAtaques(win, n), true)
-        + detalhe('📦 Habilidades & Módulos', htmlModulos(win, n), true)
-        + detalhe('💪 Atributos', atrs ? `<div class="tb-fwin-atrs">${atrs}</div>` : '')
-        + detalhe('🎯 Perícias', periciasHtml)
-        + detalhe('🧬 Peculiaridades', pecs ? `<div class="tb-fwin-chips">${pecs}</div>` : '');
+    return htmlCombateBase(win, n, {
+        blocos: blocosNpc(n),
+        atrs,
+        pericias: periciasHtml,
+        extra: detalhe('🧬 Peculiaridades', pecs ? `<div class="tb-fwin-chips">${pecs}</div>` : ''),
+    });
 }
 
 function htmlCombateChar(win, ch) {
     if (!_sys) return CARREGANDO;
 
-    const atrs = ATRIBUTOS.map(([sig, rot]) =>
-        `<div class="tb-fwin-atr" title="${rot}"><span>${sig}</span><b>${fmtN(ch.dots?.['attr_' + sig.toLowerCase()] ?? 0)}</b></div>`).join('');
+    const atrs = htmlAtributos(sig => ch.dots?.['attr_' + sig.toLowerCase()] ?? 0);
 
     // Perícias: registro resolvido contra os dots da ficha (mesma régua dos 🎯 Testes)
     const pers = _sys.skills.map(s => ({ s, v: valorComponente(s.nome, { dots: ch.dots }) }))
@@ -1196,11 +1253,11 @@ function htmlCombateChar(win, ch) {
         </div>`).join('');
 
     const vinc = dvsVinculadosChar(ch, _sys);
-    return secaoValores(blocosChar(ch, vinc))
-        + detalhe('⚔️ Ataques', htmlAtaques(win, ch), true)
-        + detalhe('📦 Habilidades & Módulos', htmlModulos(win, ch), true)
-        + detalhe('💪 Atributos', atrs ? `<div class="tb-fwin-atrs">${atrs}</div>` : '')
-        + detalhe('🎯 Perícias', periciasHtml);
+    return htmlCombateBase(win, ch, {
+        blocos: blocosChar(ch, vinc),
+        atrs,
+        pericias: periciasHtml,
+    });
 }
 
 /* ---- Aba Inventário ----
