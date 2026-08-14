@@ -112,10 +112,10 @@ function abasDeCena() {
 /** Ficha de onde sai o Alvo do participante (char do Tabuleiro ou NPC). */
 function fonteDoParticipante(p) {
     if (p.characterId) return T.chars.find(c => c.id === p.characterId) || null;   // { derivedTotals, dots }
-    if (p.npcId) {
-        const n = T.npcs.find(x => x.id === p.npcId);
-        return n ? { valoresDer: n.valoresDer, atributos: n.atributos, pericias: n.pericias } : null;
-    }
+    // NPC: o doc INTEIRO (não um recorte) — `valorComponente` lê valoresDer/
+    // atributos/pericias dele, e o motor de VD precisa de raça/classe/pecs.
+    // Recortar também trocava a identidade a cada chamada e furava os caches.
+    if (p.npcId) return T.npcs.find(x => x.id === p.npcId) || null;
     return null;
 }
 /** Alvo resolvido pela ficha, ou null (mestre digita/edita na mão). */
@@ -480,6 +480,28 @@ window.tbCombStat = async function(pid, stat, amt) {
  * Grava onde a FICHA lê: char em derivedValues['dv_<key>_atual'];
  * NPC em valoresDer.atual[<key>]. Os snapshots repintam todo mundo.
  */
+/** Grava o ATUAL de um VD num valor absoluto (usado pelo pagamento de custo). */
+window.tbCombSetVd = async function(pid, key, valor) {
+    const p = partsDaCena().find(x => x.id === pid); if (!p) return;
+    const v = vNum(Math.max(0, valor));
+    if (p.characterId) await updateDoc(doc(db, 'char', p.characterId), { [`derivedValues.dv_${key}_atual`]: String(v) });
+    else if (p.npcId) await updateDoc(doc(db, 'npcs', p.npcId), { [`valoresDer.atual.${key}`]: v });
+};
+
+/** Grava um vital num valor absoluto — reusa o caminho do tbCombStat (delta). */
+window.tbCombSetVital = async function(pid, stat, valor) {
+    const p = partsDaCena().find(x => x.id === pid); if (!p) return;
+    const map = { VIT: 'hpCurrent', ENER: 'enerCurrent', SAN: 'sanCurrent' };
+    let atual = p[map[stat]] ?? 0;
+    if (p.characterId) { const v = VITAIS.get(p.characterId); if (v) atual = { VIT: v.hp, ENER: v.ener, SAN: v.san }[stat]; }
+    else if (p.npcId) {
+        const vd = T.npcs.find(x => x.id === p.npcId)?.valoresDer || {};
+        atual = (vd.atual || {})[stat] ?? vd[stat] ?? atual;
+    }
+    const delta = vNum(valor) - vNum(atual);
+    if (delta) await window.tbCombStat(pid, stat, delta);
+};
+
 window.tbCombVd = async function(pid, key, amt) {
     const p = partsDaCena().find(x => x.id === pid); if (!p) return;
     const d = vdsCombateDaFonte(fonteDoParticipante(p)).find(x => x.key === key); if (!d) return;

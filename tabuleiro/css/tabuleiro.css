@@ -590,6 +590,8 @@ html, body {
 /* skill sem recurso: apagada, com o motivo em vermelho no próprio botão */
 .tb-turno-sem-recurso { opacity: .55; }
 .tb-turno-sem-recurso b { color: var(--lr-blood-3, #f87171); font-size: var(--lr-fs-xs); font-weight: 600; }
+/* skill com mais de uma forma de pagar */
+.tb-turno-multi { color: var(--lr-gold-3, #eab308); font-weight: 700; }
 
 /* ⚔️ VDs de Status de Combate no card do participante */
 .tb-combat-vds { display: flex; flex-wrap: wrap; gap: var(--lr-space-1); margin-top: var(--lr-space-1); }

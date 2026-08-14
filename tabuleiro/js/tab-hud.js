@@ -21,8 +21,36 @@ const unsubsVitais = [];
 // exibidos no card da janela de Combate e sobre o token, abaixo das barras.
 // Registro carregado 1x por sessão (mesmo cache das janelas de ficha).
 export let VDS_COMBATE = [];   // [{ id, key, nome, icone, prefixo, sufixo, campoAtual, todoPersonagem }]
-let _sysHud = null;
+let _sysHud = null, _calcNpcHud = null;
 const _vdsCache = new WeakMap();   // derivedTotals/valoresDer (obj do snapshot) -> valores prontos
+const _npcCalcCache = new WeakMap();   // doc do NPC -> { key: final } calculado
+
+/**
+ * Finais dos VDs de um NPC, calculados pelo MESMO motor do editor. O doc só
+ * guarda overrides/atual (por id) — sem isto, VD vinculado sem override não
+ * existe fora do editor. Cache por identidade do doc (snapshot novo recalcula).
+ */
+function finaisDoNpc(n) {
+    if (!n || !_calcNpcHud || !_sysHud) return null;
+    let r = _npcCalcCache.get(n);
+    if (r) return r;
+    try {
+        const calc = _calcNpcHud(n, _sysHud, {});
+        r = {};
+        for (const [k, d] of Object.entries(calc.derived || {})) r[k] = d.final;
+    } catch (e) { console.warn('calc VD do NPC', e); r = {}; }
+    _npcCalcCache.set(n, r);
+    return r;
+}
+
+/** Valor ATUAL de um recurso do NPC/char por VD (ou null quando não há). */
+export function atualDoVd(fonte, dv) {
+    const raw = fonte?.derivedTotals
+        ? VITAIS.get(fonte.id)?.dvAtuais?.[`dv_${dv.key}_atual`]
+        : fonte?.valoresDer?.atual?.[dv.key];
+    const n = parseFloat(String(raw ?? '').replace(',', '.'));
+    return isNaN(n) ? null : n;
+}
 
 /**
  * VDs VINCULADOS ao personagem — a MESMA regra da ficha: derivedValueIds da
@@ -68,11 +96,14 @@ export function vdsCombateDaFonte(fonte) {
     let r = _vdsCache.get(base);
     if (r) return r;
     const vincChar = (fonte.derivedTotals && _sysHud) ? dvsVinculadosChar(fonte, _sysHud) : null;
+    // NPC: os finais saem do motor (o doc não os guarda)
+    const finaisNpc = fonte.valoresDer ? finaisDoNpc(fonte) : null;
     r = [];
     for (const dv of VDS_COMBATE) {
         if (!vdAplicaFonte(dv, fonte, vincChar)) continue;
-        let v = valorComponente(dv.nome, fonte);
-        // NPC salvo antes do espelho por nome: o valor travado vive em overrides[id]
+        let v = finaisNpc?.[dv.key];
+        if (v == null) v = valorComponente(dv.nome, fonte);
+        // NPC legado sem cálculo: o valor travado vive em overrides[id]
         if (v == null && fonte.valoresDer?.overrides) {
             const o = parseFloat(fonte.valoresDer.overrides[dv.key]);
             if (!isNaN(o)) v = o;
@@ -80,15 +111,7 @@ export function vdsCombateDaFonte(fonte) {
         if (v == null || v === 0) continue;   // 0/ausente = ruído, fica de fora
         // valor ATUAL (VDs com campo Atual/Máx): char grava em
         // derivedValues['dv_<key>_atual'] na ficha; NPC em valoresDer.atual[key]
-        let atual = null;
-        if (dv.campoAtual) {
-            const raw = fonte.derivedTotals
-                ? VITAIS.get(fonte.id)?.dvAtuais?.[`dv_${dv.key}_atual`]
-                : fonte.valoresDer?.atual?.[dv.key];
-            const n = parseFloat(String(raw ?? '').replace(',', '.'));
-            atual = isNaN(n) ? null : n;
-        }
-        r.push({ ...dv, valor: v, atual });
+        r.push({ ...dv, valor: v, atual: dv.campoAtual ? atualDoVd(fonte, dv) : null });
     }
     _vdsCache.set(base, r);
     return r;
@@ -107,7 +130,12 @@ export function vdsCombateDoToken(o) {
 }
 
 export function initHud() {
-    // ⚔️ registro dos VDs de Status de Combate (lazy, sem segurar o boot)
+    // ⚔️ registro dos VDs de Status de Combate (lazy, sem segurar o boot).
+    // O motor de cálculo vem junto: o doc do NPC NÃO guarda o valor final dos
+    // VDs (só overrides/atual por id), então o card calcula igual ao editor.
+    import('../../painel-mestre/js/npc-calc-engine.js?v=1.9')
+        .then(m => { _calcNpcHud = m.calcularNpc; })
+        .catch(e => console.warn('motor de NPC no HUD', e));
     import('../../painel-mestre/js/npc-system-data.js')
         .then(m => m.ensureNpcSystemData())
         .then(sys => {

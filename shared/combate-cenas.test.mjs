@@ -9,7 +9,7 @@ import {
     condDoParticipante, tirarCondicoesExpiradas,
     faccaoDoParticipante, acoesNovas, podeGastar, gastarAcao, alvoValido,
     alcanceGolpe, participanteDaVez, indiceNaOrdem, guardadoValido,
-    custoVital, recursoInsuficiente,
+    custoVital, recursoInsuficiente, custoDaMecanica,
 } from './combate-cenas.js';
 
 const p = (n) => ({ id: n, name: n, initiative: 1 });
@@ -173,4 +173,14 @@ assert.equal(recursoInsuficiente('2 ENER', {}), null, 'atual desconhecido não b
 assert.deepEqual(recursoInsuficiente('1 VIT e 3 SAN', { vit: 5, san: 2 }), { recurso: 'san', qtd: 3, tem: 2 }, 'checa todos os recursos do custo');
 assert.equal(recursoInsuficiente('', { ener: 0 }), null, 'sem custo nada falta');
 
-console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições, turno mecânico, turno guardado, custo vital OK');
+// custo declarado por MECÂNICA (é assim que o cadastro guarda: "-1 ENER")
+const mechEner = { nome: '-1 ENER', tipo: 'modificar', config: { calculos: [{ alvo: 'Energia Atual', operacao: '-', equacao: [{ valor: 1, tipo: 'fixo' }] }] } };
+const mechGraca = { nome: '-2 Graça', tipo: 'modificar', config: { calculos: [{ alvo: 'Graça de Palla', operacao: '-', equacao: [{ valor: 2, tipo: 'fixo' }] }] } };
+assert.deepEqual(custoDaMecanica(mechEner), { rotulo: '-1 ENER', alvo: 'Energia Atual', qtd: 1 });
+assert.deepEqual(custoDaMecanica(mechGraca), { rotulo: '-2 Graça', alvo: 'Graça de Palla', qtd: 2 }, 'recurso de classe é VD, não vital');
+assert.equal(custoDaMecanica({ nome: '+1 ENER', tipo: 'modificar', config: { calculos: [{ alvo: 'Energia Atual', operacao: '+', equacao: [{ valor: 1 }] }] } }), null, 'somar não é custo');
+assert.equal(custoDaMecanica({ tipo: 'booleano' }), null, 'mecânica de outro tipo não é custo');
+assert.equal(custoDaMecanica(null), null);
+assert.equal(custoDaMecanica({ tipo: 'modificar', config: { calculos: [{ alvo: 'X', operacao: '-', equacao: [] }] } }), null, 'sem valor não vira custo');
+
+console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições, turno mecânico, turno guardado, custo vital e de mecânica OK');

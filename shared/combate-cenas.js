@@ -190,6 +190,23 @@ export function custoVital(texto) {
 }
 
 /**
+ * Custo declarado por uma MECÂNICA de custo ("-1 ENER", "-2 Graça"): o
+ * cadastro usa `modificar` com operação '-' sobre o recurso. O alvo pode ser
+ * um Status Vital ("Energia Atual") OU um Valor Derivado ("Graça de Palla",
+ * "Bolha de Sangue") — recurso de classe é VD com campo Atual.
+ * @returns { rotulo, alvo, qtd } ou null quando não é uma mecânica de custo.
+ */
+export function custoDaMecanica(mech) {
+    if (!mech || mech.tipo !== 'modificar') return null;
+    const calc = (mech.config?.calculos || [])[0];
+    if (!calc || calc.operacao !== '-') return null;
+    const eq = (calc.equacao || [])[0];
+    const qtd = Number(eq?.valor);
+    if (!(qtd > 0) || !calc.alvo) return null;
+    return { rotulo: mech.nome || `−${qtd} ${calc.alvo}`, alvo: String(calc.alvo), qtd };
+}
+
+/**
  * O personagem paga o custo? `atuais` = { vit, ener, san } (valores atuais).
  * @returns null quando paga (ou o custo não é parseável/o atual é desconhecido);
  *          senão { recurso, qtd, tem } do primeiro recurso que falta.

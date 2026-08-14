@@ -18,11 +18,11 @@ import { refCombate } from './tab-main.js';
 import {
     cenaAtiva, comCenaAtivaPatch, participanteDaVez, faccaoDoParticipante,
     acoesNovas, podeGastar, gastarAcao, alvoValido, alcanceGolpe,
-    guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME,
+    guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica,
 } from '../../shared/combate-cenas.js';
 import { shapeDaMira, alvoAoAlcance } from './tab-mira-calc.js';
 import { templateAtingeCirculo } from './tab-templates.js';
-import { tokenAtivoDoCombate, participanteDoToken, VITAIS } from './tab-hud.js';
+import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte } from './tab-hud.js';
 import { carregarCondicoesSistema, aplicarCondicaoEmVarios } from './tab-combat.js';
 import { logChat } from './tab-chat.js';
 
@@ -56,9 +56,11 @@ function controlaVez(p) {
     if (p.characterId) return T.chars.find(c => c.id === p.characterId)?.ownerUid === T.user?.uid;
     return false;   // NPC/custom são do mestre
 }
+// NPC: o doc INTEIRO (ver tab-combat) — recorte fura o cache dos VDs e o motor
+// de cálculo precisa de raça/classe/peculiaridades para os finais.
 const fonteDoParticipante = (p) => {
     if (p?.characterId) return T.chars.find(c => c.id === p.characterId) || null;
-    if (p?.npcId) { const n = T.npcs.find(x => x.id === p.npcId); return n ? { valoresDer: n.valoresDer, atributos: n.atributos, pericias: n.pericias } : null; }
+    if (p?.npcId) return T.npcs.find(x => x.id === p.npcId) || null;
     return null;
 };
 
@@ -76,10 +78,52 @@ function recursosDe(p) {
     return { vit: p?.hpCurrent, ener: p?.enerCurrent, san: p?.sanCurrent };
 }
 
+// ---------- recursos: Status Vitais E Valores Derivados de classe ----------
+const _norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+/**
+ * Quanto o participante TEM do recurso `alvo` da mecânica de custo.
+ * O alvo é o NOME do cadastro: "Energia Atual" (vital) ou "Graça de Palla"
+ * (VD com campo Atual — recurso de classe). null = desconhecido (não bloqueia).
+ * @returns { tem, nome } ou null
+ */
+function temDoRecurso(p, alvo) {
+    const a = _norm(alvo);
+    const vitais = recursosDe(p) || {};
+    if (/^(energia|ener)/.test(a)) return { tem: vitais.ener ?? null, nome: 'Energia' };
+    if (/^(vitalidade|vit)/.test(a)) return { tem: vitais.vit ?? null, nome: 'Vitalidade' };
+    if (/^(sanidade|san)/.test(a)) return { tem: vitais.san ?? null, nome: 'Sanidade' };
+    // VD (recurso de classe): o atual manda; sem atual, o máximo
+    const dv = vdsCombateDaFonte(fonteDoParticipante(p)).find(d => _norm(d.nome) === a);
+    if (!dv) return null;
+    return { tem: dv.atual ?? dv.valor, nome: dv.nome };
+}
+
+/** Falta recurso para ESTA forma de pagar? { nome, tem, qtd } ou null. */
+function faltaPara(p, custo) {
+    const r = temDoRecurso(p, custo.alvo);
+    if (!r || r.tem == null) return null;   // desconhecido não bloqueia
+    return r.tem < custo.qtd ? { nome: r.nome, tem: r.tem, qtd: custo.qtd } : null;
+}
+
 /** Botão de skill: custo sempre visível; sem recurso = desabilitado com o motivo. */
-function skillBtnHtml(s, custoAcao, i, recursos) {
-    const falta = recursoInsuficiente(s.custo, recursos);
+function skillBtnHtml(s, custoAcao, i, recursos, p) {
     const custoTxt = s.custo ? ` <i>(${esc(String(s.custo))})</i>` : '';
+    // Custos declarados por mecânica: basta UMA forma pagável para liberar
+    if (s.custos?.length) {
+        const faltas = s.custos.map(c => faltaPara(p, c));
+        const pagaveis = s.custos.filter((c, k) => !faltas[k]);
+        if (!pagaveis.length) {
+            const f = faltas.find(Boolean);
+            return `<button class="tb-btn tb-btn-small tb-turno-sem-recurso" disabled
+                title="Custo: ${esc(String(s.custo))} — ${esc(f.nome)} atual ${f.tem}, precisa de ${f.qtd}">
+                ✨ ${esc(s.nome)}${custoTxt} <b>Não tem ${esc(f.nome)} o suficiente</b></button>`;
+        }
+        const dica = s.custos.length > 1 ? ` — ${pagaveis.length} forma(s) de pagar` : '';
+        return `<button class="tb-btn tb-btn-small" onclick="tbTurnoSkill('${custoAcao}',${i})" title="${esc(s.efeito)}${esc(dica)}">✨ ${esc(s.nome)}${custoTxt}${s.custos.length > 1 ? ' <b class="tb-turno-multi">⇄</b>' : ''}</button>`;
+    }
+    // sem mecânica: custo em texto ("2 ENER") contra os vitais
+    const falta = recursoInsuficiente(s.custo, recursos);
     if (falta) {
         return `<button class="tb-btn tb-btn-small tb-turno-sem-recurso" disabled
             title="Custo: ${esc(String(s.custo))} — ${RECURSO_NOME[falta.recurso]} atual ${falta.tem}, precisa de ${falta.qtd}">
@@ -186,9 +230,11 @@ async function carregarSkills(chave, p) {
     // sem a mira cadastrada (caem no fluxo de "mira não cadastrada").
     const normNome = (s2) => String(s2 || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const predefPorId = new Map(), predefPorNome = new Map();
+    let mechsById = {};
     try {
         const m = await import('./tab-ficha-win.js?v=9');
         const sys = await m.registroSistema();
+        mechsById = sys.mechsById || {};
         for (const mod of Object.values(sys.classModulesById || {})) {
             for (const pd of mod.itensPredefinidos || []) {
                 const ref = { pd, schema: mod.schema || [] };
@@ -197,6 +243,21 @@ async function carregarSkills(chave, p) {
             }
         }
     } catch (e) { console.warn('registro do sistema p/ skills do turno', e); }
+
+    // 💰 Custos REAIS: cada campo `select_botao` do schema aponta uma mecânica
+    // de custo ("Pagar Energia" → -1 ENER · "Pagar Graça" → -1 Graça). Uma skill
+    // com dois desses tem DUAS formas de pagar, e quem usa escolhe qual.
+    const custosDaSkill = (it, schema, pd) => {
+        const out = [];
+        for (const f of schema || []) {
+            if (f.tipo !== 'select_botao') continue;
+            const mechId = it?.[f.key] || pd?.valores?.[f.key];
+            if (!mechId) continue;
+            const c = custoDaMecanica(mechsById[mechId]);
+            if (c && !out.some(x => x.alvo === c.alvo && x.qtd === c.qtd)) out.push({ ...c, label: f.label || '' });
+        }
+        return out;
+    };
 
     // Custo pelo SCHEMA: o campo cujo LABEL fala em custo (a key é numérica nos
     // módulos — "3" pode ser "Redutor", que NÃO é custo). Sem label de custo,
@@ -213,12 +274,15 @@ async function carregarSkills(chave, p) {
         // item de NPC nem sempre carrega _predefId — o nome resolve o registro
         const ref = (it._predefId && predefPorId.get(it._predefId)) || predefPorNome.get(normNome(S_NOME(it))) || null;
         const pd = ref?.pd || null;
-        const custo = custoDoSchema(it, ref?.schema) || S_CUSTO(it) || S_CUSTO(pd?.valores || {})
-            || (pd?.regua?.custo > 0 ? `${pd.regua.custo} ENER` : '');
+        const custos = custosDaSkill(it, ref?.schema, pd);
+        // texto: os custos declarados por mecânica mandam; senão campo/Régua v2
+        const custo = custos.length ? custos.map(c => c.rotulo).join(' ou ')
+            : (custoDoSchema(it, ref?.schema) || S_CUSTO(it) || S_CUSTO(pd?.valores || {})
+               || (pd?.regua?.custo > 0 ? `${pd.regua.custo} ENER` : ''));
         return {
             nome: S_NOME(it),
             efeito: S_EFEITO(it) || S_EFEITO(pd?.valores || {}) || pd?.descricao || '',
-            custo,
+            custo, custos,
             mira: it.mira || pd?.mira || miraDaReguaV2(pd),
             acao: it.custoAcao || pd?.custoAcao || pd?.mira?.custoAcao || acaoDoRotulo(it.acao || pd?.valores?.acao),   // §6.2
         };
@@ -338,7 +402,7 @@ function subMenu(qual, p, skills, acoes) {
         return `<div class="tb-turno-lista">${voltar}
             ${golpes === null ? '<span class="tb-muted">⏳ golpes…</span>'
                 : golpes.map((g, i) => `<button class="tb-btn tb-btn-small" onclick="tbTurnoGolpe(${i})" title="${esc(g.dano ? 'Dano ' + g.dano : '')}">⚔️ ${esc(g.nome)}${g.dano ? ` <i>💥${esc(g.dano)}</i>` : ''}</button>`).join('')}
-            ${skillsPadrao.map((s, i) => skillBtnHtml(s, 'padrao', i, rec)).join('')}
+            ${skillsPadrao.map((s, i) => skillBtnHtml(s, 'padrao', i, rec, p)).join('')}
             <button class="tb-btn tb-btn-small" onclick="tbTurnoGastarAvulso('padrao')" title="Qualquer outra Ação Padrão (descreva no chat)">✅ Outra ação</button>
         </div>`;
     }
@@ -346,7 +410,7 @@ function subMenu(qual, p, skills, acoes) {
     const lista = skills.filter(s => s.acao === qual);
     const rec = recursosDe(p);
     return `<div class="tb-turno-lista">${voltar}
-        ${lista.map((s, i) => skillBtnHtml(s, qual, i, rec)).join('')}
+        ${lista.map((s, i) => skillBtnHtml(s, qual, i, rec, p)).join('')}
     </div>`;
 }
 
@@ -449,13 +513,30 @@ window.tbTurnoGolpe = (i) => {
 };
 
 // ---------- skills ----------
-window.tbTurnoSkill = async (custo, i) => {
+window.tbTurnoSkill = async (custo, i, formaPaga) => {
     const p = participanteDaVez(cena());
     const s = skillsDe(p).filter(x => x.acao === custo)[i];
     if (!s) return;
-    // re-checa o custo na hora do clique (o HTML pode estar velho)
-    const falta = recursoInsuficiente(s.custo, recursosDe(p));
-    if (falta) { toast(`⚠️ Não tem ${RECURSO_NOME[falta.recurso]} o suficiente (${falta.tem}/${falta.qtd})`, 'warning'); return; }
+    // 💰 Custos por mecânica: com mais de uma forma pagável, quem usa escolhe
+    if (s.custos?.length && formaPaga == null) {
+        const pagaveis = s.custos.map((c, k) => ({ c, k })).filter(({ c }) => !faltaPara(p, c));
+        if (!pagaveis.length) {
+            const f = s.custos.map(c => faltaPara(p, c)).find(Boolean);
+            toast(`⚠️ Não tem ${f.nome} o suficiente (${f.tem}/${f.qtd})`, 'warning'); return;
+        }
+        if (pagaveis.length > 1) { escolherComoPagar(s, custo, i, pagaveis); return; }
+        formaPaga = pagaveis[0].k;
+    }
+    if (s.custos?.length) {
+        const f = faltaPara(p, s.custos[formaPaga]);
+        if (f) { toast(`⚠️ Não tem ${f.nome} o suficiente (${f.tem}/${f.qtd})`, 'warning'); return; }
+        _formaPagaAtual = s.custos[formaPaga];   // debitado na confirmação da mira
+    } else {
+        _formaPagaAtual = null;
+        // re-checa o custo em texto na hora do clique (o HTML pode estar velho)
+        const falta = recursoInsuficiente(s.custo, recursosDe(p));
+        if (falta) { toast(`⚠️ Não tem ${RECURSO_NOME[falta.recurso]} o suficiente (${falta.tem}/${falta.qtd})`, 'warning'); return; }
+    }
     const tok = tokenAtivoDoCombate();
     if (!tok) { toast('⚠️ O participante da vez não tem token neste canvas', 'warning'); return; }
     if (s.mira?.tipo) {
@@ -468,12 +549,53 @@ window.tbTurnoSkill = async (custo, i) => {
     if (!(T.isMaster && T.mode === 'secret')) {
         sub = null;
         await gastar(custo);
+        await pagarCusto(p, _formaPagaAtual);
+        _formaPagaAtual = null;
         logChat(`✨ ${p?.name || '?'} usou ${s.nome}${s.custo ? ` · custo: ${s.custo}` : ''} — sem mira cadastrada, efeitos com o mestre`);
         toast(`✨ ${s.nome} usada — a mira desta habilidade ainda não foi cadastrada; o mestre resolve os alvos`);
         return;
     }
     abrirMiraManual(s, custo, tok);
 };
+
+// Forma de pagamento escolhida para a skill em uso (debitada na confirmação).
+let _formaPagaAtual = null;
+
+/** Skill com mais de uma forma de pagar: quem usa escolhe qual recurso gasta. */
+function escolherComoPagar(s, custoAcao, i, pagaveis) {
+    const p = participanteDaVez(cena());
+    window._tbAbrirModal(`💰 Como pagar “${esc(s.nome)}”?`, `
+        <div class="tb-muted" style="font-size:.8rem;margin-bottom:10px">Esta habilidade aceita mais de uma forma de pagamento — escolha qual recurso gastar:</div>
+        ${pagaveis.map(({ c, k }) => {
+            const r = temDoRecurso(p, c.alvo);
+            return `<button class="tb-btn tb-btn-small" style="display:block;width:100%;margin-bottom:6px;text-align:left"
+                onclick="tbFecharModal();tbTurnoSkill('${custoAcao}',${i},${k})">
+                ${esc(c.label || 'Pagar')} — <b>${esc(c.rotulo)}</b>${r?.tem != null ? ` <span class="tb-muted">(tem ${r.tem} de ${esc(r.nome)})</span>` : ''}</button>`;
+        }).join('')}
+    `);
+}
+
+/**
+ * Debita o recurso escolhido. Vital vai para o doc da ficha (mesmo caminho do
+ * card de combate); VD de classe vai para o campo Atual do VD.
+ */
+async function pagarCusto(p, custo) {
+    if (!custo || !p) return;
+    const r = temDoRecurso(p, custo.alvo);
+    if (!r || r.tem == null) return;   // desconhecido: a mesa resolve
+    const novo = Math.max(0, r.tem - custo.qtd);
+    const a = _norm(custo.alvo);
+    const vital = /^(energia|ener)/.test(a) ? 'ENER' : /^(vitalidade|vit)/.test(a) ? 'VIT' : /^(sanidade|san)/.test(a) ? 'SAN' : null;
+    try {
+        if (vital) {
+            await window.tbCombSetVital?.(p.id, vital, novo);
+        } else {
+            const dv = vdsCombateDaFonte(fonteDoParticipante(p)).find(d => _norm(d.nome) === a);
+            if (dv) await window.tbCombSetVd?.(p.id, dv.key, novo);
+        }
+        logChat(`💰 ${p.name || '?'}: ${custo.rotulo} (${r.nome} ${r.tem} → ${novo})`);
+    } catch (e) { console.warn('pagar custo', e); }
+}
 
 /** Converte a mira CADASTRADA (metros) para o runtime (px no ponto do token). */
 function miraDoCadastro(m, s, custo) {
@@ -667,6 +789,8 @@ window.tbTurnoConfirmarMira = async () => {
     T.mira = null;
     markDirty();
     await gastar(custo);
+    await pagarCusto(p, _formaPagaAtual);   // 💰 debita o recurso escolhido
+    _formaPagaAtual = null;
     if (custo === 'livre') render();
     // ☠️ Condição vinculada da skill: aplica nos atingidos que participam da
     // cena (o motor de rodadas expira sozinho, com aviso ao mestre). Quando o
