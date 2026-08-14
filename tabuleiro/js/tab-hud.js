@@ -6,7 +6,7 @@
 // - Rolar iniciativa direto do mapa (1d10 + VD Iniciativa)
 // =============================================
 import { db, doc, onSnapshot, setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, ico, toast, markDirty, uid, can, selecionar, bonusIniciativa, DADO_INICIATIVA, tokenDoUsuario, deslocamentosDoToken, valorComponente } from './tab-state.js';
+import { T, esc, ico, toast, markDirty, uid, can, selecionar, bonusIniciativa, DADO_INICIATIVA, tokenDoUsuario, deslocamentosDoToken, valorComponente, participanteDoToken } from './tab-state.js';
 import { refCombate } from './tab-main.js';
 import { updObj, delObj, abrirPropriedades } from './tab-objects.js';
 import { SENSORES } from './tab-fog.js';
@@ -254,12 +254,9 @@ export function vitaisDoToken(o) {
     };
 }
 
-export function participanteDoToken(o) {
-    const parts = cenaAtiva(T.combate).participantes || [];
-    if (o.vinculo?.tipo === 'char') return parts.find(p => p.characterId === o.vinculo.id) || null;
-    if (o.vinculo?.tipo === 'npc') return parts.find(p => p.npcId === o.vinculo.id) || null;
-    return parts.find(p => p.isCustom && p.name === o.nome) || null;
-}
+// A busca mora em tab-state (deslocamento, visão e render também precisam dela).
+// Reexportada aqui porque meia dúzia de módulos já a importam por este caminho.
+export { participanteDoToken };
 
 /**
  * O token está numa cena de combate EM ANDAMENTO? Só aí o movimento passa a

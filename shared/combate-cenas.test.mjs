@@ -10,6 +10,7 @@ import {
     faccaoDoParticipante, acoesNovas, podeGastar, gastarAcao, alvoValido,
     alcanceGolpe, participanteDaVez, indiceNaOrdem, guardadoValido,
     custoVital, recursoInsuficiente, custoDaMecanica,
+    efeitoDasCondicoes, porqueCondicao, alvoDoTickRodada,
 } from './combate-cenas.js';
 
 const p = (n) => ({ id: n, name: n, initiative: 1 });
@@ -81,10 +82,14 @@ assert.deepEqual(semNada.participantes, []);
 // CONDIÇÕES — legado (string) e objeto convivem no mesmo array
 // =====================================================================
 assert.deepEqual(condDoParticipante('Caído'),
-    { nome: 'Caído', icone: '☠️', descricao: '', expiraNaRodada: null }, 'string legada vira objeto completo');
+    { nome: 'Caído', icone: '☠️', descricao: '', expiraNaRodada: null, nivel: 1 }, 'string legada vira objeto completo');
 assert.equal(condDoParticipante({ nome: 'Queimando', icone: '🔥', expiraNaRodada: 4 }).icone, '🔥');
 assert.equal(condDoParticipante({ nome: 'X' }).expiraNaRodada, null, 'sem prazo = permanente');
 assert.equal(condDoParticipante(null).nome, '', 'lixo não explode');
+// Condição que acumula guarda o nível; a comum é o nível 1 de uma escada de um degrau.
+assert.equal(condDoParticipante({ nome: 'Exaustão', nivel: 3 }).nivel, 3);
+assert.equal(condDoParticipante({ nome: 'X' }).nivel, 1, 'sem nível gravado = nível 1');
+assert.equal(condDoParticipante({ nome: 'X', nivel: 0 }).nivel, 1, 'nível 0 não existe');
 
 // expiração pela rodada (mesma régua dos templates: rodada >= expiraNaRodada)
 const emCena = [
@@ -183,4 +188,106 @@ assert.equal(custoDaMecanica({ tipo: 'booleano' }), null, 'mecânica de outro ti
 assert.equal(custoDaMecanica(null), null);
 assert.equal(custoDaMecanica({ tipo: 'modificar', config: { calculos: [{ alvo: 'X', operacao: '-', equacao: [] }] } }), null, 'sem valor não vira custo');
 
-console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições, turno mecânico, turno guardado, custo vital e de mecânica OK');
+// =============================================
+// 🎲 EFEITO DAS CONDIÇÕES — o que o Tabuleiro lê do cadastro do Criador
+// =============================================
+const REG = [
+    { nome: 'Imobilizado', afetaTabuleiro: true, bloqueiaAcoes: ['movimento'], multiplicadorDeslocamento: 0 },
+    { nome: 'Atordoado', afetaTabuleiro: true, bloqueiaAcoes: ['padrao', 'completa'], perdeTurno: false },
+    { nome: 'Lento', afetaTabuleiro: true, multiplicadorDeslocamento: 0.5, multiplicadorVisao: 0.5 },
+    { nome: 'Cego', afetaTabuleiro: true, multiplicadorVisao: 0 },
+    { nome: 'Asas Quebradas', afetaTabuleiro: true, deslocamentosBloqueados: ['Aéreo'] },
+    { nome: 'Etéreo', afetaTabuleiro: true, naoPodeSerAlvo: true, deixaInvisivel: true },
+    { nome: 'Dominado', afetaTabuleiro: true, faccaoForcada: 'inimigos' },
+    { nome: 'Enfeitiçado', afetaTabuleiro: true, faccaoForcada: 'aliados' },
+    { nome: 'Sangrando', afetaTabuleiro: true, porRodadaEfeito: 'dano_vit', porRodadaValor: '1d4' },
+    { nome: 'Inconsciente', afetaTabuleiro: true, perdeTurno: true, bloqueiaAcoes: ['padrao', 'movimento', 'livre', 'completa'] },
+    { nome: 'Inspirado', afetaTabuleiro: false, bloqueiaAcoes: ['padrao'], multiplicadorDeslocamento: 0 },
+    {
+        nome: 'Exaustão', acumulaNiveis: true, nivelMaximo: 6,
+        efeitoPorNivel: [{ nivel: 1, efeito: 'Desvantagem' }, { nivel: 2, efeito: 'Deslocamento pela metade' }],
+        testeParaSair: true, testeNome: 'Vigor + Resistência', testeMod: -2,
+        testeQuando: 'virada_da_rodada', testeSucessoRemove: 'um_nivel',
+    },
+    { nome: 'Preso', afetaTabuleiro: true, bloqueiaAcoes: ['movimento'], testeParaSair: true, testeNome: 'Força', testeMod: 0 },
+];
+
+const ef = (nomes) => efeitoDasCondicoes(nomes.map(n => (typeof n === 'string' ? { nome: n } : n)), REG);
+
+// nada aplicado = tudo neutro (nunca undefined — quem lê não precisa checar)
+const zero = efeitoDasCondicoes([], REG);
+assert.deepEqual(zero.bloqueia, { padrao: false, movimento: false, livre: false, completa: false });
+assert.equal(zero.multDesloc, 1);
+assert.equal(zero.multVisao, 1);
+assert.equal(zero.faccaoForcada, null);
+
+// bloqueio de ação: OU entre condições
+assert.equal(ef(['Imobilizado']).bloqueia.movimento, true);
+assert.equal(ef(['Imobilizado']).bloqueia.padrao, false, 'imobilizado ainda ataca');
+const atordImob = ef(['Atordoado', 'Imobilizado']);
+assert.equal(atordImob.bloqueia.padrao, true);
+assert.equal(atordImob.bloqueia.movimento, true, 'duas condições somam os bloqueios');
+
+// o interruptor do cadastro manda: sem afetaTabuleiro, nada de VTT sai
+assert.equal(ef(['Inspirado']).bloqueia.padrao, false, 'afetaTabuleiro:false não bloqueia ação');
+assert.equal(ef(['Inspirado']).multDesloc, 1, 'afetaTabuleiro:false não mexe no deslocamento');
+
+// condição personalizada do mestre (sem cadastro) não configura nada
+assert.deepEqual(ef(['Amaldiçoado pelo Bardo']).bloqueia, zero.bloqueia);
+
+// multiplicadores multiplicam — duas metades dão um quarto, e o zero vence
+assert.equal(ef(['Lento']).multDesloc, 0.5);
+assert.equal(ef([{ nome: 'Lento' }, { nome: 'Lento' }]).multDesloc, 0.25, 'duas metades = um quarto');
+assert.equal(ef(['Lento', 'Imobilizado']).multDesloc, 0, 'zero come qualquer multiplicador');
+assert.equal(ef(['Lento', 'Cego']).multVisao, 0, 'cego zera mesmo com outra visão parcial');
+
+// deslocamento por tipo: união, sem repetir
+assert.deepEqual(ef(['Asas Quebradas']).deslocBloqueados, ['Aéreo']);
+assert.deepEqual(ef([{ nome: 'Asas Quebradas' }, { nome: 'Asas Quebradas' }]).deslocBloqueados, ['Aéreo'], 'não duplica');
+
+// liga/desliga é OU
+assert.equal(ef(['Etéreo']).naoPodeSerAlvo, true);
+assert.equal(ef(['Etéreo']).deixaInvisivel, true);
+assert.equal(ef(['Inconsciente']).perdeTurno, true);
+assert.equal(ef(['Atordoado']).perdeTurno, false, 'atordoado age no turno seguinte, não some da ordem');
+
+// facção forçada: a última aplicada manda (a magia mais recente domina)
+assert.equal(ef(['Dominado']).faccaoForcada, 'inimigos');
+assert.equal(ef(['Dominado', 'Enfeitiçado']).faccaoForcada, 'aliados', 'a última aplicada vence');
+
+// tick de rodada vira lista, com a condição que causou
+assert.deepEqual(ef(['Sangrando']).porRodada, [{ condicao: 'Sangrando', icone: '☠️', efeito: 'dano_vit', valor: '1d4' }]);
+assert.deepEqual(alvoDoTickRodada('dano_vit'), { sinal: -1, stat: 'VIT' });
+assert.deepEqual(alvoDoTickRodada('cura_san'), { sinal: 1, stat: 'SAN' });
+assert.equal(alvoDoTickRodada('explodir'), null, 'efeito desconhecido não vira tick');
+assert.equal(alvoDoTickRodada(''), null);
+
+// nível: pega o texto do nível certo, e o número NÃO escala multiplicador
+const exa2 = ef([{ nome: 'Exaustão', nivel: 2 }]);
+assert.deepEqual(exa2.niveis, [{ nome: 'Exaustão', icone: '☠️', nivel: 2, maximo: 6, efeito: 'Deslocamento pela metade' }]);
+assert.equal(exa2.multDesloc, 1, 'efeitoPorNivel é texto de mesa — não vira multiplicador sozinho');
+assert.equal(ef([{ nome: 'Exaustão', nivel: 9 }]).niveis[0].efeito, '', 'nível sem linha cadastrada não inventa efeito');
+assert.equal(ef(['Exaustão']).niveis[0].nivel, 1, 'sem nível gravado, é o nível 1');
+
+// teste para sair: sai no formato que o Tabuleiro já pede (nome + mod)
+assert.deepEqual(ef(['Preso']).testes, [{ condicao: 'Preso', icone: '☠️', nome: 'Força', mod: 0, quando: 'fim_do_turno', sucessoRemove: 'tudo' }]);
+const tExa = ef(['Exaustão']).testes[0];
+assert.equal(tExa.mod, -2);
+assert.equal(tExa.quando, 'virada_da_rodada');
+assert.equal(tExa.sucessoRemove, 'um_nivel');
+assert.deepEqual(ef(['Lento']).testes, [], 'condição sem teste cadastrado não pede rolagem');
+
+// nível e teste valem MESMO fora do interruptor do Tabuleiro
+assert.equal(ef([{ nome: 'Exaustão', nivel: 2 }]).niveis.length, 1, 'acúmulo não depende de afetaTabuleiro');
+assert.equal(ef(['Exaustão']).testes.length, 1, 'teste não depende de afetaTabuleiro');
+
+// motivo: quem pergunta "por que estou travado?" recebe o nome da condição
+assert.equal(porqueCondicao(atordImob, 'bloqueia_padrao'), 'Atordoado');
+assert.equal(porqueCondicao(ef(['Lento', 'Imobilizado']), 'multDesloc'), 'Lento, Imobilizado');
+assert.equal(porqueCondicao(zero, 'bloqueia_padrao'), '', 'sem motivo devolve string vazia, não undefined');
+
+// o nome casa sem ligar para acento/caixa (o mestre digita como quiser)
+assert.equal(ef(['imobilizado']).bloqueia.movimento, true);
+assert.equal(ef(['EXAUSTAO']).testes.length, 1, 'casa sem acento');
+
+console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições, turno mecânico, turno guardado, custo vital e de mecânica, efeito das condições OK');

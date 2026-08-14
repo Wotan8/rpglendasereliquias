@@ -13,6 +13,7 @@ import {
     DRAG_WRITE_MS, DRAG_PASSO_CELULA, LERP_TOKEN_MS, LERP_MIN_MS, LERP_MAX_MS, duracaoLerp,
     ehEcoAtrasado, mapaSobPonto, T as TT,
     vNum, dvMesa, patchVitalAtualNpc, dividirPilha,
+    alcanceDeVisaoDoToken, tokenInvisivel, efeitoCondDoToken,
 } from './tab-state.js';
 import { trajetoColide } from './tab-grid.js';
 import { comMesa, npcNaMesa, mesasDoNpc, espelhoMesaId, patchVinculoMesa } from '../../shared/npc-mesas.js';
@@ -768,4 +769,84 @@ assert.deepEqual(dividirPilha({ quantidade: 12 }, 0), { move: false, qtd: 1, res
 assert.deepEqual(dividirPilha({ quantidade: 1 }, 1), { move: true, qtd: 1 }, 'pilha de 1 sempre move inteira');
 assert.deepEqual(dividirPilha({}, 3), { move: true, qtd: 1 }, 'sem quantidade = pilha de 1');
 
-console.log('✅ tab-state: escala, unidades, larguraReal, cenário, paredes, vínculo de NPC, navegação, viagem, card, fog, alcance, cone, passo do fog, iniciativa, eco atrasado, cache de mapas e vitais do NPC OK');
+// =============================================
+// 💀 CONDIÇÕES EM CIMA DO TOKEN — deslocamento, visão e invisibilidade
+// O funil é `deslocamentosDoToken`: painel do turno, HUD e limite do arrasto
+// passam todos por ele. Se ele errar, o token anda errado nos três.
+// =============================================
+T.condicoesSistema = [
+    { nome: 'Lento', afetaTabuleiro: true, multiplicadorDeslocamento: 0.5, multiplicadorVisao: 0.5 },
+    { nome: 'Imobilizado', afetaTabuleiro: true, multiplicadorDeslocamento: 0 },
+    { nome: 'Asas Quebradas', afetaTabuleiro: true, deslocamentosBloqueados: ['Aéreo'] },
+    { nome: 'Cego', afetaTabuleiro: true, multiplicadorVisao: 0 },
+    { nome: 'Etéreo', afetaTabuleiro: true, deixaInvisivel: true },
+    { nome: 'Inspirado', afetaTabuleiro: false, multiplicadorDeslocamento: 0 },
+];
+
+const CHARS_COND = [{ id: 'cx', derivedTotals: { DESLOC_TERRESTRE: 9, DESLOC_AEREO: 12 } }];
+const tokenCond = { id: 'tk', tipo: 'token', nome: 'Alvo', vinculo: { tipo: 'char', id: 'cx' }, visao: { alcance: 9 } };
+
+/** Põe o token numa cena com as condições dadas. */
+function comCondicoes(...nomes) {
+    T.combate = { participantes: [{ id: 'p1', characterId: 'cx', condicoes: nomes.map(n => (typeof n === 'string' ? { nome: n } : n)) }] };
+}
+
+// sem condição, o deslocamento da ficha passa intacto
+comCondicoes();
+assert.deepEqual(deslocamentosDoToken(tokenCond, CHARS_COND, []),
+    [{ tipo: 'Aéreo', metros: 12 }, { tipo: 'Terrestre', metros: 9 }]);
+
+// Lento corta os metros de TODOS os tipos
+comCondicoes('Lento');
+assert.deepEqual(deslocamentosDoToken(tokenCond, CHARS_COND, []),
+    [{ tipo: 'Aéreo', metros: 6 }, { tipo: 'Terrestre', metros: 4.5 }]);
+
+// Imobilizado zera — e deslocamento 0 SOME do menu (andar 0 m não é opção)
+comCondicoes('Imobilizado');
+assert.deepEqual(deslocamentosDoToken(tokenCond, CHARS_COND, []), [], 'zerado não vira botão de 0 m');
+
+// tipo bloqueado some, o resto fica
+comCondicoes('Asas Quebradas');
+assert.deepEqual(deslocamentosDoToken(tokenCond, CHARS_COND, []), [{ tipo: 'Terrestre', metros: 9 }]);
+
+// bloqueio e multiplicador juntos
+comCondicoes('Asas Quebradas', 'Lento');
+assert.deepEqual(deslocamentosDoToken(tokenCond, CHARS_COND, []), [{ tipo: 'Terrestre', metros: 4.5 }]);
+
+// o interruptor do cadastro vale aqui também
+comCondicoes('Inspirado');
+assert.equal(deslocamentosDoToken(tokenCond, CHARS_COND, []).length, 2, 'afetaTabuleiro:false não mexe no deslocamento');
+
+// token fora de cena nenhuma anda normal (não existe participante)
+T.combate = { participantes: [] };
+assert.equal(deslocamentosDoToken(tokenCond, CHARS_COND, []).length, 2);
+
+// --- visão ---
+comCondicoes();
+assert.equal(alcanceDeVisaoDoToken(tokenCond, null, false), 9);
+comCondicoes('Lento');
+assert.equal(alcanceDeVisaoDoToken(tokenCond, null, false), 4.5, 'visão pela metade');
+comCondicoes('Cego');
+assert.equal(alcanceDeVisaoDoToken(tokenCond, null, false), 0, 'cego não enxerga nada');
+comCondicoes('Cego');
+assert.equal(alcanceDeVisaoDoToken(tokenCond, null, true), 0, 'nem de dia');
+comCondicoes('Lento');
+assert.equal(alcanceDeVisaoDoToken(tokenCond, null, true), 13.5, 'o ×3 do dia continua valendo: 9×3×0.5');
+
+// --- invisibilidade: propriedade OU condição ---
+comCondicoes();
+assert.equal(tokenInvisivel(tokenCond), false);
+assert.equal(tokenInvisivel({ ...tokenCond, invisivel: true }), true, 'propriedade do token continua valendo');
+comCondicoes('Etéreo');
+assert.equal(tokenInvisivel(tokenCond), true, 'condição também deixa invisível');
+
+// --- efeito somado, lido do token ---
+comCondicoes('Lento', 'Asas Quebradas');
+const efTok = efeitoCondDoToken(tokenCond);
+assert.equal(efTok.multDesloc, 0.5);
+assert.deepEqual(efTok.deslocBloqueados, ['Aéreo']);
+assert.equal(efeitoCondDoToken({ id: 'zzz', tipo: 'token' }).multDesloc, 1, 'token sem participante não explode');
+
+T.combate = null;
+
+console.log('✅ tab-state: escala, unidades, larguraReal, cenário, paredes, vínculo de NPC, navegação, viagem, card, fog, alcance, cone, passo do fog, iniciativa, eco atrasado, cache de mapas, vitais do NPC e condições no token OK');

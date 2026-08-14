@@ -6,7 +6,7 @@
 // - Utilidades de sensores
 // =============================================
 import { updateDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, gridSize, markDirty, toast } from './tab-state.js';
+import { T, gridSize, markDirty, toast, tokenInvisivel } from './tab-state.js';
 import { refCanvas } from './tab-main.js';
 import { pontoEmPoligono } from './tab-grid.js';
 
@@ -253,11 +253,13 @@ export function pontoVisivelAgora(p) {
 export function tokenVisivelParaMim(o, meusTokens) {
     if (T.mode === 'secret') return true;   // público é a TV: vale para o mestre também
     const luz = T.canvas?.luzDinamica;
-    if (!luz?.ativa) return o.invisivel ? false : true;
+    // Invisível por PROPRIEDADE do token ou por CONDIÇÃO aplicada — some igual.
+    const invis = tokenInvisivel(o);
+    if (!luz?.ativa) return invis ? false : true;
     if (meusTokens.some(t => t.id === o.id)) return true;
     const hit = pontoVisivelAgora({ x: o.x, y: o.y });
     if (!hit) return false;
-    if (o.invisivel) {
+    if (invis) {
         return hit.sensor === 'verInvisivel' || hit.sensor === 'verdadeira';
     }
     return true;

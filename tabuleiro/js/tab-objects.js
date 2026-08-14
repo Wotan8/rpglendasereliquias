@@ -2,7 +2,7 @@
 // TABULEIRO — Objetos (CRUD), Uploads, Tokens, Camadas, Propriedades
 // =============================================
 import { db, storage, ref, uploadBytes, getDownloadURL, setDoc, updateDoc, deleteDoc, doc, writeBatch } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, uid, toast, markDirty, gridSize, getCamada, escalaCanvas, optsUnidade, tokenPadrao, pxDeLarguraReal, larguraRealDePx, alcanceDeVisao, fonteDoAlcance } from './tab-state.js';
+import { T, esc, uid, toast, markDirty, gridSize, getCamada, escalaCanvas, optsUnidade, tokenPadrao, pxDeLarguraReal, larguraRealDePx, alcanceDeVisaoDoToken, fonteDoAlcance } from './tab-state.js';
 import { npcNaMesa, patchVinculoMesa } from '../../shared/npc-mesas.js';
 import { refObjeto, refObjetos, refCanvas, abrirModal, fecharModal } from './tab-main.js';
 import { notifyObjectChange } from './tab-perf.js';
@@ -601,7 +601,7 @@ window.tbTrancaCfg = function(objId) {
 function rotuloAlcance(o) {
     const dia = T.canvas?.luzDinamica?.modo === 'dia';
     const der = derivedDoToken(o);
-    const v = alcanceDeVisao(o.visao, der, dia);
+    const v = alcanceDeVisaoDoToken(o, der, dia);
     const f = fonteDoAlcance(o.visao, der);
     const porPercepcao = o.visao?.alcanceFonte === 'percepcao';
     // Personagem vinculado mas sem VDs espelhados: a ficha nunca foi aberta desde

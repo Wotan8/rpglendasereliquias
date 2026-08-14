@@ -3,10 +3,11 @@
 // Sincroniza com Painel do Mestre > Mesas > Combate
 // =============================================
 import { db, doc, setDoc, updateDoc, getDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, patchVitalAtualNpc } from './tab-state.js';
+import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, patchVitalAtualNpc, markDirty } from './tab-state.js';
 import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
 import { VITAIS, vdsCombateDaFonte } from './tab-hud.js';
-import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas, FACCOES, faccaoDoParticipante, acoesNovas, participanteDaVez } from '../../shared/combate-cenas.js';
+import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas, FACCOES, faccaoDoParticipante, acoesNovas, participanteDaVez, efeitoDasCondicoes, alvoDoTickRodada } from '../../shared/combate-cenas.js';
+import { rolarFormula } from './tab-conflito-calc.js';
 import { logChat } from './tab-chat.js';
 
 let janelaAberta = false;
@@ -21,6 +22,11 @@ window.tbFichaWin = async function(tipo, id) {
 export function initCombat() {
     window._renderCombate = render;
     window._checarCondicoesRodada = checarCondicoesRodada;
+    // O registro de condições deixou de ser só do picker: deslocamento, visão,
+    // mira e render leem dele a cada quadro. Sem carregar no boot, o mapa passa
+    // a primeira meia dúzia de segundos ignorando toda condição — e ninguém
+    // repara que está ignorando. Falha de rede degrada para "nenhum efeito".
+    carregarCondicoesSistema().then(() => markDirty()).catch(() => {});
     const win = document.getElementById('tbCombatWin');
     // Arrastar a janela
     const head = win.querySelector('.tb-win-head');
@@ -262,8 +268,11 @@ function render() {
         // resto da mesa a condição é só o ícone — igual ao token no mapa.
         const detalhes = secreto || donoDoChar;
         const rodadaAtual = c?.rodada || 1;
+        // Condição que acumula mostra o nível junto do nome — "Exaustão" e
+        // "Exaustão nv 4" são situações muito diferentes para caberem no mesmo chip.
+        const nivelTxt = cd => (cd.nivel > 1 ? ` <i class="tb-cond-nv">nv ${cd.nivel}</i>` : '');
         const chip = (cd, titulo, extra = '') => detalhes
-            ? `<span class="tb-cond" title="${esc(titulo || cd.descricao || '')}">${esc(cd.icone)} ${esc(cd.nome)}${cd.expiraNaRodada ? ` <i class="tb-cond-t" title="acaba na rodada ${cd.expiraNaRodada}">⏱${Math.max(0, cd.expiraNaRodada - rodadaAtual)}</i>` : ''}${extra}</span>`
+            ? `<span class="tb-cond" title="${esc(titulo || cd.descricao || '')}">${esc(cd.icone)} ${esc(cd.nome)}${nivelTxt(cd)}${cd.expiraNaRodada ? ` <i class="tb-cond-t" title="acaba na rodada ${cd.expiraNaRodada}">⏱${Math.max(0, cd.expiraNaRodada - rodadaAtual)}</i>` : ''}${extra}</span>`
             : `<span class="tb-cond">${esc(cd.icone)}</span>`;
         const nomesCombate = (p.condicoes || []).map(cd => condDoParticipante(cd).nome);
         const daFicha = condsDaFicha(p).filter(x => !nomesCombate.includes(x.nome));
@@ -345,6 +354,21 @@ window.tbCombTurno = async function(dir) {
     const rodadaAntes = rodada;
     if (turno >= n) { turno = 0; rodada++; }
     if (turno < 0) { turno = n - 1; rodada = Math.max(1, rodada - 1); }
+
+    // 💤 Quem está Inconsciente/Petrificado não tem vez: a ordem passa por cima.
+    // O `voltas` existe porque a mesa inteira pode cair de uma vez — sem ele o
+    // laço giraria para sempre procurando alguém acordado.
+    const parts = c.participantes || [];
+    const pulados = [];
+    for (let voltas = 0; voltas < n; voltas++) {
+        const alvo = parts[turno];
+        if (!alvo || !efeitoDoParticipante(alvo).perdeTurno) break;
+        pulados.push(alvo.name || '?');
+        turno += (dir < 0 ? -1 : 1);
+        if (turno >= n) { turno = 0; rodada++; }
+        if (turno < 0) { turno = n - 1; rodada = Math.max(1, rodada - 1); }
+    }
+    if (pulados.length) logChat(`💤 Turno pulado: ${pulados.join(', ')}`);
     // ⚔️ turno novo = ações cheias (1 Padrão + 1 Movimento, §6.2).
     // A expiração de condições NÃO acontece aqui: quem vira a rodada pode ser
     // um jogador (encerrando o próprio turno) e as rules não deixam ele limpar
@@ -373,11 +397,65 @@ export async function checarCondicoesRodada() {
     if (_rodadaChecada === chave) return;
     _rodadaChecada = chave;
     const { participantes, expiradas } = tirarCondicoesExpiradas(c.participantes || [], c.rodada || 1);
-    if (!expiradas.length) return;
-    await salvar(participantes);
-    for (const e of expiradas) await sincRemocaoFicha(participantes.find(x => x.id === e.pid), e.cond.nome);
-    logChat(`⏱️ Acabou: ${expiradas.map(e => `${e.cond.icone} ${e.cond.nome} (${e.pNome})`).join(' · ')}`);
-    avisoCondicoesExpiradas(expiradas);
+    if (expiradas.length) {
+        await salvar(participantes);
+        for (const e of expiradas) await sincRemocaoFicha(participantes.find(x => x.id === e.pid), e.cond.nome);
+        logChat(`⏱️ Acabou: ${expiradas.map(e => `${e.cond.icone} ${e.cond.nome} (${e.pNome})`).join(' · ')}`);
+        avisoCondicoesExpiradas(expiradas);
+    }
+    // Depois de expirar: quem sobrou sangra, regenera e tenta se soltar.
+    await aplicarTickDeRodada(participantes);
+    await pedirTestesDeSaida(participantes, 'virada_da_rodada');
+}
+
+/**
+ * 🩸 Sangrando, Queimando, Regenerando: o efeito por rodada de cada condição.
+ * Roda uma vez por rodada, no cliente do MESTRE (mesma trava do expirar) —
+ * qualquer outro cliente aplicaria o dano de novo, e ninguém quer sangrar duas
+ * vezes porque dois jogadores estavam com a aba aberta.
+ */
+async function aplicarTickDeRodada(participantes) {
+    const linhas = [];
+    for (const p of participantes) {
+        for (const t of efeitoDoParticipante(p).porRodada) {
+            const alvo = alvoDoTickRodada(t.efeito);
+            if (!alvo) continue;
+            const r = rolarFormula(t.valor);
+            if (!(r.total > 0)) continue;
+            await window.tbCombStat(p.id, alvo.stat, alvo.sinal * r.total);
+            linhas.push(`${t.icone} ${p.name || '?'} ${alvo.sinal < 0 ? '−' : '+'}${r.total} ${alvo.stat} (${t.condicao}${r.dados.length ? ' · ' + r.detalhe : ''})`);
+        }
+    }
+    if (linhas.length) logChat(`🩸 Por rodada: ${linhas.join(' · ')}`);
+}
+
+/**
+ * 🎲 Condição que sai com teste: cria o teste da cena já preenchido com o que o
+ * cadastro mandou. Reusa o mesmo `cena.testes` do "🎯 Pedir teste" do mestre —
+ * quando o resultado sai positivo, `tbTesteRolar` tira a condição sozinho.
+ */
+async function pedirTestesDeSaida(participantes, quando) {
+    const testes = (cenaAtiva(T.combate).testes || []).map(t => ({ ...t, resultados: { ...(t.resultados || {}) } }));
+    let mudou = false;
+    for (const p of participantes) {
+        for (const t of efeitoDoParticipante(p).testes) {
+            if (t.quando !== quando) continue;
+            // um teste por condição por rodada: se já existe e este participante
+            // está nele, não empilha outro pedido igual
+            const ja = testes.find(x => x.condSaida?.condicao === t.condicao && (x.participantes || []).includes(p.id));
+            if (ja) continue;
+            const irmao = testes.find(x => x.condSaida?.condicao === t.condicao && x.nome === t.nome && x.mod === t.mod);
+            if (irmao) { irmao.participantes = [...(irmao.participantes || []), p.id]; }
+            else testes.push({
+                id: 't' + uid(), nome: t.nome, mod: t.mod, participantes: [p.id], resultados: {},
+                condSaida: { condicao: t.condicao, sucessoRemove: t.sucessoRemove },
+            });
+            mudou = true;
+        }
+    }
+    if (!mudou) return;
+    await salvar(participantes, { testes });
+    logChat(`🎲 Teste para se livrar de condição pedido — role no card do participante`);
 }
 
 // ---- ⏱️ Aviso do mestre: condições cujo tempo acabou (com direito a prolongar) ----
@@ -533,7 +611,15 @@ export async function carregarCondicoesSistema() {
         console.warn('⚠️ Não foi possível carregar condições do sistema:', e);
         _systemConditions = [];
     }
+    // Deslocamento, visão, render e mira leem o registro por `T` — tab-state é
+    // módulo folha e não pode importar este arquivo sem fechar ciclo.
+    T.condicoesSistema = _systemConditions;
     return _systemConditions;
+}
+
+/** Efeito somado das condições de um participante, com o registro já carregado. */
+export function efeitoDoParticipante(p) {
+    return efeitoDasCondicoes(p?.condicoes || [], T.condicoesSistema);
 }
 
 function fecharCondPicker() {
@@ -638,20 +724,55 @@ window.tbCombCondAdd = (pid) => escolherCondicao((cond, tpl) => aplicarCondicaoC
  * @param {object} cond - { nome, icone, descricao, duracao } vindo do picker
  * @param {object|null} tpl - Template da condição do sistema (ou null para personalizada)
  */
+/**
+ * 📈 Põe a condição no participante respeitando o cadastro.
+ * Condição que ACUMULA e já está lá sobe de nível (até o teto) em vez de virar
+ * uma segunda linha igual; qualquer outra entra como sempre entrou.
+ * @returns { condicoes, nivel, subiu, noTeto }
+ */
+function empilharCondicao(condicoesAtuais, cond, tpl) {
+    const lista = condicoesAtuais || [];
+    if (!tpl?.acumulaNiveis) return { condicoes: [...lista, cond], nivel: 1, subiu: false, noTeto: false };
+
+    const i = lista.map(condDoParticipante)
+        .findIndex(c => (c.nome || '').toLowerCase() === (cond.nome || '').toLowerCase());
+    if (i < 0) return { condicoes: [...lista, { ...cond, nivel: 1 }], nivel: 1, subiu: false, noTeto: false };
+
+    const atual = condDoParticipante(lista[i]);
+    const teto = Number(tpl.nivelMaximo) > 0 ? Number(tpl.nivelMaximo) : Infinity;
+    const novo = Math.min(atual.nivel + 1, teto);
+    return {
+        condicoes: lista.map((cd, idx) => idx === i ? { ...condDoParticipante(cd), nivel: novo } : cd),
+        nivel: novo, subiu: novo > atual.nivel, noTeto: novo === atual.nivel,
+    };
+}
+
 async function aplicarCondicaoCombate(pid, cond, tpl) {
     const parts = partsDaCena().map(p => ({ ...p }));
     const p = parts.find(x => x.id === pid); if (!p) return;
     const rodada = cenaAtiva(T.combate).rodada || 1;
-    p.condicoes = [...(p.condicoes || []), {
+    const nova = {
         nome: cond.nome.trim(),
         icone: cond.icone || '☠️',
         descricao: cond.descricao || '',
         expiraNaRodada: cond.duracao > 0 ? rodada + cond.duracao : null,
-    }];
+    };
+    const emp = empilharCondicao(p.condicoes, nova, tpl);
+    p.condicoes = emp.condicoes;
     await salvar(parts);
-    toast(`☠️ Condição "${cond.nome}" aplicada` + (cond.duracao > 0 ? ` por ${cond.duracao} rodada(s)` : ''));
-    logChat(`☠️ ${p.name || '?'}: +${cond.icone || '☠️'} ${cond.nome}${cond.duracao > 0 ? ` (${cond.duracao} rodada${cond.duracao > 1 ? 's' : ''})` : ''}`);
-    await sincAdicaoFicha(p, cond, tpl);
+    const prazo = cond.duracao > 0 ? ` por ${cond.duracao} rodada(s)` : '';
+    if (emp.noTeto) {
+        toast(`📈 "${cond.nome}" já está no nível máximo (${emp.nivel})`, 'warning');
+        logChat(`📈 ${p.name || '?'}: ${nova.icone} ${cond.nome} já no teto (nv ${emp.nivel})`);
+    } else if (emp.subiu) {
+        toast(`📈 "${cond.nome}" subiu para o nível ${emp.nivel}`);
+        logChat(`📈 ${p.name || '?'}: ${nova.icone} ${cond.nome} → nv ${emp.nivel}`);
+    } else {
+        toast(`☠️ Condição "${cond.nome}" aplicada${prazo}`);
+        logChat(`☠️ ${p.name || '?'}: +${nova.icone} ${cond.nome}${prazo}`);
+    }
+    // Nível novo de condição que já estava lá não duplica a linha na ficha.
+    if (!emp.subiu && !emp.noTeto) await sincAdicaoFicha(p, cond, tpl);
 }
 
 /** Espelha a condição recém-aplicada na ficha (char ou NPC) do participante. */
@@ -690,14 +811,18 @@ export async function aplicarCondicaoEmVarios(pids, nome, rodadas) {
         expiraNaRodada: rodadas > 0 ? rodada + rodadas : null,
     };
     const alvos = [];
+    const subiram = [];
     for (const pid of pids) {
         const p = parts.find(x => x.id === pid); if (!p) continue;
-        p.condicoes = [...(p.condicoes || []), { ...cond }];
-        alvos.push(p);
+        const emp = empilharCondicao(p.condicoes, { ...cond }, tpl);
+        p.condicoes = emp.condicoes;
+        (emp.subiu || emp.noTeto ? subiram : alvos).push(p);
     }
-    if (!alvos.length) return;
+    if (!alvos.length && !subiram.length) return;
     await salvar(parts);
-    logChat(`☠️ ${cond.icone} ${cond.nome}${rodadas > 0 ? ` (${rodadas} rodada${rodadas > 1 ? 's' : ''})` : ''} em: ${alvos.map(p => p.name || '?').join(', ')}`);
+    const prazo = rodadas > 0 ? ` (${rodadas} rodada${rodadas > 1 ? 's' : ''})` : '';
+    if (alvos.length) logChat(`☠️ ${cond.icone} ${cond.nome}${prazo} em: ${alvos.map(p => p.name || '?').join(', ')}`);
+    if (subiram.length) logChat(`📈 ${cond.icone} ${cond.nome} subiu de nível em: ${subiram.map(p => p.name || '?').join(', ')}`);
     for (const p of alvos) await sincAdicaoFicha(p, { nome: cond.nome, icone: cond.icone, descricao: cond.descricao, duracao: rodadas || 0 }, tpl);
 }
 
@@ -796,7 +921,47 @@ window.tbTesteRolar = async function(tid, pid) {
         (dado === 1 ? ' ✨ crítico!' : dado === 10 ? ' 💀 falha crítica!' : ''));
     logChat(`🎯 ${p.name} — ${t.nome}: d10 ${dado} vs Alvo ${alvo} → ${fmtGraus(graus)}` +
         (dado === 1 ? ' ✨ crítico' : dado === 10 ? ' 💀 falha crítica' : ''));
+    await resolverTesteDeSaida(t, pid, graus);
 };
+
+/**
+ * 🎲 Teste que existia para se livrar de uma condição: passou (Grau positivo),
+ * a condição sai — inteira, ou um nível de cada vez quando ela acumula.
+ * Chamada pelos DOIS caminhos de resultado (rolar no mapa e digitar na mão),
+ * porque teste rolado na mesa física livra tanto quanto o rolado aqui.
+ */
+async function resolverTesteDeSaida(teste, pid, graus) {
+    const cfg = teste?.condSaida;
+    if (!cfg || !(graus > 0)) return;
+    const parts = partsDaCena().map(p => ({ ...p }));
+    const p = parts.find(x => x.id === pid); if (!p) return;
+
+    const alvo = (p.condicoes || []).map(condDoParticipante)
+        .findIndex(c => (c.nome || '').toLowerCase() === (cfg.condicao || '').toLowerCase());
+    if (alvo < 0) return;
+
+    const atual = condDoParticipante(p.condicoes[alvo]);
+    const cai = cfg.sucessoRemove === 'um_nivel' && atual.nivel > 1;
+    if (cai) {
+        p.condicoes = p.condicoes.map((cd, i) => i === alvo ? { ...condDoParticipante(cd), nivel: atual.nivel - 1 } : cd);
+    } else {
+        p.condicoes = p.condicoes.filter((_, i) => i !== alvo);
+    }
+    // O teste cumpriu o papel para este participante — sai do pedido.
+    const testes = testesDaCena().map(x => x.id !== teste.id ? x : {
+        ...x, participantes: (x.participantes || []).filter(id => id !== pid),
+    }).filter(x => (x.participantes || []).length);
+
+    await salvar(parts, { testes });
+    if (cai) {
+        toast(`📉 ${p.name}: ${atual.nome} caiu para o nível ${atual.nivel - 1}`);
+        logChat(`📉 ${p.name || '?'}: ${atual.icone} ${atual.nome} nv ${atual.nivel} → ${atual.nivel - 1}`);
+    } else {
+        toast(`✅ ${p.name} se livrou de ${atual.nome}`);
+        logChat(`✅ ${p.name || '?'} se livrou de ${atual.icone} ${atual.nome}`);
+        await sincRemocaoFicha(p, atual.nome);
+    }
+}
 
 /** Teste feito fisicamente na mesa: o mestre digita os Graus direto. */
 window.tbTesteInserir = async function(tid, pid) {
@@ -810,4 +975,5 @@ window.tbTesteInserir = async function(tid, pid) {
     t.resultados[pid] = { graus, dado: null, alvo: null };
     await salvar(partsDaCena(), { testes });
     logChat(`🎯 ${p.name} — ${t.nome}: ${fmtGraus(graus)} (rolado na mesa)`);
+    await resolverTesteDeSaida(t, pid, graus);
 };

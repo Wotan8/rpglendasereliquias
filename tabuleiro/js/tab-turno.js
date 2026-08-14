@@ -13,13 +13,14 @@
 // Alcances contam a partir da BORDA do token (tab-mira-calc).
 // =============================================
 import { setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, markDirty, gridSize, upcEm, unidadeEm, valorComponente, selecionar, deslocamentosDoToken, alcanceDeVisao } from './tab-state.js';
+import { T, esc, toast, markDirty, gridSize, upcEm, unidadeEm, valorComponente, selecionar, deslocamentosDoToken, alcanceDeVisaoDoToken, efeitoCondDoToken } from './tab-state.js';
 import { refCombate } from './tab-main.js';
 import { derivedDoToken } from './tab-render.js';
 import { abrirConflito } from './tab-conflito.js';
 import {
     cenaAtiva, comCenaAtivaPatch, participanteDaVez, faccaoDoParticipante,
     acoesNovas, podeGastar, gastarAcao, alvoValido, alcanceGolpe,
+    efeitoDasCondicoes, porqueCondicao,
     guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica, custoVital,
 } from '../../shared/combate-cenas.js';
 import { shapeDaMira, alvoAoAlcance } from './tab-mira-calc.js';
@@ -308,6 +309,24 @@ async function gastar(custo) {
     await salvarCena({ acoesTurno: novas });
 }
 
+/**
+ * Faixa do que as condições estão fazendo com quem está na vez. Mostra só o que
+ * MUDA alguma coisa — sem condição configurada, não ocupa espaço nenhum.
+ */
+function avisoCondicoes(ef) {
+    const itens = [];
+    for (const n of ef.niveis) itens.push(`${n.icone} ${esc(n.nome)} <b>nv ${n.nivel}${n.maximo ? '/' + n.maximo : ''}</b>${n.efeito ? ` — ${esc(n.efeito)}` : ''}`);
+    if (ef.multDesloc !== 1) itens.push(`🏃 Deslocamento ×${ef.multDesloc} <i>(${esc(porqueCondicao(ef, 'multDesloc'))})</i>`);
+    if (ef.deslocBloqueados.length) itens.push(`⛔ Sem ${ef.deslocBloqueados.map(esc).join(', ')}`);
+    if (ef.multVisao !== 1) itens.push(`👁️ Visão ×${ef.multVisao} <i>(${esc(porqueCondicao(ef, 'multVisao'))})</i>`);
+    if (ef.naoPodeSerAlvo) itens.push(`🛡️ Não pode ser alvo`);
+    if (ef.faccaoForcada) itens.push(`🔀 Lutando como <b>${esc(ef.faccaoForcada)}</b>`);
+    for (const t of ef.porRodada) itens.push(`🩸 ${esc(t.condicao)}: ${esc(t.valor)} por rodada`);
+    for (const t of ef.testes) itens.push(`🎲 ${esc(t.condicao)}: sai com <b>${esc(t.nome)}</b>${t.mod ? ` (${t.mod > 0 ? '+' : ''}${t.mod})` : ''}`);
+    if (!itens.length) return '';
+    return `<div class="tb-turno-cond">${itens.join(' · ')}</div>`;
+}
+
 // ---------- render ----------
 const ROTULO_ACAO = { padrao: '⚡ Ação Padrão', movimento: '👣 Ação de Movimento', livre: '🕊️ Ação Livre', completa: '⏳ Ação Completa (as duas)' };
 
@@ -337,6 +356,8 @@ function render() {
         return;
     }
     const acoes = c.acoesTurno || acoesNovas();
+    // 💀 Condições da vez: o que elas PROÍBEM some do painel com o motivo à mostra.
+    const efCond = efeitoDasCondicoes(p.condicoes || [], T.condicoesSistema);
     const skills = skillsDe(p);
     const temLivre = skills.some(s => s.acao === 'livre');
     const temCompleta = skills.some(s => s.acao === 'completa');
@@ -362,8 +383,14 @@ function render() {
     let body = '';
     if (sub) body = subMenu(sub, p, skills, acoes);
     else {
-        const btn = (id, rot, habil, titulo) =>
-            `<button class="tb-btn tb-turno-btn" onclick="tbTurnoSub('${id}')" ${habil ? '' : 'disabled'} title="${esc(titulo || '')}">${rot}</button>`;
+        // Ação proibida por condição fica desabilitada COM o nome da condição no
+        // title: "por que não consigo mover?" tem que ter resposta na própria tela.
+        const btn = (id, rot, habil, titulo) => {
+            const trava = porqueCondicao(efCond, 'bloqueia_' + id);
+            const ok = habil && !trava;
+            const dica = trava ? `Bloqueado por: ${trava}` : (titulo || '');
+            return `<button class="tb-btn tb-turno-btn ${trava ? 'tb-turno-travado' : ''}" onclick="tbTurnoSub('${id}')" ${ok ? '' : 'disabled'} title="${esc(dica)}">${trava ? '🚫 ' : ''}${rot}</button>`;
+        };
         // 🛡️ Guardar = delay: só faz sentido com o turno INTEIRO (as duas ações)
         // e nunca no meio de uma interrupção (não se encadeia guardado).
         const podeGuardar = acoes.padrao && acoes.movimento && !c.retomar;
@@ -379,7 +406,8 @@ function render() {
 
     el.innerHTML = `<div class="tb-turno-head">
             ${c.retomar ? '⚡' : '⚔️'} Vez de <b>${esc(p.name || '?')}</b>${c.retomar ? ' <span class="tb-turno-hint">(turno guardado — interrompendo)</span>' : ''} · Rodada ${c.rodada || 1}
-            <span class="tb-turno-chips">${chip(acoes.padrao, '⚡')}${chip(acoes.movimento, '👣')}</span>
+            <span class="tb-turno-chips">${chip(acoes.padrao && !efCond.bloqueia.padrao, '⚡')}${chip(acoes.movimento && !efCond.bloqueia.movimento, '👣')}</span>
+            ${avisoCondicoes(efCond)}
         </div>${body}`;
 }
 
@@ -528,7 +556,7 @@ async function gastouMovimento(tokenId, foiDoTurno, custoAcao) {
  * Percepção), esteja o canvas de dia ou de noite.
  */
 function alcanceDeTiro(tok) {
-    return alcanceDeVisao(tok.visao, derivedDoToken(tok), true);
+    return alcanceDeVisaoDoToken(tok, derivedDoToken(tok), true);
 }
 
 window.tbTurnoGolpe = (i) => {
@@ -768,9 +796,20 @@ function cancelarMira() {
 
 /** Facção efetiva de um token do mapa (participante da cena, ou palpite pelo vínculo). */
 function faccaoDoToken(o) {
+    // 🔀 Condição que força facção (Dominado, Enfeitiçado) manda mais que a
+    // facção gravada: é o ponto único por onde TODA validação de alvo passa,
+    // então trocar aqui já vira o lado do token na mira, na área e no conflito.
+    const forcada = efeitoCondDoToken(o).faccaoForcada;
+    if (forcada) return forcada;
     const p = participanteDoToken(o);
     if (p) return faccaoDoParticipante(p);
     return o.vinculo?.tipo === 'char' ? 'aliados' : o.vinculo?.tipo === 'npc' ? 'inimigos' : 'neutros';
+}
+
+/** Token intocável por condição (Etéreo). Devolve o motivo, ou '' se dá para mirar. */
+function porqueNaoPodeSerAlvo(o) {
+    const ef = efeitoCondDoToken(o);
+    return ef.naoPodeSerAlvo ? (ef.motivos.naoPodeSerAlvo || []).join(', ') : '';
 }
 
 /** Clique do mapa em modo mira (chamado pelo tab-tools). */
@@ -789,6 +828,8 @@ function miraClique(w) {
         if (!alvo) return;
         const ja = m.alvos.indexOf(alvo.id);
         if (ja >= 0) { m.alvos.splice(ja, 1); render(); markDirty(); return; }
+        const intocavel = porqueNaoPodeSerAlvo(alvo);
+        if (intocavel) { toast(`⚠️ ${alvo.nome || 'Alvo'} não pode ser alvo (${intocavel})`, 'warning'); return; }
         const minha = faccaoDoToken(tok);
         if (!alvoValido(m.afeta, minha, faccaoDoToken(alvo))) { toast(`⚠️ ${alvo.nome || 'Alvo'} não é ${m.afeta === 'aliados' ? 'aliado' : 'inimigo'}`, 'warning'); return; }
         const rA = ((tok.tamanhoCelulas || 1) * gs) / 2, rB = ((alvo.tamanhoCelulas || 1) * gs) / 2;
@@ -832,6 +873,7 @@ window.tbTurnoConfirmarMira = async () => {
             const r = ((o.tamanhoCelulas || 1) * gs) / 2;
             if (!templateAtingeCirculo(shape, { x: o.x, y: o.y }, r)) continue;
             if (!alvoValido(m.afeta, minha, faccaoDoToken(o))) continue;
+            if (porqueNaoPodeSerAlvo(o)) continue;   // a área varre por cima do Etéreo
             atingidos.push(o);
         }
         // área que afeta a própria facção inclui o conjurador se ele estiver dentro

@@ -6,7 +6,7 @@
 // fecham ciclo: tab-perf serve ao cache de mapas por versão, e combate-cenas
 // dá a cena ativa para a visibilidade do loot oculto por teste.
 import { PERF } from './tab-perf.js';
-import { cenaAtiva } from '../../shared/combate-cenas.js';
+import { cenaAtiva, efeitoDasCondicoes } from '../../shared/combate-cenas.js';
 
 export const T = {
     // Contexto
@@ -27,6 +27,10 @@ export const T = {
     objects: new Map(),      // id -> objeto
     estado: {},              // tabuleiro-meta/estado (canvasAtivoId, combateVisivelPublico)
     combate: null,           // tabuleiro-meta/combate
+    // 💀 Registro `system/data/conditions` — o que cada condição FAZ. Quem
+    // carrega é tab-combat (1 query por sessão); mora aqui porque tab-state é
+    // folha e não pode importar tab-combat sem fechar ciclo.
+    condicoesSistema: [],
     reguasRemotas: {},       // uid -> medição compartilhada
     reguasRecebidas: {},     // uid -> Date.now() LOCAL de quando a régua chegou (expiração sem relógio cruzado)
 
@@ -663,6 +667,40 @@ export function patchVitalAtualNpc(atualObj, stat, valor) {
  */
 export { dividirPilha } from '../../shared/inventario-motor.js?v=2';
 
+// ===== 💀 CONDIÇÕES EM CIMA DO TOKEN =====
+/**
+ * O participante da cena de combate que corresponde a este token.
+ * Mora aqui (e não no HUD) porque o deslocamento, a visão e o render precisam
+ * dele, e tab-state é o único módulo que todos eles já importam.
+ */
+export function participanteDoToken(o) {
+    if (!o) return null;
+    const parts = cenaAtiva(T.combate).participantes || [];
+    if (o.vinculo?.tipo === 'char') return parts.find(p => p.characterId === o.vinculo.id) || null;
+    if (o.vinculo?.tipo === 'npc') return parts.find(p => p.npcId === o.vinculo.id) || null;
+    return parts.find(p => p.isCustom && p.name === o.nome) || null;
+}
+
+/** Efeito somado das condições que estão em cima do token. Nunca devolve null. */
+export function efeitoCondDoToken(o) {
+    return efeitoDasCondicoes(participanteDoToken(o)?.condicoes || [], T.condicoesSistema);
+}
+
+/** O token está invisível — por propriedade do objeto OU por condição. */
+export function tokenInvisivel(o) {
+    return !!(o?.invisivel || (o?.tipo === 'token' && efeitoCondDoToken(o).deixaInvisivel));
+}
+
+/**
+ * Alcance de visão do token JÁ com as condições aplicadas (Cego zera, Ofuscado
+ * corta pela metade). `alcanceDeVisao` continua puro e sem saber de condição —
+ * quem junta as duas coisas é esta função, e é ela que o mapa usa.
+ */
+export function alcanceDeVisaoDoToken(o, derived, dia) {
+    const base = alcanceDeVisao(o?.visao, derived, dia);
+    return base * efeitoCondDoToken(o).multVisao;
+}
+
 // ===== DESLOCAMENTOS DA FICHA =====
 const DESLOC_LABEL = { DESLOC_TERRESTRE: 'Terrestre', DESLOC_AQUATICO: 'Aquático', DESLOC_VERTICAL: 'Vertical', DESLOC_AEREO: 'Aéreo' };
 
@@ -709,7 +747,28 @@ export function deslocamentosDoToken(o, chars, npcs) {
             }
         }
     }
-    return out;
+    return aplicarCondicoesNoDeslocamento(o, out);
+}
+
+/**
+ * Condições em cima do deslocamento: tipo bloqueado some da lista (asa quebrada
+ * tira o Aéreo) e o multiplicador corta os metros (Lento pela metade,
+ * Imobilizado a zero — e zero some, porque andar 0 m não é opção de menu).
+ *
+ * Fica DENTRO de `deslocamentosDoToken` de propósito: é o funil por onde já
+ * passam o painel do turno, o HUD e o limite do arrasto. Aplicar em cada um
+ * deles seria o mesmo código três vezes, e faltaria no quarto que aparecesse.
+ */
+function aplicarCondicoesNoDeslocamento(o, lista) {
+    if (!lista.length || o?.tipo !== 'token') return lista;
+    const ef = efeitoCondDoToken(o);
+    if (ef.multDesloc === 1 && !ef.deslocBloqueados.length) return lista;
+
+    const bloqueado = new Set(ef.deslocBloqueados.map(normChave));
+    return lista
+        .filter(d => !bloqueado.has(normChave(d.tipo)))
+        .map(d => ({ ...d, metros: Math.round(d.metros * ef.multDesloc * 10) / 10 }))
+        .filter(d => d.metros > 0);
 }
 
 /**

@@ -562,6 +562,35 @@ html, body {
 }
 .tb-cond-t { font-style: normal; font-weight: 700; opacity: .85; margin-left: 2px; }
 
+/* Nível da condição que acumula (Exaustão nv 4) — precisa saltar do nome. */
+.tb-cond-nv {
+    font-style: normal; font-weight: 800; margin-left: 3px;
+    padding: 0 5px; border-radius: 8px;
+    background: var(--lr-gold-soft); color: var(--lr-gold);
+}
+
+/* Ação proibida por condição: cinza não basta, o botão tem que parecer travado. */
+.tb-turno-btn.tb-turno-travado {
+    opacity: .55;
+    border-color: var(--lr-blood-2);
+    text-decoration: line-through;
+    cursor: not-allowed;
+}
+
+/* Faixa do que as condições estão fazendo com quem está na vez. */
+.tb-turno-cond {
+    flex-basis: 100%;
+    margin-top: 4px;
+    font-size: .72rem;
+    line-height: 1.45;
+    color: var(--lr-text-2);
+    border-top: 1px solid var(--lr-border-soft);
+    padding-top: 4px;
+}
+
+.tb-turno-cond b { color: var(--lr-gold); font-weight: 800; }
+.tb-turno-cond i { font-style: normal; opacity: .75; }
+
 /* ===== ⚔️ Painel do Turno (combate mecânico) ===== */
 .tb-turno {
     position: fixed; left: 50%; bottom: calc(var(--lr-space-4) + 54px); transform: translateX(-50%);

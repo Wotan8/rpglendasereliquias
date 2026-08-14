@@ -8,7 +8,7 @@
 // F5: barras/condições/HUD constante, anel de iniciativa, anéis de alvo, loot
 // F6: clima, telhados, transições
 // =============================================
-import { T, gridSize, camadasVisiveis, objVisivel, markDirty, unidadesParaPx, esc, cfgGrid, politicaDeFog, alcanceDeVisao, rotParaCanvas, deveAtualizarPasso, tokensDaVisao, reguaVisivelAqui, FOG_PASSO_CELULA, FOG_INTERVALO_MS, REGUA_TTL_MS } from './tab-state.js';
+import { T, gridSize, camadasVisiveis, objVisivel, markDirty, unidadesParaPx, esc, cfgGrid, politicaDeFog, alcanceDeVisaoDoToken, tokenInvisivel, rotParaCanvas, deveAtualizarPasso, tokensDaVisao, reguaVisivelAqui, FOG_PASSO_CELULA, FOG_INTERVALO_MS, REGUA_TTL_MS } from './tab-state.js';
 import { PERF, melhorBitmap, construirHashParedes, paredesProximas, medir, iniciarHudMedicaoSePedido, criarMemoPorVersao } from './tab-perf.js';
 import { snapPonto, axialParaPixel, axialRound, pixelParaAxial, mesmaFaixaElev, faixaDe, pontoEmPoligono, normalizarRet } from './tab-grid.js';
 import { desenharExploracao, registrarExploracaoCelulas, tokenVisivelParaMim, carregarExploracao, versaoExploracao } from './tab-fog.js';
@@ -522,7 +522,7 @@ function drawToken(o) {
     const pos = posDisplay(o);
     const img = getImg(o.url);
     ctx.save();
-    if (o.invisivel) { ctx.globalAlpha *= (T.mode === 'secret' ? 0.5 : 0.65); }
+    if (tokenInvisivel(o)) { ctx.globalAlpha *= (T.mode === 'secret' ? 0.5 : 0.65); }
 
     // Anéis de destaque (embaixo do token)
     if (T._alvos?.has(o.id)) {
@@ -543,7 +543,7 @@ function drawToken(o) {
 
     const cor = o.vinculo?.tipo === 'char' ? '#22c55e' : o.vinculo?.tipo === 'npc' ? '#ef4444' : '#8b5cf6';
     ctx.lineWidth = Math.max(2, s * 0.045); ctx.strokeStyle = cor;
-    if (o.invisivel) ctx.setLineDash([hud(6), hud(5)]);
+    if (tokenInvisivel(o)) ctx.setLineDash([hud(6), hud(5)]);
     ctx.stroke(); ctx.setLineDash([]);
 
     // Nome (HUD constante)
@@ -1460,7 +1460,7 @@ function coletarFontesDeVisao(escopo) {
         const p = posConfirmada(o);
         fontes.push({
             x: p.x, y: p.y,
-            r: unidadesParaPx(alcanceDeVisao(o.visao, derivedDoToken(o), dia), p),
+            r: unidadesParaPx(alcanceDeVisaoDoToken(o, derivedDoToken(o), dia), p),
             ang: o.visao.angulo, dir: rotParaCanvas(o.rot),
             sensor: o.visao.tipo || 'padrao', elev: o.elev || 0,
         });

@@ -227,13 +227,115 @@ export function recursoInsuficiente(custoTexto, atuais) {
 // =============================================
 
 export function condDoParticipante(c) {
-    if (typeof c === 'string') return { nome: c, icone: '☠️', descricao: '', expiraNaRodada: null };
+    if (typeof c === 'string') return { nome: c, icone: '☠️', descricao: '', expiraNaRodada: null, nivel: 1 };
     return {
         nome: c?.nome || '',
         icone: c?.icone || '☠️',
         descricao: c?.descricao || '',
         expiraNaRodada: c?.expiraNaRodada ?? null,
+        // Condição que acumula guarda em que nível está. Ausente = nível 1:
+        // a condição comum é só o nível 1 de uma escada de um degrau.
+        nivel: Number(c?.nivel) > 0 ? Number(c.nivel) : 1,
     };
+}
+
+// =============================================
+// O QUE AS CONDIÇÕES FAZEM (leitura do cadastro do Criador)
+// ---------------------------------------------
+// O participante guarda a condição por NOME; o que ela faz mora no registro
+// `system/data/conditions`. Esta é a única função que junta os dois — todo
+// consumidor (turno, deslocamento, visão, mira, render) lê daqui em vez de
+// reinterpretar o cadastro por conta própria.
+//
+// Regras de soma, porque duas condições ao mesmo tempo é o caso normal:
+//   · bloqueio e demais liga/desliga → OU (uma que proíbe já proíbe)
+//   · multiplicadores               → PRODUTO (duas metades = um quarto)
+//   · facção forçada                → a última aplicada manda
+//   · por-rodada e testes           → lista, cada condição com a sua linha
+//
+// ⚠️ NÍVEL não escala número: `efeitoPorNivel` é texto de mesa, não fórmula.
+// O nível entra em `niveis` para o mestre ler; os multiplicadores valem uma vez
+// só. Escalar por nível sem o cadastro mandar seria inventar regra.
+// =============================================
+
+const _normCond = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+/** Efeito somado das condições de um participante. `registro` = system/data/conditions. */
+export function efeitoDasCondicoes(condicoes, registro) {
+    const out = {
+        bloqueia: { padrao: false, movimento: false, livre: false, completa: false },
+        perdeTurno: false,
+        multDesloc: 1, deslocBloqueados: [],
+        multVisao: 1, enxergaNoEscuro: false, deixaInvisivel: false,
+        naoPodeSerAlvo: false, atraiAlvo: false, faccaoForcada: null,
+        porRodada: [], testes: [], niveis: [],
+        motivos: {},   // campo -> [nomes das condições] — para dizer POR QUE travou
+    };
+    const mapa = new Map();
+    for (const r of registro || []) mapa.set(_normCond(r.nome), r);
+
+    for (const cd of condicoes || []) {
+        const c = condDoParticipante(cd);
+        const reg = mapa.get(_normCond(c.nome));
+        if (!reg) continue;   // condição personalizada (sem cadastro) não configura nada
+        const marca = campo => { (out.motivos[campo] = out.motivos[campo] || []).push(c.nome); };
+
+        if (reg.acumulaNiveis) {
+            const linha = (reg.efeitoPorNivel || []).find(l => Number(l?.nivel) === c.nivel);
+            out.niveis.push({ nome: c.nome, icone: c.icone, nivel: c.nivel, maximo: reg.nivelMaximo ?? null, efeito: linha?.efeito || '' });
+        }
+        if (reg.testeParaSair && reg.testeNome) {
+            out.testes.push({
+                condicao: c.nome, icone: c.icone, nome: reg.testeNome,
+                mod: Number(reg.testeMod) || 0, quando: reg.testeQuando || 'fim_do_turno',
+                sucessoRemove: reg.testeSucessoRemove || 'tudo',
+            });
+        }
+
+        if (!reg.afetaTabuleiro) continue;
+
+        for (const a of reg.bloqueiaAcoes || []) {
+            if (a in out.bloqueia) { out.bloqueia[a] = true; marca('bloqueia_' + a); }
+        }
+        if (reg.perdeTurno) { out.perdeTurno = true; marca('perdeTurno'); }
+
+        if (reg.multiplicadorDeslocamento != null && !isNaN(reg.multiplicadorDeslocamento)) {
+            out.multDesloc *= Number(reg.multiplicadorDeslocamento);
+            marca('multDesloc');
+        }
+        for (const d of reg.deslocamentosBloqueados || []) {
+            if (!out.deslocBloqueados.some(x => _normCond(x) === _normCond(d))) out.deslocBloqueados.push(d);
+            marca('deslocBloqueados');
+        }
+
+        if (reg.multiplicadorVisao != null && !isNaN(reg.multiplicadorVisao)) {
+            out.multVisao *= Number(reg.multiplicadorVisao);
+            marca('multVisao');
+        }
+        if (reg.enxergaNoEscuro) { out.enxergaNoEscuro = true; marca('enxergaNoEscuro'); }
+        if (reg.deixaInvisivel) { out.deixaInvisivel = true; marca('deixaInvisivel'); }
+
+        if (reg.naoPodeSerAlvo) { out.naoPodeSerAlvo = true; marca('naoPodeSerAlvo'); }
+        if (reg.atraiAlvo) { out.atraiAlvo = true; marca('atraiAlvo'); }
+        if (reg.faccaoForcada) { out.faccaoForcada = reg.faccaoForcada; marca('faccaoForcada'); }
+
+        if (reg.porRodadaEfeito) {
+            out.porRodada.push({ condicao: c.nome, icone: c.icone, efeito: reg.porRodadaEfeito, valor: reg.porRodadaValor || '' });
+        }
+    }
+    return out;
+}
+
+/** Nomes das condições que causaram `campo`, prontos para um title/tooltip. */
+export function porqueCondicao(efeito, campo) {
+    return (efeito?.motivos?.[campo] || []).join(', ');
+}
+
+/** 'dano_vit' → { sinal: -1, stat: 'VIT' }. Devolve null para efeito desconhecido. */
+export function alvoDoTickRodada(efeito) {
+    const m = /^(dano|cura)_(vit|ener|san)$/.exec(String(efeito || ''));
+    if (!m) return null;
+    return { sinal: m[1] === 'dano' ? -1 : 1, stat: m[2].toUpperCase() };
 }
 
 /**
