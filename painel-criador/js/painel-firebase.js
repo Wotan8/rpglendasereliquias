@@ -240,6 +240,57 @@ const MODULE_DEFS = {
             { key: 'removivel', label: 'Removível?', type: 'boolean' },
             { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: 💫' },
 
+            // ===== 📈 ACÚMULO EM NÍVEIS =====
+            // Condição que empilha em vez de repetir: aplicar de novo sobe o
+            // nível (Exaustão 1→6). Fica FORA do interruptor do Tabuleiro de
+            // propósito — o nível vale na ficha também, não só no mapa.
+            { key: 'acumulaNiveis', label: '📈 Acumula em níveis (aplicar de novo sobe o nível)', type: 'boolean' },
+            {
+                key: 'nivelMaximo', label: 'Nível máximo', type: 'number',
+                placeholder: 'Ex: 6 — vazio = sem teto', showWhenBoolean: 'acumulaNiveis'
+            },
+            {
+                key: 'efeitoPorNivel', label: '📊 O que muda em cada nível', type: 'array', showWhenBoolean: 'acumulaNiveis',
+                arrayFields: [
+                    { key: 'nivel', label: 'Nível', type: 'number', placeholder: '1' },
+                    { key: 'efeito', label: 'Efeito neste nível', type: 'textarea', placeholder: 'Ex: Deslocamento pela metade' },
+                ]
+            },
+
+            // ===== 🎲 TESTE PARA SAIR =====
+            // Mesmo formato do "🎯 Pedir teste" do Tabuleiro (tab-combat.js):
+            // um NOME de componentes somados que `alvoDoTeste` sabe ler, mais um
+            // modificador de dificuldade. A rolagem é 1d10 vs Alvo e o resultado
+            // sai em Graus — passar é Grau positivo. Nada de "CD 15" aqui: esse
+            // número não existe neste sistema.
+            { key: 'testeParaSair', label: '🎲 Sai com teste?', type: 'boolean' },
+            {
+                key: 'testeNome', label: 'Teste (componentes somados)', type: 'text',
+                placeholder: 'Ex: Vigor + Resistência — mesmo formato do "Pedir teste" do Tabuleiro',
+                showWhenBoolean: 'testeParaSair'
+            },
+            {
+                key: 'testeMod', label: 'Modificador de dificuldade', type: 'number',
+                placeholder: '0 — negativo é mais difícil (−2), positivo é mais fácil (+1)',
+                showWhenBoolean: 'testeParaSair'
+            },
+            {
+                key: 'testeQuando', label: 'Quando o teste acontece', type: 'select', showWhenBoolean: 'testeParaSair',
+                options: [
+                    { value: 'fim_do_turno', label: '🔚 No fim do turno do afetado' },
+                    { value: 'inicio_do_turno', label: '🔛 No início do turno do afetado' },
+                    { value: 'virada_da_rodada', label: '🔄 Na virada da rodada' },
+                    { value: 'acao_padrao', label: '⚔️ Gastando uma Ação Padrão' },
+                ]
+            },
+            {
+                key: 'testeSucessoRemove', label: 'Passando no teste, a condição...', type: 'select', showWhenBoolean: 'testeParaSair',
+                options: [
+                    { value: 'tudo', label: '✅ Sai inteira' },
+                    { value: 'um_nivel', label: '📉 Cai um nível (só para condição que acumula)' },
+                ]
+            },
+
             // ===== 🎲 TABULEIRO (VTT) =====
             // O que a condição TIRA ou MUDA no token, em vocabulário que o motor
             // do Tabuleiro já fala. Número que muda VD continua sendo trabalho
@@ -1313,6 +1364,8 @@ function _buildCardMetaChips(item) {
             add(item.duracao ? `⏱️ ${escapeHtml(item.duracao)}` : '');
             add(item.removivel ? '🔓 Removível' : '🔒 Permanente');
             if (mechCount) add(`🔧 ${mechCount}`);
+            if (item.acumulaNiveis) add(`📈 Até nv ${item.nivelMaximo ?? '∞'}`, 'chip-accent');
+            if (item.testeParaSair) add(`🎲 ${escapeHtml(item.testeNome || 'teste')}`, 'chip-accent');
             // O que a condição faz no Tabuleiro, resumido — dá para bater o olho
             // na lista e ver quais já estão configuradas e quais faltam.
             if (item.afetaTabuleiro) {
