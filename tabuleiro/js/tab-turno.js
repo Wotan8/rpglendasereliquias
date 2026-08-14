@@ -13,12 +13,14 @@
 // Alcances contam a partir da BORDA do token (tab-mira-calc).
 // =============================================
 import { setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, markDirty, gridSize, upcEm, unidadeEm, valorComponente, selecionar, deslocamentosDoToken } from './tab-state.js';
+import { T, esc, toast, markDirty, gridSize, upcEm, unidadeEm, valorComponente, selecionar, deslocamentosDoToken, alcanceDeVisao } from './tab-state.js';
 import { refCombate } from './tab-main.js';
+import { derivedDoToken } from './tab-render.js';
+import { abrirConflito } from './tab-conflito.js';
 import {
     cenaAtiva, comCenaAtivaPatch, participanteDaVez, faccaoDoParticipante,
     acoesNovas, podeGastar, gastarAcao, alvoValido, alcanceGolpe,
-    guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica,
+    guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica, custoVital,
 } from '../../shared/combate-cenas.js';
 import { shapeDaMira, alvoAoAlcance } from './tab-mira-calc.js';
 import { templateAtingeCirculo } from './tab-templates.js';
@@ -381,14 +383,27 @@ function render() {
         </div>${body}`;
 }
 
+/**
+ * Botões de deslocamento da ficha. §6.2: a Ação Padrão também pode ser gasta
+ * andando (quem tem pressa troca o golpe por mais distância) — por isso o
+ * mesmo bloco aparece nos dois submenus, mudando só qual ação é debitada.
+ */
+function htmlDeslocs(custoAcao) {
+    const tok = tokenAtivoDoCombate();
+    const deslocs = tok ? deslocamentosDoToken(tok, T.chars, T.npcs) : [];
+    if (!deslocs.length) {
+        return custoAcao === 'movimento'
+            ? '<span class="tb-muted">Sem deslocamento na ficha — mova pelo arrasto e gaste manualmente:</span>' : '';
+    }
+    return deslocs.map((d, i) => `<button class="tb-btn tb-btn-small" onclick="tbTurnoMover(${i},'${custoAcao}')"
+        title="${custoAcao === 'padrao' ? 'Gasta a Ação PADRÃO para andar' : 'Gasta a Ação de Movimento'}">👣 ${esc(d.tipo)} — ${d.metros} m${custoAcao === 'padrao' ? ' <i>(com a Padrão)</i>' : ''}</button>`).join('');
+}
+
 function subMenu(qual, p, skills, acoes) {
     const voltar = `<button class="tb-mini-btn" onclick="tbTurnoSub(null)" title="Voltar">←</button>`;
     if (qual === 'movimento') {
-        const tok = tokenAtivoDoCombate();
-        const deslocs = tok ? deslocamentosDoToken(tok, T.chars, T.npcs) : [];
         return `<div class="tb-turno-lista">${voltar}
-            ${deslocs.map((d, i) => `<button class="tb-btn tb-btn-small" onclick="tbTurnoMover(${i})">👣 ${esc(d.tipo)} — ${d.metros} m</button>`).join('')
-              || '<span class="tb-muted">Sem deslocamento na ficha — mova pelo arrasto e gaste manualmente:</span>'}
+            ${htmlDeslocs('movimento')}
             <button class="tb-btn tb-btn-small" onclick="tbTurnoGastarAvulso('movimento')" title="Levantar, sacar item, abrir porta...">✅ Outro movimento</button>
         </div>`;
     }
@@ -403,6 +418,7 @@ function subMenu(qual, p, skills, acoes) {
             ${golpes === null ? '<span class="tb-muted">⏳ golpes…</span>'
                 : golpes.map((g, i) => `<button class="tb-btn tb-btn-small" onclick="tbTurnoGolpe(${i})" title="${esc(g.dano ? 'Dano ' + g.dano : '')}">⚔️ ${esc(g.nome)}${g.dano ? ` <i>💥${esc(g.dano)}</i>` : ''}</button>`).join('')}
             ${skillsPadrao.map((s, i) => skillBtnHtml(s, 'padrao', i, rec, p)).join('')}
+            ${htmlDeslocs('padrao')}
             <button class="tb-btn tb-btn-small" onclick="tbTurnoGastarAvulso('padrao')" title="Qualquer outra Ação Padrão (descreva no chat)">✅ Outra ação</button>
         </div>`;
     }
@@ -456,6 +472,11 @@ window.tbTurnoAgirAgora = async (pid) => {
     const c = cena();
     const p = (c.participantes || []).find(x => x.id === pid);
     if (!p || !guardadoValido(c, p) || c.retomar) return;
+    // O guardado só vale uma vez e interrompe a ordem de todo mundo — clique
+    // sem querer aqui custa o turno inteiro, então confirma.
+    const daVez = participanteDaVez(c);
+    if (!confirm(`⚡ ${p.name || 'Este personagem'} vai interromper agora, no meio do turno de ${daVez?.name || '?'}?\n\n`
+        + 'O turno guardado é consumido e a ordem volta ao normal quando ele encerrar.')) return;
     const parts = (c.participantes || []).map(x => x.id === pid ? { ...x, guardadoNaRodada: null } : x);
     await salvarCena({
         participantes: parts,
@@ -477,37 +498,64 @@ window.tbTurnoGastarAvulso = async (custo) => {
 };
 
 /** Mover pelo deslocamento: arma o arrasto limitado que já existe (T.moverDesloc). */
-window.tbTurnoMover = (i) => {
+window.tbTurnoMover = (i, custoAcao) => {
     const tok = tokenAtivoDoCombate(); if (!tok) return;
     const d = deslocamentosDoToken(tok, T.chars, T.npcs)[i]; if (!d) return;
-    T.moverDesloc = { tokenId: tok.id, tipo: d.tipo, metros: d.metros, doTurno: true };
+    const custo = custoAcao === 'padrao' ? 'padrao' : 'movimento';
+    T.moverDesloc = { tokenId: tok.id, tipo: d.tipo, metros: d.metros, doTurno: true, custoAcao: custo };
     selecionar(tok.id);
     sub = null;
     render();
-    toast(`👣 ${d.tipo}: arraste o token — até ${d.metros} m. A ação é gasta ao soltar.`);
+    toast(`👣 ${d.tipo}: arraste o token — até ${d.metros} m. A ${custo === 'padrao' ? 'Ação Padrão' : 'Ação de Movimento'} é gasta ao soltar.`);
     markDirty();
 };
 
 /** tab-tools avisa quando o arrasto limitado do turno terminou. */
-async function gastouMovimento(tokenId, foiDoTurno) {
+async function gastouMovimento(tokenId, foiDoTurno, custoAcao) {
     const c = cena();
     if (!c?.iniciado || !foiDoTurno) return;
     const tok = tokenAtivoDoCombate();
     if (!tok || tok.id !== tokenId || !controlaVez(participanteDaVez(c))) return;
-    if ((c.acoesTurno || acoesNovas()).movimento) await gastar('movimento');
+    const custo = custoAcao === 'padrao' ? 'padrao' : 'movimento';
+    if ((c.acoesTurno || acoesNovas())[custo]) await gastar(custo);
 }
 
-// ---------- golpe CaC ----------
+// ---------- golpe ----------
+/**
+ * 🏹 Alcance de uma arma a DISTÂNCIA: 3× o alcance de visão do próprio token.
+ * Sempre 3×, sem depender do ambiente — o `dia: true` do cálculo é justamente o
+ * multiplicador ×3 já testado, aplicado aqui sobre a base (fixa ou por
+ * Percepção), esteja o canvas de dia ou de noite.
+ */
+function alcanceDeTiro(tok) {
+    return alcanceDeVisao(tok.visao, derivedDoToken(tok), true);
+}
+
 window.tbTurnoGolpe = (i) => {
     const g = golpesCache?.linhas?.[i]; if (!g) return;
     const p = participanteDaVez(cena());
     const tok = tokenAtivoDoCombate();
     if (!tok) { toast('⚠️ O participante da vez não tem token neste canvas', 'warning'); return; }
+    const meta = {
+        nome: g.nome, efeito: g.dano ? `dano ${g.dano}` : '', custoAcao: 'padrao',
+        golpe: { dano: g.dano || '', acerto: g.acerto ?? null, tipos: (g.tiposGolpe || []).map(t => t.nome) },
+    };
+    // 🏹 Arma a distância não balança arco nenhum: escolhe o alvo dentro do
+    // triplo da visão (o tiro enxerga mais longe do que a mão alcança).
+    if (g.distancia) {
+        const alcanceM = alcanceDeTiro(tok);
+        armarMira({
+            tipo: 'alvos', alcanceM, maxAlvos: 1, afeta: 'inimigos',
+            meta: { ...meta, detalhe: `alcance ${Math.round(alcanceM * 100) / 100} m (3× a visão do token)` },
+        }, tok);
+        sub = null;
+        return;
+    }
     const tamanho = valorComponente('Tamanho', fonteDoParticipante(p)) || 0;
     const alcanceM = alcanceGolpe(g.alcanceM, tamanho);
     armarMira({
         tipo: 'cac', alcanceM, angGraus: ARCO_GOLPE_GRAUS, afeta: 'inimigos',
-        meta: { nome: g.nome, efeito: g.dano ? `dano ${g.dano}` : '', custoAcao: 'padrao', detalhe: `alcance ${Math.round(alcanceM * 100) / 100} m (arma ${g.alcanceM || 0} m + 5% do Tamanho${g.alcanceM ? '' : ', mínimo 1 m'})` },
+        meta: { ...meta, detalhe: `alcance ${Math.round(alcanceM * 100) / 100} m (arma ${g.alcanceM || 0} m + 5% do Tamanho${g.alcanceM ? '' : ', mínimo 1 m'})` },
     }, tok);
     sub = null;
 };
@@ -530,12 +578,14 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
     if (s.custos?.length) {
         const f = faltaPara(p, s.custos[formaPaga]);
         if (f) { toast(`⚠️ Não tem ${f.nome} o suficiente (${f.tem}/${f.qtd})`, 'warning'); return; }
-        _formaPagaAtual = s.custos[formaPaga];   // debitado na confirmação da mira
+        _custosAPagar = [s.custos[formaPaga]];   // debitado na confirmação da mira
     } else {
-        _formaPagaAtual = null;
         // re-checa o custo em texto na hora do clique (o HTML pode estar velho)
         const falta = recursoInsuficiente(s.custo, recursosDe(p));
         if (falta) { toast(`⚠️ Não tem ${RECURSO_NOME[falta.recurso]} o suficiente (${falta.tem}/${falta.qtd})`, 'warning'); return; }
+        // 💰 Custo só em TEXTO ("2 ENER") também é debitado: era o furo — quem
+        // não tinha mecânica de custo cadastrada usava a habilidade de graça.
+        _custosAPagar = custosDoTexto(s.custo);
     }
     const tok = tokenAtivoDoCombate();
     if (!tok) { toast('⚠️ O participante da vez não tem token neste canvas', 'warning'); return; }
@@ -549,8 +599,7 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
     if (!(T.isMaster && T.mode === 'secret')) {
         sub = null;
         await gastar(custo);
-        await pagarCusto(p, _formaPagaAtual);
-        _formaPagaAtual = null;
+        await pagarCustos(p);
         logChat(`✨ ${p?.name || '?'} usou ${s.nome}${s.custo ? ` · custo: ${s.custo}` : ''} — sem mira cadastrada, efeitos com o mestre`);
         toast(`✨ ${s.nome} usada — a mira desta habilidade ainda não foi cadastrada; o mestre resolve os alvos`);
         return;
@@ -558,8 +607,15 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
     abrirMiraManual(s, custo, tok);
 };
 
-// Forma de pagamento escolhida para a skill em uso (debitada na confirmação).
-let _formaPagaAtual = null;
+// Custos da skill em uso, debitados na confirmação da mira.
+let _custosAPagar = [];
+
+/** Custo em TEXTO ("2 ENER + 1 SAN") no mesmo formato dos custos por mecânica. */
+function custosDoTexto(txt) {
+    return custoVital(txt).map(c => ({
+        alvo: RECURSO_NOME[c.recurso], qtd: c.qtd, rotulo: `−${c.qtd} ${RECURSO_NOME[c.recurso]}`,
+    }));
+}
 
 /** Skill com mais de uma forma de pagar: quem usa escolhe qual recurso gasta. */
 function escolherComoPagar(s, custoAcao, i, pagaveis) {
@@ -579,6 +635,12 @@ function escolherComoPagar(s, custoAcao, i, pagaveis) {
  * Debita o recurso escolhido. Vital vai para o doc da ficha (mesmo caminho do
  * card de combate); VD de classe vai para o campo Atual do VD.
  */
+async function pagarCustos(p) {
+    const lista = _custosAPagar;
+    _custosAPagar = [];
+    for (const c of lista) await pagarCusto(p, c);
+}
+
 async function pagarCusto(p, custo) {
     if (!custo || !p) return;
     const r = temDoRecurso(p, custo.alvo);
@@ -789,19 +851,32 @@ window.tbTurnoConfirmarMira = async () => {
     T.mira = null;
     markDirty();
     await gastar(custo);
-    await pagarCusto(p, _formaPagaAtual);   // 💰 debita o recurso escolhido
-    _formaPagaAtual = null;
+    await pagarCustos(p);   // 💰 debita o recurso (mecânica ou texto do cadastro)
     if (custo === 'livre') render();
-    // ☠️ Condição vinculada da skill: aplica nos atingidos que participam da
-    // cena (o motor de rodadas expira sozinho, com aviso ao mestre). Quando o
-    // cadastro limita quantos sofrem a condição, valem os N primeiros.
-    if (meta.condicao?.nome && atingidos.length) {
+    // 🤝 Ação de apoio (só aliados): ninguém se defende de um buff — segue o
+    // caminho antigo, aplicando a condição direto nos atingidos.
+    if (atingidos.length && m.afeta === 'aliados') {
         let pids = atingidos.map(o => participanteDoToken(o)?.id).filter(Boolean);
-        if (meta.condicao.maxAlvos > 0 && pids.length > meta.condicao.maxAlvos) {
-            pids = pids.slice(0, meta.condicao.maxAlvos);
-            toast(`☠️ Condição limitada a ${meta.condicao.maxAlvos} alvo(s) pelo cadastro — valem os primeiros`, 'warning');
+        if (meta.condicao?.nome && pids.length) {
+            if (meta.condicao.maxAlvos > 0 && pids.length > meta.condicao.maxAlvos) {
+                pids = pids.slice(0, meta.condicao.maxAlvos);
+                toast(`☠️ Condição limitada a ${meta.condicao.maxAlvos} alvo(s) pelo cadastro — valem os primeiros`, 'warning');
+            }
+            aplicarCondicaoEmVarios(pids, meta.condicao.nome, meta.condicao.rodadas || 0).catch(e => console.warn('condição da skill', e));
         }
-        if (pids.length) aplicarCondicaoEmVarios(pids, meta.condicao.nome, meta.condicao.rodadas || 0).catch(e => console.warn('condição da skill', e));
+        toast(`${icone} ${nomes.length} aliado(s): ${nomes.join(', ')}`);
+        return;
     }
-    toast(nomes.length ? `${icone} ${nomes.length} alvo(s): ${nomes.join(', ')}` : `${icone} Nenhum alvo na área`);
+    // ⚔️ Com alvo, a ação vira CONFLITO: acerto → defesa → dano → aplicação.
+    // A janela resolve dano e condições na ficha de quem levou (tab-conflito).
+    if (atingidos.length) {
+        await abrirConflito(p, tok, {
+            nome: meta.nome || 'ação', icone, efeito: meta.efeito || '', custoAcao: custo,
+            dano: meta.golpe?.dano || '', tipos: meta.golpe?.tipos || [],
+            alvoAcerto: meta.golpe?.acerto ?? null,
+            condicao: meta.condicao || null,
+        }, atingidos);
+        return;
+    }
+    toast(`${icone} Nenhum alvo na área`);
 };

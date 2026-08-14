@@ -593,6 +593,59 @@ html, body {
 /* skill com mais de uma forma de pagar */
 .tb-turno-multi { color: var(--lr-gold-3, #eab308); font-weight: 700; }
 
+/* ===== ⚔️ Janela de Conflito (acerto → defesa → dano) ===== */
+/* Fica no ALTO do centro: o Painel do Turno mora embaixo e os dois aparecem
+   juntos durante a troca de golpes. Rola por dentro quando há muitos alvos. */
+.tb-conflito {
+    position: fixed; left: 50%; top: calc(var(--tb-bar-h) + var(--lr-space-3)); transform: translateX(-50%);
+    z-index: 49; display: none; flex-direction: column; gap: var(--lr-space-2);
+    width: max-content; max-width: min(94vw, 620px); max-height: 62vh; overflow-y: auto;
+    background: var(--lr-surface); border: 1px solid var(--lr-border);
+    border-radius: var(--lr-radius-lg); box-shadow: var(--lr-shadow-3);
+    padding: var(--lr-space-2) var(--lr-space-3);
+}
+.tb-conflito.open { display: flex; }
+.tb-conflito-head {
+    font-family: var(--lr-font-title); font-size: var(--lr-fs-sm); color: var(--lr-text-1);
+    display: flex; align-items: center; gap: var(--lr-space-2); flex-wrap: wrap;
+}
+.tb-conflito-rolagem {
+    background: var(--lr-bg-1); border: 1px solid var(--lr-border); border-radius: var(--lr-radius-sm);
+    padding: var(--lr-space-1) var(--lr-space-2); font-size: var(--lr-fs-xs); color: var(--lr-text-2);
+}
+.tb-conflito-rolagem.crit { border-color: var(--lr-gold-2); }
+.tb-conflito-rolagem.falha { border-color: var(--lr-blood-3); }
+.tb-conflito-alvos { display: flex; flex-direction: column; gap: var(--lr-space-1); }
+.tb-conflito-alvo {
+    display: flex; align-items: center; gap: var(--lr-space-2); flex-wrap: wrap;
+    font-size: var(--lr-fs-xs); color: var(--lr-text-1);
+    border-top: 1px solid var(--lr-border-soft); padding-top: var(--lr-space-1);
+}
+.tb-conflito-nome { flex: 1 1 140px; min-width: 0; }
+.tb-conflito-dir { display: flex; align-items: center; gap: var(--lr-space-1); flex-wrap: wrap; }
+.tb-conflito-hit { color: var(--lr-blood-3); }
+.tb-conflito-miss { color: var(--lr-nature); }
+.tb-conflito-def {
+    background: var(--lr-bg-0); border: 1px solid var(--lr-border); border-radius: var(--lr-radius-sm);
+    color: var(--lr-text-1); font-size: var(--lr-fs-xs); padding: 2px var(--lr-space-2); max-width: 60vw;
+}
+/* Linha de rolagem: 🎲 do sistema à esquerda, dado FÍSICO da mesa à direita.
+   O mestre vê todas — inclusive as do atacante e as do defensor. */
+.tb-conflito-roll {
+    display: flex; align-items: center; gap: var(--lr-space-2); flex-wrap: wrap;
+    font-size: var(--lr-fs-xs); color: var(--lr-text-1);
+    border-top: 1px solid var(--lr-border-soft); padding-top: var(--lr-space-2);
+}
+.tb-conflito-manual { display: flex; align-items: center; gap: var(--lr-space-1); color: var(--lr-text-2); }
+.tb-conflito-manual input, .tb-conflito-alvoin input {
+    background: var(--lr-bg-0); border: 1px solid var(--lr-border); border-radius: var(--lr-radius-sm);
+    color: var(--lr-text-1); font-size: var(--lr-fs-xs); padding: 2px var(--lr-space-2); width: 92px;
+}
+.tb-conflito-alvoin { display: flex; align-items: center; gap: var(--lr-space-1); color: var(--lr-text-2); }
+.tb-conflito-alvoin input { width: 64px; }
+/* orçamento de defesas da rodada (Reflexo − 1) */
+.tb-conflito-orc { color: var(--lr-text-2); font-size: var(--lr-fs-xs); white-space: nowrap; }
+
 /* ⚔️ VDs de Status de Combate no card do participante */
 .tb-combat-vds { display: flex; flex-wrap: wrap; gap: var(--lr-space-1); margin-top: var(--lr-space-1); }
 .tb-combat-vd {

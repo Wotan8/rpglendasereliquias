@@ -17,6 +17,7 @@
 //   sys         registro do sistema (window._npcSys) — opcional, enriquece o detalhe
 //   idCanvas    id do <canvas> do mapa; só o Tabuleiro passa (habilita dropar no mapa)
 //   dica        texto curto sob a pressão
+//   semQtd      true esconde os botões ± de quantidade (leitura da pilha só)
 //   botoes      (item) => HTML de ações extras na linha  — opcional
 //   repintar    () => void
 //   acoes       { equipar, desequipar, mover, fundir, mapa, qtd }
@@ -138,7 +139,9 @@ function detalheItem(ctx, i) {
 function itemRow(ctx, i, dentro) {
     const cont = ehContainer(i);
     const img = i.imagem || i.imagemUrl;
-    const podeQtd = !(i.tipo === 'Arma' || cont);
+    // `semQtd`: host que não deixa mexer na quantidade (jogador no Tabuleiro —
+    // quem cria e destrói item é o mestre). Some com os ±, o número fica.
+    const podeQtd = !ctx.semQtd && !(i.tipo === 'Arma' || cont);
     const extra = [];
     if (i.equipado) {
         extra.push(ESTADO_EQUIP[i.estadoEquip] || 'Equipado');

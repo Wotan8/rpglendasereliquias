@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v215';
+const VERSION = 'v217';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -172,6 +172,8 @@ const PRECACHE_URLS = [
   '/tabuleiro/js/tab-chat.js',
   '/tabuleiro/js/tab-turno.js',
   '/tabuleiro/js/tab-mira-calc.js',
+  '/tabuleiro/js/tab-conflito.js',
+  '/tabuleiro/js/tab-conflito-calc.js',
   '/tabuleiro/js/tab-livros.js',
   '/tabuleiro/js/tab-local.js',
   '/tabuleiro/js/tab-sessao.js',

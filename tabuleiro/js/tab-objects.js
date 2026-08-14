@@ -2,7 +2,7 @@
 // TABULEIRO — Objetos (CRUD), Uploads, Tokens, Camadas, Propriedades
 // =============================================
 import { db, storage, ref, uploadBytes, getDownloadURL, setDoc, updateDoc, deleteDoc, doc, writeBatch } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, uid, toast, markDirty, gridSize, getCamada, escalaCanvas, optsUnidade, pxDeLarguraReal, larguraRealDePx, alcanceDeVisao, fonteDoAlcance } from './tab-state.js';
+import { T, esc, uid, toast, markDirty, gridSize, getCamada, escalaCanvas, optsUnidade, tokenPadrao, pxDeLarguraReal, larguraRealDePx, alcanceDeVisao, fonteDoAlcance } from './tab-state.js';
 import { npcNaMesa, patchVinculoMesa } from '../../shared/npc-mesas.js';
 import { refObjeto, refObjetos, refCanvas, abrirModal, fecharModal } from './tab-main.js';
 import { notifyObjectChange } from './tab-perf.js';
@@ -220,6 +220,7 @@ window.tbTokenFiltraNpcs = function() {
 };
 
 window.tbAbrirToken = function() {
+    const tp = tokenPadrao();   // ⚙️ Configurações → 🎭 Padrão de Tokens Novos
     abrirModal('🎭 Novo Token', `
         <div class="tb-form-grid tb-form-grid-1">
             <label>🔍 Buscar personagem ou NPC<input type="text" id="tk_busca" placeholder="Nome ou papel — busca em todos os NPCs, não só os da mesa" oninput="tbTokenFiltraNpcs()"></label>
@@ -228,23 +229,23 @@ window.tbAbrirToken = function() {
             <label>Vincular a<select id="tk_vinculo" size="6" style="height:150px" onchange="tbTokenVinculoChange()"></select></label>
             <label id="tk_nomeWrap" style="display:none">Nome<input type="text" id="tk_nome" placeholder="Nome do token"></label>
             <label>Camada<select id="tk_layer">
-                <option value="tokens" selected>🎭 Tokens</option>
-                <option value="dm">🕵️ DM (só modo secreto)</option>
+                <option value="tokens" ${tp.camada !== 'dm' ? 'selected' : ''}>🎭 Tokens</option>
+                <option value="dm" ${tp.camada === 'dm' ? 'selected' : ''}>🕵️ DM (só modo secreto)</option>
             </select></label>
-            <label>Tamanho (células)<input type="number" id="tk_tam" value="1" min="0.25" step="0.25"></label>
-            <label class="tb-check"><input type="checkbox" id="tk_visPub" checked> Visível ao público</label>
+            <label>Tamanho (células)<input type="number" id="tk_tam" value="${tp.tamanho}" min="0.25" step="0.25"></label>
+            <label class="tb-check"><input type="checkbox" id="tk_visPub" ${tp.visivelPublico !== false ? 'checked' : ''}> Visível ao público</label>
         </div>
         <hr class="tb-hr">
         <div class="tb-section-title">👁️ Visão do token (revela o mapa no modo público)</div>
         <div class="tb-form-grid">
-            <label class="tb-check"><input type="checkbox" id="tk_visao" checked> Tem visão</label>
+            <label class="tb-check"><input type="checkbox" id="tk_visao" ${tp.visaoAtiva !== false ? 'checked' : ''}> Tem visão</label>
             <label>Fonte do alcance<select id="tk_alcFonte">
-                <option value="fixo" selected>🔢 Valor fixo</option>
-                <option value="percepcao">👁️ Percepção Visual +2 (da ficha)</option>
+                <option value="fixo" ${tp.alcanceFonte !== 'percepcao' ? 'selected' : ''}>🔢 Valor fixo</option>
+                <option value="percepcao" ${tp.alcanceFonte === 'percepcao' ? 'selected' : ''}>👁️ Percepção Visual +2 (da ficha)</option>
             </select></label>
-            <label>Alcance da visão (${escalaCanvas().unidade})<input type="number" id="tk_alcance" value="9" min="0" step="0.5"></label>
-            <label>Amplitude (graus)<input type="number" id="tk_angulo" value="360" min="10" max="360"></label>
-            <label>Tipo de visão<select id="tk_sensor">${SENSORES.map(x => `<option value="${x.id}">${x.nome}</option>`).join('')}</select></label>
+            <label>Alcance da visão (${escalaCanvas().unidade})<input type="number" id="tk_alcance" value="${tp.alcance}" min="0" step="0.5"></label>
+            <label>Amplitude (graus)<input type="number" id="tk_angulo" value="${tp.angulo}" min="10" max="360"></label>
+            <label>Tipo de visão<select id="tk_sensor">${SENSORES.map(x => `<option value="${x.id}" ${tp.sensor === x.id ? 'selected' : ''}>${x.nome}</option>`).join('')}</select></label>
         </div>
         <div class="tb-form-grid" style="margin-top:6px">
             <label class="tb-check"><input type="checkbox" id="tk_temImg"> Usar imagem personalizada (URL ou arquivo)</label>

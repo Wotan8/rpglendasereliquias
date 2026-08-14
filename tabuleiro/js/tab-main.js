@@ -6,7 +6,7 @@ import {
     collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc,
     onSnapshot, query, where, writeBatch
 } from '../../painel-mestre/js/firebase-config.js';
-import { T, CAMADAS_PADRAO, mesclarCamadasPadrao, PERMISSOES_LISTA, esc, uid, toast, markDirty, camadasVisiveis, optsUnidade, popNavegacaoValida, refViagemPorDia, HORAS_DE_MARCHA, ehEcoAtrasado, duracaoLerp, marcarRecebimentoReguas, configDoCanvasMudou, melhorGrauDoUsuario } from './tab-state.js';
+import { T, CAMADAS_PADRAO, mesclarCamadasPadrao, PERMISSOES_LISTA, tokenPadrao, esc, uid, toast, markDirty, camadasVisiveis, optsUnidade, popNavegacaoValida, refViagemPorDia, HORAS_DE_MARCHA, ehEcoAtrasado, duracaoLerp, marcarRecebimentoReguas, configDoCanvasMudou, melhorGrauDoUsuario } from './tab-state.js';
 import { notifyObjectChange, notifyCanvasConfigChange } from './tab-perf.js';
 import { npcNaMesa } from '../../shared/npc-mesas.js';
 import { startRenderLoop, centerCamera } from './tab-render.js';
@@ -23,10 +23,11 @@ import { initMusica } from './tab-musica.js';
 import { initDados } from './tab-dados.js';
 import { initChat, sincChatDoCanvas } from './tab-chat.js';
 import { initTurno } from './tab-turno.js';
+import { initConflito } from './tab-conflito.js';
 import './tab-local.js';   // 📍 Locais do Worldbuilding (registra window.tbAbrirLocal)
 import { initGirar } from './tab-girar.js';
 import { initSessao } from './tab-sessao.js';
-import { carregarExploracao } from './tab-fog.js';
+import { carregarExploracao, SENSORES } from './tab-fog.js';
 import { limparHistorico } from './tab-undo.js';
 import { posDisplay, screenToWorld } from './tab-render.js';
 
@@ -93,6 +94,7 @@ window.addEventListener('DOMContentLoaded', () => {
             initDados();
             initChat();   // o listener do chat já assinou no trocarCanvas do iniciarSync
             initTurno();
+            initConflito();   // ⚔️ janela de conflito (acerto → defesa → dano)
             initSessao();
             startRenderLoop();
             document.getElementById('tbLoading').style.display = 'none';
@@ -216,6 +218,7 @@ async function iniciarSync() {
         T._meuMelhorGrau = melhorGrauDoUsuario(T.combate, meus);
         window._renderCombate && window._renderCombate();
         window._renderTurno?.();   // ⚔️ painel do turno acompanha o doc de combate
+        window._renderConflito?.();  // ⚔️ janela de conflito vive no mesmo doc
         window._checarCondicoesRodada?.();   // ⏱️ mestre expira condições da rodada
         atualizarBarraCanvas();
         markDirty();
@@ -345,7 +348,9 @@ export async function criarCanvas(nome, ativar) {
 
 function resolverPermissoes() {
     if (T.isMaster) { T.perms = {}; return; }
-    T.perms = (T.canvas?.permissoes || {})[T.user.uid] || {};
+    // 🌐 O que foi marcado em "Toda a mesa" é o piso: vale para quem entrar
+    // depois de as permissões terem sido salvas. O ajuste individual vence.
+    T.perms = { ...(T.canvas?.permissoesTodos || {}), ...((T.canvas?.permissoes || {})[T.user.uid] || {}) };
 }
 
 // ===== UI GERAL =====
@@ -535,7 +540,7 @@ window.tbExcluirCanvas = async (id) => {
 // ===== CONFIG DO CANVAS (grid, escala, luz dinâmica) =====
 window.tbAbrirConfig = function() {
     const c = T.canvas; if (!c) return;
-    const g = c.grid || {}, e = c.escala || {}, l = c.luzDinamica || {};
+    const g = c.grid || {}, e = c.escala || {}, l = c.luzDinamica || {}, tp = tokenPadrao();
     abrirModal('⚙️ Configurações do Canvas', `
         <div class="tb-form-grid">
             <label>Tamanho da célula (px)<input type="number" id="cfg_grid" value="${g.size||70}" min="20" max="300"></label>
@@ -559,6 +564,25 @@ window.tbAbrirConfig = function() {
             </select></label>
         </div>
         <div class="tb-muted" style="font-size:.75rem;margin-top:4px">O padrão vale para todo token com barras em “Padrão da mesa”; nas propriedades do token dá para abrir exceção.</div>
+        <hr class="tb-hr">
+        <div class="tb-section-title">🎭 Padrão de Tokens Novos</div>
+        <div class="tb-form-grid">
+            <label>Camada<select id="cfg_tkLayer">
+                <option value="tokens" ${tp.camada!=='dm'?'selected':''}>🎭 Tokens</option>
+                <option value="dm" ${tp.camada==='dm'?'selected':''}>🕵️ DM (só modo secreto)</option>
+            </select></label>
+            <label>Tamanho (células)<input type="number" id="cfg_tkTam" value="${tp.tamanho}" min="0.25" step="0.25"></label>
+            <label class="tb-check"><input type="checkbox" id="cfg_tkVisPub" ${tp.visivelPublico!==false?'checked':''}> Visível ao público</label>
+            <label class="tb-check"><input type="checkbox" id="cfg_tkVisao" ${tp.visaoAtiva!==false?'checked':''}> 👁️ Tem visão</label>
+            <label>Fonte do alcance<select id="cfg_tkFonte">
+                <option value="fixo" ${tp.alcanceFonte!=='percepcao'?'selected':''}>🔢 Valor fixo</option>
+                <option value="percepcao" ${tp.alcanceFonte==='percepcao'?'selected':''}>👁️ Percepção Visual +2 (da ficha)</option>
+            </select></label>
+            <label>Alcance da visão (${esc(e.unidade||'m')})<input type="number" id="cfg_tkAlc" value="${tp.alcance}" min="0" step="0.5"></label>
+            <label>Amplitude (graus)<input type="number" id="cfg_tkAng" value="${tp.angulo}" min="10" max="360"></label>
+            <label>Tipo de visão<select id="cfg_tkSensor">${SENSORES.map(s=>`<option value="${s.id}" ${tp.sensor===s.id?'selected':''}>${esc(s.nome)}</option>`).join('')}</select></label>
+        </div>
+        <div class="tb-muted" style="font-size:.75rem;margin-top:4px">Vale só para tokens criados daqui em diante, neste canvas — o 🎭 Novo Token já abre com estes valores.</div>
         <hr class="tb-hr">
         <div class="tb-section-title">🚶 Movimento & Andares</div>
         <div class="tb-form-grid">
@@ -620,6 +644,16 @@ window.tbSalvarConfig = async function() {
             escala: { valorPorCelula: parseFloat(v('cfg_vpc').value)||1.5, unidade: v('cfg_un').value },
             luzDinamica: { ativa: v('cfg_luz').checked, modo: v('cfg_modo').value, fogSecretOpacity: (parseInt(v('cfg_fog').value)||0)/100, memoria: v('cfg_memoria').checked },
             bloquearMovimento: v('cfg_lock').checked,
+            tokenPadrao: {
+                camada: v('cfg_tkLayer').value,
+                tamanho: parseFloat(v('cfg_tkTam').value) || 1,
+                visivelPublico: v('cfg_tkVisPub').checked,
+                visaoAtiva: v('cfg_tkVisao').checked,
+                alcanceFonte: v('cfg_tkFonte').value,
+                alcance: parseFloat(v('cfg_tkAlc').value) || 0,
+                angulo: parseInt(v('cfg_tkAng').value) || 360,
+                sensor: v('cfg_tkSensor').value,
+            },
             barrasPadrao: v('cfg_barras').value,
             reguaPublica: v('cfg_reguaPub').checked,
             andarAltura: parseFloat(v('cfg_andar').value)||5,
@@ -646,37 +680,45 @@ window.tbAbrirPermissoes = function() {
             </div>
         </div>`;
     }).join('');
-    // Linha da MESA: marcar aqui marca a mesma permissão em todo mundo. É só um
-    // atalho de preenchimento — o que vai para o banco continua sendo a
-    // permissão de cada jogador, então dá para ajustar um deles depois.
+    // Linha da MESA: marca a permissão em todo mundo E fica gravada como padrão
+    // do canvas (`permissoesTodos`) — assim quem for adicionado à mesa depois já
+    // nasce com ela. O ajuste individual continua vencendo o padrão.
+    const jaTodos = T.canvas?.permissoesTodos || {};
     const todos = `<div class="tb-perm-row" style="border-color:var(--tb-primary)">
-        <div class="tb-perm-user"><b>🌐 Toda a mesa</b><div class="tb-muted" style="font-size:.75rem">${jogadores.length} ${jogadores.length === 1 ? 'jogador' : 'jogadores'}</div></div>
+        <div class="tb-perm-user"><b>🌐 Toda a mesa</b><div class="tb-muted" style="font-size:.75rem">${jogadores.length} ${jogadores.length === 1 ? 'jogador' : 'jogadores'} + quem entrar depois</div></div>
         <div class="tb-perm-checks">
             ${PERMISSOES_LISTA.map(pl => {
                 const marcados = jogadores.filter(u => (perms[u] || {})[pl.key]).length;
-                return `<label class="tb-check tb-check-sm"><input type="checkbox" data-todos="${pl.key}"
-                    ${marcados === jogadores.length ? 'checked' : ''} onchange="tbPermTodos('${pl.key}',this.checked)"> ${pl.label}</label>`;
+                return `<label class="tb-check tb-check-sm"><input type="checkbox" data-todos="${pl.key}" data-salvo="${jaTodos[pl.key] ? '1' : ''}"
+                    ${(marcados === jogadores.length || jaTodos[pl.key]) ? 'checked' : ''} onchange="tbPermTodos('${pl.key}',this.checked)"> ${pl.label}</label>`;
             }).join('')}
         </div>
     </div>`;
     abrirModal('🔑 Permissões de Edição (modo público)', `
-        <div class="tb-muted" style="font-size:.8rem;margin-bottom:10px">Válidas para <b>este canvas</b>. A linha da mesa aplica a permissão a todos de uma vez; abaixo dá para acertar caso a caso.</div>
+        <div class="tb-muted" style="font-size:.8rem;margin-bottom:10px">Válidas para <b>este canvas</b>. A linha da mesa aplica a permissão a todos de uma vez <b>e a quem for adicionado à mesa depois</b>; abaixo dá para acertar caso a caso.</div>
         ${todos}
         ${linhas}
         <div class="tb-modal-actions"><button class="tb-btn tb-btn-success" onclick="tbSalvarPermissoes()">💾 Salvar</button></div>
     `);
     PERMISSOES_LISTA.forEach(pl => window.tbPermSync(pl.key));   // meio-marcado já na abertura
 };
-/** Marca/desmarca a permissão de TODOS os jogadores da lista aberta. */
+/** Marca/desmarca a permissão de TODOS os jogadores — e fixa o padrão da mesa. */
 window.tbPermTodos = function(perm, valor) {
     document.querySelectorAll(`#tbModal input[data-perm="${perm}"]`).forEach(i => { i.checked = valor; });
+    const box = document.querySelector(`#tbModal input[data-todos="${perm}"]`);
+    if (!box) return;
+    box.dataset.salvo = valor ? '1' : '';   // decisão explícita do mestre
+    box.checked = valor; box.indeterminate = false;   // é o que vai para o banco
 };
-/** Devolve a caixa da mesa ao estado certo quando um jogador é ajustado sozinho. */
+/** Devolve a caixa da mesa ao estado certo quando um jogador é ajustado sozinho.
+ *  O padrão da mesa (`data-salvo`) segue de pé mesmo com exceção individual —
+ *  ele é o que os jogadores NOVOS herdam, não um resumo dos atuais. */
 window.tbPermSync = function(perm) {
     const ind = [...document.querySelectorAll(`#tbModal input[data-perm="${perm}"]`)];
     const box = document.querySelector(`#tbModal input[data-todos="${perm}"]`);
     if (!box) return;
-    box.checked = ind.length > 0 && ind.every(i => i.checked);
+    const todos = ind.length > 0 && ind.every(i => i.checked);
+    box.checked = todos || box.dataset.salvo === '1';
     box.indeterminate = !box.checked && ind.some(i => i.checked);
 };
 window.tbSalvarPermissoes = async function() {
@@ -686,7 +728,12 @@ window.tbSalvarPermissoes = async function() {
         perms[u] = perms[u] || {};
         perms[u][i.dataset.perm] = i.checked;
     });
-    try { await updateDoc(refCanvas(), { permissoes: perms }); fecharModal(); toast('✅ Permissões salvas'); }
+    // 🌐 padrão da mesa: herdado por quem for adicionado depois
+    const permissoesTodos = {};
+    document.querySelectorAll('#tbModal input[data-todos]').forEach(i => {
+        permissoesTodos[i.dataset.todos] = i.checked;
+    });
+    try { await updateDoc(refCanvas(), { permissoes: perms, permissoesTodos }); fecharModal(); toast('✅ Permissões salvas'); }
     catch (e) { console.error(e); toast('❌ Erro', 'danger'); }
 };
 

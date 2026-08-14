@@ -14,7 +14,7 @@ import { snapPonto, medirTrajeto, trajetoColide, simplificarPontos, normalizarRe
 import { criarFilaDeEscrita } from './tab-write-queue.js';
 import { publicarCursor, enviarPing } from './tab-presenca.js';
 import { logMovimento } from './tab-chat.js';
-import { abrirMenuRadial } from './tab-hud.js';
+import { abrirMenuRadial, emCombateAtivo } from './tab-hud.js';
 import { pontoVisivelAgora } from './tab-fog.js';
 import { confirmarTemplate, confirmarTerreno, terrenosDoCanvas, tplCfg } from './tab-templates.js';
 import { desfazer, refazer, registrarOp } from './tab-undo.js';
@@ -172,9 +172,10 @@ function podeMoverObj(o) {
     if (T.isMaster) return true;
     if (o.tipo === 'token' && tokenDoUsuario(o)) {
         if (!can('moverToken')) return false;
-        // "Mover só como ação de turno": o arrasto livre é bloqueado — o token
-        // só anda armado pelo menu radial (👣 deslocamento, no turno dele)
-        if (can('moverSoNoTurno')) return T.moverDesloc?.tokenId === o.id;
+        // "Mover só como ação de turno" só vale DENTRO da cena de combate: fora
+        // dela não existe turno para gastar, então o token anda livre. Em cena,
+        // o arrasto livre é bloqueado — só armado pelo menu radial/⚔️ Painel.
+        if (can('moverSoNoTurno') && emCombateAtivo(o)) return T.moverDesloc?.tokenId === o.id;
         return true;
     }
     // loot segue a MESMA permissão de interação do cenário (portas/janelas/luzes)
@@ -812,9 +813,9 @@ async function onUp(e) {
     // Se a armada veio do ⚔️ Painel do Turno e o token andou, a Ação de
     // Movimento é gasta (o painel confere se ainda é a vez dele).
     if (p.tipo === 'dragObj' && p.limite != null) {
-        const doTurno = !!T.moverDesloc?.doTurno;
+        const armada = T.moverDesloc;
         T.moverDesloc = null;
-        if (p.moveu) window._turnoGastouMovimento?.(p.id, doTurno);
+        if (p.moveu) window._turnoGastouMovimento?.(p.id, !!armada?.doTurno, armada?.custoAcao);
     }
 
     if (p.tipo === 'pan' && p.botao === 2 && !p.moveu && p.alvoCtx) {

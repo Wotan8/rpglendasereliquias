@@ -179,6 +179,8 @@ function ctxInventario(win) {
         contAbertos: win.contAbertos,
         idCanvas: 'tbCanvas',
         dica: 'arraste: equipar/desequipar entre seções · contêiner · pilha igual · mapa',
+        semQtd: !T.isMaster,   // quantidade de item é coisa do mestre
+
         // Cache por repinte: a anatomia não muda no meio de uma lista
         rotuloSlot: (k) => {
             if (!_sys) return k;
@@ -385,6 +387,7 @@ async function rmCondicao(win, idx) {
 }
 
 function setQtd(win, itemId, delta) {
+    if (!T.isMaster) return;   // botão nem aparece (ctx.semQtd); aqui é a tranca
     const i = (win.itens || []).find(x => x.id === itemId); if (!i) return;
     const q = Math.max(1, (parseInt(i.quantidade) || 1) + delta);
     if (q === (parseInt(i.quantidade) || 1)) return;
@@ -1065,9 +1068,13 @@ export async function linhasDeAtaque(tipo, id) {
         : (() => { const ch = dadosChar(id); return ch ? linhasAtaqueChar(win, ch) : []; })();
     // alcance do golpe: o item da linha (match por nome — as linhas saem do item)
     for (const l of linhas) {
-        if (l.desarmado) { l.alcanceM = 0; continue; }
+        // 🎯 Alvo do ataque: a coluna Acerto da própria linha (item + ficha)
+        l.acerto = (l.colunas || []).find(c => /acerto/i.test(c.nome || ''))?.total ?? null;
+        if (l.desarmado) { l.alcanceM = 0; l.distancia = false; continue; }
         const i = itens.find(x => (x.nome || 'Item') === l.nome);
         l.alcanceM = Number(i?.alcanceM ?? (i ? tplDoItem(i)?.alcanceM : 0)) || 0;
+        // 🏹 Arma a distância não tem arco de balanço: mira por alvo (ver tab-turno)
+        l.distancia = (i?.categoriaArma || (i ? tplDoItem(i)?.categoriaArma : '')) === 'distancia';
     }
     return linhas;
 }

@@ -117,6 +117,31 @@ export function vdsCombateDaFonte(fonte) {
     return r;
 }
 
+/**
+ * Valor FINAL de um VD qualquer para uma fonte (char ou NPC) — o caminho que o
+ * card já usa, aberto para quem precisa de VD que não é Status de Combate
+ * (as 8 Defesas e as Blindagens, no conflito). null = a ficha não tem o VD.
+ * @param dv { key, nome } do registro do sistema
+ */
+export function valorVdDaFonte(fonte, dv) {
+    if (!fonte || !dv) return null;
+    if (fonte.valoresDer) {
+        const f = finaisDoNpc(fonte)?.[dv.key];
+        if (f != null) return f;
+    }
+    const v = valorComponente(dv.nome, fonte);
+    if (v != null) return v;
+    const o = parseFloat(fonte.valoresDer?.overrides?.[dv.key]);
+    return isNaN(o) ? null : o;
+}
+
+/** Ficha por trás de um participante da cena (char da mesa ou NPC). */
+export function fonteDoParticipante(p) {
+    if (p?.characterId) return T.chars.find(c => c.id === p.characterId) || null;
+    if (p?.npcId) return T.npcs.find(x => x.id === p.npcId) || null;
+    return null;
+}
+
 export function vdsCombateDoToken(o) {
     if (o.vinculo?.tipo === 'char') {
         const ch = T.chars.find(c => c.id === o.vinculo.id);
@@ -234,6 +259,15 @@ export function participanteDoToken(o) {
     if (o.vinculo?.tipo === 'char') return parts.find(p => p.characterId === o.vinculo.id) || null;
     if (o.vinculo?.tipo === 'npc') return parts.find(p => p.npcId === o.vinculo.id) || null;
     return parts.find(p => p.isCustom && p.name === o.nome) || null;
+}
+
+/**
+ * O token está numa cena de combate EM ANDAMENTO? Só aí o movimento passa a
+ * ser ação de turno — antes do START não existe vez para gastar, e travar o
+ * token nesse limbo deixaria o jogador parado sem nada a fazer.
+ */
+export function emCombateAtivo(o) {
+    return !!cenaAtiva(T.combate)?.iniciado && !!participanteDoToken(o);
 }
 
 /** Barras visíveis para o usuário atual? (por token: todos|dono|mestre|off; vazio = padrão do canvas) */

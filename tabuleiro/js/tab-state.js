@@ -109,6 +109,16 @@ export const PERMISSOES_LISTA = [
     { key: 'interagirCenario', label: 'Interagir com o cenário (portas, janelas, luzes, loot)' },
 ];
 
+/**
+ * 🎭 Padrão dos tokens NOVOS deste canvas (⚙️ Configurações → Padrão de Tokens).
+ * O criador de token nasce com estes valores; mexer num token depois é exceção.
+ */
+export const TOKEN_PADRAO = {
+    visaoAtiva: true, alcance: 9, alcanceFonte: 'fixo', angulo: 360,
+    sensor: 'padrao', tamanho: 1, visivelPublico: true, camada: 'tokens',
+};
+export const tokenPadrao = () => ({ ...TOKEN_PADRAO, ...(T.canvas?.tokenPadrao || {}) });
+
 /** Objetos da camada de luz que o jogador pode ver e acionar com `interagirCenario`.
  *  Os riscos (paredes) continuam invisíveis — senão o mapa entrega a própria planta. */
 export const CENARIO_INTERATIVO = new Set(['porta', 'janela', 'luz']);
