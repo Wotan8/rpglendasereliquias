@@ -100,11 +100,6 @@ export async function ensureNpcSystemData() {
         sys.norm = norm;
 
         window._npcSys = sys;
-        console.log('✅ [NPC v2] Registros carregados:', {
-            races: sys.races.length, classes: sys.classes.length, tribes: sys.tribes.length,
-            peculiarities: sys.peculiarities.length, mechanics: sys.mechanics.length,
-            derivedValues: sys.derivedValues.length, vitalStats: sys.vitalStats.length
-        });
         return sys;
     })();
 

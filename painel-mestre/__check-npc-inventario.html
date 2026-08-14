@@ -45,6 +45,21 @@
 import { renderNpcInventoryList } from './js/npc-inventario.js?c=8';
 import { coletarCampos, camposDaInstancia } from '../shared/equip-campos.js?v=5';
 
+// Cede um turno do event loop ANTES de qualquer teste.
+//
+// Módulo executa com document.readyState === 'interactive': o documento ainda
+// não fechou e a geometria não é final. Metade dos testes daqui mede geometria
+// — o arrasto pega coordenada por getBoundingClientRect e acha o alvo por
+// elementFromPoint (T11, T12, T15), e T26 confere a rolagem do corpo do modal
+// por scrollHeight/overflowY. Com o layout no meio do caminho os quatro
+// falhavam com o motor de inventário intacto.
+//
+// setTimeout e não requestAnimationFrame: rAF não roda quando a aba está sem
+// pintar (navegador headless, aba em segundo plano) e o teste travaria. Esperar
+// o evento 'load' também não serve — ele só dispara depois que ESTE módulo
+// termina, e o await nunca voltaria.
+await new Promise(r => setTimeout(r, 0));
+
 const linhas = [];
 let ok = 0;
 const teste = (nome, passou) => { linhas.push([nome, passou]); if (passou) ok++; };

@@ -502,7 +502,13 @@ window.openNpcModal = async function(npcId = null) {
 window.openNpcEditModal = window.openNpcModal;
 
 /* ===== CONSTRUÇÃO DO FORMULÁRIO ===== */
-function buildNpcForm() {
+/* ===== FORMULÁRIO DA FICHA DE NPC =====
+ * Uma função por seção da ficha, na mesma ordem dos botões da barra de cima.
+ * Mexer numa aba não obriga a rolar as outras seiscentas linhas.
+ */
+
+/** Barra de cima: alternador Rápido/Mecânico, ações e os botões das seções. */
+function _npcTopo() {
     return `
     <div class="npcv2-topbar">
         <div class="npcv2-toolbar">
@@ -526,7 +532,12 @@ function buildNpcForm() {
             <button type="button" class="npcv2-section-btn" data-sec="vinculos" onclick="npcSwitchSection('vinculos')">🔗 Vínculos</button>
         </div>
     </div>
+`;
+}
 
+/** Quem é o NPC, como ele aparece no Tabuleiro e os blocos que só valem para Criatura e para Eco da Alma. */
+function _npcSecaoIdentidade() {
+    return `
     <!-- ============ SEÇÃO: IDENTIDADE ============ -->
     <div class="npcv2-section" id="npcSec_identidade">
       <div class="npcv2-card">
@@ -602,7 +613,12 @@ function buildNpcForm() {
             </label>
         </div>
     </div>
+`;
+}
 
+/** O que o motor calcula: peculiaridades, status vitais, atributos, perícias e valores derivados. */
+function _npcSecaoMecanica() {
+    return `
     <!-- ============ SEÇÃO: MECÂNICA ============ -->
     <div class="npcv2-section" id="npcSec_mecanica">
         <div id="npcPecsWrap" class="npcv2-card npcv2-only-mecanico">
@@ -712,7 +728,12 @@ function buildNpcForm() {
             <div class="npcv2-attrs-grid" id="npcStructuredSkillsGrid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));"></div>
         </div>
     </div>
+`;
+}
 
+/** Itens do NPC — a lista roda pelo motor compartilhado (shared/inventario-motor.js). */
+function _npcSecaoInventario() {
+    return `
     <!-- ============ SEÇÃO: INVENTÁRIO ============ -->
     <div class="npcv2-section" id="npcSec_inventario">
         <!-- Anatomia: mexe-se nela uma vez e pronto — fica recolhida para o
@@ -738,7 +759,12 @@ function buildNpcForm() {
             <div id="npcInventoryList"></div>
         </div>
     </div>
+`;
+}
 
+/** Como interpretar: personalidade, motivação, segredos e relações. */
+function _npcSecaoRoleplay() {
+    return `
     <!-- ============ SEÇÃO: ROLE PLAY ============ -->
     <div class="npcv2-section" id="npcSec_roleplay">
         <div class="npcv2-card">
@@ -768,7 +794,12 @@ function buildNpcForm() {
             <div class="form-group" style="margin-bottom:0"><textarea class="form-textarea" id="npcHistoria" rows="4"></textarea></div>
         </div>
     </div>
+`;
+}
 
+/** O que sobra dele: itens, luns, pistas e complicações. */
+function _npcSecaoLoot() {
+    return `
     <!-- ============ SEÇÃO: LOOT ============ -->
     <div class="npcv2-section" id="npcSec_loot">
         <div class="npcv2-card">
@@ -779,7 +810,12 @@ function buildNpcForm() {
             <div class="form-group"><label class="form-label">Complicações</label><textarea class="form-textarea" id="npcComplicacoes" rows="2"></textarea></div>
         </div>
     </div>
+`;
+}
 
+/** A que mesas, locais e personagens este NPC está preso. */
+function _npcSecaoVinculos() {
+    return `
     <!-- ============ SEÇÃO: VÍNCULOS ============ -->
     <div class="npcv2-section" id="npcSec_vinculos">
         <div class="npcv2-card">
@@ -810,6 +846,16 @@ function buildNpcForm() {
         </div>
     </div>
 `;
+}
+
+function buildNpcForm() {
+    return _npcTopo()
+        + _npcSecaoIdentidade()
+        + _npcSecaoMecanica()
+        + _npcSecaoInventario()
+        + _npcSecaoRoleplay()
+        + _npcSecaoLoot()
+        + _npcSecaoVinculos();
 }
 
 /* ===== CAMPO HÍBRIDO (registro OU personalizado) ===== */

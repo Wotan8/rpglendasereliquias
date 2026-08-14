@@ -242,9 +242,42 @@ window.aliadoSwitchSection = function(secId) {
     }
 };
 
-function buildAliadoForm() {
-    return `
-    <div class="al-topbar">
+/* ===== TIJOLOS DO FORMULÁRIO =====
+ * A ficha do Aliado é HTML repetitivo: dezenas de "label + input". Estes
+ * construtores existem para que cada seção abaixo se leia como a tela que ela
+ * desenha, e para que acrescentar um campo seja uma linha só.
+ */
+const _alAttrs = (extra) => Object.entries(extra).map(([k, v]) => ` ${k}="${v}"`).join('');
+const _alCampo = (label, corpo) => `<div class="field"><label>${label}</label>${corpo}</div>`;
+const _alTexto = (label, id, extra = {}) => _alCampo(label, `<input type="text" id="${id}"${_alAttrs(extra)}>`);
+const _alArea = (label, id, rows, extra = {}) => _alCampo(label, `<textarea id="${id}" rows="${rows}"${_alAttrs(extra)}></textarea>`);
+const _alNumero = (label, id, extra = {}) => _alCampo(label, `<input type="number" id="${id}"${_alAttrs(extra)}>`);
+const _alSelect = (label, id, opcoes) => _alCampo(label, `<select id="${id}">${opcoes}</select>`);
+
+/** `cols` vira o grid-template-columns da linha; sem ele, a linha usa o padrão. */
+const _alLinha = (campos, cols) => `<div class="row"${cols ? ` style="grid-template-columns: ${cols};"` : ''}>${campos.join('')}</div>`;
+const _alSecao = (titulo, corpo, attrs = '') => `<div class="section"${attrs}><div class="section-title">${titulo}</div>${corpo}</div>`;
+/** Painel de uma aba. `ativa` marca a que nasce aberta. */
+const _alAba = (sec, corpo, ativa = false) => `<div class="tab-content${ativa ? ' active' : ''}" id="alSec_${sec}">${corpo}</div>`;
+/** Caixa vazia que o JS preenche depois (VDs, módulos, inventário). */
+const _alPlaceholder = (id, texto) => `<div id="${id}">${texto ? `<div class="al-empty">${texto}</div>` : ''}</div>`;
+
+const _AL_ABAS = [
+    ['identidade', 'Identidade'], ['mecanica', 'Mecânica'], ['inventario', 'Inventário'],
+    ['roleplay', 'Role Play'], ['loot', 'Loot'],
+];
+const _AL_PORTES = ['Minúsculo', 'Pequeno', 'Médio', 'Grande', 'Enorme', 'Colossal'];
+const _AL_ATRIBUTOS = ['FOR', 'DES', 'VIG', 'INT', 'RAC', 'PRS', 'PRE', 'MAN', 'AUT'];
+const _AL_VITAIS = [
+    ['❤️ Vitalidade', 'al_vit_atual', 'al_vit'],
+    ['⚡ Energia', 'al_ener_atual', 'al_ener'],
+    ['🧠 Sanidade', 'al_san_atual', 'al_san'],
+];
+
+/* ===== SEÇÕES DA FICHA (uma por aba) ===== */
+
+function _alTopo() {
+    return `<div class="al-topbar">
         <div class="al-head">
             <div class="al-portrait" id="al_portrait">
                 <span class="al-portrait-rune" aria-hidden="true">🜲</span>
@@ -258,69 +291,35 @@ function buildAliadoForm() {
         </div>
 
         <div class="tabs">
-            <button type="button" class="tab active" data-sec="identidade" onclick="aliadoSwitchSection('identidade')">Identidade</button>
-            <button type="button" class="tab" data-sec="mecanica" onclick="aliadoSwitchSection('mecanica')">Mecânica</button>
-            <button type="button" class="tab" data-sec="inventario" onclick="aliadoSwitchSection('inventario')">Inventário</button>
-            <button type="button" class="tab" data-sec="roleplay" onclick="aliadoSwitchSection('roleplay')">Role Play</button>
-            <button type="button" class="tab" data-sec="loot" onclick="aliadoSwitchSection('loot')">Loot</button>
+            ${_AL_ABAS.map(([sec, rotulo], i) => `<button type="button" class="tab${i === 0 ? ' active' : ''}" data-sec="${sec}" onclick="aliadoSwitchSection('${sec}')">${rotulo}</button>`).join('')}
         </div>
-    </div>
+    </div>`;
+}
 
-    <!-- ============ SEÇÃO: IDENTIDADE ============ -->
-    <div class="tab-content active" id="alSec_identidade">
-        <div class="section">
-            <div class="section-title">Informações Básicas</div>
-            <div class="row">
-                <div class="field"><label>🖼️ Imagem</label>${CampoImagem.html({ id: 'al_imagem', pasta: 'imagens/aliados', preview: false, attrs: 'oninput="alRefreshPortrait()"' })}</div>
-            </div>
-            <div class="row" style="grid-template-columns: 2fr 1fr 1fr;">
-                <div class="field"><label>Nome *</label><input type="text" id="al_nome" placeholder="Nome do NPC" oninput="alRefreshHeadName()"></div>
-                <div class="field">
-                    <label>Tipo *</label>
-                    <select id="al_tipo">
-                        <option value="npc">👤 NPC</option>
-                        <option value="criatura">🐉 Criatura</option>
-                    </select>
-                </div>
-                <div class="field"><label>Nível</label><input type="number" id="al_nivel" value="1" min="1" style="text-align: center;"></div>
-            </div>
-            
-            <div class="row" style="grid-template-columns: 1fr 1fr 1fr;">
-                <div class="field"><label>Raça</label><input type="text" id="al_raca"></div>
-                <div class="field"><label>Classe</label><input type="text" id="al_classe"></div>
-                <div class="field"><label>Tribo</label><input type="text" id="al_tribo"></div>
-            </div>
-            
-            <div class="row" style="grid-template-columns: 1fr 1fr 1fr;">
-                <div class="field">
-                    <label>Porte</label>
-                    <select id="al_porte">
-                        <option value="">Selecione</option>
-                        <option>Minúsculo</option><option>Pequeno</option><option>Médio</option>
-                        <option>Grande</option><option>Enorme</option><option>Colossal</option>
-                    </select>
-                </div>
-                <div class="field"><label>Papel</label><input type="text" id="al_papel" placeholder="Comerciante, Guarda..."></div>
-                <div class="field"><label>Local</label><input type="text" id="al_local"></div>
-            </div>
-            
-            <div class="row" style="grid-template-columns: 1fr 1fr;">
-                <div class="field"><label>Tamanho</label><input type="text" id="al_tamanho"></div>
-                <div class="field"><label>Tags (separadas por vírgula)</label><input type="text" id="al_tags" placeholder="tag1, tag2"></div>
-            </div>
-        </div>
-    </div>
+function _alAbaIdentidade() {
+    const portes = ['<option value="">Selecione</option>', ..._AL_PORTES.map(p => `<option>${p}</option>`)].join('');
+    return _alAba('identidade', _alSecao('Informações Básicas', [
+        _alLinha([_alCampo('🖼️ Imagem', CampoImagem.html({ id: 'al_imagem', pasta: 'imagens/aliados', preview: false, attrs: 'oninput="alRefreshPortrait()"' }))]),
+        _alLinha([
+            _alTexto('Nome *', 'al_nome', { placeholder: 'Nome do NPC', oninput: 'alRefreshHeadName()' }),
+            _alSelect('Tipo *', 'al_tipo', '<option value="npc">👤 NPC</option><option value="criatura">🐉 Criatura</option>'),
+            _alNumero('Nível', 'al_nivel', { value: 1, min: 1, style: 'text-align: center;' }),
+        ], '2fr 1fr 1fr'),
+        _alLinha([_alTexto('Raça', 'al_raca'), _alTexto('Classe', 'al_classe'), _alTexto('Tribo', 'al_tribo')], '1fr 1fr 1fr'),
+        _alLinha([
+            _alSelect('Porte', 'al_porte', portes),
+            _alTexto('Papel', 'al_papel', { placeholder: 'Comerciante, Guarda...' }),
+            _alTexto('Local', 'al_local'),
+        ], '1fr 1fr 1fr'),
+        _alLinha([
+            _alTexto('Tamanho', 'al_tamanho'),
+            _alTexto('Tags (separadas por vírgula)', 'al_tags', { placeholder: 'tag1, tag2' }),
+        ], '1fr 1fr'),
+    ].join('')), true);
+}
 
-    <!-- ============ SEÇÃO: MECÂNICA ============ -->
-    <div class="tab-content" id="alSec_mecanica">
-        <div class="section">
-            <div class="section-title">Status Vitais</div>
-            <div class="al-vitals">
-                ${[
-                    ['❤️ Vitalidade', 'al_vit_atual', 'al_vit'],
-                    ['⚡ Energia',    'al_ener_atual', 'al_ener'],
-                    ['🧠 Sanidade',   'al_san_atual', 'al_san']
-                ].map(([label, idAtual, idMax]) => `
+function _alAbaMecanica() {
+    const vitais = _AL_VITAIS.map(([label, idAtual, idMax]) => `
                 <div class="al-vital">
                     <span class="al-vital-label">${label}</span>
                     <div class="al-vital-pair">
@@ -329,133 +328,74 @@ function buildAliadoForm() {
                         <input type="number" id="${idMax}" value="0" title="Máximo" placeholder="Máx.">
                     </div>
                     <small class="al-vital-hint">Atual / Máx.</small>
-                </div>`).join('')}
-            </div>
-            <!-- Lealdade: eixo do companheiro (Bestiário, "Como se lê uma fera").
-                 0–10; melhorias a partir de 6, uma por ponto, teto 5. -->
-            <div class="al-vital" style="margin-top:8px;">
+                </div>`).join('');
+
+    // Lealdade: eixo do companheiro (Bestiário, "Como se lê uma fera").
+    // 0–10; melhorias a partir de 6, uma por ponto, teto 5.
+    const lealdade = `<div class="al-vital" style="margin-top:8px;">
                 <span class="al-vital-label">🐾 Lealdade</span>
                 <div class="al-vital-pair">
                     <input type="number" id="al_lealdade" value="0" min="0" max="10" title="Lealdade (0–10)">
                     <span class="al-vital-sep">/ 10</span>
                 </div>
                 <small class="al-vital-hint">melhorias a partir de 6 — uma por ponto (teto 5)</small>
-            </div>
-        </div>
+            </div>`;
 
-        <div class="section">
-            <div class="section-title">Atributos</div>
-            <div class="al-attrs" id="al_attr_grid">
-                ${['FOR','DES','VIG','INT','RAC','PRS','PRE','MAN','AUT'].map(a => `
+    const atributos = _AL_ATRIBUTOS.map(a => `
                     <div class="al-attr">
                         <label for="al_attr_${a}">${a}</label>
                         <input type="number" id="al_attr_${a}" value="0">
-                    </div>`).join('')}
-            </div>
-        </div>
+                    </div>`).join('');
 
-        <div class="section">
-            <div class="section-title">Combate e Perícias Livres</div>
-            <div class="row">
-                <div class="field"><label>⚔️ Ataques</label><textarea id="al_ataques" rows="3" placeholder="Ataques e danos..."></textarea></div>
-            </div>
-            <div class="row">
-                <div class="field"><label>📚 Perícias</label><textarea id="al_skills" rows="2" placeholder="Perícias relevantes (Texto Livre)..."></textarea></div>
-            </div>
-        </div>
+    return _alAba('mecanica', [
+        _alSecao('Status Vitais', `<div class="al-vitals">${vitais}</div>${lealdade}`),
+        _alSecao('Atributos', `<div class="al-attrs" id="al_attr_grid">${atributos}</div>`),
+        _alSecao('Combate e Perícias Livres', [
+            _alLinha([_alArea('⚔️ Ataques', 'al_ataques', 3, { placeholder: 'Ataques e danos...' })]),
+            _alLinha([_alArea('📚 Perícias', 'al_skills', 2, { placeholder: 'Perícias relevantes (Texto Livre)...' })]),
+        ].join('')),
+        _alSecao('📊 Valores Derivados', _alPlaceholder('al_dv_grid', 'Calculando...')),
+        _alSecao('🎯 Perícias Estruturadas', _alPlaceholder('al_structured_skills_grid', '')),
+        _alSecao('🧩 Módulos de Classe', _alPlaceholder('al_class_modules', 'Carregando módulos...'), ' id="al_class_modules_section"'),
+    ].join(''));
+}
 
-        <div class="section">
-            <div class="section-title">📊 Valores Derivados</div>
-            <div id="al_dv_grid">
-                <div class="al-empty">Calculando...</div>
-            </div>
-        </div>
+function _alAbaInventario() {
+    return _alAba('inventario',
+        _alSecao('Inventário do Aliado', _alPlaceholder('aliadoInvRoot', 'Abra esta aba para carregar o inventário.')));
+}
 
-        <div class="section">
-            <div class="section-title">🎯 Perícias Estruturadas</div>
-            <div id="al_structured_skills_grid"></div>
-        </div>
+function _alAbaRoleplay() {
+    return _alAba('roleplay', _alSecao('Role Play', [
+        _alLinha([1, 2, 3].map(n => _alTexto(`Personalidade ${n}`, `al_personalidade${n}`)), '1fr 1fr 1fr'),
+        _alLinha([_alTexto('Trejeitos', 'al_trejeitos')]),
+        _alLinha([_alArea('Motivação', 'al_motivacao', 2)]),
+        _alLinha([_alArea('Segredos', 'al_segredos', 2)]),
+        _alLinha([_alTexto('Aliado', 'al_aliado'), _alTexto('Rival', 'al_rival'), _alTexto('Devedor', 'al_devedor')], '1fr 1fr 1fr'),
+        _alLinha([_alArea('💬 Frases', 'al_frases', 2)]),
+        _alLinha([_alArea('📖 História', 'al_historia', 3)]),
+    ].join('')));
+}
 
-        <div class="section" id="al_class_modules_section">
-            <div class="section-title">🧩 Módulos de Classe</div>
-            <div id="al_class_modules">
-                <div class="al-empty">Carregando módulos...</div>
-            </div>
-        </div>
-    </div>
+function _alAbaLoot() {
+    return _alAba('loot', _alSecao('Loot', [
+        _alLinha([_alArea('Itens', 'al_itens', 2)]),
+        _alLinha([_alTexto('Luns', 'al_luns')]),
+        _alLinha([_alArea('Pistas', 'al_pistas', 2)]),
+        _alLinha([_alArea('Complicações', 'al_complicacoes', 2)]),
+    ].join('')));
+}
 
-    <!-- ============ SEÇÃO: INVENTÁRIO ============ -->
-    <div class="tab-content" id="alSec_inventario">
-        <div class="section">
-            <div class="section-title">Inventário do Aliado</div>
-            <div id="aliadoInvRoot">
-                <div class="al-empty">Abra esta aba para carregar o inventário.</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============ SEÇÃO: ROLE PLAY ============ -->
-    <div class="tab-content" id="alSec_roleplay">
-        <div class="section">
-            <div class="section-title">Role Play</div>
-            
-            <div class="row" style="grid-template-columns: 1fr 1fr 1fr;">
-                <div class="field"><label>Personalidade 1</label><input type="text" id="al_personalidade1"></div>
-                <div class="field"><label>Personalidade 2</label><input type="text" id="al_personalidade2"></div>
-                <div class="field"><label>Personalidade 3</label><input type="text" id="al_personalidade3"></div>
-            </div>
-            
-            <div class="row">
-                <div class="field"><label>Trejeitos</label><input type="text" id="al_trejeitos"></div>
-            </div>
-            
-            <div class="row">
-                <div class="field"><label>Motivação</label><textarea id="al_motivacao" rows="2"></textarea></div>
-            </div>
-            
-            <div class="row">
-                <div class="field"><label>Segredos</label><textarea id="al_segredos" rows="2"></textarea></div>
-            </div>
-            
-            <div class="row" style="grid-template-columns: 1fr 1fr 1fr;">
-                <div class="field"><label>Aliado</label><input type="text" id="al_aliado"></div>
-                <div class="field"><label>Rival</label><input type="text" id="al_rival"></div>
-                <div class="field"><label>Devedor</label><input type="text" id="al_devedor"></div>
-            </div>
-            
-            <div class="row">
-                <div class="field"><label>💬 Frases</label><textarea id="al_frases" rows="2"></textarea></div>
-            </div>
-            
-            <div class="row">
-                <div class="field"><label>📖 História</label><textarea id="al_historia" rows="3"></textarea></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============ SEÇÃO: LOOT ============ -->
-    <div class="tab-content" id="alSec_loot">
-        <div class="section">
-            <div class="section-title">Loot</div>
-            <div class="row">
-                <div class="field"><label>Itens</label><textarea id="al_itens" rows="2"></textarea></div>
-            </div>
-            <div class="row">
-                <div class="field"><label>Luns</label><input type="text" id="al_luns"></div>
-            </div>
-            <div class="row">
-                <div class="field"><label>Pistas</label><textarea id="al_pistas" rows="2"></textarea></div>
-            </div>
-            <div class="row">
-                <div class="field"><label>Complicações</label><textarea id="al_complicacoes" rows="2"></textarea></div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="al-foot">
+function buildAliadoForm() {
+    return _alTopo()
+        + _alAbaIdentidade()
+        + _alAbaMecanica()
+        + _alAbaInventario()
+        + _alAbaRoleplay()
+        + _alAbaLoot()
+        + `<div class="al-foot">
         <strong>Nota:</strong> Mecânicas complexas, peculiaridades e vínculos estendidos devem ser gerenciados pelo Mestre no painel dedicado.
-    </div>
-    `;
+    </div>`;
 }
 
 /* =====================================================================

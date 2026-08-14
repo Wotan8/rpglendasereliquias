@@ -49,7 +49,6 @@ window._loadMesaLogs = async function () {
     });
     viewerMesaId = mesaId;
     viewer.start();
-    console.log('📜 Mesa Logs: assinatura em tempo real iniciada para mesa', mesaId);
 };
 
 window._stopMesaLogs = function () {

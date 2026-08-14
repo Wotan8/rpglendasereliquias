@@ -18,7 +18,6 @@ export async function onTabActivated() {
             maxLogs: 1000
         });
         viewer.start();
-        console.log('📜 Histórico: assinatura em tempo real iniciada.');
     }
 }
 

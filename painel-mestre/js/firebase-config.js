@@ -34,7 +34,6 @@ try {
     db = initializeFirestore(app, {
         localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
     });
-    console.log('💾 Firestore: cache offline (IndexedDB) ativado.');
 } catch (e) {
     console.warn('💾 Firestore: cache offline indisponível, usando memória.', e);
     db = getFirestore(app);

@@ -123,7 +123,6 @@ window.switchTab = async function (tabName) {
 
 // ===== INIT =====
 initAuth(async (user) => {
-    console.log('✅ Mestre autenticado:', user.email);
 
     // Load default tab (Mesas)
     await window.switchTab('mesas');

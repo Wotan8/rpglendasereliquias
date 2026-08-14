@@ -410,7 +410,6 @@ export async function loadMestreCatalog() {
             }
         });
         window._mestreCatalog.sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
-        console.log(`✅ Catálogo do Mestre: ${window._mestreCatalog.length} template(s)`);
     } catch(e) { console.error('❌ Erro catálogo:', e); }
 }
 

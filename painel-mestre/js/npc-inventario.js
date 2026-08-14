@@ -882,4 +882,3 @@ window._executeNpcTransfer = async function(itemId, targetId, targetKind) {
     } catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
 };
 
-console.log('✅ [NPC] Módulo de Inventário do NPC carregado.');

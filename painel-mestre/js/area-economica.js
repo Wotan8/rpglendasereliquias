@@ -16,7 +16,6 @@ async function loadAvulsosItems() {
         const items = [];
         snap.forEach(d => { const data = d.data(); if (!data.characterId) items.push({ id: d.id, ...data }); });
         S.setAvulsosItems(items);
-        console.log('📦 Avulsos:', items.length);
         renderAvulsosItems();
     } catch (e) { console.error('❌ Avulsos:', e); showAlert('❌ Erro avulsos', 'danger'); }
 }

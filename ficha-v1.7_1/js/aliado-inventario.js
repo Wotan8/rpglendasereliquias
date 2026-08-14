@@ -184,11 +184,67 @@
     }
 
     /* ============ CRIAR / EDITAR ITEM ============ */
+
+    const TIPOS_ITEM = ['Objeto', 'Arma', 'Vestimenta', 'Acessório', 'Projétil', 'Container', 'Consumível', 'Relíquia'];
+    const FORMAS_EQUIPAR = [['', '— Livre —'], ['segurar', 'Segurar'], ['empunhar', 'Empunhar'], ['vestir', 'Vestir'], ['fixar', 'Fixar']];
+    const CATEGORIAS_ARMA = [
+        ['uma_mao', '🗡️ Arma de Uma Mão'], ['duas_maos', '⚔️ Arma de Duas Mãos'],
+        ['versatil', '🔄 Arma Versátil'], ['escudo', '🛡️ Escudo'], ['distancia', '🏹 Arma a Distância'],
+    ];
+
+    /** Arma e contêiner são peça única: não têm campo de quantidade. */
+    const _naoEmpilha = (tipo, ehContainer) => tipo === 'Container' || tipo === 'Arma' || !!ehContainer;
+    const _ehContainer = (tipo, flag) => tipo === 'Container' || !!flag;
+
+    const _opt = (valor, rotulo, selecionado, extra = '') =>
+        `<option value="${valor}"${extra} ${selecionado ? 'selected' : ''}>${rotulo}</option>`;
+    const _opts = (pares, atual) => pares.map(([v, rotulo]) => _opt(v, rotulo, v === atual)).join('');
+
+    const _grupo = (label, corpo, attrs = '') =>
+        `<div class="inv-form-group"${attrs}><label class="inv-form-label">${label}</label>${corpo}</div>`;
+    const _grupoLargo = (label, corpo) =>
+        `<div class="inv-form-group inv-form-wide"><label class="inv-form-label">${label}</label>${corpo}</div>`;
+    const _numero = (id, valor, extra = '') =>
+        `<input type="number" id="${id}" class="inv-form-input" value="${valor}"${extra}>`;
+    const _select = (id, opcoes, extra = '') =>
+        `<select id="${id}" class="inv-form-select"${extra}>${opcoes}</select>`;
+
     function openForm(editItemId) {
         if (!AI.npc?.id) return;
         const item = editItemId ? AI.items.find(i => i.id === editItemId) : null;
         const isEdit = !!item;
-        const partes = _aliadoBodyParts();
+
+        const semQtd = _naoEmpilha(item?.tipo, item?.ehContainer);
+        const container = _ehContainer(item?.tipo, item?.ehContainer);
+
+        // Uma parte do corpo do aliado por linha; nenhuma marcada = item Livre.
+        const partesOpts = _aliadoBodyParts().map(bp => _opt(
+            bp.id, `${bp.icone || '🦴'} ${esc(bp.nome)}`,
+            Array.isArray(item?.equipavelEm) && item.equipavelEm.includes(bp.id))).join('');
+
+        const campos = [
+            _grupoLargo('Nome *', `<input type="text" id="aif_nome" class="inv-form-input" value="${esc(item?.nome || '')}" placeholder="Nome do item">`),
+            _grupo('Tipo', _select('aif_tipo',
+                TIPOS_ITEM.map(t => _opt(t, `${_emoji(t)} ${t}`, item?.tipo === t)).join(''),
+                ' onchange="AliadoInventario._toggleFormFields()"')),
+            _grupo('Equipável em (partes do aliado)',
+                `<select id="aif_equipavelEm" class="inv-form-select" multiple size="4">${partesOpts}</select>`
+                + '<small style="color:var(--muted);font-size:.8rem">Ctrl/Cmd p/ múltiplos. Vazio = Livre.</small>'),
+            _grupo('Forma de equipar', _select('aif_formaEquipar', _opts(FORMAS_EQUIPAR, item?.formaEquipar || ''))),
+            _grupo('Categoria da Arma *', _select('aif_categoriaArma',
+                _opt('', '— Selecione —', !item?.categoriaArma, ' disabled') + _opts(CATEGORIAS_ARMA, item?.categoriaArma)),
+                ` id="aif_catArmaGroup" style="display:${item?.tipo === 'Arma' ? 'flex' : 'none'}"`),
+            _grupo('Peso', _numero('aif_peso', item?.peso ?? 1, ' min="0" step="0.1"')),
+            _grupo('Tamanho', _numero('aif_tamanho', item?.tamanho ?? 1, ' min="0"')),
+            _grupo('Quantidade', _numero('aif_quantidade', semQtd ? 1 : (item?.quantidade || 1), ' min="1"'),
+                ` id="aif_qtyGroup" style="display:${semQtd ? 'none' : 'flex'}"`),
+            `<div id="aif_containerFields" class="inv-form-group inv-form-wide" style="display:${container ? 'grid' : 'none'};grid-template-columns:1fr 1fr;gap:12px">`
+            + _grupo('⚖️ Peso Máximo', _numero('aif_pesoMaximo', item?.pesoMaximoContainer || 10, ' min="0" step="0.1"'))
+            + _grupo('✖️ Mult. Pressão', _numero('aif_multPressao', item?.multiplicadorPressao || 1, ' min="0" step="0.01"'))
+            + '</div>',
+            _grupoLargo('Descrição', `<textarea id="aif_desc" class="inv-form-textarea" rows="3">${esc(item?.descricao || '')}</textarea>`),
+            _grupoLargo('Imagem', CampoImagem.html({ id: 'aif_imagem', classe: 'inv-form-input', valor: item?.imagem || item?.imagemUrl || '', pasta: 'imagens/itens' })),
+        ].join('');
 
         document.getElementById('aliadoItemFormModal')?.remove();
         const modal = document.createElement('div');
@@ -201,80 +257,7 @@
                 <button class="inv-modal-close" onclick="this.closest('.inv-modal').remove()">✕</button>
             </div>
             <div class="inv-modal-body">
-                <div class="inv-form-grid">
-                    <div class="inv-form-group inv-form-wide">
-                        <label class="inv-form-label">Nome *</label>
-                        <input type="text" id="aif_nome" class="inv-form-input" value="${esc(item?.nome || '')}" placeholder="Nome do item">
-                    </div>
-                    <div class="inv-form-group">
-                        <label class="inv-form-label">Tipo</label>
-                        <select id="aif_tipo" class="inv-form-select" onchange="AliadoInventario._toggleFormFields()">
-                            ${['Objeto', 'Arma', 'Vestimenta', 'Acessório', 'Projétil', 'Container', 'Consumível', 'Relíquia'].map(t =>
-                                `<option value="${t}" ${item?.tipo === t ? 'selected' : ''}>${_emoji(t)} ${t}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="inv-form-group">
-                        <label class="inv-form-label">Equipável em (partes do aliado)</label>
-                        <select id="aif_equipavelEm" class="inv-form-select" multiple size="4">
-                            ${partes.map(bp => {
-                                const sel = Array.isArray(item?.equipavelEm) && item.equipavelEm.includes(bp.id) ? 'selected' : '';
-                                return `<option value="${bp.id}" ${sel}>${bp.icone || '🦴'} ${esc(bp.nome)}</option>`;
-                            }).join('')}
-                        </select>
-                        <small style="color:var(--muted);font-size:.8rem">Ctrl/Cmd p/ múltiplos. Vazio = Livre.</small>
-                    </div>
-                    <div class="inv-form-group">
-                        <label class="inv-form-label">Forma de equipar</label>
-                        <select id="aif_formaEquipar" class="inv-form-select">
-                            <option value="" ${!item?.formaEquipar ? 'selected' : ''}>— Livre —</option>
-                            <option value="segurar" ${item?.formaEquipar === 'segurar' ? 'selected' : ''}>Segurar</option>
-                            <option value="empunhar" ${item?.formaEquipar === 'empunhar' ? 'selected' : ''}>Empunhar</option>
-                            <option value="vestir" ${item?.formaEquipar === 'vestir' ? 'selected' : ''}>Vestir</option>
-                            <option value="fixar" ${item?.formaEquipar === 'fixar' ? 'selected' : ''}>Fixar</option>
-                        </select>
-                    </div>
-                    <div class="inv-form-group" id="aif_catArmaGroup" style="display:${item?.tipo === 'Arma' ? 'flex' : 'none'}">
-                        <label class="inv-form-label">Categoria da Arma *</label>
-                        <select id="aif_categoriaArma" class="inv-form-select">
-                            <option value="" disabled ${!item?.categoriaArma ? 'selected' : ''}>— Selecione —</option>
-                            <option value="uma_mao" ${item?.categoriaArma === 'uma_mao' ? 'selected' : ''}>🗡️ Arma de Uma Mão</option>
-                            <option value="duas_maos" ${item?.categoriaArma === 'duas_maos' ? 'selected' : ''}>⚔️ Arma de Duas Mãos</option>
-                            <option value="versatil" ${item?.categoriaArma === 'versatil' ? 'selected' : ''}>🔄 Arma Versátil</option>
-                            <option value="escudo" ${item?.categoriaArma === 'escudo' ? 'selected' : ''}>🛡️ Escudo</option>
-                            <option value="distancia" ${item?.categoriaArma === 'distancia' ? 'selected' : ''}>🏹 Arma a Distância</option>
-                        </select>
-                    </div>
-                    <div class="inv-form-group">
-                        <label class="inv-form-label">Peso</label>
-                        <input type="number" id="aif_peso" class="inv-form-input" value="${item?.peso ?? 1}" min="0" step="0.1">
-                    </div>
-                    <div class="inv-form-group">
-                        <label class="inv-form-label">Tamanho</label>
-                        <input type="number" id="aif_tamanho" class="inv-form-input" value="${item?.tamanho ?? 1}" min="0">
-                    </div>
-                    <div class="inv-form-group" id="aif_qtyGroup" style="display:${(item?.tipo === 'Container' || item?.tipo === 'Arma' || item?.ehContainer) ? 'none' : 'flex'}">
-                        <label class="inv-form-label">Quantidade</label>
-                        <input type="number" id="aif_quantidade" class="inv-form-input" value="${(item?.tipo === 'Container' || item?.tipo === 'Arma' || item?.ehContainer) ? 1 : (item?.quantidade || 1)}" min="1">
-                    </div>
-                    <div id="aif_containerFields" class="inv-form-group inv-form-wide" style="display:${(item?.tipo === 'Container' || item?.ehContainer) ? 'grid' : 'none'};grid-template-columns:1fr 1fr;gap:12px">
-                        <div class="inv-form-group">
-                            <label class="inv-form-label">⚖️ Peso Máximo</label>
-                            <input type="number" id="aif_pesoMaximo" class="inv-form-input" value="${item?.pesoMaximoContainer || 10}" min="0" step="0.1">
-                        </div>
-                        <div class="inv-form-group">
-                            <label class="inv-form-label">✖️ Mult. Pressão</label>
-                            <input type="number" id="aif_multPressao" class="inv-form-input" value="${item?.multiplicadorPressao || 1}" min="0" step="0.01">
-                        </div>
-                    </div>
-                    <div class="inv-form-group inv-form-wide">
-                        <label class="inv-form-label">Descrição</label>
-                        <textarea id="aif_desc" class="inv-form-textarea" rows="3">${esc(item?.descricao || '')}</textarea>
-                    </div>
-                    <div class="inv-form-group inv-form-wide">
-                        <label class="inv-form-label">Imagem</label>
-                        ${CampoImagem.html({ id: 'aif_imagem', classe: 'inv-form-input', valor: item?.imagem || item?.imagemUrl || '', pasta: 'imagens/itens' })}
-                    </div>
-                </div>
+                <div class="inv-form-grid">${campos}</div>
                 ${isEdit ? `<input type="hidden" id="aif_editId" value="${item.id}">` : ''}
             </div>
             <div class="inv-modal-footer">
