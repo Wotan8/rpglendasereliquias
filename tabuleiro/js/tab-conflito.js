@@ -24,14 +24,16 @@
 // Writes: 1 por etapa, no doc de combate que já existe. Nenhuma coleção nova.
 // =============================================
 import { setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, uid, normChave, valorComponente } from './tab-state.js';
+import { T, esc, toast, uid, normChave, valorComponente, gridSize, pxParaUnidades } from './tab-state.js';
+import { golpesDe, golpesCacheados, escolherGolpe, golpesCorpoACorpo, alcanceDoGolpe } from './tab-golpes.js';
 import { refCombate } from './tab-main.js';
 import { cenaAtiva, comCenaAtivaPatch } from '../../shared/combate-cenas.js';
 import { participanteDoToken, valorVdDaFonte, fonteDoParticipante, VITAIS } from './tab-hud.js';
 import { aplicarCondicaoEmVarios } from './tab-combat.js';
 import { logChat } from './tab-chat.js';
 import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal,
-         defesasLivres, custoDaDefesa, soODado } from './tab-conflito-calc.js';
+         defesasLivres, custoDaDefesa, soODado,
+         podeContraAtacar as regraContraAtaque } from './tab-conflito-calc.js';
 
 const DADO_DESARMADO = '1d4';   // §6.8: contra-ataque sem arma
 
@@ -267,26 +269,57 @@ window.tbConfRolarDano = async (naMesa) => {
 };
 
 // ---------- 4) contra-ataque (§6.8) ----------
-/** Arma o contra-ataque: sempre 1 ENER e uma defesa da rodada. */
+/** Distância BORDA a BORDA entre dois tokens, na unidade do canvas. */
+function distanciaEntreTokens(idA, idB) {
+    const a = T.objects.get(idA), b = T.objects.get(idB);
+    if (!a || !b) return null;
+    const gs = gridSize();
+    const rA = ((a.tamanhoCelulas || 1) * gs) / 2, rB = ((b.tamanhoCelulas || 1) * gs) / 2;
+    const px = Math.max(0, Math.hypot(b.x - a.x, b.y - a.y) - rA - rB);
+    return pxParaUnidades(px, { x: a.x, y: a.y }).valor;
+}
+
+/**
+ * 🔁 Este alvo pode contra-atacar? (§6.8) — junta o estado da mesa (ficha,
+ * tokens, posição) e entrega para a REGRA, que mora no módulo puro.
+ * @returns { ok, motivo, linhas, pericia }
+ */
+function podeContra(c, a, linhas) {
+    if (!a?.pid) return { ok: false, motivo: 'está fora da cena', linhas: [] };
+    const p = part(a.pid);
+    const pericia = valorComponente('Contra-Ataque', fonteDoParticipante(p)) ?? 0;
+    // o alcance de cada golpe já sai resolvido (arma + 5% do Tamanho)
+    const golpes = golpesCorpoACorpo(linhas).map(l => ({ ...l, alcanceM: alcanceDoGolpe(l, p) ?? 0 }));
+    const r = regraContraAtaque({
+        pericia, energia: enerDe(a.pid),
+        jaContraAtacou: (c.contra || []).some(x => x.pid === a.pid),
+        distanciaM: distanciaEntreTokens(a.tokenId, c.atacante.tokenId),
+        golpes,
+    });
+    return { ...r, pericia };
+}
+
+/** Arma o contra-ataque: o defensor escolhe COM O QUE responde. */
 window.tbConfContra = async (i) => {
     const c = conflito(); if (!c || !c.rolagem?.abriu) return;
     const a = c.alvos[i]; if (!a?.pid || !controla(a.pid)) return;
-    if ((c.contra || []).some(x => x.pid === a.pid)) return;
-    const ener = enerDe(a.pid);
-    if (ener != null && ener < 1) { toast(`⚠️ ${a.nome} não tem Energia para contra-atacar`, 'warning'); return; }
     const p = part(a.pid);
-    const pericia = valorComponente('Contra-Ataque', fonteDoParticipante(p)) ?? 0;
-    let formula = DADO_DESARMADO;
-    try {
-        const m = await import('./tab-ficha-win.js?v=9');
-        const linhas = await m.linhasDeAtaque(p.npcId ? 'npc' : 'char', p.npcId || p.characterId);
-        // §6.8: o contra-ataque usa o DADO da arma, sem os bônus dela
-        const comDado = linhas.map(l => soODado(l.dano)).find(Boolean);
-        if (comDado) formula = comDado;
-    } catch (e) { console.warn('arma do contra-ataque', e); }
-    const contra = [...(c.contra || []), { pid: a.pid, nome: a.nome, formula, pericia, bruto: null, dano: null, blindagem: 0, aplicado: false }];
+    const linhas = await golpesDe(p);
+    const pode = podeContra(c, a, linhas);
+    if (!pode.ok) { toast(`⚠️ ${a.nome} não pode contra-atacar: ${pode.motivo}`, 'warning'); return; }
+    const escolhido = await escolherGolpe(
+        `🔁 Com o que ${esc(a.nome)} contra-ataca?`, pode.linhas,
+        'Só o DADO da arma entra (§6.8): sem o seu Dano e sem os bônus da peça. Custa 1 Energia e uma defesa da rodada.');
+    if (!escolhido && pode.linhas.length > 1) return;   // cancelou
+    const linha = escolhido || pode.linhas[0];
+    // §6.8: o contra-ataque usa o DADO cru da arma; sem dado, o desarmado 1d4
+    const formula = soODado(linha?.dano) || DADO_DESARMADO;
+    const contra = [...(c.contra || []), {
+        pid: a.pid, nome: a.nome, arma: linha?.nome || 'desarmado', formula,
+        pericia: pode.pericia, bruto: null, dano: null, blindagem: 0, aplicado: false,
+    }];
     await salvar({ ...c, contra }, comDefesaGasta(a.pid));
-    toast(`🔁 ${a.nome} contra-ataca — role o ${formula} (custa 1 Energia)`);
+    toast(`🔁 ${a.nome} contra-ataca com ${linha?.nome || 'o corpo'} — role o ${formula} (custa 1 Energia)`);
 };
 
 window.tbConfRolarContra = async (k, naMesa) => {
@@ -439,12 +472,12 @@ function render() {
 function linhaContra(ct, k) {
     if (ct.bruto == null) {
         return controla(ct.pid)
-            ? linhaRolagem({ rotulo: `🔁 Contra-ataque de ${esc(ct.nome)} (${esc(ct.formula)}${ct.pericia ? ` + ${ct.pericia}` : ''})`,
+            ? linhaRolagem({ rotulo: `🔁 Contra-ataque de ${esc(ct.nome)}${ct.arma ? ` com ${esc(ct.arma)}` : ''} (${esc(ct.formula)}${ct.pericia ? ` + ${ct.pericia}` : ''})`,
                              fn: 'tbConfRolarContra', args: `${k},`, idManual: `cfManualContra${k}`, dica: 'dado da mesa' })
             : `<div class="tb-conflito-alvo"><span class="tb-conflito-nome">🔁 ${esc(ct.nome)} contra-ataca</span><span class="tb-muted">⏳ rolando…</span></div>`;
     }
     return `<div class="tb-conflito-alvo">
-        <span class="tb-conflito-nome">🔁 ${esc(ct.nome)} contra-ataca</span>
+        <span class="tb-conflito-nome">🔁 ${esc(ct.nome)} contra-ataca${ct.arma ? ` <span class="tb-muted">com ${esc(ct.arma)}</span>` : ''}</span>
         <span class="tb-conflito-dir"><b class="tb-conflito-hit">−${ct.dano} VIT</b>
             <span class="tb-muted">${esc(ct.detalhe || ct.formula)}${ct.pericia ? ` +${ct.pericia}` : ''}${ct.blindagem ? ` −${ct.blindagem} blindagem` : ''} · 1 Energia</span></span>
     </div>`;
@@ -475,14 +508,21 @@ function linhaAlvo(c, a, i) {
     } else {
         dir = `<b class="tb-conflito-miss">🛡️ defendeu</b> <span class="tb-muted">(${esc(a.defesaNome || '—')}${a.defesa ? ' ' + a.defesa : ''}${a.defesaPaga ? ' · 1 ENER' : ''})</span>`;
     }
-    // 🔁 guarda aberta: quem foi atacado pode contra-atacar (sempre 1 Energia)
-    const jaContra = (c.contra || []).some(x => x.pid === a.pid);
-    const podeContra = c.rolagem?.abriu && a.pid && meu && !jaContra && a.escolhido;
-    const semEnerContra = podeContra && (enerDe(a.pid) ?? 1) < 1;
-    const btnContra = podeContra
-        ? ` <button class="tb-btn tb-btn-small" ${semEnerContra ? 'disabled' : ''}
-             title="${semEnerContra ? 'Sem Energia para contra-atacar' : 'Acerta automático, ignora a Defesa. Custa 1 Energia e uma defesa da rodada.'}"
-             onclick="tbConfContra(${i})">🔁 Contra-atacar (1 ENER)</button>` : '';
+    // 🔁 guarda aberta: quem foi atacado pode contra-atacar (§6.8). As travas
+    // (perícia, alcance corpo a corpo, Energia) já aparecem no próprio botão.
+    let btnContra = '';
+    if (c.rolagem?.abriu && a.pid && meu && a.escolhido) {
+        const linhas = golpesCacheados(part(a.pid));
+        if (linhas === null) {
+            golpesDe(part(a.pid)).then(render).catch(() => {});   // carrega e repinta
+            btnContra = ' <span class="tb-muted">⏳ conferindo o contra-ataque…</span>';
+        } else {
+            const pode = podeContra(c, a, linhas);
+            btnContra = ` <button class="tb-btn tb-btn-small" ${pode.ok ? '' : 'disabled'}
+                title="${esc(pode.ok ? 'Acerta automático, ignora a Defesa. Custa 1 Energia e uma defesa da rodada.' : 'Não pode contra-atacar: ' + pode.motivo)}"
+                onclick="tbConfContra(${i})">🔁 Contra-atacar (1 ENER)</button>`;
+        }
+    }
     const orcTxt = orc && (meu || souMestre())
         ? ` <span class="tb-conflito-orc" title="Defesas grátis por rodada = Reflexo − 1 (mínimo 1); as extras custam 1 Energia">🛡️ ${orc.restam}/${orc.livres}${orc.restam ? '' : ' · extra custa 1 ENER'}</span>` : '';
     return `<div class="tb-conflito-alvo">

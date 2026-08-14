@@ -376,8 +376,10 @@ function onDown(e) {
                     markDirty();
                     break;
                 }
+                // ⚙️ Propriedades NÃO abre no toque/clique seco: no celular o
+                // painel cobria o mapa a cada encostada. Quem abre é o menu —
+                // toque longo no dedo ou botão direito no mouse.
                 selecionar(o.id);
-                abrirPropriedades(o.id);
                 revelarLootSeInteragiu(o);
                 markDirty();
                 if (podeMoverObj(o)) {
@@ -399,7 +401,7 @@ function onDown(e) {
         case 'move': {
             const o = pickObject(w);
             if (o && podeMoverObj(o)) {
-                selecionar(o.id); abrirPropriedades(o.id);
+                selecionar(o.id);   // Propriedades só pelo menu (ver ferramenta 'select')
                 revelarLootSeInteragiu(o);
                 iniciarDragObj(o, w, e.pointerId);
                 cv.style.cursor = 'grabbing';
@@ -538,7 +540,7 @@ function selecionarNoRetangulo(r) {
 
     T.selecionados = ids;
     T.selection = ids.length === 1 ? ids[0] : null;
-    abrirPropriedades(T.selection);
+    if (!T.selection) abrirPropriedades(null);   // laço só FECHA o painel; abrir é pelo menu
     if (ids.length > 1) toast(`✅ ${ids.length} objetos selecionados — arraste para mover, Delete para excluir`);
     else if (!ids.length) toast('Nada dentro do laço', 'warning');
 }

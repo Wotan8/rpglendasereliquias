@@ -23,7 +23,8 @@ import {
     efeitoDasCondicoes, porqueCondicao,
     guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica, custoVital,
 } from '../../shared/combate-cenas.js';
-import { shapeDaMira, alvoAoAlcance } from './tab-mira-calc.js';
+import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR } from './tab-mira-calc.js';
+import { golpesDe, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes } from './tab-golpes.js';
 import { templateAtingeCirculo } from './tab-templates.js';
 import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte } from './tab-hud.js';
 import { carregarCondicoesSistema, aplicarCondicaoEmVarios } from './tab-combat.js';
@@ -400,7 +401,10 @@ function render() {
             ${temLivre ? btn('livre', ROTULO_ACAO.livre, true, 'Incidental — não consome ação') : ''}
             ${temCompleta && !semAcoes ? btn('completa', ROTULO_ACAO.completa, acoes.padrao && acoes.movimento, 'Habilidades que consomem o turno inteiro') : ''}
             ${podeGuardar ? `<button class="tb-btn tb-turno-btn" onclick="tbTurnoGuardar()" title="Guarda as DUAS ações: você pode interromper e agir a qualquer momento até o fim DESTA rodada — depois perde">🛡️ Guardar Turno</button>` : ''}
-            <button class="tb-btn tb-turno-btn ${semAcoes ? 'tb-btn-primary' : ''}" onclick="tbTurnoEncerrar()">⏭️ Encerrar Turno</button>
+            <button class="tb-btn tb-turno-btn ${semAcoes && !conflitoPendente() ? 'tb-btn-primary' : ''}"
+                ${conflitoPendente() ? 'disabled' : ''}
+                title="${conflitoPendente() ? 'Termine o conflito aberto antes de passar a vez' : 'Passa a vez para o próximo da ordem'}"
+                onclick="tbTurnoEncerrar()">⏭️ Encerrar Turno${conflitoPendente() ? ' <i>(conflito em curso)</i>' : ''}</button>
         </div>`;
     }
 
@@ -460,18 +464,27 @@ function subMenu(qual, p, skills, acoes) {
 
 async function carregarGolpes(chave, p) {
     golpesCache = { chave, linhas: null };
-    try {
-        const m = await import('./tab-ficha-win.js?v=9');
-        const linhas = await m.linhasDeAtaque(p.npcId ? 'npc' : 'char', p.npcId || p.characterId);
-        golpesCache = { chave, linhas };
-    } catch (e) { console.warn('golpes do turno', e); golpesCache = { chave, linhas: [] }; }
+    golpesCache = { chave, linhas: await golpesDe(p) };   // cache compartilhado (tab-golpes)
     render();
 }
 
 // ---------- handlers do painel ----------
 window.tbTurnoSub = (qual) => { sub = qual; render(); };
 
+/**
+ * ⚔️ Conflito aberto e ainda por resolver? O jogador não passa a vez no meio
+ * de uma troca de golpes — a defesa e o dano do alvo ficariam órfãos. Em 'fim'
+ * o conflito já está resolvido (só falta fechar a janela) e a vez pode passar.
+ * O MESTRE nunca fica preso: ele destrava a mesa quando algo emperra.
+ */
+function conflitoPendente() {
+    if (T.isMaster && T.mode === 'secret') return false;
+    const cf = cena()?.conflito;
+    return !!cf && cf.fase !== 'fim';
+}
+
 window.tbTurnoEncerrar = async () => {
+    if (conflitoPendente()) { toast('⚠️ Resolva o conflito aberto antes de encerrar o turno', 'warning'); return; }
     sub = null;
     logChat(`⏭️ ${participanteDaVez(cena())?.name || '?'} encerrou o turno`);
     await window.tbCombTurno(1);
@@ -566,7 +579,7 @@ window.tbTurnoGolpe = (i) => {
     if (!tok) { toast('⚠️ O participante da vez não tem token neste canvas', 'warning'); return; }
     const meta = {
         nome: g.nome, efeito: g.dano ? `dano ${g.dano}` : '', custoAcao: 'padrao',
-        golpe: { dano: g.dano || '', acerto: g.acerto ?? null, tipos: (g.tiposGolpe || []).map(t => t.nome) },
+        golpe: metaDoGolpe(g),
     };
     // 🏹 Arma a distância não balança arco nenhum: escolhe o alvo dentro do
     // triplo da visão (o tiro enxerga mais longe do que a mão alcança).
@@ -618,7 +631,14 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
     const tok = tokenAtivoDoCombate();
     if (!tok) { toast('⚠️ O participante da vez não tem token neste canvas', 'warning'); return; }
     if (s.mira?.tipo) {
-        armarMira(miraDoCadastro(s.mira, s, custo), tok);
+        const cfg = miraDoCadastro(s.mira, s, custo);
+        // 🗡️ Habilidade que MACHUCA sai de uma arma, de um foco ou do corpo:
+        // é de lá que vêm o Acerto (o Alvo da rolagem), o dado de dano e o tipo
+        // de golpe. Com mais de um equipado, quem age escolhe.
+        const golpe = await escolherGolpeDaAcao(p, s, cfg);
+        if (golpe === false) return;   // cancelou o picker: nada foi gasto
+        if (golpe) cfg.meta.golpe = metaDoGolpe(golpe);
+        armarMira(cfg, tok);
         sub = null;
         return;
     }
@@ -634,6 +654,24 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
     }
     abrirMiraManual(s, custo, tok);
 };
+
+/**
+ * Com o que esta habilidade vai bater? Só pergunta em ação OFENSIVA (a que
+ * pode pegar inimigo) — buff em aliado não tem Acerto nem dano de arma.
+ * @returns linha do golpe · null (segue sem arma) · false (cancelou)
+ */
+async function escolherGolpeDaAcao(p, s, cfg) {
+    if (cfg.afeta === 'aliados') return null;
+    const linhas = await golpesDe(p);
+    // arma a distância não serve para uma habilidade de arco/cone que nasce no
+    // corpo; para mira de alvos vale tudo que estiver equipado
+    const uteis = cfg.tipo === 'cac' ? linhas.filter(l => !l.distancia) : linhas;
+    if (!uteis.length) return null;
+    const escolhido = await escolherGolpe(
+        `🗡️ Com o que ${esc(p?.name || 'o personagem')} usa “${esc(s.nome)}”?`, uteis,
+        'O Acerto, o dado de dano e o tipo de golpe da janela de conflito saem daqui.');
+    return escolhido || (uteis.length > 1 ? false : null);
+}
 
 // Custos da skill em uso, debitados na confirmação da mira.
 let _custosAPagar = [];
@@ -876,8 +914,14 @@ window.tbTurnoConfirmarMira = async () => {
             if (porqueNaoPodeSerAlvo(o)) continue;   // a área varre por cima do Etéreo
             atingidos.push(o);
         }
-        // área que afeta a própria facção inclui o conjurador se ele estiver dentro
-        if (m.afeta !== 'inimigos' && templateAtingeCirculo(shape, { x: tok.x, y: tok.y }, rTok)) atingidos.unshift(tok);
+        // 🙅 O CONJURADOR só entra na própria área se estiver mesmo dentro dela.
+        // Cone e linha nascem na BORDA do token, então encostam nele sempre — o
+        // toque simples fazia quem lançava virar alvo do próprio golpe. Vale a
+        // cobertura: mais da metade do corpo dentro da forma.
+        if (m.afeta !== 'inimigos') {
+            const dentro = (p) => templateAtingeCirculo(shape, p, 0);
+            if (fracaoCoberta({ x: tok.x, y: tok.y }, rTok, dentro) > COBERTURA_MINIMA_CONJURADOR) atingidos.unshift(tok);
+        }
     }
 
     const nomes = atingidos.map(o => o.nome || '?');

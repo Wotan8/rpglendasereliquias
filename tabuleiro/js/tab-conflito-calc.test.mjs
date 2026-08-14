@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal,
-         defesasLivres, custoDaDefesa, soODado } from './tab-conflito-calc.js';
+         defesasLivres, custoDaDefesa, soODado, podeContraAtacar } from './tab-conflito-calc.js';
 
 // --- Graus ---
 assert.equal(grausDoAtaque(7, 4), 3, 'Alvo 7, dado 4 → 3 Graus');
@@ -57,4 +57,27 @@ assert.equal(soODado('1d8+3'), '1d8', 'o +3 fica de fora do contra-ataque');
 assert.equal(soODado('2d6 - 1'), '2d6', 'espaço e menos não confundem');
 assert.equal(soODado('4'), '', 'dano fixo não tem dado para o contra-ataque');
 
-console.log('✅ conta do conflito OK — graus, defesa, crítico, blindagem, orçamento e piso');
+// --- Quem pode contra-atacar (§6.8) ---
+const espada = { nome: 'Espada', alcanceM: 1.5, distancia: false };
+const lanca  = { nome: 'Lança',  alcanceM: 3,   distancia: false };
+const arco   = { nome: 'Arco',   alcanceM: 30,  distancia: true };
+const base = { pericia: 2, energia: 5, jaContraAtacou: false, distanciaM: 1.5, golpes: [espada] };
+
+assert.equal(podeContraAtacar(base).ok, true, 'perícia, energia e alcance: pode');
+assert.equal(podeContraAtacar({ ...base, pericia: 0 }).ok, false, 'sem a perícia não contra-ataca');
+assert.match(podeContraAtacar({ ...base, pericia: 0 }).motivo, /Contra-Ataque/, 'o motivo diz qual é a trava');
+assert.equal(podeContraAtacar({ ...base, pericia: 1 }).ok, true, 'nível 1 já basta');
+assert.equal(podeContraAtacar({ ...base, energia: 0 }).ok, false, 'sem Energia não contra-ataca');
+assert.equal(podeContraAtacar({ ...base, energia: null }).ok, true, 'Energia desconhecida não bloqueia');
+assert.equal(podeContraAtacar({ ...base, jaContraAtacou: true }).ok, false, 'um contra-ataque por golpe');
+
+// alcance: é corpo a corpo, tem que CHEGAR no agressor
+assert.equal(podeContraAtacar({ ...base, distanciaM: 4 }).ok, false, 'espada não alcança a 4 m');
+assert.equal(podeContraAtacar({ ...base, distanciaM: 3, golpes: [espada, lanca] }).ok, true, 'a lança alcança');
+assert.deepEqual(podeContraAtacar({ ...base, distanciaM: 3, golpes: [espada, lanca] }).linhas.map(g => g.nome),
+    ['Lança'], 'só entram os golpes que realmente alcançam');
+assert.equal(podeContraAtacar({ ...base, golpes: [arco] }).ok, false, 'arma a distância não contra-ataca');
+assert.equal(podeContraAtacar({ ...base, golpes: [] }).ok, false, 'sem golpe físico não há contra-ataque');
+assert.equal(podeContraAtacar({ ...base, distanciaM: null }).ok, false, 'sem distância medida não libera');
+
+console.log('✅ conta do conflito OK — graus, defesa, crítico, blindagem, orçamento, piso e contra-ataque');

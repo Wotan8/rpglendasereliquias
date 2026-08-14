@@ -1170,6 +1170,32 @@ function _npcModFieldHtml(mi, ii, field, item) {
         </div>`;
     } else if (field.tipo === 'data') {
         input = `<input type="date" class="form-input" value="${escapeHtml(String(val ?? ''))}" oninput="${set(key, 'this.value')}">`;
+    } else if (field.tipo === 'select_botao') {
+        // 🔘 O valor guardado é o ID de uma MECÂNICA — sem isto o campo mostrava
+        // "c71FVX70xj1mDzqNt3tc" no lugar do nome dela.
+        const mechs = (F.sys.mechanics || []).slice().sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        const opts = mechs.map(m => `<option value="${escapeHtml(m.id)}" ${val === m.id ? 'selected' : ''}>${escapeHtml(m.nome || m.id)}</option>`).join('');
+        const orfa = val && !mechs.some(m => m.id === val);
+        input = `<select class="form-select" onchange="${set(key, 'this.value')}">
+            <option value="">— Nenhuma mecânica —</option>${opts}
+            ${orfa ? `<option value="${escapeHtml(String(val))}" selected>⚠️ mecânica fora do registro (${escapeHtml(String(val))})</option>` : ''}
+        </select>`;
+    } else if (field.tipo === 'select_vd') {
+        // 📊 Idem, mas o ID é de um Valor Derivado
+        const dvs = (F.sys.derivedValues || []).slice().sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        const opts = dvs.map(d => `<option value="${escapeHtml(d.id)}" ${val === d.id ? 'selected' : ''}>${escapeHtml((d.icone || '📊') + ' ' + (d.nome || d.id))}</option>`).join('');
+        const orfa = val && !dvs.some(d => d.id === val);
+        input = `<select class="form-select" onchange="${set(key, 'this.value')}">
+            <option value="">— Nenhum Valor Derivado —</option>${opts}
+            ${orfa ? `<option value="${escapeHtml(String(val))}" selected>⚠️ VD fora do registro (${escapeHtml(String(val))})</option>` : ''}
+        </select>`;
+    } else if (field.tipo === 'valor_derivado') {
+        // 📊 O VD é fixo no schema; o que se digita aqui é o VALOR dele
+        const dv = (F.sys.derivedValues || []).find(d => d.id === field.derivedValueId);
+        const nome = dv ? `${dv.icone || '📊'} ${dv.nome}` : '📊 VD não encontrado no registro';
+        input = `<input type="number" class="form-input" value="${escapeHtml(String(val ?? ''))}" title="${escapeHtml(nome)}"
+            placeholder="${escapeHtml(nome)}" oninput="${set(key, "this.value===''?'':parseFloat(this.value)||0")}">`;
+        return `<div class="npcv2-mod-field"><label class="form-label">${label} <span class="npcv2-pec-fonte">${escapeHtml(nome)}</span></label>${input}</div>`;
     } else {
         // text e demais tipos → texto livre
         input = `<input type="text" class="form-input" value="${escapeHtml(String(val ?? ''))}" placeholder="${escapeHtml(field.placeholder || '')}" oninput="${set(key, 'this.value')}">`;
@@ -1406,10 +1432,13 @@ function renderDvGrid() {
     // aparecer duas vezes. Os com campo Atual ganham a caixinha atual/máx,
     // igual a Vitalidade, Energia e Sanidade.
     const combateKeys = new Set((F.sys.derivedValues || []).filter(d => d.statusCombate).map(d => d.key));
-    const vitals = allDvs.filter(dv => dv.isVital || combateKeys.has(dv.key));
-
     // 📊 VDs: apenas os vinculados ao NPC (não lista mais todos os VDs do sistema)
     const vinc = F.npc.valoresDer.vinculados || [];
+    // ⚔️ "Status de Combate" é um jeito de EXIBIR, não um vínculo: um VD de
+    // classe (Graça de Palla, Bolha de Sangue) só aparece em quem realmente o
+    // tem. Antes a grade mostrava todo VD marcado no registro, e um bardo
+    // ficava com a Graça do Pallacerdote na ficha.
+    const vitals = allDvs.filter(dv => dv.isVital || (combateKeys.has(dv.key) && vinc.includes(dv.key)));
     const dvs = allDvs.filter(dv => !dv.isVital && !combateKeys.has(dv.key) && vinc.includes(dv.key));
 
     const cellHtml = (dv, removable) => {
@@ -1450,8 +1479,10 @@ function renderDvGrid() {
 
     const vazio = msg => `<div class="npcv2-empty">${msg}</div>`;
 
+    // Status Vital é do sistema (não se desvincula); VD de combate veio de um
+    // vínculo e sai pelo mesmo ✕ da grade 📊 lá embaixo.
     vGrid.innerHTML = vitals.length
-        ? vitals.map(dv => cellHtml(dv, false)).join('')
+        ? vitals.map(dv => cellHtml(dv, !dv.isVital)).join('')
         : vazio('Nenhum status vital cadastrado no Painel de Criador.');
 
     // VDs agrupados pelo bloco do cadastro; a ordem já vem de F.sys.derivedValues

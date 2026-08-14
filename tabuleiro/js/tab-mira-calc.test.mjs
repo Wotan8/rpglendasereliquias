@@ -2,7 +2,8 @@
 // O que está trancado aqui: o alcance conta a partir da BORDA do token
 // (regra da mesa), em todo tipo de mira — golpe, geometria e alvos.
 import assert from 'node:assert/strict';
-import { direcaoAte, origemNaBorda, clampAoAlcance, alvoAoAlcance, shapeDaMira } from './tab-mira-calc.js';
+import { direcaoAte, origemNaBorda, clampAoAlcance, alvoAoAlcance, shapeDaMira,
+         fracaoCoberta, COBERTURA_MINIMA_CONJURADOR } from './tab-mira-calc.js';
 
 const aprox = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-6, `${msg} (${a} ≠ ${b})`);
 
@@ -55,4 +56,16 @@ assert.equal(linha.raio, 30, 'largura vira o `raio` do template de linha');
 // mira de alvos não tem shape
 assert.equal(shapeDaMira({ tipo: 'alvos', alcancePx: 100 }, tok, { x: 0, y: 0 }), null);
 
-console.log('✅ tab-mira-calc: borda como eixo, clamp de alcance, borda-a-borda e shapes OK');
+// ⛔ cobertura do próprio token: o conjurador só entra na área se boa parte
+// do corpo dele estiver dentro (senão todo cone pegava quem o lançou).
+const disco = (cx, cy, r) => (p) => Math.hypot(p.x - cx, p.y - cy) <= r;
+aprox(fracaoCoberta({ x: 100, y: 100 }, 35, disco(100, 100, 200)), 1, 'token inteiro dentro');
+assert.equal(fracaoCoberta({ x: 100, y: 100 }, 35, disco(900, 900, 50)), 0, 'token inteiro fora');
+const meio = fracaoCoberta({ x: 100, y: 100 }, 35, (p) => p.x >= 100);
+assert.ok(meio > 0.4 && meio < 0.7, `metade coberta fica perto de 0,5 (deu ${meio})`);
+// só a borda encostando (o caso do cone que nasce na borda) não conta
+const soEncosta = fracaoCoberta({ x: 100, y: 100 }, 35, (p) => p.x >= 134);
+assert.ok(soEncosta < COBERTURA_MINIMA_CONJURADOR, 'encostar na borda não põe o conjurador na área');
+assert.equal(fracaoCoberta({ x: 5, y: 5 }, 0, disco(5, 5, 1)), 1, 'token sem raio cai no teste do centro');
+
+console.log('✅ tab-mira-calc: borda como eixo, clamp de alcance, borda-a-borda, shapes e cobertura OK');

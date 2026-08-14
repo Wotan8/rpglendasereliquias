@@ -428,6 +428,9 @@ export function abrirPropriedades(id, soAtualizar) {
     if (!id) { p.classList.remove('open'); return; }
     const o = T.objects.get(id); if (!o) { p.classList.remove('open'); return; }
     if (T.mode !== 'secret') { p.classList.remove('open'); return; }
+    // `soAtualizar` = repinte vindo do snapshot. Com o painel fechado ele não
+    // abre nada: quem abre é sempre o menu (toque longo / botão direito).
+    if (soAtualizar && !p.classList.contains('open')) return;
     p.classList.add('open');
     // 🔒 F8: objeto bloqueado — sem campos de edição; só o Mestre vê o botão de desbloqueio
     if (o.bloqueado) {

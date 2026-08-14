@@ -108,3 +108,29 @@ export function soODado(formula) {
     const m = String(formula || '').replace(/\s+/g, '').match(/^(\d*)d(\d+)/i);
     return m ? `${m[1] || 1}d${m[2]}` : '';
 }
+
+/**
+ * 🔁 Este defensor pode contra-atacar? (§6.8) — regra pura, sem canvas.
+ *
+ * O contra-ataque é uma estocada na abertura da guarda: é CORPO A CORPO. Não
+ * existe contra-atacar quem atirou de longe, nem quem está fora do alcance do
+ * seu braço — por isso a conta é "algum golpe físico meu alcança o agressor?".
+ *
+ * @param pericia        nível da perícia Contra-Ataque
+ * @param energia        Energia atual (null = desconhecida, não bloqueia)
+ * @param jaContraAtacou já respondeu neste conflito
+ * @param distanciaM     distância BORDA a BORDA até o agressor
+ * @param golpes         [{ nome, alcanceM, distancia }] — alcanceM já efetivo
+ * @returns { ok, motivo, linhas }
+ */
+export function podeContraAtacar({ pericia, energia, jaContraAtacou, distanciaM, golpes }) {
+    if (jaContraAtacou) return { ok: false, motivo: 'já contra-atacou neste golpe', linhas: [] };
+    if (!(Number(pericia) >= 1)) return { ok: false, motivo: 'não tem a perícia Contra-Ataque (nível 1+)', linhas: [] };
+    if (energia != null && Number(energia) < 1) return { ok: false, motivo: 'sem Energia (custa 1)', linhas: [] };
+    if (distanciaM == null) return { ok: false, motivo: 'não dá para medir a distância até o agressor', linhas: [] };
+    const cac = (golpes || []).filter(g => !g.distancia && (Number(g.alcanceM) || 0) >= distanciaM - 1e-6);
+    if (!cac.length) {
+        return { ok: false, linhas: [], motivo: `nenhum golpe corpo a corpo alcança o agressor (${Math.round(distanciaM * 100) / 100} m)` };
+    }
+    return { ok: true, motivo: '', linhas: cac };
+}

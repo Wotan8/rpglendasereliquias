@@ -100,6 +100,23 @@ function salvarJanela(patch) {
     localStorage.setItem(CHAVE_JANELA, JSON.stringify({ ...cfgJanela(), ...patch }));
 }
 
+/**
+ * Segura a janela inteira dentro da tela. A posição é salva POR APARELHO, mas o
+ * mesmo aparelho gira e o mesmo login abre no celular depois do PC: sem isto, a
+ * janela reabria em `left: 900` numa tela de 375 e o chat "não abria" — estava
+ * aberto, fora do viewport. Mesma rede de segurança da janela de ficha.
+ */
+function clampJanela() {
+    if (!el?.isConnected) return;
+    if (el.offsetWidth > window.innerWidth - 8) el.style.width = Math.max(240, window.innerWidth - 8) + 'px';
+    if (el.offsetHeight > window.innerHeight - 8) el.style.height = Math.max(180, window.innerHeight - 8) + 'px';
+    // sem `left` explícito a janela está no canto padrão do CSS — não mexer
+    if (el.style.left) {
+        el.style.left = Math.max(0, Math.min(el.offsetLeft, window.innerWidth - el.offsetWidth)) + 'px';
+        el.style.top = Math.max(0, Math.min(el.offsetTop, window.innerHeight - Math.min(el.offsetHeight, 48))) + 'px';
+    }
+}
+
 function montarJanela() {
     el = document.createElement('div');
     el.className = 'tb-window tb-chat';
@@ -169,10 +186,13 @@ function toggleChat() {
         naoLidas = 0; atualizarBadge();
         preencherIdentidades();
         render();
+        clampJanela();   // só dá para medir depois de `open` (antes é display:none)
         el.querySelector('#tbChatTexto').focus();
     }
 }
 window.tbToggleChat = toggleChat;
+// girar o celular também pode jogar a janela para fora
+window.addEventListener('resize', () => { if (aberto) clampJanela(); });
 
 function atualizarBadge() {
     const b = document.getElementById('tbChatBadge');

@@ -38,6 +38,39 @@ export function alvoAoAlcance(centroA, rA, centroB, rB, alcancePx) {
 }
 
 /**
+ * ⛔ O CONJURADOR entra na própria área?
+ *
+ * O toque simples não serve: um cone nasce na BORDA do token de quem conjura,
+ * então ele encosta sempre — e o conjurador virava alvo do próprio cone.
+ * Aqui medimos QUANTO do disco do token cai dentro da forma, amostrando pontos
+ * em anéis concêntricos, e só conta quem está com boa parte do corpo lá dentro.
+ *
+ * @param centro  { x, y } do token
+ * @param raio    raio do token em px
+ * @param dentro  (ponto) => bool — teste de ponto na forma (raio 0 do template)
+ * @param aneis   quantos anéis amostrar (o centro conta como anel 0)
+ * @returns fração de 0 a 1
+ */
+export function fracaoCoberta(centro, raio, dentro, aneis = 3) {
+    if (!(raio > 0)) return dentro(centro) ? 1 : 0;
+    let n = 0, total = 0;
+    for (let a = 0; a <= aneis; a++) {
+        const r = (raio * a) / aneis;
+        // 1 ponto no centro, 8 por anel: barato e simétrico o bastante
+        const passos = a === 0 ? 1 : 8;
+        for (let k = 0; k < passos; k++) {
+            const ang = (k / passos) * Math.PI * 2;
+            total++;
+            if (dentro({ x: centro.x + Math.cos(ang) * r, y: centro.y + Math.sin(ang) * r })) n++;
+        }
+    }
+    return total ? n / total : 0;
+}
+
+/** Quanto do próprio token precisa estar na área para o conjurador virar alvo. */
+export const COBERTURA_MINIMA_CONJURADOR = 0.5;
+
+/**
  * Shape do preview/confirmação da mira, no formato dos templates.
  * @param mira  { tipo: 'cac'|'geometria', forma, alcancePx, raioPx, angGraus,
  *                larguraPx, comprimentoPx, origem: 'token'|'livre' }
