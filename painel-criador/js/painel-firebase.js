@@ -12,7 +12,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
     getFirestore, collection, query, where, getDocs, getDoc, setDoc,
-    deleteDoc, updateDoc, doc, orderBy, Timestamp, addDoc
+    deleteDoc, updateDoc, doc, orderBy, limit, getCountFromServer, Timestamp, addDoc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
@@ -43,7 +43,7 @@ try {
 }
 
 let currentUser = null;
-let currentModule = 'races';
+let currentModule = 'dashboard';
 let allItems = [];
 let itemToDelete = null;
 let editingItemId = null;
@@ -602,8 +602,8 @@ onAuthStateChanged(auth, async (user) => {
     const nameEl = document.getElementById('userDisplayName');
     if (nameEl) { nameEl.textContent = user.displayName || user.email; nameEl.title = user.email; }
 
-    // Load initial module
-    await loadModule(currentModule);
+    // Load initial module (Dashboard é a primeira aba)
+    await window.switchModule('dashboard', document.querySelector('.tab[data-module="dashboard"]'));
 
     if (loadingScreen) loadingScreen.style.display = 'none';
     if (toolbar) toolbar.style.display = '';
@@ -647,6 +647,19 @@ window.switchModule = function (moduleName, btnEl) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     if (btnEl) btnEl.classList.add('active');
 
+    // Hide mechanics editor when switching away + limpar estado residual
+    const mechArea = document.getElementById('mechanicsEditorArea');
+    if (mechArea) mechArea.style.display = 'none';
+    window._mechParentFieldKey = null;
+
+    // O cabeçalho do painel vive só no Dashboard — as demais abas vão direto ao conteúdo.
+    const isDash = moduleName === 'dashboard';
+    const header = document.querySelector('.menu-header');
+    if (header) header.style.display = isDash ? '' : 'none';
+    document.getElementById('dashboardArea').style.display = isDash ? '' : 'none';
+    document.getElementById('moduleContent').style.display = isDash ? 'none' : '';
+    if (isDash) return loadDashboard();
+
     const modDef = MODULE_DEFS[moduleName];
     const titleEl = document.getElementById('createCardTitle');
     if (titleEl) titleEl.textContent = `Criar ${modDef.name}`;
@@ -654,12 +667,6 @@ window.switchModule = function (moduleName, btnEl) {
     // Limpar busca da aba anterior (evita filtro "fantasma" ao trocar de módulo)
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.value = '';
-
-    // Hide mechanics editor when switching away + limpar estado residual
-    const mechArea = document.getElementById('mechanicsEditorArea');
-    if (mechArea) mechArea.style.display = 'none';
-    window._mechParentFieldKey = null;
-    document.getElementById('moduleContent').style.display = '';
 
     // Remove/add mechanic extra filters
     const oldFilters = document.getElementById('mechFiltersExtra');
@@ -685,7 +692,7 @@ window.switchModule = function (moduleName, btnEl) {
     const seedBtn = document.getElementById('runicSeedBtn');
     if (seedBtn) seedBtn.style.display = moduleName === 'runicElements' ? '' : 'none';
 
-    loadModule(moduleName);
+    return loadModule(moduleName);
 };
 
 function renderMechExtraFilters() {
@@ -872,6 +879,90 @@ window.toggleTagFilter = function (btn) {
         btn.classList.add('active');
     }
     renderItems();
+};
+
+// ====================================================================
+// DASHBOARD — contagem por coleção + últimas edições do cenário
+// A contagem usa agregação no servidor (1 leitura por coleção); as
+// últimas edições são 5 docs por coleção. Relê sempre que a aba abre —
+// é barato e evita mostrar número velho depois de salvar algo.
+// ====================================================================
+let dashCache = null;
+
+async function loadDashboard() {
+    const area = document.getElementById('dashboardArea');
+    if (!area) return;
+
+    area.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">⏳ Lendo o cenário...</div>';
+    dashCache = await Promise.all(Object.entries(MODULE_DEFS).map(async ([key, def]) => {
+        const colRef = collection(db, def.collection);
+        const [total, recentes] = await Promise.all([
+            getCountFromServer(colRef).then(s => s.data().count).catch(() => null),
+            getDocs(query(colRef, orderBy('updatedAt', 'desc'), limit(5)))
+                .then(s => s.docs.map(d => ({ ...d.data(), id: d.id })))
+                .catch(() => [])
+        ]);
+        return { key, def, total, recentes };
+    }));
+    renderDashboard();
+}
+
+function _dashData(item) {
+    const secs = item.updatedAt?.seconds || item.atualizadoEm?.seconds || item.criadoEm?.seconds || 0;
+    if (!secs) return '—';
+    return new Date(secs * 1000).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function renderDashboard() {
+    const area = document.getElementById('dashboardArea');
+    if (!area || !dashCache) return;
+
+    const totalGeral = dashCache.reduce((n, m) => n + (m.total || 0), 0);
+
+    const cards = dashCache.map(m => `
+        <button type="button" class="dash-card" onclick="dashOpen('${m.key}')" title="Abrir ${escapeHtml(m.def.namePlural || m.def.name)}">
+            <span class="dash-card-icon">${m.def.icon || '📁'}</span>
+            <span class="dash-card-count">${m.total ?? '—'}</span>
+            <span class="dash-card-label">${escapeHtml(m.def.namePlural || m.def.name)}</span>
+        </button>`).join('');
+
+    const recentes = dashCache
+        .flatMap(m => m.recentes.map(it => ({ it, m })))
+        .sort((a, b) => (b.it.updatedAt?.seconds || 0) - (a.it.updatedAt?.seconds || 0))
+        .slice(0, 15);
+
+    const linhas = recentes.length ? recentes.map(({ it, m }) => `
+        <tr onclick="dashOpen('${m.key}', '${it.id}')">
+            <td><strong>${escapeHtml(it.nome || it.titulo || 'Sem nome')}</strong></td>
+            <td>${m.def.icon || '📁'} ${escapeHtml(m.def.name)}</td>
+            <td><span class="badge-status ${it.publicado ? 'badge-published' : 'badge-draft'}">${it.publicado ? '✅ Pub' : '📝 Rasc'}</span></td>
+            <td class="td-sub">${_dashData(it)}</td>
+        </tr>`).join('')
+        : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">Nada editado ainda.</td></tr>';
+
+    area.innerHTML = `
+        <div class="dash-head">
+            <div class="dash-total">🗂️ <strong>${totalGeral}</strong> registros em ${dashCache.length} coleções</div>
+            <button type="button" class="btn-edit" onclick="dashRefresh()" title="Recarregar contagens">🔄 Atualizar</button>
+        </div>
+        <div class="dash-grid">${cards}</div>
+        <div class="skills-category-header">🕒 Últimas edições <span class="skills-category-count">${recentes.length}</span></div>
+        <div class="table-container">
+            <table class="users-table items-table">
+                <thead><tr><th>Registro</th><th>Coleção</th><th>Status</th><th>Editado em</th></tr></thead>
+                <tbody>${linhas}</tbody>
+            </table>
+        </div>`;
+}
+
+window.dashRefresh = () => loadDashboard();
+
+// Abre uma aba a partir do Dashboard — e, com id, já abre o registro.
+window.dashOpen = async function (moduleName, itemId) {
+    await window.switchModule(moduleName, document.querySelector(`.tab[data-module="${moduleName}"]`));
+    if (!itemId) return;
+    if (moduleName === 'mechanics') window.openMechanicEditor(itemId);
+    else window.openForm(itemId);
 };
 
 // ===== LOAD MODULE DATA =====
@@ -1320,6 +1411,70 @@ function _updateResultsCount(shown, total) {
     el.textContent = shown === total ? `${total} registro(s)` : `${shown} de ${total}`;
 }
 
+// ===== MODO DE EXIBIÇÃO (cards / lista / planilha) — lembrado no navegador =====
+const VIEW_KEY = 'painel-criador-view';
+let currentView = localStorage.getItem(VIEW_KEY) || 'cards';
+
+window.setViewMode = function (view) {
+    currentView = view;
+    localStorage.setItem(VIEW_KEY, view);
+    _syncViewButtons();
+    renderItems();
+};
+
+function _syncViewButtons() {
+    document.querySelectorAll('#viewSwitch .view-btn')
+        .forEach(b => b.classList.toggle('active', b.dataset.view === currentView));
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _syncViewButtons);
+else _syncViewButtons();
+
+// Onde o clique na linha/card leva: mecânica tem editor próprio.
+function _openCall(id) {
+    return currentModule === 'mechanics' ? `openMechanicEditor('${id}')` : `openForm('${id}')`;
+}
+
+function _buildItemsTableHTML(section) {
+    const rows = section.items.map(item => {
+        const isPub = item.publicado === true;
+        const name = escapeHtml(item.nome || item.titulo || 'Sem nome');
+        const icon = item.icone ? escapeHtml(item.icone) + ' ' : '';
+        const sub = item.subtitulo || item.arquetipo || '';
+        const desc = item.descricao || item.conteudo || item.efeito || item.previewTexto || '';
+        return `
+        <tr onclick="${_openCall(item.id)}">
+            <td><strong>${icon}${name}</strong>${sub ? `<div class="td-sub">${escapeHtml(sub)}</div>` : ''}</td>
+            <td>${_buildCardMetaChips(item) || '<span class="td-sub">—</span>'}</td>
+            <td class="td-desc">${desc ? escapeHtml(truncate(desc, 110)) : '—'}</td>
+            <td><span class="badge-status ${isPub ? 'badge-published' : 'badge-draft'}">${isPub ? '✅ Pub' : '📝 Rasc'}</span></td>
+            <td onclick="event.stopPropagation()">
+                <div class="item-card-actions">
+                    <button class="btn-edit" onclick="${_openCall(item.id)}" title="Editar">✏️</button>
+                    <button class="btn-edit" onclick="duplicateItem('${item.id}')" title="Duplicar" style="border-color:var(--warning);color:var(--warning)">📋</button>
+                    <button class="btn-delete-card" onclick="openDeleteModal('${item.id}')" title="Excluir">🗑️</button>
+                    <div class="toggle-publish" title="Publicado">
+                        <input type="checkbox" ${isPub ? 'checked' : ''} onchange="togglePublish('${item.id}', this.checked)">
+                        <span class="toggle-slider"></span>
+                    </div>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `${_sectionHeaderHTML(section)}
+        <div class="table-container">
+            <table class="users-table items-table">
+                <thead><tr><th>Registro</th><th>Informações</th><th>Descrição</th><th>Status</th><th>Ações</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+}
+
+function _sectionHeaderHTML(section) {
+    if (!section.title) return '';
+    return `<div class="skills-category-header">${escapeHtml(section.title)} <span class="skills-category-count">${section.items.length}</span></div>`;
+}
+
 function _updateClearSearchBtn() {
     const btn = document.getElementById('btnClearSearch');
     const search = document.getElementById('searchInput');
@@ -1414,33 +1569,19 @@ function renderItems() {
 
     emptyState.style.display = 'none';
 
-    // Use custom card renderer for mechanics
-    if (currentModule === 'mechanics') {
-        grid.innerHTML = filtered.map(item => renderMechanicCard(item)).join('');
-        return;
-    }
-
-    const modDef = MODULE_DEFS[currentModule];
+    // Seções (com cabeçalho de grupo). A lista é a mesma nos três modos de exibição.
+    let sections = [{ title: null, items: filtered }];
 
     // Skills: group by category if checkbox is checked
     if (currentModule === 'skills' && document.getElementById('skillGroupByCategoria')?.checked) {
         const groups = {};
-        SKILL_CATEGORIA_ORDER.forEach(k => { groups[k] = []; });
         filtered.forEach(item => {
             const cat = (item.categoria || 'mental').toLowerCase();
-            if (!groups[cat]) groups[cat] = [];
-            groups[cat].push(item);
+            (groups[cat] || (groups[cat] = [])).push(item);
         });
-
-        let html = '';
-        SKILL_CATEGORIA_ORDER.forEach(cat => {
-            const items = groups[cat];
-            if (!items || items.length === 0) return;
-            html += `<div class="skills-category-header">${SKILL_CATEGORIA_LABELS[cat] || cat} <span class="skills-category-count">${items.length}</span></div>`;
-            html += items.map(item => buildItemCardHTML(item)).join('');
-        });
-        grid.innerHTML = html;
-        return;
+        const cats = [...SKILL_CATEGORIA_ORDER, ...Object.keys(groups).filter(c => !SKILL_CATEGORIA_ORDER.includes(c))];
+        sections = cats.filter(c => groups[c]?.length)
+            .map(c => ({ title: SKILL_CATEGORIA_LABELS[c] || c, items: groups[c] }));
     }
 
     // Derived Values: group by block
@@ -1458,27 +1599,25 @@ function renderItems() {
             }
             if (item.blocoOrdem && blockOrders[blockId] === 999) blockOrders[blockId] = item.blocoOrdem;
             if (item.blocoNome && blockNames[blockId] === 'Sem Bloco (Desagrupado)') blockNames[blockId] = item.blocoNome;
-            
+
             groups[blockId].push(item);
         });
 
-        const sortedBlockIds = Object.keys(groups).sort((a, b) => {
+        sections = Object.keys(groups).sort((a, b) => {
             if (blockOrders[a] !== blockOrders[b]) return blockOrders[a] - blockOrders[b];
             return blockNames[a].localeCompare(blockNames[b]);
-        });
+        }).map(id => ({ title: blockNames[id], items: groups[id] }));
+    }
 
-        let html = '';
-        sortedBlockIds.forEach(blockId => {
-            const items = groups[blockId];
-            if (!items || items.length === 0) return;
-            html += `<div class="skills-category-header">${escapeHtml(blockNames[blockId])} <span class="skills-category-count">${items.length}</span></div>`;
-            html += items.map(item => buildItemCardHTML(item)).join('');
-        });
-        grid.innerHTML = html;
+    grid.className = 'items-grid view-' + currentView;
+    if (currentView === 'planilha') {
+        grid.innerHTML = sections.map(_buildItemsTableHTML).join('');
         return;
     }
 
-    grid.innerHTML = filtered.map(item => buildItemCardHTML(item)).join('');
+    // Cards e lista compacta compartilham o mesmo HTML — a diferença é só CSS.
+    const cardOf = currentModule === 'mechanics' ? renderMechanicCard : buildItemCardHTML;
+    grid.innerHTML = sections.map(s => _sectionHeaderHTML(s) + s.items.map(cardOf).join('')).join('');
 }
 
 window.filterItems = function () { renderItems(); };

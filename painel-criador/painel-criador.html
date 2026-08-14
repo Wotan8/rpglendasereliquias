@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Criador — Lendas e Relíquias</title>
     <meta name="description" content="Painel de Criador — Onde o mundo de Vasteluna é forjado.">
-    <link rel="stylesheet" href="css/painel-criador.css?v=13">
+    <link rel="stylesheet" href="css/painel-criador.css?v=15">
     <link rel="stylesheet" href="../shared/equip-campos.css?v=3">
     <script type="module" src="/js/global-favicon.js"></script>
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
@@ -37,7 +37,8 @@
 
             <!-- Tabs -->
             <div class="tabs" id="tabBar">
-                <button class="tab active" data-module="races" onclick="switchModule('races', this)"><span class="emoji">🧬</span><span class="text"> Raças</span></button>
+                <button class="tab active" data-module="dashboard" onclick="switchModule('dashboard', this)"><span class="emoji">📈</span><span class="text"> Dashboard</span></button>
+                <button class="tab" data-module="races" onclick="switchModule('races', this)"><span class="emoji">🧬</span><span class="text"> Raças</span></button>
                 <button class="tab" data-module="classes" onclick="switchModule('classes', this)"><span class="emoji">⚔️</span><span class="text"> Classes</span></button>
                 <button class="tab" data-module="tribes" onclick="switchModule('tribes', this)"><span class="emoji">🏕️</span><span class="text"> Tribos</span></button>
                 <button class="tab" data-module="derivedValues" onclick="switchModule('derivedValues', this)"><span class="emoji">📊</span><span class="text"> Valores Derivados</span></button>
@@ -76,8 +77,11 @@
 
             <div id="alertArea"></div>
 
+            <!-- Dashboard (primeira aba) — contagens por coleção + últimas edições -->
+            <div id="dashboardArea"></div>
+
             <!-- Module Content Area -->
-            <div id="moduleContent">
+            <div id="moduleContent" style="display:none">
                 <!-- Filter Bar -->
                 <div class="filter-bar" id="filterBar">
                     <div class="search-wrap">
@@ -94,6 +98,11 @@
                         Apenas publicados
                     </label>
                     <span id="resultsCount" class="results-count"></span>
+                    <div class="view-switch" id="viewSwitch" role="group" aria-label="Modo de exibição">
+                        <button type="button" class="view-btn" data-view="cards" onclick="setViewMode('cards')" title="Exibir em cards">🃏</button>
+                        <button type="button" class="view-btn" data-view="lista" onclick="setViewMode('lista')" title="Exibir em lista compacta">📃</button>
+                        <button type="button" class="view-btn" data-view="planilha" onclick="setViewMode('planilha')" title="Exibir em planilha">📊</button>
+                    </div>
                 </div>
 
                 <!-- Create Card -->
@@ -251,7 +260,7 @@
     <script src="../shared/imagem-zoom.js?v=1"></script>
 
     <!-- Firebase Module -->
-    <script type="module" src="js/painel-firebase.js?v=18"></script>
+    <script type="module" src="js/painel-firebase.js?v=19"></script>
     <script type="module" src="js/settings-manager.js?v=7"></script>
     <script type="module" src="js/shortcuts-manager.js?v=7"></script>
 
