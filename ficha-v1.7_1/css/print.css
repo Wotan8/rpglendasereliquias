@@ -121,6 +121,13 @@
         zoom: 1 !important;
     }
 
+    /* O cabeçalho de topo repete Nome/Raça/Classe/Tribo, que a Identificação
+       já imprime — e o `.sheet` perde o padding na impressão, então a margem
+       negativa dele jogaria o bloco para fora da página. */
+    .char-header {
+        display: none !important;
+    }
+
     /* Hide non-printable elements */
     .no-print,
     .toolbar,

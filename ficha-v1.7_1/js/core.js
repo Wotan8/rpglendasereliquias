@@ -1,6 +1,87 @@
 /* ===== CORE: Tabs, Dots, Skills, Class Change, Tests ===== */
 
+/**
+ * Cabeçalho do personagem no topo da ficha (nome, raça, classe, tribo).
+ * Fica fora das abas de propósito: em Combate ou Inventário o mestre precisa
+ * saber de quem é a ficha sem voltar para a Principal.
+ */
+function updateCharHeader() {
+    const nameEl = document.getElementById('charHeaderName');
+    if (!nameEl) return;
+
+    const nome = document.querySelector('[data-key="nome"]')?.value?.trim();
+    nameEl.textContent = nome || 'Personagem sem nome';
+    nameEl.classList.toggle('char-header-vazio', !nome);
+
+    const tags = ['selRaca', 'selClasse', 'selTribo']
+        .map(id => document.getElementById(id)?.value?.trim())
+        .filter(Boolean);
+    const tagsEl = document.getElementById('charHeaderTags');
+    tagsEl.replaceChildren(...tags.map(t => {
+        const span = document.createElement('span');
+        span.className = 'char-header-tag';
+        span.textContent = t;
+        return span;
+    }));
+
+    const avatar = document.getElementById('charHeaderAvatar');
+    const foto = document.getElementById('charImgPreview');
+    const src = foto && foto.style.display !== 'none' ? foto.src : '';
+    avatar.hidden = !src;
+    if (src) avatar.src = src;
+}
+window.updateCharHeader = updateCharHeader;
+
+['input', 'change'].forEach(ev => document.addEventListener(ev, e => {
+    if (e.target.matches?.('[data-key="nome"], #selRaca, #selClasse, #selTribo')) updateCharHeader();
+}));
+
 function initTabs() { document.querySelectorAll('.tab').forEach(b => { b.addEventListener('click', () => { document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); b.classList.add('active'); document.getElementById(b.dataset.tab).classList.add('active'); }); }); }
+
+/**
+ * Grava o novo nível e repinta tudo que depende dele.
+ * Era o mesmo bloco repetido em cada caminho de handleDotUpgrade.
+ */
+function _aplicarNivelDot(container, k, newRawLevel) {
+    state.dots[k] = newRawLevel;
+    refreshDots(container, k);
+    scheduleAutosave();
+    if (typeof applyAllRaceMechanics === 'function') {
+        applyAllRaceMechanics(document.getElementById('selRaca')?.value);
+    }
+    if (typeof recalcAll === 'function') recalcAll();
+    if (typeof recalcMainTests === 'function') recalcMainTests();
+}
+
+/**
+ * Clique em dot já preenchido: só mestre/criador retrocede, e o EXP dos níveis
+ * desfeitos volta para "EXP Restante" (o Total é histórico, não muda).
+ * Regra do clique: dot abaixo do atual → cai para ele; dot atual → cai um.
+ * @returns {boolean} true se tratou o clique
+ */
+function _tentarRetroceder(container, k, clickedVal, filledForClick, floorVal) {
+    if (typeof podeRetroceder !== 'function' || !podeRetroceder()) return true; // jogador: clique morto
+    const type = typeof detectDotType === 'function' ? detectDotType(k) : null;
+
+    const alvoTotal = clickedVal >= filledForClick ? clickedVal - 1 : clickedVal;
+    const newRawLevel = alvoTotal - floorVal;
+    if (newRawLevel < 0) {
+        if (typeof showUpgradeBlocked === 'function')
+            showUpgradeBlocked(`Não dá para descer abaixo do piso da ficha (${floorVal}).`);
+        return true;
+    }
+
+    const label = getDotLabel(k, container);
+    if (!type) { _aplicarNivelDot(container, k, newRawLevel); return true; }
+
+    const refund = somaCustoDegraus(type, k, alvoTotal, filledForClick);
+    showDowngradeConfirm(label, alvoTotal, refund, () => {
+        if (refund > 0) refundExp(refund);
+        _aplicarNivelDot(container, k, newRawLevel);
+        showDowngradeSuccess(label, alvoTotal, refund);
+    });
+    return true;
+}
 
 /**
  * Handler centralizado para clicks de dots com EXP.
@@ -37,21 +118,20 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
     if (auraInfo && auraInfo.grauDesbloqueado > 0) {
         // Calculate current position in grade context
         const totalLevel = current + floorVal;
-        const currentGrade = totalLevel > 0 ? Math.floor((totalLevel - 1) / baseDots) : 0;
         const posInGrade = totalLevel > 0 ? ((totalLevel - 1) % baseDots) + 1 : 0;
 
-        if (posInGrade >= baseDots && clickedVal === 1) {
-            // Advancing to next grade (all dots filled, click first dot)
-            targetLevel = totalLevel + 1;
-        } else if (clickedVal === posInGrade + 1) {
-            // Normal sequential advance within grade
-            targetLevel = totalLevel + 1;
-        } else if (posInGrade === 0 && clickedVal === 1) {
-            // First dot from zero
-            targetLevel = 1;
+        if (posInGrade >= baseDots) {
+            // Grau cheio: os dots reiniciam no próximo grau, então o dot clicado
+            // é quantos níveis avançar. Aqui não há retrocesso — os dots cheios
+            // já significam "avançar", não "desfazer".
+            targetLevel = totalLevel + clickedVal;
+        } else if (clickedVal > posInGrade) {
+            targetLevel = totalLevel + (clickedVal - posInGrade);
         } else {
-            // Invalid click
-            return;
+            // Os dots da aura contam dentro do grau; o retrocesso trabalha em
+            // nível absoluto, então converte antes de passar.
+            const absoluto = clickedVal + (totalLevel - posInGrade);
+            return void _tentarRetroceder(container, k, absoluto, totalLevel, floorVal);
         }
 
         const newRawLevel = targetLevel - floorVal;
@@ -66,19 +146,9 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
         }
 
         const type = typeof detectDotType === 'function' ? detectDotType(k) : null;
-        if (!type) {
-            state.dots[k] = newRawLevel;
-            refreshDots(container, k); scheduleAutosave();
-            if (typeof applyAllRaceMechanics === 'function') {
-                const raca = document.getElementById('selRaca')?.value;
-                applyAllRaceMechanics(raca);
-            }
-            if (typeof recalcAll === 'function') recalcAll();
-            if (typeof recalcMainTests === 'function') recalcMainTests();
-            return;
-        }
+        if (!type) { _aplicarNivelDot(container, k, newRawLevel); return; }
 
-        const check = canUpgrade(k, newRawLevel, type, specName, floorVal);
+        const check = canUpgrade(k, newRawLevel, type, specName, floorVal, current);
         if (!check.allowed) { showUpgradeBlocked(check.reason); return; }
 
         const label = getDotLabel(k, container, specName);
@@ -88,14 +158,7 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
         const grauName = grauDef?.nomeGrau ? ` (${grauDef.nomeGrau})` : '';
         showUpgradeConfirm(`${label}${grauName}`, displayLevel, check.cost, () => {
             spendExp(check.cost);
-            state.dots[k] = newRawLevel;
-            refreshDots(container, k); scheduleAutosave();
-            if (typeof applyAllRaceMechanics === 'function') {
-                const raca = document.getElementById('selRaca')?.value;
-                applyAllRaceMechanics(raca);
-            }
-            if (typeof recalcAll === 'function') recalcAll();
-            if (typeof recalcMainTests === 'function') recalcMainTests();
+            _aplicarNivelDot(container, k, newRawLevel);
             showUpgradeSuccess(`${label}${grauName}`, displayLevel, check.cost);
         });
         return;
@@ -103,7 +166,11 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
 
     // --- Standard (non-aura) flow ---
     const filledForClick = current + floorVal;
-    if (clickedVal <= filledForClick) return;
+    // Clique em dot já preenchido: retrocesso (só mestre) — nunca upgrade.
+    if (clickedVal <= filledForClick) {
+        _tentarRetroceder(container, k, clickedVal, filledForClick, floorVal);
+        return;
+    }
 
     if (ceiling <= 0) {
         if (typeof showUpgradeBlocked === 'function')
@@ -111,14 +178,9 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
         return;
     }
 
-    const nextClickLevel = filledForClick + 1;
-    if (clickedVal !== nextClickLevel) {
-        if (typeof showUpgradeBlocked === 'function')
-            showUpgradeBlocked(`Só é possível subir 1 nível por vez! Nível base+piso: ${filledForClick}, próximo: ${nextClickLevel}.`);
-        return;
-    }
-
-    const newRawLevel = current + 1;
+    // Subir vários níveis de uma vez: o dot clicado É o nível alvo, e o custo
+    // é a soma de cada degrau até ele.
+    const newRawLevel = clickedVal - floorVal;
     const newTotal = newRawLevel + floorVal + mechBonus;
     if (newTotal > ceiling) {
         if (typeof showUpgradeBlocked === 'function')
@@ -127,33 +189,16 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
     }
 
     const type = typeof detectDotType === 'function' ? detectDotType(k) : null;
-    if (!type) {
-        state.dots[k] = newRawLevel;
-        refreshDots(container, k); scheduleAutosave();
-        if (typeof applyAllRaceMechanics === 'function') {
-            const raca = document.getElementById('selRaca')?.value;
-            applyAllRaceMechanics(raca);
-        }
-        if (typeof recalcAll === 'function') recalcAll();
-        if (typeof recalcMainTests === 'function') recalcMainTests();
-        return;
-    }
+    if (!type) { _aplicarNivelDot(container, k, newRawLevel); return; }
 
-    const check = canUpgrade(k, newRawLevel, type, specName, floorVal);
+    const check = canUpgrade(k, newRawLevel, type, specName, floorVal, current);
     if (!check.allowed) { showUpgradeBlocked(check.reason); return; }
 
     const label = getDotLabel(k, container, specName);
     const displayLevel = newRawLevel + floorVal;
     showUpgradeConfirm(label, displayLevel, check.cost, () => {
         spendExp(check.cost);
-        state.dots[k] = newRawLevel;
-        refreshDots(container, k); scheduleAutosave();
-        if (typeof applyAllRaceMechanics === 'function') {
-            const raca = document.getElementById('selRaca')?.value;
-            applyAllRaceMechanics(raca);
-        }
-        if (typeof recalcAll === 'function') recalcAll();
-        if (typeof recalcMainTests === 'function') recalcMainTests();
+        _aplicarNivelDot(container, k, newRawLevel);
         showUpgradeSuccess(label, displayLevel, check.cost);
     });
 }

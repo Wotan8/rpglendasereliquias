@@ -67,6 +67,7 @@ window.initApp = function () {
     if (typeof initVitalStatsTooltips === 'function') initVitalStatsTooltips();
     if (typeof initSkillTooltips === 'function') initSkillTooltips();
     if (typeof recalcAll === 'function') recalcAll();
+    if (typeof updateCharHeader === 'function') updateCharHeader();
 
     // Garantir que _dataReady é setado mesmo se loadFromData nunca foi chamado
     // (personagem novo ou localStorage vazio).

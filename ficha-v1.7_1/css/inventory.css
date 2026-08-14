@@ -1325,6 +1325,15 @@
     margin-left: auto;
     font-weight: 700;
 }
+/* Fórmula do Valor Derivado — linha inteira, abaixo do cálculo do item */
+.inv-escopo-formula {
+    flex-basis: 100%;
+    margin: 1px 0 4px 18px;
+    color: var(--muted, var(--lr-text-2));
+    font-size: 0.72rem;
+    line-height: 1.35;
+    opacity: .85;
+}
 .inv-escopo-dano {
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
     color: var(--lr-gold);

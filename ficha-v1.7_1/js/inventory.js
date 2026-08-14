@@ -238,6 +238,17 @@ function _updatePressureDisplay(totalPressure) {
     }
 }
 
+/**
+ * Só Mestre e Criador mexem no CADASTRO do item (criar, editar, mudar
+ * quantidade). O jogador equipa, usa, transfere, divide e descarta — o que
+ * acontece na mesa —, mas não inventa item nem multiplica o que tem.
+ * O papel só chega depois do login (firebase.js), por isso a checagem é
+ * sempre na hora de desenhar, nunca guardada.
+ */
+window.podeEditarItens = function() {
+    return !!(window.isMestre || window.isCreator);
+};
+
 // ===== EFEITOS ATIVOS — regra canônica =====
 /**
  * Categorias de forma que um item equipado satisfaz: 'efeitos', 'segurando' e/ou 'fixado'.
@@ -875,6 +886,9 @@ function _getMechPreview(item) {
 
 // ===== RENDER: ABA INVENTÁRIO =====
 function renderInventoryTab() {
+    const btnCriar = document.getElementById('btnCriarItem');
+    if (btnCriar) btnCriar.style.display = window.podeEditarItens() ? '' : 'none';
+
     const container = document.getElementById('inventoryItemsGrid');
     if (!container) return;
 
@@ -948,7 +962,7 @@ function _renderInvItemRow(item, isEquipped) {
 
     // Quantity — editable if loose, or if equipped AND type is Projétil/Consumível
     const qty = Math.max(1, parseInt(item.quantidade) || 1);
-    const canEditQty = item.tipo !== 'Container' && item.tipo !== 'Arma' && (!isEquipped || item.tipo === 'Projétil' || item.tipo === 'Consumível');
+    const canEditQty = window.podeEditarItens() && item.tipo !== 'Container' && item.tipo !== 'Arma' && (!isEquipped || item.tipo === 'Projétil' || item.tipo === 'Consumível');
     const qtyHtml = canEditQty
         ? `<input type="number" class="inv-qty-input" value="${qty}" min="1" onclick="event.stopPropagation()" onchange="updateItemQuantity('${item.id}', this.value)" title="Quantidade">`
         : `<span class="inv-badge inv-badge-qty" title="Quantidade">×${qty}</span>`;
@@ -1021,7 +1035,7 @@ function _renderOpenContainers() {
                 : `<div class="inv-row-img inv-row-img-ph">${tipoEmoji}</div>`;
 
             // Quantity input — disable for Container type items (same rule as loose items)
-            const canEditQty = i.tipo !== 'Container' && i.tipo !== 'Arma';
+            const canEditQty = window.podeEditarItens() && i.tipo !== 'Container' && i.tipo !== 'Arma';
             const qtyHtml = canEditQty
                 ? `<input type="number" class="inv-qty-input" value="${iQty}" min="1" onclick="event.stopPropagation()" onchange="updateItemQuantity('${i.id}', this.value)" title="Quantidade">`
                 : `<span class="inv-badge inv-badge-qty" title="Quantidade">×${iQty}</span>`;
@@ -1057,7 +1071,7 @@ function _renderOpenContainers() {
             <span class="inv-stat-pressure">📐 Pressão: ${pressaoContainer.toFixed(2)} (${pesoBase.toFixed(2)} + ${insideWeight.toFixed(2)} × ${mult})</span>
         </div>
         <div class="inv-container-items">${itemsHtml}</div>
-        <button class="inv-btn inv-btn-add-to-container" onclick="addItemToContainer('${cid}')">➕ Adicionar Item</button>
+        ${window.podeEditarItens() ? `<button class="inv-btn inv-btn-add-to-container" onclick="addItemToContainer('${cid}')">➕ Adicionar Item</button>` : ''}
     </div>`;
 }
 
@@ -1121,6 +1135,25 @@ function _getCompatibleSlots(item) {
 }
 
 /**
+ * Fórmula de um Valor Derivado, do jeito que o tooltip da ficha mostra: as
+ * mecânicas vinculadas ao VD no cadastro. É o "de onde sai esse número" que
+ * faltava na janela do item.
+ */
+function _formulaDoVD(dvKey) {
+    const dv = (window.DERIVED_VALUES || []).find(d => d.key === dvKey);
+    const previews = (dv && dv.mechPreviews) || [];
+    if (!previews.length) return '';
+    return `<span class="inv-escopo-formula">ƒ ${previews.map(_escHtml).join(' · ')}</span>`;
+}
+
+/** Forma de Equipar do modelo do catálogo (só quando a instância não define). */
+function _formaEquiparDoModelo(item) {
+    if (!item || !item.modeloId) return null;
+    const tpl = (window._inventoryState.catalog || []).find(t => t.id === item.modeloId);
+    return (tpl && tpl.formaEquipar) || null;
+}
+
+/**
  * Retorna os estados de equipamento disponíveis para um item dado seu tipo e slot selecionado.
  */
 function _getAvailableStates(item, slotKey) {
@@ -1129,7 +1162,9 @@ function _getAvailableStates(item, slotKey) {
     const slotDef = bodySlots[slotKey];
     if (!slotDef) return states;
 
-    const forma = item.formaEquipar;
+    // A Forma de Equipar do CADASTRO vale quando a instância não tem a sua —
+    // sem isso uma arma cadastrada como "empunhar" ainda oferecia "vestido".
+    const forma = item.formaEquipar || _formaEquiparDoModelo(item);
     const equipavelEm = Array.isArray(item.equipavelEm) ? item.equipavelEm : (item.equipavelEm ? [item.equipavelEm] : []);
     const slotRestritoLegacy = Array.isArray(item.slotRestrito) ? item.slotRestrito : (item.slotRestrito ? [item.slotRestrito] : []);
     const restricoes = equipavelEm.length > 0 ? equipavelEm : slotRestritoLegacy;
@@ -1326,12 +1361,15 @@ window.selectEquipSlot = function(slotKey) {
     const stateSection = document.getElementById('equipStateSection');
     const statesGrid = document.getElementById('equipStatesGrid');
     
-    // We need to pass the full item object mock or properties to _getAvailableStates
-    const tempItem = { tipo: st.itemTipo, slotRestrito: st.itemSlotRestrito };
-    let availableStates = _getAvailableStates(tempItem, slotKey);
+    // O item REAL, não um mock: sem `formaEquipar` o _getAvailableStates cai na
+    // retrocompatibilidade e oferece todo modo que o slot aceita — era assim que
+    // uma arma ganhava a opção "vestido" no torso.
+    const items = window._inventoryState.items;
+    const itemReal = items.find(i => i.id === st.itemId);
+    let availableStates = _getAvailableStates(
+        itemReal || { tipo: st.itemTipo, slotRestrito: st.itemSlotRestrito }, slotKey);
 
     // Filtrar availableStates: se o slot estiver cheio para itens normais, só permite 'fixado'
-    const items = window._inventoryState.items;
     const inSlot = items.filter(i => _itemOcupaSlot(i, slotKey) && i.equipado && i.estadoEquip !== 'armazenado' && i.estadoEquip !== 'fixado');
     const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : {};
     const slotDef = bodySlots[slotKey];
@@ -1354,7 +1392,6 @@ window.selectEquipSlot = function(slotKey) {
     // "Bloqueia Equipar com Efeito": o item entra no corpo, mas só nos modos que
     // não ativam efeitos. Os que ativariam ficam visíveis e não clicáveis, para
     // o jogador ver que existem e por que estão fora.
-    const itemReal = items.find(i => i.id === st.itemId);
     const bloqEfeitos = typeof window.equipBloqueioEfeitosDoItem === 'function'
         ? window.equipBloqueioEfeitosDoItem(itemReal) : null;
 
@@ -1776,6 +1813,7 @@ window.moveToContainer = async function(itemId) {
 };
 
 window.updateItemQuantity = async function(itemId, newQty) {
+    if (!window.podeEditarItens()) return;
     const qty = Math.max(1, parseInt(newQty) || 1);
     try {
         await _firestoreSetDoc('items', itemId, { quantidade: qty, lastModified: new Date().toISOString() });
@@ -1841,6 +1879,7 @@ window.openItemDetail = function(itemId) {
                 <span class="inv-escopo-nome">${c.icone} ${_escHtml(c.nome)}</span>
                 <span class="inv-escopo-calc">base ${c.base} ${c.bonus >= 0 ? '+' : '−'} ${Math.abs(c.bonus)} <em>(item)</em></span>
                 <span class="inv-escopo-total">= ${_escHtml(c.prefixo)}${c.total}${_escHtml(c.sufixo)}</span>
+                ${_formulaDoVD(c.key)}
             </div>`).join('');
 
         // Canal de Essência é parcela separada: o alvo reduz cada uma com a
@@ -1850,6 +1889,7 @@ window.openItemDetail = function(itemId) {
                 <span class="inv-escopo-nome">${c.icone} ${_escHtml(c.nome)}</span>
                 <span class="inv-escopo-calc"><em>canal separado</em></span>
                 <span class="inv-escopo-total inv-escopo-dano">${c.total > 0 ? '+' : ''}${c.total}</span>
+                ${_formulaDoVD(c.key)}
             </div>`).join('');
 
         if (r.dano || canaisHtml || linhas) {
@@ -1924,7 +1964,7 @@ window.openItemDetail = function(itemId) {
             <button class="inv-btn-action" onclick="toggleEquip('${item.id}',${!item.equipado});closeItemDetail()">${item.equipado ? '⬇️ Desequipar' : '⬆️ Equipar'}</button>
             <button class="inv-btn-transfer" onclick="openTransferModal('${item.id}')">🔄 Transferir</button>
             ${qty > 1 && !item.ehContainer && item.tipo !== 'Container' ? `<button class="inv-btn-action" onclick="closeItemDetail();openSplitModal('${item.id}')">➗ Dividir</button>` : ''}
-            <button class="inv-btn-action" onclick="closeItemDetail();openItemFormModal('Editar Item', window._inventoryState.items.find(i=>i.id==='${item.id}'))" style="margin-left:auto">✏️ Editar</button>
+            ${window.podeEditarItens() ? `<button class="inv-btn-action" onclick="closeItemDetail();openItemFormModal('Editar Item', window._inventoryState.items.find(i=>i.id==='${item.id}'))" style="margin-left:auto">✏️ Editar</button>` : ''}
         </div>
     </div>`;
     document.body.appendChild(modal);
@@ -2331,6 +2371,11 @@ window.transferItem = async function(itemId, targetCharId, targetOwnerUid) {
 
 // ===== ITEM FORM MODAL (Create/Edit) =====
 window.openItemFormModal = function(title, item, containerId) {
+    // Guarda única para todos os caminhos (criar solto, criar no container, editar).
+    if (!window.podeEditarItens()) {
+        alert('🔒 Só o Mestre ou o Criador pode criar e editar itens.');
+        return;
+    }
     let existing = document.getElementById('invFormModal');
     if (existing) existing.remove();
 

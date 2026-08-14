@@ -22,6 +22,30 @@
             padding: 10px 14px;
             background: rgba(139,92,246,.08);
             border-bottom: 1px solid var(--soft, var(--lr-border-soft));
+            cursor: pointer;
+            gap: 8px;
+        }
+        /* Recolher: seta no header, conteúdo some. A impressão ignora — ficha
+           impressa com bloco fechado seria ficha incompleta. */
+        .class-module-header .cm-caret,
+        .class-module-item-header .cm-caret {
+            font-size: .7rem;
+            color: var(--muted, #94a3b8);
+            transition: transform .15s;
+            flex-shrink: 0;
+        }
+        .cm-collapsed > .class-module-header .cm-caret,
+        .cm-collapsed > .class-module-item-header .cm-caret {
+            transform: rotate(-90deg);
+        }
+        .class-module-section.cm-collapsed > .class-module-items,
+        .class-module-section.cm-collapsed > .class-module-add-btn,
+        .class-module-item.cm-collapsed > .class-module-fields {
+            display: none;
+        }
+        @media print {
+            .class-module-section.cm-collapsed > .class-module-items { display: block; }
+            .class-module-item.cm-collapsed > .class-module-fields { display: grid; }
         }
         .class-module-header h4 {
             margin: 0;
@@ -55,6 +79,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 8px;
             padding: 6px 10px;
             background:var(--lr-bg-1);
             border-bottom: 1px solid var(--soft, rgba(148,163,184,.06));
@@ -485,9 +510,18 @@ function _buildModuleSection(mod) {
     const header = document.createElement('div');
     header.className = 'class-module-header';
 
+    const caret = document.createElement('span');
+    caret.className = 'cm-caret';
+    caret.textContent = '▼';
+    header.appendChild(caret);
+
     const title = document.createElement('h4');
     title.textContent = `${mod.icone || '📦'} ${mod.titulo || mod.id}`;
+    title.style.marginRight = 'auto';
     header.appendChild(title);
+
+    header.title = 'Clique para recolher/expandir';
+    header.addEventListener('click', () => section.classList.toggle('cm-collapsed'));
 
     // Slots indicator
     const limit = _getModuleLimit(mod);
@@ -893,11 +927,22 @@ function _addModuleItem(mod) {
         return;
     }
 
-    const predefs = Array.isArray(mod.itensPredefinidos) ? mod.itensPredefinidos : [];
+    const todosPredefs = Array.isArray(mod.itensPredefinidos) ? mod.itensPredefinidos : [];
     const podeCriar = mod.permitirCriacaoJogador !== false;
+
+    // O que o personagem já tem não volta para a lista de escolha.
+    const jaTem = new Set(currentItems.map(it => it && it._predefId).filter(Boolean));
+    const predefs = todosPredefs.filter(pd => !jaTem.has(pd.id));
 
     if (predefs.length > 0) {
         _cmAbrirSelecaoPredef(mod, predefs, podeCriar);
+        return;
+    }
+
+    if (todosPredefs.length > 0 && !podeCriar) {
+        if (typeof showUpgradeBlocked === 'function') {
+            showUpgradeBlocked('Você já adquiriu tudo o que este módulo oferece.');
+        }
         return;
     }
 
@@ -1267,9 +1312,23 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
     // Item header
     const header = document.createElement('div');
     header.className = 'class-module-item-header';
+    header.style.cursor = 'pointer';
+    header.title = 'Clique para recolher/expandir';
+    // Recolher a habilidade — os botões do header (editar/remover) seguem
+    // funcionando: só o clique no "vazio" do cabeçalho dobra o item.
+    header.addEventListener('click', (e) => {
+        if (e.target.closest('button, input, select, a')) return;
+        item.classList.toggle('cm-collapsed');
+    });
+
+    const caret = document.createElement('span');
+    caret.className = 'cm-caret';
+    caret.textContent = '▼';
+    header.appendChild(caret);
 
     const numSpan = document.createElement('span');
     numSpan.className = 'module-item-number';
+    numSpan.style.marginRight = 'auto';
     numSpan.textContent = data._predefNome ? `#${idx + 1} · ${data._predefNome}` : `#${idx + 1}`;
     header.appendChild(numSpan);
 

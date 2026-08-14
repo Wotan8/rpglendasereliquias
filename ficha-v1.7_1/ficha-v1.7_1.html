@@ -6,14 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0E1117">
     <title>Ficha Online</title>
-    <link rel="stylesheet" href="css/styles_v2.css?v=19">
-    <link rel="stylesheet" href="css/inventory.css?v=10">
+    <link rel="stylesheet" href="css/styles_v2.css?v=20">
+    <link rel="stylesheet" href="css/inventory.css?v=11">
     <link rel="stylesheet" href="css/equip-modal.css?v=9">
     <link rel="stylesheet" href="css/combat-panel.css?v=5">
     <link rel="stylesheet" href="css/conhecimento.css?v=4">
     <link rel="stylesheet" href="../shared/texto-mundo.css?v=1">
     <link rel="stylesheet" href="../shared/tokens.css?v=11">
-    <link rel="stylesheet" href="css/print.css?v=7">
+    <link rel="stylesheet" href="css/print.css?v=8">
 <script type="module" src="/js/global-favicon.js"></script>
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -71,6 +71,15 @@
 
     <div class="wrap" style="display:none">
         <div class="sheet">
+
+            <!-- Cabeçalho do personagem — visível em qualquer aba -->
+            <div class="char-header" id="charHeader">
+                <img class="char-header-avatar" id="charHeaderAvatar" alt="" hidden>
+                <div class="char-header-id">
+                    <span class="char-header-name" id="charHeaderName">Personagem sem nome</span>
+                    <span class="char-header-tags" id="charHeaderTags"></span>
+                </div>
+            </div>
 
             <div class="tabs no-print" id="tabBar">
                 <button class="tab active" data-tab="tabPrincipal">Principal</button>
@@ -320,7 +329,7 @@
                 <div class="section">
                     <div class="section-title">📋 Inventário
                         <button class="add-btn no-print" onclick="mergeInventoryItems()" style="margin-left:auto;font-size:0.8rem;padding:4px 12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:var(--lr-arcane-2);" title="Mesclar itens idênticos em stacks">🔀 Mesclar</button>
-                        <button class="add-btn no-print" onclick="openItemFormModal('Criar Item')" style="font-size:0.8rem;padding:4px 12px;">+ Criar Item</button>
+                        <button id="btnCriarItem" class="add-btn no-print" onclick="openItemFormModal('Criar Item')" style="font-size:0.8rem;padding:4px 12px;display:none">+ Criar Item</button>
                     </div>
                     <div id="inventoryItemsGrid">
                         <div class="inv-empty">

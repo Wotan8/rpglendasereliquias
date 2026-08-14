@@ -582,6 +582,9 @@ onAuthStateChanged(auth, async (user) => {
             const userRole = await checkUserRole(user);
             window.isCreator = (userRole === 'criador');
             window.isMestre = (userRole === 'criador' || userRole === 'mestre');
+            // O inventário desenhou antes do papel chegar: repinta para mostrar
+            // (ou esconder) criar/editar/quantidade conforme quem está logado.
+            if (typeof renderInventoryTab === 'function') renderInventoryTab();
             if (window.isCreator) {
                 enableCreatorExpEditing();
                 // Re-render derived values grid para liberar edição de campos

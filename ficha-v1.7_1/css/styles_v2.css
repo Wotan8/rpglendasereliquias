@@ -227,6 +227,75 @@ body {
     overflow: hidden
 }
 
+/* ===== CABEÇALHO DO PERSONAGEM (todas as abas) ===== */
+.char-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    margin: -18px -18px 14px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(90deg, var(--chip), transparent 70%);
+}
+
+.char-header-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--line);
+    flex-shrink: 0;
+}
+
+.char-header-id {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.char-header-name {
+    font-family: 'Cinzel', var(--font);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.char-header-name.char-header-vazio {
+    opacity: .5;
+    font-style: italic;
+}
+
+.char-header-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.char-header-tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--lr-text-2);
+    white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+    .char-header { padding: 8px 12px; margin: -18px -18px 12px; gap: 9px; }
+    .char-header-avatar { width: 32px; height: 32px; }
+    .char-header-name { font-size: .92rem; }
+    .char-header-tag { font-size: 9px; padding: 1px 6px; }
+}
+
 .tabs {
     display: flex;
     gap: 8px;
@@ -2274,11 +2343,14 @@ html.dark .teste-quando {
 }
 
 /* ===== FIREBASE SAVE INDICATOR ===== */
+/* Canto inferior direito: avisos de sistema não podem cair em cima dos dots
+   nem do toast de confirmação de EXP, que fica logo acima deste. */
 .firebase-save-indicator {
     position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%) translateY(20px);
+    bottom: 20px;
+    right: 20px;
+    max-width: calc(100vw - 40px);
+    transform: translateY(20px);
     background: var(--lr-surface);
     color: var(--lr-text-2);
     padding: 8px 20px;
@@ -2296,7 +2368,7 @@ html.dark .teste-quando {
 
 .firebase-save-indicator.show {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
 }
 
 .firebase-save-indicator.saving {
@@ -2434,13 +2506,13 @@ html.dark .bg-orange input {
 /* ===== EXP UPGRADE TOAST ===== */
 .exp-toast-container {
     position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: 68px;   /* acima do indicador de save, mesmo canto */
+    right: 20px;
+    max-width: calc(100vw - 40px);
     z-index: 99998;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end;
     gap: 8px;
     pointer-events: none;
 }
@@ -2459,8 +2531,8 @@ html.dark .bg-orange input {
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    min-width: 300px;
-    max-width: 480px;
+    min-width: min(300px, 100%);
+    max-width: min(480px, 100%);
     animation: expToastIn .3s ease-out;
     border: 2px solid var(--lr-surface-2);
 }

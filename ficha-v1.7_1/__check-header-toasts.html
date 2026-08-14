@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check — cabeçalho do personagem e avisos de canto</title>
+    <link rel="stylesheet" href="css/styles_v2.css">
+    <link rel="stylesheet" href="../shared/tokens.css">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="../shared/lendas-reliquias.css">
+</head>
+
+<body>
+    <!-- Mesmo markup da ficha, sem Firebase: confere o cabeçalho de topo e os
+         avisos no canto inferior direito (save + toast de EXP). -->
+    <div id="firebaseSaveIndicator" class="firebase-save-indicator"></div>
+    <div id="expToastContainer" class="exp-toast-container"></div>
+
+    <div class="wrap">
+        <div class="sheet">
+            <div class="char-header" id="charHeader">
+                <img class="char-header-avatar" id="charHeaderAvatar" alt="" hidden>
+                <div class="char-header-id">
+                    <span class="char-header-name" id="charHeaderName">Personagem sem nome</span>
+                    <span class="char-header-tags" id="charHeaderTags"></span>
+                </div>
+            </div>
+
+            <div class="tabs no-print" id="tabBar">
+                <button class="tab active">Principal</button>
+                <button class="tab">Combate</button>
+                <button class="tab">Inventário</button>
+            </div>
+
+            <div class="section">
+                <div class="row" style="grid-template-columns:1fr 1fr 1fr 1fr">
+                    <div class="field"><label>Nome</label><input type="text" data-key="nome"></div>
+                    <div class="field"><label>Raça</label><select id="selRaca">
+                            <option value="">— Selecione —</option>
+                            <option>Humano</option>
+                            <option>Anão</option>
+                        </select></div>
+                    <div class="field"><label>Classe</label><select id="selClasse">
+                            <option value="">— Selecione —</option>
+                            <option>Guerreiro</option>
+                        </select></div>
+                    <div class="field"><label>Tribo</label><select id="selTribo">
+                            <option value="">— Selecione —</option>
+                            <option>Filhos do Vau</option>
+                        </select></div>
+                </div>
+                <img id="charImgPreview" style="display:none">
+            </div>
+        </div>
+    </div>
+
+    <script src="js/core.js"></script>
+    <script src="js/exp-upgrade.js"></script>
+    <script>
+        // Stubs do que core.js espera da ficha completa
+        window.state = { dots: {} };
+        window.scheduleAutosave = () => { };
+
+        function showSaveIndicator(text, type) {
+            const ind = document.getElementById('firebaseSaveIndicator');
+            ind.textContent = text;
+            ind.className = 'firebase-save-indicator show ' + (type || '');
+        }
+
+        // Cena de checagem: ficha preenchida + os dois avisos ao mesmo tempo,
+        // que era exatamente o par que se cobria no rodapé central.
+        document.querySelector('[data-key="nome"]').value = 'Þórvald, o Sem-Nome';
+        document.getElementById('selRaca').value = 'Anão';
+        document.getElementById('selClasse').value = 'Guerreiro';
+        document.getElementById('selTribo').value = 'Filhos do Vau';
+        updateCharHeader();
+
+        showSaveIndicator('✅ Salvo na nuvem!', 'saved');
+        showExpToast('⬆️ Força → Nível 4? Custo: 25 EXP', 'confirm', [
+            { label: '✓ Confirmar', cls: 'exp-btn-ok' },
+            { label: '✕ Cancelar', cls: 'exp-btn-cancel' },
+        ]);
+    </script>
+</body>
+
+</html>

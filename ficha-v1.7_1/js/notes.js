@@ -199,6 +199,7 @@ async function escolherFotoPersonagem() {
     img.src = url;
     img.style.display = 'block';
     document.getElementById('charImgPlaceholder').style.display = 'none';
+    if (typeof updateCharHeader === 'function') updateCharHeader();
     scheduleAutosave();
 }
 

@@ -289,6 +289,8 @@ function loadFromData(d) {
             try { onTriboChange(); } catch (e) { console.error('Erro em onTriboChange:', e); }
         }
 
+        if (typeof updateCharHeader === 'function') updateCharHeader();
+
         // Force render main tests with restored data
         const cl = document.getElementById('selClasse').value;
         if (typeof renderMainTests === 'function') renderMainTests(cl);

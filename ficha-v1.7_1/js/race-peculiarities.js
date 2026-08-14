@@ -572,6 +572,24 @@ function renderPeculiaridadeCompact(pec, raceKey, container) {
 
 /* ===== DOTS INLINE PARA EVOLUTIVAS ===== */
 
+/**
+ * Custo líquido em EXP de ir do nível `de` até o nível `ate` de uma
+ * peculiaridade — a soma degrau a degrau, porque cada nível tem preço próprio
+ * no cadastro. Nível com `tipoExp: 'ganho'` entra NEGATIVO (o personagem
+ * recebe EXP por uma desvantagem). Serve para cobrar e para devolver.
+ */
+function _pecCustoLiquido(pec, de, ate) {
+    let total = 0;
+    for (let n = de + 1; n <= ate; n++) {
+        const nivel = pec.niveis?.[n];
+        if (!nivel) continue;
+        const m = String(nivel.custo || '').match(/(\d+)/);
+        const c = m ? parseInt(m[1], 10) : 0;
+        total += nivel.tipoExp === 'ganho' ? -c : c;
+    }
+    return total;
+}
+
 function renderEvolutableDotsInline(dotsDiv, raceKey, pec, minLevel, maxLevel) {
     const dotKey = 'pec_' + pec.key;
 
@@ -604,91 +622,82 @@ function renderEvolutableDotsInline(dotsDiv, raceKey, pec, minLevel, maxLevel) {
 
         dot.addEventListener('click', () => {
             if (dot.disabled) return;
-            if (dot.dataset.locked === 'criacao') {
+            // A trava é de EVOLUÇÃO; retroceder um nível já pago continua
+            // valendo para o mestre (é conserto, não progressão).
+            if (dot.dataset.locked === 'criacao' && i > (state.dots[dotKey] || minLevel)) {
                 if (typeof showUpgradeBlocked === 'function')
                     showUpgradeBlocked(`🏗️ "${pec.nome}" só pode ser evoluída na criação de personagem.`);
                 return;
             }
             const current = state.dots[dotKey] || minLevel;
 
-            // Click ≤ nível atual → nada acontece
-            if (i <= current) return;
-
-            // Só permite subir 1 nível por vez
-            const newLevel = current + 1;
-            if (i !== newLevel) {
-                if (typeof showUpgradeBlocked === 'function')
-                    showUpgradeBlocked(`Só é possível subir 1 nível por vez! Nível atual: ${current}, próximo: ${newLevel}.`);
-                return;
-            }
-
-            // Verificar se o nível está disponível
-            if (!pec.niveis[newLevel]) return;
-
-            // Parsear custo do nível
-            const custoStr = pec.niveis[newLevel].custo || '—';
-            const custoMatch = custoStr.match(/(\d+)/);
-            const custo = custoMatch ? parseInt(custoMatch[1], 10) : 0;
-            const isGanho = pec.niveis[newLevel].tipoExp === 'ganho';
-
-            // Se custo é 0 ou '—' (nível base), permite sem gastar
-            if (custo === 0) {
-                state.dots[dotKey] = newLevel;
+            const aplicar = (novoNivel) => {
+                state.dots[dotKey] = novoNivel;
                 refreshPecDots(dotsDiv, dotKey, minLevel);
-                updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
+                updatePeculiaridadeLevel(raceKey, pec.key, novoNivel, pec);
                 if (typeof applyAllRaceMechanics === 'function') applyAllRaceMechanics(raceKey);
                 if (typeof recalcAll === 'function') recalcAll();
                 if (typeof recalcMainTests === 'function') recalcMainTests();
                 if (typeof checkDistribuirOnLevelUp === 'function') checkDistribuirOnLevelUp(pec);
                 scheduleAutosave();
+            };
+
+            // Clique em nível já pago: só mestre/criador retrocede, devolvendo
+            // o EXP dos níveis desfeitos em "Restante" (Total não muda).
+            if (i <= current) {
+                if (typeof podeRetroceder !== 'function' || !podeRetroceder()) return;
+                const alvo = i >= current ? i - 1 : i;
+                if (alvo < minLevel) {
+                    if (typeof showUpgradeBlocked === 'function')
+                        showUpgradeBlocked(`"${pec.nome}" não desce abaixo do nível inicial (${minLevel}).`);
+                    return;
+                }
+                const devolve = _pecCustoLiquido(pec, alvo, current);
+                showDowngradeConfirm(pec.nome, alvo, devolve, () => {
+                    if (devolve > 0) refundExp(devolve);
+                    else if (devolve < 0) spendExp(-devolve); // desfaz EXP ganho por nível prejudicial
+                    aplicar(alvo);
+                    showDowngradeSuccess(pec.nome, alvo, devolve);
+                });
                 return;
             }
 
-            if (isGanho) {
-                // Mecânica prejudicial: GANHA EXP ao subir de nível
-                if (typeof showUpgradeConfirm === 'function') {
-                    showUpgradeConfirm(`${pec.nome} (🎁 +${custo} EXP)`, newLevel, custo, () => {
-                        spendExp(-custo); // Negativo = adiciona EXP
-                        state.dots[dotKey] = newLevel;
-                        refreshPecDots(dotsDiv, dotKey, minLevel);
-                        updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
-                        if (typeof applyAllRaceMechanics === 'function') applyAllRaceMechanics(raceKey);
-                        if (typeof recalcAll === 'function') recalcAll();
-                        if (typeof recalcMainTests === 'function') recalcMainTests();
-                        if (typeof checkDistribuirOnLevelUp === 'function') checkDistribuirOnLevelUp(pec);
-                        scheduleAutosave();
-                        if (typeof showUpgradeSuccess === 'function')
-                            showExpToast(`✅ ${pec.nome} subiu para nível ${newLevel}! (+${custo} EXP)`, 'success');
-                        setTimeout(dismissExpToast, 2000);
-                    });
-                }
-            } else {
-                // Mecânica benéfica: CUSTA EXP ao subir de nível
-                // Verificar EXP
-                const currentExp = typeof getCurrentExp === 'function' ? getCurrentExp() : 0;
-                if (custo > currentExp) {
-                    if (typeof showUpgradeBlocked === 'function')
-                        showUpgradeBlocked(`EXP insuficiente! Precisa de ${custo} EXP, mas só tem ${currentExp}.`);
-                    return;
-                }
-
-                // Confirmação
-                if (typeof showUpgradeConfirm === 'function') {
-                    showUpgradeConfirm(pec.nome, newLevel, custo, () => {
-                        spendExp(custo);
-                        state.dots[dotKey] = newLevel;
-                        refreshPecDots(dotsDiv, dotKey, minLevel);
-                        updatePeculiaridadeLevel(raceKey, pec.key, newLevel, pec);
-                        if (typeof applyAllRaceMechanics === 'function') applyAllRaceMechanics(raceKey);
-                        if (typeof recalcAll === 'function') recalcAll();
-                        if (typeof recalcMainTests === 'function') recalcMainTests();
-                        if (typeof checkDistribuirOnLevelUp === 'function') checkDistribuirOnLevelUp(pec);
-                        scheduleAutosave();
-                        if (typeof showUpgradeSuccess === 'function')
-                            showUpgradeSuccess(pec.nome, newLevel, custo);
-                    });
-                }
+            // Subir vários de uma vez: todo degrau até o clicado precisa existir
+            for (let n = current + 1; n <= i; n++) {
+                if (!pec.niveis[n]) return;
             }
+
+            // Custo líquido: níveis "ganho" devolvem EXP, os demais cobram
+            const custo = _pecCustoLiquido(pec, current, i);
+
+            if (custo === 0) { aplicar(i); return; }
+
+            if (typeof showUpgradeConfirm !== 'function') return;
+
+            if (custo < 0) {
+                // Mecânica prejudicial: GANHA EXP ao subir de nível
+                const ganho = -custo;
+                showUpgradeConfirm(`${pec.nome} (🎁 +${ganho} EXP)`, i, ganho, () => {
+                    spendExp(custo); // negativo = adiciona EXP
+                    aplicar(i);
+                    showExpToast(`✅ ${pec.nome} subiu para nível ${i}! (+${ganho} EXP)`, 'success');
+                    setTimeout(dismissExpToast, 2000);
+                });
+                return;
+            }
+
+            const currentExp = typeof getCurrentExp === 'function' ? getCurrentExp() : 0;
+            if (custo > currentExp) {
+                if (typeof showUpgradeBlocked === 'function')
+                    showUpgradeBlocked(`EXP insuficiente! Precisa de ${custo} EXP, mas só tem ${currentExp}.`);
+                return;
+            }
+
+            showUpgradeConfirm(pec.nome, i, custo, () => {
+                spendExp(custo);
+                aplicar(i);
+                if (typeof showUpgradeSuccess === 'function') showUpgradeSuccess(pec.nome, i, custo);
+            });
         });
 
         dotsDiv.appendChild(dot);

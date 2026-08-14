@@ -18,6 +18,17 @@ function getExpCost(type, newLevel, dotKey) {
     return 0;
 }
 
+/**
+ * Custo de ir do nível efetivo `de` até `ate` — a soma de cada degrau, porque
+ * o custo é por nível (5×N, 4×N...). Serve tanto para cobrar quanto para
+ * devolver no retrocesso.
+ */
+function somaCustoDegraus(type, dotKey, de, ate) {
+    let total = 0;
+    for (let lv = de + 1; lv <= ate; lv++) total += getExpCost(type, lv, dotKey);
+    return total;
+}
+
 function getCurrentExp() {
     const el = document.querySelector('[data-key="exp"]');
     return parseInt(el ? el.value : '0', 10) || 0;
@@ -26,6 +37,21 @@ function getCurrentExp() {
 function setCurrentExp(val) {
     const el = document.querySelector('[data-key="exp"]');
     if (el) el.value = val;
+}
+
+/**
+ * Devolve EXP ao personagem SEM mexer no Total.
+ * Usado no retrocesso de nível pelo mestre: o EXP volta para "Restante",
+ * porque o Total é o histórico do que o personagem já ganhou na mesa.
+ */
+function refundExp(amount) {
+    setCurrentExp(getCurrentExp() + amount);
+    scheduleAutosave();
+}
+
+/** É mestre/criador nesta ficha? Só eles retrocedem níveis. */
+function podeRetroceder() {
+    return !!(window.isMestre || window.isCreator);
 }
 
 function spendExp(amount) {
@@ -117,12 +143,15 @@ function getLimiterName(dotKey, specName) {
  * @param {string} type - 'attr', 'skill', 'spec', 'pec'
  * @param {string} [specName]
  * @param {number} [floorBonus=0] - piso bonus from mechanicLimits
+ * @param {number} [fromLevel] - nível raw de partida; permite subir vários de
+ *        uma vez cobrando a soma de cada degrau. Omitido = 1 degrau (padrão).
  * @returns {{ allowed: boolean, reason: string, cost: number }}
  */
-function canUpgrade(dotKey, newLevel, type, specName, floorBonus) {
+function canUpgrade(dotKey, newLevel, type, specName, floorBonus, fromLevel) {
     floorBonus = floorBonus || 0;
     const effectiveNewLevel = newLevel + floorBonus;
-    const cost = getExpCost(type, effectiveNewLevel, dotKey);
+    const cost = somaCustoDegraus(type, dotKey,
+        (fromLevel == null ? newLevel - 1 : fromLevel) + floorBonus, effectiveNewLevel);
     const currentExp = getCurrentExp();
 
     // Verificar se base + bônus de mecânica + piso ultrapassaria o máximo
@@ -261,6 +290,30 @@ function showUpgradeConfirm(label, newLevel, cost, onConfirm) {
             { label: '✕ Cancelar', cls: 'exp-btn-cancel' }
         ]
     );
+}
+
+/**
+ * Confirmação de retrocesso de nível (só mestre/criador).
+ * O EXP devolvido volta para "Restante" — o Total não muda.
+ */
+function showDowngradeConfirm(label, newLevel, refund, onConfirm) {
+    const efeito = refund >= 0
+        ? `Devolve ${refund} EXP (só em Restante)`
+        : `Retoma ${-refund} EXP que a desvantagem havia dado`;
+    showExpToast(
+        `⬇️ ${label} → Nível ${newLevel}? ${efeito}`,
+        'confirm',
+        [
+            { label: '✓ Retroceder', cls: 'exp-btn-ok', action: onConfirm },
+            { label: '✕ Cancelar', cls: 'exp-btn-cancel' }
+        ]
+    );
+}
+
+function showDowngradeSuccess(label, newLevel, refund) {
+    const sinal = refund >= 0 ? `+${refund}` : `${refund}`;
+    showExpToast(`↩️ ${label} voltou para nível ${newLevel}! (${sinal} EXP)`, 'success');
+    setTimeout(dismissExpToast, 2000);
 }
 
 /**
