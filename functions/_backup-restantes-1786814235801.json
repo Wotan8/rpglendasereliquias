@@ -1,0 +1,919 @@
+{
+ "ally_animal": {
+  "custoRemocaoMecanicaId": null,
+  "custoRemocaoAtivo": false,
+  "custoCriacaoMecanicaIds": [],
+  "custoRemocaoMecanicaIds": [],
+  "custoEquipamentos": [],
+  "id": "ally_animal",
+  "tipo": "lista",
+  "limiteFixo": null,
+  "custoExpLabel": "",
+  "mecanicaLimiteId": null,
+  "cadastrarBloqueio": false,
+  "custoEdicaoAtivo": false,
+  "custoExpPorItem": 0,
+  "custoEdicaoMecanicaIds": [],
+  "custoCriacaoMecanicaId": null,
+  "icone": "🐕",
+  "criadoEm": {
+   "_seconds": 1784403183,
+   "_nanoseconds": 958000000
+  },
+  "limiteMecanicaIds": [],
+  "bloqueioMecanicaIds": [],
+  "criadoPor": "M2rZzlQkzxTrrddeFQ10S6zsfX62",
+  "custoEdicaoMecanicaId": null,
+  "permitirCriacaoJogador": false,
+  "publicado": true,
+  "titulo": "Ferinismo",
+  "versao": 4,
+  "schema": [
+   {
+    "somenteLeitura": true,
+    "placeholder": "",
+    "tipo": "select_vd",
+    "largura": "",
+    "label": "Teste:",
+    "key": "1",
+    "ehVeiculo": true
+   },
+   {
+    "key": "acao",
+    "tipo": "select",
+    "label": "Ação:",
+    "largura": "quarto",
+    "placeholder": "",
+    "somenteLeitura": true,
+    "opcoes": [
+     "Ação Padrão",
+     "Ação de Movimento",
+     "Ação Livre",
+     "Ação Completa (turno inteiro)",
+     "Reação",
+     "Sustentada (1 Padrão/turno)",
+     "Fora de combate"
+    ]
+   }
+  ],
+  "updatedAt": {
+   "_seconds": 1786751444,
+   "_nanoseconds": 586000000
+  },
+  "atualizadoEm": {
+   "_seconds": 1786813641,
+   "_nanoseconds": 456000000
+  },
+  "itensPredefinidos": [
+   {
+    "descricao": "O Druida abre espaço na própria carne e o Aliado Animal entra. O corpo do bicho fica inerte; o Druida ganha o que o animal tem de melhor, e só o que for melhor que o dele. Acaba quando a fusão acaba.",
+    "nome": "Fusão Selvagem — Receptor",
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "eKX7SWsRARoyjxOwN1Ex",
+     "acao": "Ação Completa (turno inteiro)"
+    },
+    "custoExpProprio": null,
+    "id": "pdi_1784476430077_5t33mz_receptor",
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": 1,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": [],
+    "faccao": "aliado",
+    "exigeVinculo": "aliado-animal",
+    "incorporacao": "receptor",
+    "alcanceVisao": true
+   },
+   {
+    "descricao": "O Druida sai de si e vai para o Aliado Animal. O corpo DELE fica inerte, e ele passa a jogar pelo bicho — na iniciativa do bicho, que já está na cena. Pode abrir a ficha do animal para consultar; não pode editá-la.",
+    "nome": "Fusão Selvagem — Projetor",
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "eKX7SWsRARoyjxOwN1Ex",
+     "acao": "Ação Completa (turno inteiro)"
+    },
+    "custoExpProprio": null,
+    "id": "pdi_1784476430077_5t33mz_projetor",
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": 1,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": [],
+    "faccao": "aliado",
+    "exigeVinculo": "aliado-animal",
+    "incorporacao": "projetor",
+    "alcanceVisao": true
+   },
+   {
+    "valores": {
+     "1": "kU2fFVZc7XQUsrGoBpzd",
+     "acao": "Ação Padrão"
+    },
+    "custoEquipamentos": null,
+    "nome": "Convocar Manada",
+    "id": "pdi_1784476430077_ymj2z5",
+    "custoExpProprio": null,
+    "descricao": "Habilidade utilizada para chamar animais pequenos próximos para intervir ou ajudar na cena.",
+    "alcance": "(Percepção * 2)",
+    "formaArea": "locais",
+    "tamanhoArea": null,
+    "alvosMax": 5,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": [],
+    "alvosPorGraus": true,
+    "faccao": "aliado"
+   },
+   {
+    "nome": "Vínculo Animal",
+    "valores": {
+     "1": "JXaPuGDZCqW8P48EUVrV",
+     "acao": "Ação Padrão"
+    },
+    "custoEquipamentos": null,
+    "custoExpProprio": null,
+    "id": "pdi_1784476430077_wft41f",
+    "descricao": "Sela o vínculo com um Aliado Animal que já tenha Lealdade suficiente. Só depois do vínculo selado a Fusão Selvagem pode ser usada com aquele aliado.",
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": [],
+    "criaturasVinculadas": [
+     {
+      "npcId": "fT3roOTTZdxYcH0OT9et",
+      "nome": "Lobo"
+     },
+     {
+      "npcId": "YMoghZDKb9mBqDaModSr",
+      "nome": "Urso"
+     },
+     {
+      "npcId": "guUn4vi7UhkHmnjDaZ1Y",
+      "nome": "Corvo"
+     },
+     {
+      "npcId": "s4wBkhYZKrAUkXqv7d1o",
+      "nome": "Serpente"
+     },
+     {
+      "npcId": "2PAbV6iAkSqBgBYbHDXp",
+      "nome": "Velocirops"
+     },
+     {
+      "npcId": "TO2WnYy3Cbhyi0refHfd",
+      "nome": "Ratazana"
+     }
+    ]
+   }
+  ]
+ },
+ "TbRKh68m2hvr9KUVrOXb": {
+  "custoExpLabel": "",
+  "bloqueioMecanicaIds": [],
+  "custoEquipamentos": [],
+  "custoExpPorItem": 0,
+  "custoCriacaoMecanicaId": null,
+  "mecanicaLimiteId": null,
+  "custoEdicaoMecanicaId": null,
+  "limiteMecanicaIds": [],
+  "custoRemocaoMecanicaId": null,
+  "custoEdicaoAtivo": false,
+  "custoRemocaoMecanicaIds": [],
+  "custoCriacaoMecanicaIds": [],
+  "custoRemocaoAtivo": false,
+  "criadoEm": {
+   "_seconds": 1784511789,
+   "_nanoseconds": 25000000
+  },
+  "custoEdicaoMecanicaIds": [],
+  "criadoPor": "M2rZzlQkzxTrrddeFQ10S6zsfX62",
+  "tipo": "lista",
+  "titulo": "Rituais de Invocação Abissal",
+  "limiteFixo": null,
+  "icone": "🌑",
+  "id": "TbRKh68m2hvr9KUVrOXb",
+  "cadastrarBloqueio": false,
+  "permitirCriacaoJogador": false,
+  "publicado": true,
+  "versao": 14,
+  "schema": [
+   {
+    "placeholder": "",
+    "key": "1",
+    "largura": "full",
+    "tipo": "textarea",
+    "somenteLeitura": true,
+    "label": "O que faz:"
+   },
+   {
+    "somenteLeitura": true,
+    "label": "CA mínimo:",
+    "tipo": "number",
+    "placeholder": "",
+    "key": "2",
+    "largura": ""
+   },
+   {
+    "largura": "",
+    "key": "3",
+    "placeholder": "",
+    "label": "Teste:",
+    "somenteLeitura": true,
+    "tipo": "select_vd",
+    "ehVeiculo": true
+   },
+   {
+    "key": "4",
+    "placeholder": "",
+    "ocultarSeVazio": true,
+    "largura": "",
+    "label": "Redutor:",
+    "somenteLeitura": true,
+    "tipo": "number"
+   },
+   {
+    "tipo": "number",
+    "label": "Custo Sanidade:",
+    "somenteLeitura": true,
+    "largura": "",
+    "ocultarSeVazio": true,
+    "key": "5",
+    "placeholder": ""
+   },
+   {
+    "key": "acao",
+    "tipo": "select",
+    "label": "Ação:",
+    "largura": "quarto",
+    "placeholder": "",
+    "somenteLeitura": true,
+    "opcoes": [
+     "Ação Padrão",
+     "Ação de Movimento",
+     "Ação Livre",
+     "Ação Completa (turno inteiro)",
+     "Reação",
+     "Sustentada (1 Padrão/turno)",
+     "Fora de combate"
+    ]
+   },
+   {
+    "somenteLeitura": true,
+    "label": "Custo em Energia",
+    "tipo": "number",
+    "key": "6",
+    "placeholder": "",
+    "ocultarSeVazio": true,
+    "largura": ""
+   },
+   {
+    "derivedValueId": "hH1U9UXrqgXtxNTpJchU",
+    "tipo": "valor_derivado",
+    "label": "CA",
+    "somenteLeitura": true,
+    "key": "7",
+    "placeholder": "",
+    "largura": ""
+   },
+   {
+    "tipo": "contador",
+    "label": "Graus Obtidos",
+    "key": "8",
+    "placeholder": "",
+    "largura": ""
+   },
+   {
+    "tipo": "select_botao",
+    "label": "🔮 Conjurar Ritual",
+    "somenteLeitura": true,
+    "largura": "",
+    "key": "9",
+    "placeholder": ""
+   }
+  ],
+  "updatedAt": {
+   "_seconds": 1786751444,
+   "_nanoseconds": 426000000
+  },
+  "atualizadoEm": {
+   "_seconds": 1786803623,
+   "_nanoseconds": 676000000
+  },
+  "itensPredefinidos": [
+   {
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Chama uma entidade abissal. Reporte ao Mestre seu CA atual e os Graus de Sucesso do teste — ele gera a criatura em segredo. Requer Sacrifício. Quanto mais insano (CA alto), maior e mais indócil tende a ser o que responde.",
+     "2": "2",
+     "3": "J4dtnjgEqVZvkGOleGK4",
+     "4": "",
+     "5": "4",
+     "6": "1",
+     "8": "0",
+     "9": "xZaVZcl6p6XUmjA5f1wM",
+     "acao": "Ação Padrão"
+    },
+    "id": "pdi_1784604406980_bbkqom",
+    "nome": "Invocação Abissal",
+    "descricao": "Rasga o véu e puxa uma criatura da Oitava Camada para a realidade. O que vem, o Abismo decide.",
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": [],
+    "criaturasVinculadas": [
+     {
+      "npcId": "ZAQmjd1H2zml9Wzwi8cg",
+      "nome": "Cria Menor do Véu"
+     },
+     {
+      "npcId": "j5Nn1e38L0kzINuX6nBe",
+      "nome": "Cria da Fenda"
+     },
+     {
+      "npcId": "HTU0ep2gVzkqh0rQ0kzk",
+      "nome": "Horror Rastejante"
+     },
+     {
+      "npcId": "qoGly5KjYvcIkmyWQb3w",
+      "nome": "Horror Maior"
+     },
+     {
+      "npcId": "e0FdHrT6OlxIYlMvXtA2",
+      "nome": "Entidade da Oitava"
+     }
+    ]
+   },
+   {
+    "id": "pdi_inv_1785107140941_0",
+    "nome": "Selo Negativo",
+    "descricao": "Ergue uma jaula espacial que aprisiona o alvo no tecido da realidade.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Conter ou aprisionar um alvo. Redutor: −(3 + AI do alvo). Custo: 2 Energia + 1 Sanidade OU 3 Sanidade. Falha: o selo inverte — a área vira limiar (Fenda Menor por 1 turno). Efeito: cria uma jaula de Tecido Espacial Físico (2–4m); presos testam (FOR/PRS + AUT) vs seus Graus de Sucesso para escapar.",
+     "2": "6",
+     "3": "zAlnZyvt1WJLwTyrDMdl",
+     "4": "0",
+     "5": "1",
+     "6": "2",
+     "8": "0",
+     "9": "KLf8ewjI908BaTca9ibp",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "onda",
+    "tamanhoArea": 4,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "turno",
+    "condicoesAplicadas": [],
+    "faccao": "inimigo"
+   },
+   {
+    "id": "pdi_inv_1785107140941_1",
+    "nome": "Ocultação de Eco Abissal",
+    "descricao": "Dissolve os ecos deixados pela magia abissal, ocultando rastros.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Apagar rastros abissais. Área 6m. Requer Sacrifício e CA 3+. Custo: 1 Energia OU 1 Sanidade. Redutor: −3. Falha: você absorve parte do Eco; −1 Sanidade imediato. Efeito: apaga rastros abissais; rituais rastreadores na área sofrem −2 até o fim da cena.",
+     "2": "3",
+     "3": "zAlnZyvt1WJLwTyrDMdl",
+     "4": "-3",
+     "5": "0",
+     "6": "1",
+     "8": "0",
+     "9": "gT5DZcIaG69aYuEjdXwQ",
+     "acao": "Fora de combate"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_2",
+    "nome": "Laço de Nome",
+    "descricao": "Amarra a vontade da criatura invocada usando o poder do nome.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Dominar uma criatura abissal. Requer CA 3+. Custo: 1 Energia OU 1 Sanidade. Redutor: −(3 + Risco do Aspecto + AI da criatura). Falha: a criatura aprende seu nome verdadeiro e −1 na Disposição. Efeito: +1 imediato na Disposição da criatura invocada.",
+     "2": "3",
+     "3": "zAlnZyvt1WJLwTyrDMdl",
+     "4": "-3",
+     "5": "0",
+     "6": "1",
+     "8": "0",
+     "9": "gT5DZcIaG69aYuEjdXwQ",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_3",
+    "nome": "Plano Inferior",
+    "descricao": "Abre uma passagem para a primeira camada de realidade abaixo do plano base.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Acesso a outro plano. Duração 1 cena. Raio 4m. Requer CA 4+. Custo: 1 Energia OU 1 Sanidade. Redutor: −2. Falha: o portal rompe até a Oitava, criando uma Fenda Menor. Efeito: cria passagem para uma bolha de realidade fixa na primeira camada inferior ao plano base.",
+     "2": "4",
+     "3": "J4dtnjgEqVZvkGOleGK4",
+     "4": "-2",
+     "5": "0",
+     "6": "1",
+     "8": "0",
+     "9": "gT5DZcIaG69aYuEjdXwQ",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "onda",
+    "tamanhoArea": 4,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_4",
+    "nome": "Plano Mental Inferior",
+    "descricao": "Cria um refúgio mental pessoal numa camada inferior da realidade.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Acessar uma bolha mental pessoal. Duração 1 cena. Raio 4m. Requer CA 5+. Custo: 1 Energia OU 1 Sanidade. Redutor: −2. Falha: o portal rompe até a Oitava, criando uma Fenda Menor. Efeito: cria passagem para uma bolha na segunda camada inferior — espaço mental pessoal, moldável pelo Invocador.",
+     "2": "5",
+     "3": "zAlnZyvt1WJLwTyrDMdl",
+     "4": "-2",
+     "5": "0",
+     "6": "1",
+     "8": "0",
+     "9": "gT5DZcIaG69aYuEjdXwQ",
+     "acao": "Fora de combate"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_5",
+    "nome": "Vórtice na Fenda",
+    "descricao": "Rasga uma fenda e atravessa o plano invertido para reaparecer longe.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Teleportar usando o plano invertido. Tempo: 6 Ações (3 turnos). Alvo: o usuário e mais um alvo tocado. Requer CA 7+. Custo: 1 Energia + 1 Sanidade OU 2 Sanidade. Redutor: −4. Falha: volta perdido (Defesa 0 por 1 cena). Falha Crítica: fica preso no plano invertido por 1 cena. Efeito: teleporta por uma fenda visível (até 10m) e retorna no mesmo turno em um ponto de até 200m da origem.",
+     "2": "7",
+     "3": "J4dtnjgEqVZvkGOleGK4",
+     "4": "-4",
+     "5": "1",
+     "6": "1",
+     "8": "0",
+     "9": "7zRZ3yazPmgjUgXDmX1c",
+     "acao": "Ação Padrão"
+    },
+    "alcance": 10,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_6",
+    "nome": "Fechamento de Fenda",
+    "descricao": "Costura o tecido da realidade, selando uma fenda abissal passo a passo.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Selar uma fenda. Tempo: 6 Ações (3 turnos). Requer Sacrifício e CA 5+. Custo: 1 Energia + 1 Sanidade OU 2 Sanidade. Redutor: −2 − tamanho da Fenda (Menor=1, Maior=3, Verdadeira=5). Falha: a Fenda aumenta 1 passo. Efeito: reduz a fenda 1 passo por Grau de Sucesso; ao zerar, sela completamente.",
+     "2": "5",
+     "3": "zAlnZyvt1WJLwTyrDMdl",
+     "4": "-2",
+     "5": "1",
+     "6": "1",
+     "8": "0",
+     "9": "7zRZ3yazPmgjUgXDmX1c",
+     "acao": "Ação Completa (turno inteiro)"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 3,
+    "duracaoUnidade": "turno",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_7",
+    "nome": "Estilhaçar Causa",
+    "descricao": "Desfaz o último evento da realidade — a um custo terrível para a mente.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Anular o último evento. Requer CA 8+. Custo: Sacrifício + 2 Energia + 1 Sanidade. Redutor: −6. Falha: o evento retorna pior (o alvo ganha +1 Grau de Sucesso adicional no evento original). Efeito: cancela o último evento (um ataque, queda, rolagem); memórias ficam turvas e deixa Eco Forte. Consequência: pessoas afetadas testam Sanidade ou perdem 1 ponto. ⚠ Um dos rituais mais poderosos e perigosos da Abismancia.",
+     "2": "8",
+     "3": "J4dtnjgEqVZvkGOleGK4",
+     "4": "-6",
+     "5": "1",
+     "6": "2",
+     "8": "0",
+     "9": "KLf8ewjI908BaTca9ibp",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": []
+   }
+  ]
+ },
+ "mod_totem": {
+  "custoEdicaoAtivo": false,
+  "custoExpLabel": "",
+  "bloqueioMecanicaIds": [],
+  "criadoPor": "M2rZzlQkzxTrrddeFQ10S6zsfX62",
+  "limiteMecanicaIds": [],
+  "custoExpPorItem": 0,
+  "limiteFixo": null,
+  "custoCriacaoMecanicaId": null,
+  "titulo": "Rituais da Totemancia",
+  "cadastrarBloqueio": false,
+  "id": "mod_totem",
+  "custoRemocaoAtivo": false,
+  "custoEquipamentos": [],
+  "custoRemocaoMecanicaId": null,
+  "criadoEm": {
+   "_seconds": 1784862349,
+   "_nanoseconds": 428000000
+  },
+  "publicado": true,
+  "custoCriacaoMecanicaIds": [],
+  "custoRemocaoMecanicaIds": [],
+  "mecanicaLimiteId": null,
+  "permitirCriacaoJogador": false,
+  "icone": "🌿",
+  "custoEdicaoMecanicaIds": [],
+  "custoEdicaoMecanicaId": null,
+  "tipo": "lista",
+  "versao": 3,
+  "schema": [
+   {
+    "placeholder": "",
+    "somenteLeitura": true,
+    "largura": "full",
+    "label": "Nome:",
+    "tipo": "text",
+    "key": "1"
+   },
+   {
+    "key": "8",
+    "tipo": "number",
+    "label": "Perícia mínima (Totemismo):",
+    "largura": "quarto",
+    "somenteLeitura": true,
+    "placeholder": "1 a 5",
+    "ocultarSeVazio": false
+   },
+   {
+    "somenteLeitura": true,
+    "ocultarSeVazio": true,
+    "placeholder": "",
+    "tipo": "text",
+    "label": "Requer:",
+    "key": "3",
+    "largura": "full"
+   },
+   {
+    "tipo": "select_vd",
+    "key": "2",
+    "label": "Teste:",
+    "largura": "",
+    "somenteLeitura": true,
+    "placeholder": "",
+    "ehVeiculo": true
+   },
+   {
+    "placeholder": "",
+    "somenteLeitura": true,
+    "largura": "",
+    "key": "4",
+    "label": "Custo:",
+    "tipo": "text"
+   },
+   {
+    "key": "acao",
+    "tipo": "select",
+    "label": "Ação:",
+    "largura": "quarto",
+    "placeholder": "",
+    "somenteLeitura": true,
+    "opcoes": [
+     "Ação Padrão",
+     "Ação de Movimento",
+     "Ação Livre",
+     "Ação Completa (turno inteiro)",
+     "Reação",
+     "Sustentada (1 Padrão/turno)",
+     "Fora de combate"
+    ]
+   },
+   {
+    "tipo": "text",
+    "label": "Duração:",
+    "key": "5",
+    "largura": "",
+    "somenteLeitura": true,
+    "placeholder": "",
+    "ocultarSeVazio": true
+   },
+   {
+    "key": "6",
+    "label": "Efeito:",
+    "tipo": "text",
+    "largura": "",
+    "somenteLeitura": true,
+    "placeholder": ""
+   },
+   {
+    "mecanicaIds": [],
+    "placeholder": "",
+    "key": "7",
+    "label": "Pagar Custo",
+    "tipo": "botao",
+    "largura": ""
+   }
+  ],
+  "updatedAt": {
+   "_seconds": 1786751444,
+   "_nanoseconds": 774000000
+  },
+  "atualizadoEm": {
+   "_seconds": 1786813641,
+   "_nanoseconds": 631000000
+  },
+  "itensPredefinidos": [
+   {
+    "id": "pdi_totem_1785111662028_0",
+    "nome": "Cravar Totem",
+    "descricao": "Conecta o totem ao ambiente, permitindo sentir os fluxos de essência verde local. Necessário para qualquer ritual de Transcendência.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Cravar Totem",
+     "2": "dapUS5VMMdAXR4IaOiDb",
+     "3": "Totem pessoal",
+     "4": "1 Ação Prolongada (10 min)",
+     "5": "Permanente até remover",
+     "6": "Conecta o totem ao ambiente, permitindo sentir os fluxos de essência verde local. Necessário para qualquer ritual de Transcendência.",
+     "7": "",
+     "8": 1,
+     "acao": "Fora de combate"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": null,
+    "duracaoUnidade": "permanente",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_totem_1785111662028_1",
+    "nome": "Buscar Vestígio",
+    "descricao": "Busca Ecos da Alma na essência verde local, FORA DE COMBATE — chamar um Eco leva o tempo que leva. Os Graus determinam quantos Ecos respondem (1 + Graus) e qual o melhor Estado disponível para o Mestre escolher. Quem carrega um Totem de Ancestral já consagrado àquele Eco dispensa a busca: ele vem junto.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Buscar Vestígio",
+     "2": "24fZw6X33okTcsJ0kMYJ",
+     "3": "Totem cravado",
+     "4": "1 Energia",
+     "5": "Instantâneo",
+     "6": "Busca Ecos da Alma na essência verde local, FORA DE COMBATE — chamar um Eco leva o tempo que leva. Os Graus determinam quantos Ecos respondem (1 + Graus) e qual o melhor Estado disponível para o Mestre escolher. Quem carrega um Totem de Ancestral já consagrado àquele Eco dispensa a busca: ele vem junto.",
+     "7": "gT5DZcIaG69aYuEjdXwQ",
+     "8": 1,
+     "acao": "Fora de combate"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 0,
+    "duracaoUnidade": "instantaneo",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_totem_1785111662028_2",
+    "nome": "Transcendência — Projetor",
+    "descricao": "Projeta a consciência no Eco; o corpo entra em transe (inerte, vulnerável). Pode elevar-se ao Véu Etérico (Redutor +2) ou Astral (Redutor +4) se o Eco tiver transcendido.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Transcendência — Projetor",
+     "2": "kgwbOKaZxWw0KFsSWqx1",
+     "3": "Eco encontrado",
+     "4": "2 Energia ou 1 Energia + 2 Sanidade",
+     "5": "Graus × 10 minutos",
+     "6": "Projeta a consciência no Eco; o corpo entra em transe (inerte, vulnerável). Pode elevar-se ao Véu Etérico (Redutor +2) ou Astral (Redutor +4) se o Eco tiver transcendido.",
+     "7": "tnDqEc9gTObQY7Fs7xHU",
+     "8": 3,
+     "acao": "Ação Completa (turno inteiro)"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": 1,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": [],
+    "faccao": "aliado",
+    "exigeVinculo": "eco",
+    "incorporacao": "projetor",
+    "alcanceVisao": true
+   },
+   {
+    "id": "pdi_totem_1785111662028_3",
+    "nome": "Transcendência — Receptor",
+    "descricao": "O Eco divide a carne com o Xamã por 1 CENA. Ele empresta a DÁDIVA da vida que teve, e\numa PERÍCIA sua no valor 3 (Eco Comum) ou 5 (Ancestral).\n\nDÁDIVAS — o Mestre define ao gerar o Eco:\n· BRAÇO (lutou, caçou, matou) — +4 de dano e +3 no Alvo dos seus ataques\n· PELE (aguentou; fera de couro) — +7 de Blindagem\n· OLHO (batedor, vigia, ave) — +5 no Alvo de ataques à distância e +5 em Observação\n· PASSO (corria; fera veloz) — +9m de Deslocamento, +5 em Furtividade e Atletismo\n· BOCA (orador, líder, sacerdote) — +5 no Alvo de testes sociais\nEco ANCESTRAL dobra a Dádiva e o custo passa a 2 Energia + 2 Sanidade.\n\nA PERSONALIDADE do Eco soma o bônus e o ônus dela aos seus testes enquanto durar,\ne pesa na Supressão. Disposição alta ajuda; baixa empurra o Eco para o corpo.\n\nSUPRESSÃO — o Eco tentando ficar com o corpo. Teste: Alvo = AUT + Transcendência,\ncom REDUTOR igual à PRS do Eco. Role na falha crítica, a cada extensão paga, SEMPRE que\nincorporar um Eco ANCESTRAL, e ao fim\nde cada cena com Eco Furioso ou Corrompido. Falhou, sobe um degrau:\n· Nv 1 SUSSURRO — o Eco fala pela sua boca quando o Mestre quiser. −1 no Alvo de tudo.\n· Nv 2 RÉDEA — uma vez por cena o Eco gasta uma das suas ações. −2 no Alvo de tudo.\n· Nv 3 DOMÍNIO — o Eco tem o corpo; o jogador não joga o personagem. Ao fim de cada\n  cena, o mesmo teste (AUT + Transcendência, redutor = PRS do Eco) para voltar ao Nv 2.\nTRÊS cenas seguidas em Domínio sem sucesso: o Eco fica. O personagem vira NPC do Mestre.\nDesce um degrau por Exorcismo, por honrar o preço do Eco, ou por Descanso Longo com oferenda.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Transcendência — Receptor",
+     "2": "vRP4EE1qwLABMnXRw7RY",
+     "3": "Eco encontrado",
+     "4": "2 Energia ou 1 Energia + 2 Sanidade",
+     "5": "1 cena",
+     "6": "O Eco divide a carne com o Xamã por 1 CENA. Ele empresta a DÁDIVA da vida que teve, e\numa PERÍCIA sua no valor 3 (Eco Comum) ou 5 (Ancestral).\n\nDÁDIVAS — o Mestre define ao gerar o Eco:\n· BRAÇO (lutou, caçou, matou) — +4 de dano e +3 no Alvo dos seus ataques\n· PELE (aguentou; fera de couro) — +7 de Blindagem\n· OLHO (batedor, vigia, ave) — +5 no Alvo de ataques à distância e +5 em Observação\n· PASSO (corria; fera veloz) — +9m de Deslocamento, +5 em Furtividade e Atletismo\n· BOCA (orador, líder, sacerdote) — +5 no Alvo de testes sociais\nEco ANCESTRAL dobra a Dádiva e o custo passa a 2 Energia + 2 Sanidade.\n\nA PERSONALIDADE do Eco soma o bônus e o ônus dela aos seus testes enquanto durar,\ne pesa na Supressão. Disposição alta ajuda; baixa empurra o Eco para o corpo.\n\nSUPRESSÃO — o Eco tentando ficar com o corpo. Teste: Alvo = AUT + Transcendência,\ncom REDUTOR igual à PRS do Eco. Role na falha crítica, a cada extensão paga, SEMPRE que\nincorporar um Eco ANCESTRAL, e ao fim\nde cada cena com Eco Furioso ou Corrompido. Falhou, sobe um degrau:\n· Nv 1 SUSSURRO — o Eco fala pela sua boca quando o Mestre quiser. −1 no Alvo de tudo.\n· Nv 2 RÉDEA — uma vez por cena o Eco gasta uma das suas ações. −2 no Alvo de tudo.\n· Nv 3 DOMÍNIO — o Eco tem o corpo; o jogador não joga o personagem. Ao fim de cada\n  cena, o mesmo teste (AUT + Transcendência, redutor = PRS do Eco) para voltar ao Nv 2.\nTRÊS cenas seguidas em Domínio sem sucesso: o Eco fica. O personagem vira NPC do Mestre.\nDesce um degrau por Exorcismo, por honrar o preço do Eco, ou por Descanso Longo com oferenda.",
+     "7": "tnDqEc9gTObQY7Fs7xHU",
+     "8": 3,
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": 1,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": [],
+    "regua": {
+     "razao": 1.31,
+     "unidades": 3.94,
+     "custo": 3,
+     "em": "2026-08-13"
+    },
+    "faccao": "aliado",
+    "exigeVinculo": "eco",
+    "incorporacao": "receptor",
+    "alcanceVisao": true
+   },
+   {
+    "id": "pdi_totem_1785111662028_4",
+    "nome": "Comunhão Simples",
+    "descricao": "Conversa com um Eco sem incorporação. Pode fazer perguntas (Graus = quantidade de respostas claras). Ecos podem exigir oferendas ou recusar.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Comunhão Simples",
+     "2": "nzpmGKWnNqZ6hKK9Q50S",
+     "3": "Eco por perto",
+     "4": "1 Energia",
+     "5": "Curta",
+     "6": "Conversa com um Eco sem incorporação. Pode fazer perguntas (Graus = quantidade de respostas claras). Ecos podem exigir oferendas ou recusar.",
+     "7": "gT5DZcIaG69aYuEjdXwQ",
+     "8": 2,
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_totem_1785111662028_5",
+    "nome": "Vincular Eco (Antiqua)",
+    "descricao": "Convida um Eco a habitar permanentemente o Totem de Antiqua (vs PRS do Eco, Redutor base 4). O Eco deve consentir. Limite de Ecos Vinculados = Totemismo ÷ 2 (mín 1). Falha crítica: -1 SAN permanente e Dívida Espiritual.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Vincular Eco (Antiqua)",
+     "2": "2VokOJTUIYaHaWetRGMe",
+     "3": "Totem de Antiqua; Totemismo 5; Transcendência 2",
+     "4": "3 Energia + 10 Sanidade + oferenda",
+     "5": "Ritual de uma noite (8h)",
+     "6": "Convida um Eco a habitar permanentemente o Totem de Antiqua (vs PRS do Eco, Redutor base 4). O Eco deve consentir. Limite de Ecos Vinculados = Totemismo ÷ 2 (mín 1). Falha crítica: -1 SAN permanente e Dívida Espiritual.",
+     "7": "Uygfg53VibNqvHqnLER2",
+     "8": 4,
+     "acao": "Fora de combate"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_totem_1785111662028_6",
+    "nome": "Libertar Eco Aprisionado",
+    "descricao": "Liberta um Eco aprisionado contra a vontade em objeto, relíquia ou totem. Os Graus determinam se a libertação é completa ou parcial.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Libertar Eco Aprisionado",
+     "2": "HEd9hsA2wlGBM9KO90Ed",
+     "3": "—",
+     "4": "1 Energia",
+     "5": "Instantâneo",
+     "6": "Liberta um Eco aprisionado contra a vontade em objeto, relíquia ou totem. Os Graus determinam se a libertação é completa ou parcial.",
+     "7": "gT5DZcIaG69aYuEjdXwQ",
+     "8": 5,
+     "acao": "Fora de combate"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 0,
+    "duracaoUnidade": "instantaneo",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_totem_1785111662028_7",
+    "nome": "Exorcismo",
+    "descricao": "Expulsa um espírito invasor de pessoa, objeto ou local (vs PRS do Espírito).",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Exorcismo",
+     "2": "SFK2KSrbID8RFMVNQsHW",
+     "3": "—",
+     "4": "2 Energia",
+     "5": "Graus determinam a duração do banimento",
+     "6": "Expulsa um espírito invasor de pessoa, objeto ou local (vs PRS do Espírito).",
+     "7": "tnDqEc9gTObQY7Fs7xHU",
+     "8": 4,
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": []
+   }
+  ]
+ }
+}

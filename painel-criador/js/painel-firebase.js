@@ -1146,9 +1146,9 @@ async function renderDiagnosticoTabuleiro() {
     box.innerHTML = '<div class="skills-category-header">🎲 Leitura do Tabuleiro <span class="skills-category-count">…</span></div>';
 
     try {
-        const [{ indexarPredefs, interpretarSkill }, { custosDaSkill }, { custoDaMecanica }] = await Promise.all([
-            import('../../shared/skill-runtime.js?v=1'),
-            import('../../shared/skill-custo.js?v=1'),
+        const [{ indexarPredefs, interpretarSkill }, { custosDaSkill, moduloDeclaraCusto, custoDeclaradoZero }, { custoDaMecanica }] = await Promise.all([
+            import('../../shared/skill-runtime.js?v=2'),
+            import('../../shared/skill-custo.js?v=2'),
             import('../../shared/combate-cenas.js'),
         ]);
 
@@ -1163,7 +1163,7 @@ async function renderDiagnosticoTabuleiro() {
                 total++;
                 // O item da ficha nasce do pré-definido: é assim que a mesa o vê.
                 const r = interpretarSkill({ _predefId: pd.id, _predefNome: pd.nome }, {
-                    idx, custosDaSkill, mechPorId, custoDaMecanica, registroOk: true,
+                    idx, custosDaSkill, moduloDeclaraCusto, custoDeclaradoZero, mechPorId, custoDaMecanica, registroOk: true,
                 });
                 if (!r.diagnostico.ok) problemas.push({ mod, pd, d: r.diagnostico });
             }

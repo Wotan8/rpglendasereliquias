@@ -23,8 +23,8 @@ import {
     efeitoDasCondicoes, porqueCondicao,
     guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica,
 } from '../../shared/combate-cenas.js';
-import { custosDaSkill, rotuloDosCustos } from '../../shared/skill-custo.js?v=1';
-import { indexarPredefs, interpretarSkill } from '../../shared/skill-runtime.js?v=1';
+import { custosDaSkill, rotuloDosCustos, moduloDeclaraCusto, custoDeclaradoZero } from '../../shared/skill-custo.js?v=1';
+import { indexarPredefs, interpretarSkill } from '../../shared/skill-runtime.js?v=2';
 import { resolverMedida, ehFormula } from '../../shared/medida-formula.js?v=1';
 import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR,
          porqueLocalInvalido, localSob } from './tab-mira-calc.js';
@@ -381,7 +381,8 @@ async function carregarSkills(chave, p, tentativas = 0) {
     // sem nenhum caso especial.
     const lista = itensBrutos(p).map(it => {
         const r = interpretarSkill(it, {
-            idx, custosDaSkill, mechPorId: (id) => mechsById[id], custoDaMecanica, registroOk,
+            idx, custosDaSkill, moduloDeclaraCusto, custoDeclaradoZero,
+            mechPorId: (id) => mechsById[id], custoDaMecanica, registroOk,
         });
         if (!r.diagnostico.ok) {
             console.warn(`⚠️ Skill "${r.nome}" não saiu completa:`,

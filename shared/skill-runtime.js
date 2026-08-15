@@ -150,8 +150,25 @@ export function resolverMira(it, pd) {
 
 /* ===================== DIAGNÓSTICO ===================== */
 
-/** O que falta para o Tabuleiro interpretar esta habilidade sozinho. */
-export function diagnosticarSkill({ it, pd, modulo, como, mira, custos, registroOk = true }) {
+/** A habilidade acontece FORA do turno? Ritual não mira nem gasta ação. */
+export function ehForaDeCombate(it, pd) {
+    const r = String(it?.custoAcao || pd?.custoAcao || it?.acao || pd?.valores?.acao || '').toLowerCase();
+    return /fora de combate|prolongad/.test(r);
+}
+
+/**
+ * O que falta para o Tabuleiro interpretar esta habilidade sozinho.
+ *
+ * O diagnóstico só acusa o que É falta. Três coisas que PARECIAM falta e não
+ * são, e que enchiam a lista de ruído:
+ *   · ritual "Fora de combate" não é ação de turno — não precisa de mira nem
+ *     de custo de rodada;
+ *   · módulo sem nenhum campo de custo (Receita de Loções) é gratuito por
+ *     desenho: a loção já foi preparada, usar é beber;
+ *   · "—", "Gatilho", "0" no campo de custo são gratuidade DECLARADA, não
+ *     campo esquecido.
+ */
+export function diagnosticarSkill({ it, pd, modulo, como, mira, custos, registroOk = true, semCusto = false }) {
     const faltas = [];
     if (!registroOk) {
         return {
@@ -167,29 +184,37 @@ export function diagnosticarSkill({ it, pd, modulo, como, mira, custos, registro
                 + `_predefId=${it?._predefId || '(vazio)'} e o nome não achou par no registro.`,
         });
     }
-    if (!mira) {
-        faltas.push({
-            campo: 'formaArea / tamanhoArea / alvosMax',
-            porque: 'Sem forma+tamanho de área e sem número de alvos, não há como mirar. '
-                + 'Preencha a Mira no pré-definido (ou marque "Locais no mapa").',
-        });
-    } else if (mira.tipo === 'alvos' && !(Number(mira.alcanceM) > 0) && !mira.alcanceVisao && !mira.alcanceDoDisparo) {
-        faltas.push({
-            campo: 'alcance',
-            porque: 'Mira de alvos com alcance 0: só dá para mirar em si mesmo. '
-                + 'Preencha o alcance, ou marque "alcance da visão" / "alcance do disparo".',
-        });
+
+    const foraDeCombate = ehForaDeCombate(it, pd);
+
+    if (!foraDeCombate) {
+        if (!mira) {
+            faltas.push({
+                campo: 'formaArea / tamanhoArea / alvosMax',
+                porque: 'Sem forma+tamanho de área e sem número de alvos, não há como mirar. '
+                    + 'Preencha a Mira no pré-definido, marque "Locais no mapa", ou — se for rito — '
+                    + 'ponha a Ação como "Fora de combate".',
+            });
+        } else if (mira.tipo === 'alvos' && !(Number(mira.alcanceM) > 0) && !mira.alcanceVisao && !mira.alcanceDoDisparo) {
+            faltas.push({
+                campo: 'alcance',
+                porque: 'Mira de alvos com alcance 0: só dá para mirar em si mesmo. '
+                    + 'Preencha o alcance, ou marque "alcance da visão" / "alcance do disparo".',
+            });
+        }
+        if (!custos?.length && !semCusto) {
+            faltas.push({
+                campo: 'custo',
+                porque: 'Nenhuma forma de pagar encontrada: sem mecânica de custo, sem campo com '
+                    + '"Custo" no rótulo e sem degrau no título do módulo. Se for de graça mesmo, '
+                    + 'escreva "—" no campo de custo.',
+            });
+        }
     }
-    if (!custos?.length) {
-        faltas.push({
-            campo: 'custo',
-            porque: 'Nenhuma forma de pagar encontrada: sem mecânica de custo, sem campo com '
-                + '"Custo" no rótulo e sem degrau no título do módulo.',
-        });
-    }
+
     return {
         ok: faltas.length === 0, registroIndisponivel: false,
-        achouPredef: !!pd, como: como || null,
+        achouPredef: !!pd, como: como || null, foraDeCombate, gratuita: semCusto,
         modulo: modulo?.titulo || null, faltas,
     };
 }
@@ -216,10 +241,19 @@ export function interpretarSkill(it, ctx) {
         : [];
     const mira = resolverMira(it, pd);
 
+    // Gratuidade de DESENHO (módulo sem campo de custo) ou DECLARADA ("—").
+    const semCusto = !custos.length && (
+        (ctx.moduloDeclaraCusto ? !ctx.moduloDeclaraCusto(modulo) : false)
+        || (ctx.custoDeclaradoZero ? ctx.custoDeclaradoZero(modulo, pd, it) : false)
+    );
+
     return {
         nome: nomeDoItem(it),
         efeito: it?.efeito || it?.Efeito || it?.descricao || pd?.descricao || '',
-        pd, modulo, custos, mira,
-        diagnostico: diagnosticarSkill({ it, pd, modulo, como: achado?.como, mira, custos, registroOk: ctx.registroOk !== false }),
+        pd, modulo, custos, mira, semCusto,
+        diagnostico: diagnosticarSkill({
+            it, pd, modulo, como: achado?.como, mira, custos, semCusto,
+            registroOk: ctx.registroOk !== false,
+        }),
     };
 }

@@ -5,7 +5,7 @@
  */
 import { createRequire } from 'node:module';
 import { indexarPredefs, interpretarSkill } from '../shared/skill-runtime.js';
-import { custosDaSkill } from '../shared/skill-custo.js';
+import { custosDaSkill, moduloDeclaraCusto, custoDeclaradoZero } from '../shared/skill-custo.js';
 const require = createRequire(import.meta.url);
 const admin = require('firebase-admin');
 admin.initializeApp({ credential: admin.credential.cert(
@@ -40,7 +40,8 @@ for (const mod of modulos) {
     for (const pd of mod.itensPredefinidos || []) {
         total++;
         const r = interpretarSkill({ _predefId: pd.id, _predefNome: pd.nome }, {
-            idx, custosDaSkill, mechPorId: (id) => mechById.get(id), custoDaMecanica, registroOk: true,
+            idx, custosDaSkill, moduloDeclaraCusto, custoDeclaradoZero,
+            mechPorId: (id) => mechById.get(id), custoDaMecanica, registroOk: true,
         });
         if (!r.diagnostico.ok) problemas.push({ mod, pd, d: r.diagnostico });
     }

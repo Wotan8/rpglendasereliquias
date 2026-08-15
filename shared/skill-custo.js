@@ -167,6 +167,37 @@ export function recursoDoModulo(modulo) {
     return String(modulo?.custoRecurso || modulo?.retornoRecurso || '').trim();
 }
 
+/**
+ * O MÓDULO tem alguma forma de declarar custo?
+ *
+ * Serve para separar duas coisas que pareciam iguais: "esqueceram de preencher
+ * o custo" e "esta habilidade não custa nada, por desenho". Um módulo de
+ * Receita de Loções não tem campo de custo em lugar nenhum — a loção já foi
+ * preparada, e usar é beber. Cobrar isso como falta é ruído.
+ */
+export function moduloDeclaraCusto(modulo) {
+    const schema = modulo?.schema || [];
+    if (schema.some(f => f.tipo === 'select_botao')) return true;
+    if (schema.some(f => /custo/i.test(f.label || ''))) return true;
+    return !!(degrauDoTitulo(modulo?.titulo) && recursoDoModulo(modulo));
+}
+
+/**
+ * O cadastro declara EXPLICITAMENTE que não custa recurso?
+ * "—", "-", "0", "Gatilho", "Nenhum" no campo de custo são declarações de
+ * gratuidade, não campos vazios. O Ladino usa as duas primeiras.
+ */
+export function custoDeclaradoZero(modulo, predef, item) {
+    const schema = modulo?.schema || [];
+    for (const f of schema) {
+        if (!/custo/i.test(f.label || '') || f.tipo === 'select_botao') continue;
+        const v = String(item?.[f.key] ?? predef?.valores?.[f.key] ?? '').trim();
+        if (v === '') continue;
+        if (/^(—|–|-|0|nenhum[ao]?|gratuit[ao]|sem custo|gatilho|livre|passiv[ao])$/i.test(v)) return true;
+    }
+    return false;
+}
+
 /** Texto curto para o botão: "1 Harmonia" ou "2 Energia ou 1 Graça". */
 export function rotuloDosCustos(formas) {
     return (formas || []).map(f => f.rotulo).filter(Boolean).join(' ou ');

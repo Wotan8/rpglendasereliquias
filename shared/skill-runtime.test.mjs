@@ -109,3 +109,68 @@ assert.equal(indexarPredefs([]).total, 0);
 assert.equal(indexarPredefs(null).total, 0);
 
 console.log('✅ interpretador OK — cadeia de recurso, item vence predef, e "sem registro" ≠ "sem cadastro"');
+
+/* ===== gratuidade: DECLARADA e por DESENHO ===== */
+import { moduloDeclaraCusto, custoDeclaradoZero } from './skill-custo.js';
+
+// Módulo sem NENHUM campo de custo (Receita de Loções): grátis por desenho.
+// A loção já foi preparada — usar é beber, e cobrar isso seria ruído.
+const modLocoes = {
+    titulo: 'Receita de Loções Ofensiva', schema: [{ key: '1', tipo: 'text', label: 'Nome' }],
+    itensPredefinidos: [{ id: 'pdi_locao', nome: 'Loção de Veneno', formaArea: 'unico', alvosMax: 1, alcance: 0 }],
+};
+assert.equal(moduloDeclaraCusto(modLocoes), false, 'módulo sem campo de custo não declara custo');
+assert.equal(moduloDeclaraCusto({ titulo: 'X', schema: [{ tipo: 'select_botao', label: 'Pagar' }] }), true);
+assert.equal(moduloDeclaraCusto({ titulo: 'X', schema: [{ tipo: 'text', label: 'Custo:' }] }), true);
+assert.equal(moduloDeclaraCusto({ titulo: 'Custo 3 — Clímax', retornoRecurso: 'Harmonia', schema: [] }), true,
+    'o degrau no título é declaração de custo');
+
+const ctxLocao = {
+    idx: indexarPredefs([modLocoes]), custosDaSkill, moduloDeclaraCusto, custoDeclaradoZero,
+    mechPorId: () => null, custoDaMecanica: () => null, registroOk: true,
+};
+const locao = interpretarSkill({ _predefId: 'pdi_locao' }, ctxLocao);
+assert.equal(locao.semCusto, true);
+assert.equal(locao.diagnostico.ok, true, 'loção pronta não pode ser acusada de falta de custo');
+
+// "—" e "Gatilho" no campo de custo são gratuidade DECLARADA (o Ladino usa)
+const modLadino = {
+    titulo: 'Manobras de Ladino', schema: [{ key: 'c', tipo: 'text', label: 'Custo:' }],
+    itensPredefinidos: [
+        { id: 'pdi_salto', nome: 'Salto Predatório', valores: { c: '—' }, formaArea: 'proprio', alvosMax: 1, alcance: 0 },
+        { id: 'pdi_troca', nome: 'Troca de Mãos', valores: { c: 'Gatilho' }, formaArea: 'proprio', alvosMax: 1, alcance: 0 },
+    ],
+};
+const ctxLadino = { ...ctxLocao, idx: indexarPredefs([modLadino]) };
+for (const id of ['pdi_salto', 'pdi_troca']) {
+    const r = interpretarSkill({ _predefId: id }, ctxLadino);
+    assert.equal(r.diagnostico.ok, true, `${id}: custo declarado como zero não é falta`);
+}
+// mas campo de custo VAZIO num módulo que declara custo continua sendo falta
+const vazio = interpretarSkill({ _predefId: 'pdi_x' }, {
+    ...ctxLocao,
+    idx: indexarPredefs([{ ...modLadino, itensPredefinidos: [
+        { id: 'pdi_x', nome: 'Manobra Esquecida', valores: {}, formaArea: 'proprio', alvosMax: 1, alcance: 0 }] }]),
+});
+assert.ok(vazio.diagnostico.faltas.some(f => f.campo === 'custo'),
+    'campo de custo vazio num módulo que cobra continua sendo falta');
+
+/* ===== ritual "Fora de combate" não precisa de mira nem de custo ===== */
+const modRito = {
+    titulo: 'Rituais', schema: [{ key: 'acao', tipo: 'select', label: 'Ação:' }, { key: 'c', tipo: 'text', label: 'Custo:' }],
+    itensPredefinidos: [{ id: 'pdi_rito', nome: 'Rito Longo', valores: { acao: 'Fora de combate' } }],
+};
+const rito = interpretarSkill({ _predefId: 'pdi_rito' }, { ...ctxLocao, idx: indexarPredefs([modRito]) });
+assert.equal(rito.diagnostico.foraDeCombate, true);
+assert.equal(rito.diagnostico.ok, true, 'rito fora de combate não tem alvo no mapa — e isso não é falta');
+assert.deepEqual(rito.diagnostico.faltas, []);
+
+// a MESMA habilidade como Ação Padrão volta a ser cobrada
+const mesmoComoAcao = interpretarSkill({ _predefId: 'pdi_rito2' }, {
+    ...ctxLocao,
+    idx: indexarPredefs([{ ...modRito, itensPredefinidos: [
+        { id: 'pdi_rito2', nome: 'Rito Longo', valores: { acao: 'Ação Padrão' } }] }]),
+});
+assert.equal(mesmoComoAcao.diagnostico.ok, false, 'como Ação Padrão, a falta de mira volta a valer');
+
+console.log('✅ gratuidade e ritos OK — o diagnóstico só acusa o que É falta');
