@@ -808,17 +808,23 @@ window.tbCombCondAdd = (pid) => escolherCondicao((cond, tpl) => aplicarCondicaoC
  * uma segunda linha igual; qualquer outra entra como sempre entrou.
  * @returns { condicoes, nivel, subiu, noTeto }
  */
-function empilharCondicao(condicoesAtuais, cond, tpl) {
+function empilharCondicao(condicoesAtuais, cond, tpl, niveis = 1) {
     const lista = condicoesAtuais || [];
+    // Quantos degraus esta aplicação vale. "fica Fortalecido 2" entra em 2, não
+    // em 1 — antes o nível do cadastro se perdia e toda condição valia 1.
+    const passo = Math.max(1, Number(niveis) || 1);
     if (!tpl?.acumulaNiveis) return { condicoes: [...lista, cond], nivel: 1, subiu: false, noTeto: false };
 
+    const teto = Number(tpl.nivelMaximo) > 0 ? Number(tpl.nivelMaximo) : Infinity;
     const i = lista.map(condDoParticipante)
         .findIndex(c => (c.nome || '').toLowerCase() === (cond.nome || '').toLowerCase());
-    if (i < 0) return { condicoes: [...lista, { ...cond, nivel: 1 }], nivel: 1, subiu: false, noTeto: false };
+    if (i < 0) {
+        const n = Math.min(passo, teto);
+        return { condicoes: [...lista, { ...cond, nivel: n }], nivel: n, subiu: false, noTeto: false };
+    }
 
     const atual = condDoParticipante(lista[i]);
-    const teto = Number(tpl.nivelMaximo) > 0 ? Number(tpl.nivelMaximo) : Infinity;
-    const novo = Math.min(atual.nivel + 1, teto);
+    const novo = Math.min(atual.nivel + passo, teto);
     return {
         condicoes: lista.map((cd, idx) => idx === i ? { ...condDoParticipante(cd), nivel: novo } : cd),
         nivel: novo, subiu: novo > atual.nivel, noTeto: novo === atual.nivel,
@@ -879,7 +885,7 @@ async function sincAdicaoFicha(p, cond, tpl) {
  * uma vez (1 write no doc + espelho nas fichas). O nome resolve contra o
  * registro do sistema (ícone/descrição); sem registro vira personalizada.
  */
-export async function aplicarCondicaoEmVarios(pids, nome, rodadas, porPid) {
+export async function aplicarCondicaoEmVarios(pids, nome, rodadas, porPid, nivel = 1) {
     if (!pids?.length || !nome) return;
     const tpl = (await carregarCondicoesSistema()).find(c => (c.nome || '').toLowerCase() === nome.toLowerCase()) || null;
     const rodada = cenaAtiva(T.combate).rodada || 1;
@@ -905,7 +911,7 @@ export async function aplicarCondicaoEmVarios(pids, nome, rodadas, porPid) {
     const subiram = [];
     for (const pid of pids) {
         const p = parts.find(x => x.id === pid); if (!p) continue;
-        const emp = empilharCondicao(p.condicoes, { ...cond }, tpl);
+        const emp = empilharCondicao(p.condicoes, { ...cond }, tpl, nivel);
         p.condicoes = emp.condicoes;
         (emp.subiu || emp.noTeto ? subiram : alvos).push(p);
     }

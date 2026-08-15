@@ -95,11 +95,20 @@ export function miraDeCadastro(pd) {
     if (!temArea && !temAlvos && !ehLocais) return null;
 
     const afeta = pd.faccao === 'inimigo' ? 'inimigos' : pd.faccao === 'aliado' ? 'aliados' : 'todos';
+    // ⚔️🤝 Cada condição pode ter a SUA facção, independente da que a área pega.
+    // Composição de Batalha varre aliado e inimigo com a mesma onda, mas quem
+    // fica Fortalecido é aliado e quem fica Abalado é inimigo — sem isto, os
+    // dois recebiam as duas.
     const condicoes = (pd.condicoesAplicadas || []).filter(c => c?.condicao)
-        .map(c => ({ nome: c.condicao, rodadas: Number(c.rodadas) || 0, maxAlvos: Number(c.alvos) || 0 }));
+        .map(c => ({ nome: c.condicao, rodadas: Number(c.rodadas) || 0, maxAlvos: Number(c.alvos) || 0,
+            // "fica Abalado 2" — o nível é do cadastro; sem ele tudo entrava em 1.
+            nivel: Math.max(1, Number(c.nivel) || 1),
+            faccao: c.faccao || '', rotulo: c.rotulo || '' }));
     const cond = (pd.condicoesAplicadas || [])[0] || null;
     const base = {
         afeta, condicoes,
+        // "Escolha na conjuração: X, OU Y" — uma condição só, não as duas.
+        condicoesExclusivas: !!pd.condicoesExclusivas && condicoes.length > 1,
         condicaoNome: cond?.condicao || null,
         condicaoRodadas: Number(cond?.rodadas) || 0,
         condicaoMaxAlvos: Number(cond?.alvos) || 0,
@@ -263,3 +272,14 @@ export function interpretarSkill(it, ctx) {
         }),
     };
 }
+
+/**
+ * ⚔️🤝 A facção que ESTA condição alcança, no vocabulário de `alvoValido`.
+ * `null` = a condição não filtra e cai em quem a área pegou.
+ */
+export const afetaDaCondicao = (cd) =>
+    cd?.faccao === 'aliado' ? 'aliados' : cd?.faccao === 'inimigo' ? 'inimigos' : null;
+
+/** Como a condição se chama no picker de "escolha um efeito". */
+export const rotuloDaCondicao = (cd) => cd?.rotulo
+    || `${cd?.nome || 'efeito'}${cd?.faccao === 'aliado' ? ' nos aliados' : cd?.faccao === 'inimigo' ? ' nos inimigos' : ''}`;

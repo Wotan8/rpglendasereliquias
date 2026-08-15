@@ -1147,7 +1147,7 @@ async function renderDiagnosticoTabuleiro() {
 
     try {
         const [{ indexarPredefs, interpretarSkill }, { custosDaSkill, moduloDeclaraCusto, custoDeclaradoZero }, { custoDaMecanica }] = await Promise.all([
-            import('../../shared/skill-runtime.js?v=2'),
+            import('../../shared/skill-runtime.js?v=3'),
             import('../../shared/skill-custo.js?v=2'),
             import('../../shared/combate-cenas.js'),
         ]);

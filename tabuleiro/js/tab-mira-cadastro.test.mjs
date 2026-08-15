@@ -27,7 +27,9 @@ assert.equal(grito.forma, 'circulo');
 assert.equal(grito.origem, 'token', 'onda sem alcance nasce no token de quem canta');
 assert.equal(grito.raioM, 3);
 assert.equal(grito.afeta, 'inimigos');
-assert.deepEqual(grito.condicoes, [{ nome: 'Atordoado', rodadas: 1, maxAlvos: 2 }]);
+assert.deepEqual(grito.condicoes,
+    [{ nome: 'Atordoado', rodadas: 1, maxAlvos: 2, nivel: 1, faccao: '', rotulo: '' }],
+    'cadastro sem nível nem facção continua saindo com os padrões (nível 1, sem facção)');
 assert.equal(grito.condicaoPortao, 'chance', 'o portão é o que torna a habilidade contestável');
 
 /* ===== círculo COM alcance: solto no mapa ===== */

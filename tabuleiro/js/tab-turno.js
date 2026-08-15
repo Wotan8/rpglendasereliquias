@@ -24,7 +24,7 @@ import {
     guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica,
 } from '../../shared/combate-cenas.js';
 import { custosDaSkill, rotuloDosCustos, moduloDeclaraCusto, custoDeclaradoZero } from '../../shared/skill-custo.js?v=1';
-import { indexarPredefs, interpretarSkill } from '../../shared/skill-runtime.js?v=2';
+import { indexarPredefs, interpretarSkill, afetaDaCondicao, rotuloDaCondicao } from '../../shared/skill-runtime.js?v=3';
 import { resolverMedida, ehFormula } from '../../shared/medida-formula.js?v=1';
 import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR,
          porqueLocalInvalido, localSob } from './tab-mira-calc.js';
@@ -634,7 +634,7 @@ function alcanceDeTiro(tok) {
     return alcanceDeVisaoDoToken(tok, derivedDoToken(tok), true);
 }
 
-window.tbTurnoGolpe = (i) => {
+window.tbTurnoGolpe = async (i) => {
     const g = golpesCache?.linhas?.[i]; if (!g) return;
     const p = participanteDaVez(cena());
     const tok = tokenAtivoDoCombate();
@@ -643,6 +643,12 @@ window.tbTurnoGolpe = (i) => {
         nome: g.nome, efeito: g.dano ? `dano ${g.dano}` : '', custoAcao: 'padrao',
         golpe: metaDoGolpe(g),
     };
+    // 🏹 A munição vale para o ATAQUE COMUM também, não só para a manobra que
+    // dispara. Sem esta linha o arco atirava de aljava vazia e nunca gastava
+    // flecha: só o caminho das habilidades passava pelo pedágio.
+    const proj = await municaoParaOGolpe(p, g);
+    if (proj === false) return;   // sem munição, ou cancelou: nada gasto
+    if (proj) meta.projetil = proj;
     // 🏹 Arma a distância não balança arco nenhum: escolhe o alvo dentro do
     // triplo da visão (o tiro enxerga mais longe do que a mão alcança).
     if (g.distancia) {
@@ -1277,9 +1283,37 @@ function miraDoCadastro(m, s, custo, p) {
             nome: s.nome, efeito: s.efeito, custoSkill: s.custo, custoAcao: custo,
             condicao: m.condicaoNome ? { nome: m.condicaoNome, rodadas: Number(m.condicaoRodadas) || 0, maxAlvos: Number(m.condicaoMaxAlvos) || 0 } : null,
             condicoes: m.condicoes || [],
+            condicoesExclusivas: !!m.condicoesExclusivas,
             portao: m.condicaoPortao || null,
         },
     };
+}
+
+/**
+ * ⚖️ "Escolha na conjuração: X, OU Y."
+ *
+ * Habilidade marcada como exclusiva no cadastro entrega UMA das condições, não
+ * todas. Antes disso existir, a Composição de Batalha aplicava a lista inteira
+ * em todo mundo que a onda pegasse.
+ *
+ * @returns Promise<condição escolhida | null se cancelou>
+ */
+function escolherCondicaoExclusiva(nomeSkill, condicoes) {
+    return new Promise(resolve => {
+        window.__tbCondEscolhida = (i) => {
+            delete window.__tbCondEscolhida;
+            window.tbFecharModal?.();
+            resolve(i < 0 ? null : condicoes[i]);
+        };
+        window._tbAbrirModal(`⚖️ Qual efeito de “${esc(nomeSkill || 'habilidade')}”?`, `
+            <div class="tb-muted" style="font-size:.8rem;margin-bottom:10px">Esta habilidade entrega <b>um</b> dos efeitos — escolha qual:</div>
+            ${condicoes.map((cd, i) => `<button class="tb-btn tb-btn-small" style="display:block;width:100%;margin-bottom:6px;text-align:left"
+                onclick="__tbCondEscolhida(${i})">☠️ <b>${esc(rotuloDaCondicao(cd))}${cd.nivel > 1 ? ' ' + cd.nivel : ''}</b>
+                ${cd.rodadas ? `<span class="tb-muted">· ${cd.rodadas} rodada(s)</span>` : ''}
+                ${cd.maxAlvos ? `<span class="tb-muted">· até ${cd.maxAlvos} alvo(s)</span>` : ''}</button>`).join('')}
+            <div class="tb-modal-actions"><button class="tb-btn" onclick="__tbCondEscolhida(-1)">✖ Cancelar</button></div>
+        `);
+    });
 }
 
 /** As condições que a ação aplica: a lista nova, ou a única do formato antigo. */
@@ -1530,11 +1564,11 @@ window.tbTurnoConfirmarMira = async () => {
 
     // alvos atingidos
     let atingidos = [];
+    const minha = faccaoDoToken(tok);
     if (m.tipo === 'alvos') {
         atingidos = m.alvos.map(id => T.objects.get(id)).filter(Boolean);
     } else {
         const shape = shapeDaMira(m, { x: tok.x, y: tok.y, r: rTok }, m.cursor);
-        const minha = faccaoDoToken(tok);
         for (const o of T.objects.values()) {
             if (o.tipo !== 'token' || o.id === tok.id) continue;
             const r = ((o.tamanhoCelulas || 1) * gs) / 2;
@@ -1575,17 +1609,31 @@ window.tbTurnoConfirmarMira = async () => {
     //     uma rolagem que o cadastro não tem (portão 'nenhum', §6.1).
     const semRolagem = !meta.golpe?.dano && (!meta.portao || meta.portao === 'nenhum');
     if (atingidos.length && (m.afeta === 'aliados' || semRolagem)) {
-        const pidsTodos = atingidos.map(o => participanteDoToken(o)?.id).filter(Boolean);
+        // "Escolha na conjuração: X, OU Y" — pergunta antes de aplicar qualquer
+        // uma. Só quem age vê a pergunta; o cadastro diz se há escolha.
+        let condicoes = condicoesDaAcao(meta);
+        if (meta.condicoesExclusivas && condicoes.length > 1) {
+            const esc1 = await escolherCondicaoExclusiva(meta.nome, condicoes);
+            if (!esc1) { toast('✖ Efeito não escolhido — a ação já foi gasta'); return; }
+            condicoes = [esc1];
+        }
         // Uma habilidade pode aplicar mais de uma condição (Postura Defensiva
-        // dá Blindado e Abalado). Cada uma tem o seu próprio teto de alvos.
-        for (const cd of condicoesDaAcao(meta)) {
-            let pids = pidsTodos;
-            if (!pids.length) break;
+        // dá Blindado e Abalado). Cada uma tem o seu próprio teto de alvos — e
+        // a SUA facção: a onda da Composição de Batalha varre os dois lados,
+        // mas Fortalecido é para aliado e Abalado para inimigo.
+        for (const cd of condicoes) {
+            const afetaCd = afetaDaCondicao(cd);
+            const alvosDaCd = afetaCd
+                ? atingidos.filter(o => alvoValido(afetaCd, minha, faccaoDoToken(o)))
+                : atingidos;
+            let pids = alvosDaCd.map(o => participanteDoToken(o)?.id).filter(Boolean);
+            if (!pids.length) continue;
             if (cd.maxAlvos > 0 && pids.length > cd.maxAlvos) {
                 pids = pids.slice(0, cd.maxAlvos);
                 toast(`☠️ ${cd.nome} limitada a ${cd.maxAlvos} alvo(s) pelo cadastro — valem os primeiros`, 'warning');
             }
-            aplicarCondicaoEmVarios(pids, cd.nome, cd.rodadas || 0, p?.id).catch(e => console.warn('condição da skill', e));
+            aplicarCondicaoEmVarios(pids, cd.nome, cd.rodadas || 0, p?.id, cd.nivel || 1)
+                .catch(e => console.warn('condição da skill', e));
         }
         // "aliado(s)" só quando forem mesmo aliados — A Presa marca inimigo.
         const quem = m.afeta === 'aliados' ? 'aliado(s)' : 'alvo(s)';
