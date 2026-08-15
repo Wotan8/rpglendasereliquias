@@ -242,6 +242,35 @@ export function condDoParticipante(c) {
     };
 }
 
+/**
+ * Junta a MESMA condição numa entrada só, para exibição.
+ *
+ * A mesma condição chega por dois caminhos: a lista do participante da cena e a
+ * cópia espelhada na ficha (ver sincAdicaoFicha). Somando as duas listas sem
+ * juntar, o token ficava com dois ☠️ idênticos em volta. Aqui vira um ícone,
+ * com o NÍVEL de quem estiver mais alto — que é o número que a mesa lê.
+ *
+ * @param condicoes lista crua (string legada ou objeto), de qualquer fonte
+ * @returns [{ nome, icone, descricao, expiraNaRodada, nivel, porPid }] sem repetição
+ */
+export function condicoesAgrupadas(condicoes) {
+    const porNome = new Map();
+    for (const bruta of (condicoes || [])) {
+        const c = condDoParticipante(bruta);
+        if (!c.nome) continue;
+        const k = _normCond(c.nome);
+        const ja = porNome.get(k);
+        if (!ja) { porNome.set(k, { ...c }); continue; }
+        // mesma condição de duas fontes: fica o nível maior e o prazo mais longo
+        if (c.nivel > ja.nivel) ja.nivel = c.nivel;
+        if (c.expiraNaRodada != null && (ja.expiraNaRodada == null || c.expiraNaRodada > ja.expiraNaRodada)) {
+            ja.expiraNaRodada = c.expiraNaRodada;
+        }
+        if (!ja.descricao && c.descricao) ja.descricao = c.descricao;
+    }
+    return [...porNome.values()];
+}
+
 // =============================================
 // O QUE AS CONDIÇÕES FAZEM (leitura do cadastro do Criador)
 // ---------------------------------------------

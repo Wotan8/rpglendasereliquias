@@ -10,7 +10,7 @@ import {
     faccaoDoParticipante, acoesNovas, podeGastar, gastarAcao, alvoValido,
     alcanceGolpe, participanteDaVez, indiceNaOrdem, guardadoValido,
     custoVital, recursoInsuficiente, custoDaMecanica,
-    efeitoDasCondicoes, porqueCondicao, alvoDoTickRodada,
+    efeitoDasCondicoes, porqueCondicao, alvoDoTickRodada, condicoesAgrupadas,
 } from './combate-cenas.js';
 
 const p = (n) => ({ id: n, name: n, initiative: 1 });
@@ -290,4 +290,24 @@ assert.equal(porqueCondicao(zero, 'bloqueia_padrao'), '', 'sem motivo devolve st
 assert.equal(ef(['imobilizado']).bloqueia.movimento, true);
 assert.equal(ef(['EXAUSTAO']).testes.length, 1, 'casa sem acento');
 
-console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições, turno mecânico, turno guardado, custo vital e de mecânica, efeito das condições OK');
+// --- condições agrupadas para exibição (um ícone por condição) ---
+// A mesma condição chega pela cena E pela ficha; o token não pode virar um
+// mostruário de ☠️ repetidos.
+const ag = condicoesAgrupadas([
+    { nome: 'Queimando', icone: '🔥', nivel: 1 },
+    { nome: 'Queimando', icone: '🔥', nivel: 3 },
+    'Caído',
+]);
+assert.equal(ag.length, 2, 'a mesma condição vira uma entrada só');
+assert.equal(ag[0].nivel, 3, 'fica o nível MAIS ALTO das duas fontes');
+assert.equal(ag[1].nome, 'Caído', 'string legada entra junto');
+assert.equal(condicoesAgrupadas([{ nome: 'QUEIMANDO' }, { nome: 'queimando' }]).length, 1, 'caixa não separa');
+assert.equal(condicoesAgrupadas([{ nome: 'Exaustão' }, { nome: 'Exaustao' }]).length, 1, 'acento não separa');
+assert.equal(condicoesAgrupadas([]).length, 0);
+assert.equal(condicoesAgrupadas(null).length, 0, 'lixo não explode');
+assert.equal(condicoesAgrupadas([{ nome: '' }, { nome: 'X' }]).length, 1, 'condição sem nome não conta');
+// prazo: fica o que dura mais; permanente (null) não vence prazo nenhum
+assert.equal(condicoesAgrupadas([{ nome: 'A', expiraNaRodada: 3 }, { nome: 'A', expiraNaRodada: 7 }])[0].expiraNaRodada, 7);
+assert.equal(condicoesAgrupadas([{ nome: 'A', expiraNaRodada: null }, { nome: 'A', expiraNaRodada: 5 }])[0].expiraNaRodada, 5);
+
+console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições, turno mecânico, turno guardado, custo vital e de mecânica, efeito das condições e agrupamento OK');

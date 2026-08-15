@@ -10,7 +10,7 @@ import { T, esc, ico, toast, markDirty, uid, can, selecionar, bonusIniciativa, D
 import { refCombate } from './tab-main.js';
 import { updObj, delObj, abrirPropriedades } from './tab-objects.js';
 import { SENSORES } from './tab-fog.js';
-import { cenaAtiva, comCenaAtivaPatch, condDoParticipante } from '../../shared/combate-cenas.js';
+import { cenaAtiva, comCenaAtivaPatch, condicoesAgrupadas } from '../../shared/combate-cenas.js';
 import { logChat } from './tab-chat.js';
 
 // charId -> { hp, hpMax, ener, enerMax, san, sanMax, conds:[{icone,nome}] }
@@ -221,9 +221,11 @@ export function vitaisDoToken(o) {
     if (o.vinculo?.tipo === 'char') {
         const v = VITAIS.get(o.vinculo.id);
         if (!v) return null;
-        // condições extras vindas do combate
+        // Condições da FICHA + as da cena. A mesma condição vive nas duas
+        // listas (o combate espelha na ficha), então agrupa: um ícone por
+        // condição, com o nível mais alto — senão o token vira mostruário.
         const p = participanteDoToken(o);
-        const conds = [...v.conds, ...((p?.condicoes || []).map(condDoParticipante))];
+        const conds = condicoesAgrupadas([...v.conds, ...(p?.condicoes || [])]);
         return { ...v, conds };
     }
     const p = participanteDoToken(o);
@@ -250,7 +252,7 @@ export function vitaisDoToken(o) {
         hp: p.hpCurrent ?? 0, hpMax: p.hpMax ?? 0,
         ener: p.enerCurrent ?? 0, enerMax: p.enerMax ?? 0,
         san: p.sanCurrent ?? 0, sanMax: p.sanMax ?? 100,
-        conds: (p.condicoes || []).map(condDoParticipante),
+        conds: condicoesAgrupadas(p.condicoes || []),
     };
 }
 

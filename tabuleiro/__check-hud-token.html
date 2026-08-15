@@ -1,0 +1,163 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>__check HUD do token — barras de VD e condições agrupadas</title>
+<!--
+  Banco de prova do HUD que fica SOBRE o token: a pilha de barras (vitais +
+  recursos de classe com atual/máx) e o arco de ícones de condição.
+
+  Existe porque os dois bugs desta tela só aparecem desenhados: recurso de
+  classe saindo como texto "3/7" no lugar de barra, e a mesma condição
+  repetindo ícone porque chega pela cena E pela ficha.
+
+  Abrir direto no navegador (não precisa de login nem de Firestore).
+-->
+<style>
+  body { margin: 0; background: #0A0D12; color: #cbd5e1; font: 13px system-ui; }
+  header { padding: 10px 14px; border-bottom: 1px solid #1f2937; }
+  h1 { font-size: 14px; margin: 0 0 4px; color: #f8fafc; }
+  #saida { padding: 10px 14px; white-space: pre-wrap; font-family: ui-monospace, monospace; }
+  .ok { color: #4ade80; } .bad { color: #f87171; }
+  canvas { display: block; margin: 12px 14px; background: #111827; border: 1px solid #1f2937; border-radius: 8px; }
+</style>
+<header>
+  <h1>🎭 HUD do token — barras e condições</h1>
+  <div>Esquerda: 3 vitais + Harmonia 3/7 + Bolha 8/8. Direita: condição repetida em duas fontes.</div>
+</header>
+<canvas id="cv" width="520" height="260"></canvas>
+<div id="saida">rodando…</div>
+
+<script type="module">
+import { condicoesAgrupadas } from '../shared/combate-cenas.js';
+
+const linhas = [];
+const diz = (ok, msg) => linhas.push(`<span class="${ok ? 'ok' : 'bad'}">${ok ? '✅' : '❌'}</span> ${msg}`);
+
+// ---- 1) agrupamento das condições (a régua que o token usa) ----
+const cruas = [
+    { nome: 'Queimando', icone: '🔥', nivel: 1 },   // veio da ficha
+    { nome: 'Queimando', icone: '🔥', nivel: 3 },   // veio da cena, acumulada
+    { nome: 'Caído', icone: '🤕' },
+    'Cego',
+];
+const conds = condicoesAgrupadas(cruas);
+diz(conds.length === 3, `4 entradas cruas viraram ${conds.length} ícones (esperado 3)`);
+diz(conds[0].nivel === 3, `Queimando ficou no nível ${conds[0].nivel} (o mais alto das duas fontes)`);
+diz(conds[2].nome === 'Cego', 'condição em string legada entra na lista');
+
+// ---- 2) desenho: a mesma conta do tab-render, isolada ----
+const ctx = document.getElementById('cv').getContext('2d');
+const hud = px => px;                       // sem câmera: zoom 1
+const roundRect = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); };
+
+const CORES_VD = ['#38bdf8', '#f472b6', '#a3e635', '#c084fc', '#2dd4bf', '#fb7185'];
+function corDoVd(chave) {
+    let h = 0;
+    for (const c of String(chave || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return CORES_VD[h % CORES_VD.length];
+}
+function medidoresDoToken(v, vds) {
+    const out = [];
+    if (v) {
+        out.push({ cur: v.hp, max: v.hpMax, cor: '#34d399' });
+        out.push({ cur: v.ener, max: v.enerMax, cor: '#fbbf24' });
+        out.push({ cur: v.san, max: v.sanMax, cor: '#a78bfa' });
+    }
+    for (const d of (vds || [])) {
+        if (!d.campoAtual || d.atual == null) continue;
+        out.push({ cur: d.atual, max: d.valor, cor: corDoVd(d.key || d.nome), icone: d.icone });
+    }
+    return out;
+}
+const alturaMedidores = n => (hud(4.5) + hud(1.5)) * n;
+
+function drawBarras(pos, s, medidores) {
+    const w = Math.max(s, hud(44)), h = hud(4.5), gap = hud(1.5);
+    const x = pos.x - w / 2;
+    let y = pos.y - s / 2 - hud(8) - alturaMedidores(medidores.length);
+    for (const m of medidores) {
+        ctx.fillStyle = 'rgba(10,14,22,.85)';
+        roundRect(x - hud(1), y - hud(1), w + hud(2), h + hud(2), hud(2)); ctx.fill();
+        const pct = m.max > 0 ? Math.max(0, Math.min(1, m.cur / m.max)) : 0;
+        ctx.fillStyle = m.cor;
+        if (pct > 0) { roundRect(x, y, w * pct, h, hud(2)); ctx.fill(); }
+        if (m.icone) {
+            const fs = hud(8);
+            ctx.font = `${fs}px Arial`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+            ctx.fillText(m.icone, x - hud(3), y + h / 2);
+            ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        }
+        y += h + gap;
+    }
+}
+function drawVDsCombate(pos, s, vds, nMed) {
+    const soNumero = vds.filter(d => !(d.campoAtual && d.atual != null));
+    if (!soNumero.length) return;
+    const fs = hud(10.5);
+    ctx.font = `bold ${fs}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    const txt = soNumero.map(d => `${d.icone}${d.prefixo || ''}${d.valor}${d.sufixo || ''}`).join(' ');
+    const y = pos.y - s / 2 - hud(8) - alturaMedidores(nMed) - hud(3);
+    ctx.lineWidth = hud(3); ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(txt, pos.x, y);
+    ctx.fillStyle = '#e2e8f0'; ctx.fillText(txt, pos.x, y);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+function drawCondicoes(pos, s, conds) {
+    const fs = hud(13);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const max = Math.min(conds.length, 6);
+    for (let i = 0; i < max; i++) {
+        const ang = -Math.PI * 0.75 + (i / 6) * Math.PI * 1.5;
+        const cx = pos.x + Math.cos(ang) * (s / 2 + hud(11));
+        const cy = pos.y + Math.sin(ang) * (s / 2 + hud(11));
+        ctx.fillStyle = 'rgba(17,24,39,.9)';
+        ctx.beginPath(); ctx.arc(cx, cy, fs * 0.72, 0, Math.PI * 2); ctx.fill();
+        ctx.font = `${fs}px Arial`;
+        ctx.fillStyle = '#fff';
+        ctx.fillText(conds[i].icone || '☠️', cx, cy + fs * 0.05);
+        const nv = Number(conds[i].nivel) || 1;
+        if (nv > 1) {
+            const nfs = hud(8);
+            ctx.font = `bold ${nfs}px Arial`;
+            const bx = cx + fs * 0.6, by = cy + fs * 0.6;
+            ctx.lineWidth = hud(2.5); ctx.strokeStyle = 'rgba(0,0,0,.9)';
+            ctx.strokeText('×' + nv, bx, by);
+            ctx.fillStyle = '#fde047';
+            ctx.fillText('×' + nv, bx, by);
+        }
+    }
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+const token = (pos, s) => {
+    ctx.fillStyle = '#334155';
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, s / 2, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#64748b'; ctx.lineWidth = 2; ctx.stroke();
+};
+
+const vitais = { hp: 12, hpMax: 20, ener: 4, enerMax: 6, san: 80, sanMax: 100 };
+const vds = [
+    { key: 'HARMONIA', nome: 'Harmonia', icone: '🎵', campoAtual: true, atual: 3, valor: 7, prefixo: '', sufixo: '' },
+    { key: 'BOLHA_DE_SANGUE', nome: 'Bolha de Sangue', icone: '🩸', campoAtual: true, atual: 8, valor: 8, prefixo: '', sufixo: '' },
+    { key: 'BLINDAGEM', nome: 'Blindagem', icone: '🛡️', campoAtual: false, atual: null, valor: 3, prefixo: '', sufixo: '' },
+];
+
+const p1 = { x: 140, y: 190 }, s = 60;
+token(p1, s);
+const med = medidoresDoToken(vitais, vds);
+drawBarras(p1, s, med);
+drawVDsCombate(p1, s, vds, med.length);
+
+const p2 = { x: 380, y: 190 };
+token(p2, s);
+const med2 = medidoresDoToken(vitais, []);
+drawBarras(p2, s, med2);
+drawCondicoes(p2, s, conds);
+
+diz(med.length === 5, `pilha com ${med.length} barras: 3 vitais + 2 recursos de classe`);
+diz(med[3].cur === 3 && med[3].max === 7, 'Harmonia entrou como barra 3/7, não como texto');
+diz(med[3].icone === '🎵' && med[4].icone === '🩸', 'cada barra de VD leva o ícone dela');
+diz(corDoVd('HARMONIA') === corDoVd('HARMONIA'), 'a cor de um VD é estável entre sessões');
+diz(corDoVd('HARMONIA') !== corDoVd('BOLHA_DE_SANGUE'), 'dois VDs diferentes não saem da mesma cor');
+diz(!vds.filter(d => d.campoAtual && d.atual != null).length !== true, 'Blindagem (sem atual/máx) fica na linha de texto');
+
+document.getElementById('saida').innerHTML = linhas.join('\n');
+</script>

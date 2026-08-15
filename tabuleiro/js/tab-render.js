@@ -557,10 +557,12 @@ function drawToken(o) {
     // Barras de vitais (F5.1)
     if (barrasVisiveis(o)) {
         const v = vitaisDoToken(o);
-        if (v) drawBarras(pos, s, v);
-        // ⚔️ VDs de Status de Combate (Blindagem etc.) acima das barras
         const vds = vdsCombateDoToken(o);
-        if (vds.length) drawVDsCombate(pos, s, vds);
+        // Vitais e recursos de classe são a MESMA pilha de barras, na ordem do
+        // cadastro; só o VD sem atual/máx sobra para a linha de texto acima.
+        const medidores = medidoresDoToken(v, vds);
+        if (medidores.length) drawBarras(pos, s, medidores);
+        if (vds.length) drawVDsCombate(pos, s, vds, medidores.length);
         // Ícones de condição (F5.2)
         if (v?.conds?.length) drawCondicoes(pos, s, v.conds);
     }
@@ -584,39 +586,83 @@ function drawToken(o) {
     ctx.restore();
 }
 
-function drawBarras(pos, s, v) {
-    const w = Math.max(s, hud(44)), h = hud(4.5), gap = hud(1.5);
-    const x = pos.x - w/2;
-    let y = pos.y - s/2 - hud(8) - (h + gap) * 3;
-    const barra = (cur, max, cor) => {
-        ctx.fillStyle = 'rgba(10,14,22,.85)';
-        roundRect(x - hud(1), y - hud(1), w + hud(2), h + hud(2), hud(2)); ctx.fill();
-        const pct = max > 0 ? Math.max(0, Math.min(1, cur / max)) : 0;
-        ctx.fillStyle = cor;
-        if (pct > 0) { roundRect(x, y, w * pct, h, hud(2)); ctx.fill(); }
-        y += h + gap;
-    };
-    barra(v.hp, v.hpMax, '#34d399');
-    barra(v.ener, v.enerMax, '#fbbf24');
-    barra(v.san, v.sanMax, '#a78bfa');
+// Cores das barras de recurso de CLASSE (Harmonia, Graça, Bolha de Sangue...).
+// O cadastro não tem campo de cor, então a escolha é estável pelo nome do VD:
+// a mesma Harmonia sai sempre da mesma cor, em qualquer token e sessão.
+const CORES_VD = ['#38bdf8', '#f472b6', '#a3e635', '#c084fc', '#2dd4bf', '#fb7185'];
+function corDoVd(chave) {
+    let h = 0;
+    for (const c of String(chave || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return CORES_VD[h % CORES_VD.length];
 }
 
-// ⚔️ Linha compacta com os VDs de Status de Combate, acima das barras
-function drawVDsCombate(pos, s, vds) {
+/**
+ * 📊 Medidores do token, NA ORDEM DE EXIBIÇÃO: os três Status Vitais e, depois,
+ * todo VD de combate que tenha atual/máx (Harmonia 3/7 é barra, não texto) —
+ * estes na ordem do cadastro, que é a ordem em que VDS_COMBATE chega.
+ * VD sem campo Atual (Blindagem) não vira barra: vai na linha de texto acima.
+ */
+function medidoresDoToken(v, vds) {
+    const out = [];
+    if (v) {
+        out.push({ cur: v.hp, max: v.hpMax, cor: '#34d399' });
+        out.push({ cur: v.ener, max: v.enerMax, cor: '#fbbf24' });
+        out.push({ cur: v.san, max: v.sanMax, cor: '#a78bfa' });
+    }
+    for (const d of (vds || [])) {
+        if (!d.campoAtual || d.atual == null) continue;
+        out.push({ cur: d.atual, max: d.valor, cor: corDoVd(d.key || d.nome), icone: d.icone });
+    }
+    return out;
+}
+
+/** Altura ocupada pela pilha de medidores — a linha de texto se pendura nela. */
+function alturaMedidores(n) { return (hud(4.5) + hud(1.5)) * n; }
+
+function drawBarras(pos, s, medidores) {
+    const w = Math.max(s, hud(44)), h = hud(4.5), gap = hud(1.5);
+    const x = pos.x - w / 2;
+    let y = pos.y - s / 2 - hud(8) - alturaMedidores(medidores.length);
+    for (const m of medidores) {
+        ctx.fillStyle = 'rgba(10,14,22,.85)';
+        roundRect(x - hud(1), y - hud(1), w + hud(2), h + hud(2), hud(2)); ctx.fill();
+        const pct = m.max > 0 ? Math.max(0, Math.min(1, m.cur / m.max)) : 0;
+        ctx.fillStyle = m.cor;
+        if (pct > 0) { roundRect(x, y, w * pct, h, hud(2)); ctx.fill(); }
+        // Barra de VD vai com o ícone à esquerda: cor sozinha não diz QUAL
+        // recurso é, e um bardo pode ter três barras de classe empilhadas.
+        if (m.icone) {
+            const fs = hud(8);
+            ctx.font = `${fs}px Arial`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+            ctx.fillText(m.icone, x - hud(3), y + h / 2);
+            ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        }
+        y += h + gap;
+    }
+}
+
+// ⚔️ Linha compacta com os VDs de Status de Combate SEM atual/máx (Blindagem
+// etc.) — os que têm atual/máx já viraram barra logo abaixo.
+function drawVDsCombate(pos, s, vds, nMedidores) {
+    const soNumero = vds.filter(d => !(d.campoAtual && d.atual != null));
+    if (!soNumero.length) return;
     const fs = hud(10.5);
     ctx.font = `bold ${fs}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-    const txt = vds.map(d => d.campoAtual && d.atual != null
-        ? `${d.icone}${d.atual}/${d.valor}`
-        : `${d.icone}${d.prefixo}${d.valor}${d.sufixo}`).join(' ');
-    const y = pos.y - s / 2 - hud(8) - (hud(4.5) + hud(1.5)) * 3 - hud(3);
+    const txt = soNumero.map(d => `${d.icone}${d.prefixo}${d.valor}${d.sufixo}`).join(' ');
+    const y = pos.y - s / 2 - hud(8) - alturaMedidores(nMedidores) - hud(3);
     ctx.lineWidth = hud(3); ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(txt, pos.x, y);
     ctx.fillStyle = '#e2e8f0'; ctx.fillText(txt, pos.x, y);
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
 
+/**
+ * Ícones de condição em arco sobre o token. A lista já vem AGRUPADA (um item
+ * por condição, ver condicoesAgrupadas) — aqui só sobra mostrar o nível de quem
+ * acumulou, num "×N" miúdo no canto do ícone.
+ */
 function drawCondicoes(pos, s, conds) {
     const fs = hud(13);
-    ctx.font = `${fs}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const max = Math.min(conds.length, 6);
     for (let i = 0; i < max; i++) {
         const ang = -Math.PI * 0.75 + (i / 6) * Math.PI * 1.5;
@@ -624,8 +670,20 @@ function drawCondicoes(pos, s, conds) {
         const cy = pos.y + Math.sin(ang) * (s/2 + hud(11));
         ctx.fillStyle = 'rgba(17,24,39,.9)';
         ctx.beginPath(); ctx.arc(cx, cy, fs * 0.72, 0, Math.PI*2); ctx.fill();
+        ctx.font = `${fs}px Arial`;
         ctx.fillStyle = '#fff';
         ctx.fillText(conds[i].icone || '☠️', cx, cy + fs*0.05);
+        // acumulou? o número vai no canto, pequeno, com contorno para ler sobre o ícone
+        const nv = Number(conds[i].nivel) || 1;
+        if (nv > 1) {
+            const nfs = hud(8);
+            ctx.font = `bold ${nfs}px Arial`;
+            const bx = cx + fs * 0.6, by = cy + fs * 0.6;
+            ctx.lineWidth = hud(2.5); ctx.strokeStyle = 'rgba(0,0,0,.9)';
+            ctx.strokeText('×' + nv, bx, by);
+            ctx.fillStyle = '#fde047';
+            ctx.fillText('×' + nv, bx, by);
+        }
     }
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 }
