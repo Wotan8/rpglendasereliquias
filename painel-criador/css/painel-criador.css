@@ -3807,3 +3807,43 @@ html.dark .meta-chip.chip-tag {
         font-size: .95rem;
     }
 }
+
+/* 🎲 Dashboard — o que o Tabuleiro não interpreta sozinho */
+.dash-tab-resumo {
+    padding: var(--lr-space-3, 12px);
+    border-radius: 8px;
+    font-size: .85rem;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    border: 1px solid var(--lr-border, #333);
+}
+
+.dash-tab-resumo.tudo-ok {
+    background: rgba(63, 174, 106, .08);
+    border-color: rgba(63, 174, 106, .35);
+    color: var(--lr-nature, #3fae6a);
+}
+
+.dash-tab-resumo.tem-falta {
+    background: rgba(229, 197, 88, .08);
+    border-color: rgba(229, 197, 88, .35);
+    color: var(--lr-gold-2, #e5c558);
+}
+
+.dash-falta {
+    font-size: .75rem;
+    line-height: 1.45;
+    color: var(--muted, #94a3b8);
+    padding: 2px 0;
+}
+
+.dash-falta + .dash-falta { border-top: 1px dashed var(--lr-border-soft, #2a2a2a); margin-top: 3px; }
+
+.dash-falta code {
+    color: var(--lr-gold-2, #e5c558);
+    background: rgba(229, 197, 88, .1);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: .72rem;
+    margin-right: 4px;
+}

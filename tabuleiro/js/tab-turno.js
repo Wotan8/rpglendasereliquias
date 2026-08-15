@@ -24,6 +24,7 @@ import {
     guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica,
 } from '../../shared/combate-cenas.js';
 import { custosDaSkill, rotuloDosCustos } from '../../shared/skill-custo.js?v=1';
+import { indexarPredefs, interpretarSkill } from '../../shared/skill-runtime.js?v=1';
 import { resolverMedida, ehFormula } from '../../shared/medida-formula.js?v=1';
 import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR,
          porqueLocalInvalido, localSob } from './tab-mira-calc.js';
@@ -315,42 +316,45 @@ function skillsDe(p) {
     return [];
 }
 
+/**
+ * 🔁 Retorno de recurso: regra do MÓDULO, não da magia (ver
+ * shared/retorno-recurso.js). Só viaja se estiver ligada no cadastro.
+ *
+ * ⚠️ É `function` e mora AQUI FORA de propósito. Isto já foi um `const` dentro
+ * de carregarSkills, DEPOIS do ponto que o chamava: a zona morta temporal fazia
+ * a montagem do índice lançar ReferenceError, o catch engolia, e o índice de
+ * pré-definidos ficava VAZIO. Resultado: toda habilidade do sistema perdia
+ * custo e mira e caía no diálogo "Como aplicar". Um `const` mal posicionado
+ * apagava o cadastro inteiro do Tabuleiro, em silêncio.
+ */
+function cfgRetorno(mod) {
+    if (!String(mod?.retornoRecurso || '').trim()) return null;
+    return {
+        retornoRecurso: String(mod.retornoRecurso).trim(),
+        retornoBonusParado: Number(mod.retornoBonusParado) || 0,
+        retornoExigeSucesso: !!mod.retornoExigeSucesso,
+        retornoZeraSeFalhar: !!mod.retornoZeraSeFalhar,
+    };
+}
+
 async function carregarSkills(chave, p, tentativas = 0) {
     // marcador de "carregando": impede o render seguinte de disparar outra
     skillsCache = { chave, lista: skillsCache?.chave === chave ? (skillsCache.lista || []) : [], parcial: false, tentativas };
-    // índice global de pré-definidos (o id `pdi_...` é único entre módulos).
-    // Se o registro falhar, as skills da FICHA continuam listadas — só ficam
-    // sem a mira cadastrada (caem no fluxo de "mira não cadastrada").
-    const normNome = (s2) => String(s2 || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const predefPorId = new Map(), predefPorNome = new Map();
     let mechsById = {};
     let sysDVs = [];
+    let idx = indexarPredefs([]);
     let registroOk = false;
     try {
         const m = await import('./tab-ficha-win.js?v=12');
         const sys = await m.registroSistema();
         mechsById = sys.mechsById || {};
         sysDVs = sys.derivedValues || [];
-        for (const mod of Object.values(sys.classModulesById || {})) {
-            for (const pd of mod.itensPredefinidos || []) {
-                // O MÓDULO inteiro viaja junto: o custo do Bardo está no título
-                // dele ("Custo 3 — Clímax"), não no pré-definido.
-                const ref = { pd, modulo: mod, schema: mod.schema || [], retorno: cfgRetorno(mod) };
-                predefPorId.set(pd.id, ref);
-                predefPorNome.set(normNome(pd.nome), ref);
-            }
-        }
-        registroOk = predefPorId.size > 0;
-    } catch (e) { console.warn('registro do sistema p/ skills do turno', e); }
-
-    // 🔁 Retorno de recurso: regra do MÓDULO, não da magia (ver
-    // shared/retorno-recurso.js). Só viaja se estiver ligada no cadastro.
-    const cfgRetorno = mod => (String(mod?.retornoRecurso || '').trim() ? {
-        retornoRecurso: String(mod.retornoRecurso).trim(),
-        retornoBonusParado: Number(mod.retornoBonusParado) || 0,
-        retornoExigeSucesso: !!mod.retornoExigeSucesso,
-        retornoZeraSeFalhar: !!mod.retornoZeraSeFalhar,
-    } : null);
+        idx = indexarPredefs(Object.values(sys.classModulesById || {}));
+        registroOk = idx.total > 0;
+        if (!registroOk) console.warn('⚠️ registro do sistema veio sem módulos de classe');
+    } catch (e) {
+        console.error('❌ registro do sistema p/ skills do turno — habilidades vão sair sem custo e sem mira', e);
+    }
 
     // 🪄 Formas de conjurar da skill: as colunas do módulo marcadas com
     // "é forma de conjurar" no Criador. Cada uma aponta o VD que dá o Acerto —
@@ -370,35 +374,32 @@ async function carregarSkills(chave, p, tentativas = 0) {
         return out;
     };
 
+    // 🧠 UM interpretador só, o mesmo que o Painel do Criador usa para listar o
+    // que está incompleto (shared/skill-runtime.js). Ele tem cadeia de recurso
+    // para achar o pré-definido — id, nome, nome sem o "[V, S]" — e devolve um
+    // diagnóstico dizendo o que faltou. Skill nova, módulo novo: entram por aqui
+    // sem nenhum caso especial.
     const lista = itensBrutos(p).map(it => {
-        // item de NPC nem sempre carrega _predefId — o nome resolve o registro
-        const ref = (it._predefId && predefPorId.get(it._predefId)) || predefPorNome.get(normNome(S_NOME(it))) || null;
-        // Sem o predefinido não há mira, e a habilidade cai no diálogo manual
-        // "não tem mira cadastrada" — que parece bug de mira e é, na verdade,
-        // o REGISTRO não ter chegado. Deixa o motivo no console.
-        if (!ref) {
-            console.warn(`⚠️ Skill "${S_NOME(it)}": predefinido não encontrado`,
-                { _predefId: it._predefId || null, predefsIndexados: predefPorId.size });
-        }
-        const pd = ref?.pd || null;
-        // 💰 As formas de pagar saem do cadastro por shared/skill-custo.js — é
-        // ele que sabe ler as quatro gerações de módulo (mecânica de custo,
-        // campo de texto, degrau no título do Bardo, e "não custa nada").
-        const custos = custosDaSkill({
-            modulo: ref?.modulo, predef: pd, item: it,
-            mechPorId: (id) => mechsById[id], custoDaMecanica,
+        const r = interpretarSkill(it, {
+            idx, custosDaSkill, mechPorId: (id) => mechsById[id], custoDaMecanica, registroOk,
         });
-        // Texto do botão: o que o cadastro declara. Sem custo cadastrado o
-        // campo livre da ficha ainda vale como AVISO (não é debitado).
-        const custo = rotuloDosCustos(custos) || S_CUSTO(it) || S_CUSTO(pd?.valores || {});
+        if (!r.diagnostico.ok) {
+            console.warn(`⚠️ Skill "${r.nome}" não saiu completa:`,
+                r.diagnostico.faltas.map(f => `${f.campo}: ${f.porque}`));
+        }
+        const pd = r.pd;
         return {
-            nome: S_NOME(it),
-            efeito: S_EFEITO(it) || S_EFEITO(pd?.valores || {}) || pd?.descricao || '',
-            custo, custos,
-            veiculos: veiculosDaSkill(it, ref?.schema, pd),
-            retorno: ref?.retorno || null,
-            mira: it.mira || pd?.mira || miraDaReguaV2(pd),
+            nome: r.nome,
+            efeito: r.efeito || S_EFEITO(pd?.valores || {}),
+            // Texto do botão: o que o cadastro declara. Sem custo cadastrado o
+            // campo livre da ficha ainda vale como AVISO (não é debitado).
+            custo: rotuloDosCustos(r.custos) || S_CUSTO(it) || S_CUSTO(pd?.valores || {}),
+            custos: r.custos,
+            veiculos: veiculosDaSkill(it, r.modulo?.schema, pd),
+            retorno: cfgRetorno(r.modulo),
+            mira: r.mira,
             acao: it.custoAcao || pd?.custoAcao || pd?.mira?.custoAcao || acaoDoRotulo(it.acao || pd?.valores?.acao),   // §6.2
+            diagnostico: r.diagnostico,
         };
     });
     // Registro que não chegou não pode virar cache definitivo: com ele fora
@@ -820,6 +821,13 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
         sub = null;
         return;
     }
+    // 🛑 Registro fora do ar NÃO é "sem cadastro". Antes isto caía no mesmo
+    // diálogo manual e parecia falta de cadastro numa habilidade que estava
+    // cadastrada. Falha de leitura tem de dizer que é falha de leitura.
+    if (s.diagnostico?.registroIndisponivel) {
+        toast('⚠️ O registro do sistema não carregou — recarregue a página antes de usar habilidades', 'danger');
+        return;
+    }
     // Sem mira cadastrada: os PARÂMETROS são regra — só o mestre os define.
     // O jogador usa a ação assim mesmo (gasta e loga); a resolução fica na mesa.
     if (!(T.isMaster && T.mode === 'secret')) {
@@ -1219,7 +1227,13 @@ window.tbTurnoDesfazerIncorporacao = async (pid) => {
 function miraDoCadastro(m, s, custo, p) {
     // 🏹 Alcance que sai da ARMA, não do cadastro: a manobra do Caçador vale
     // até onde a flecha dele chega, e isso muda quando ele troca de arco.
-    const alcance = m.alcanceDoDisparo ? alcanceDoDisparoDe(p).metros : medidaDaMira(m.alcanceM, p);
+    // 👁️ "Alcance da visão": vale até onde o token ENXERGA — já cortado pelas
+    // condições (Cego zera, Ofuscado corta pela metade). É o alcance da
+    // incorporação: o Xamã comunga com o Eco que consegue ver.
+    const tokV = tokenAtivoDoCombate();
+    const alcance = m.alcanceVisao ? alcanceDeVisaoDoToken(tokV, derivedDoToken(tokV), T.canvas?.luzDinamica?.modo === 'dia')
+        : m.alcanceDoDisparo ? alcanceDoDisparoDe(p).metros
+        : medidaDaMira(m.alcanceM, p);
     return {
         tipo: m.tipo, forma: m.forma || 'circulo', origem: m.origem || 'token',
         alcanceM: alcance, raioM: medidaDaMira(m.raioM, p),

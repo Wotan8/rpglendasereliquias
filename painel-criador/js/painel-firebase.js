@@ -1117,6 +1117,7 @@ function renderDashboard() {
             <button type="button" class="btn-edit" onclick="dashRefresh()" title="Recarregar contagens">🔄 Atualizar</button>
         </div>
         <div class="dash-grid">${cards}</div>
+        <div id="dashTabuleiro"></div>
         <div class="skills-category-header">🕒 Últimas edições <span class="skills-category-count">${recentes.length}</span></div>
         <div class="table-container">
             <table class="users-table items-table">
@@ -1124,6 +1125,80 @@ function renderDashboard() {
                 <tbody>${linhas}</tbody>
             </table>
         </div>`;
+
+    // Diagnóstico do Tabuleiro: precisa dos módulos de classe e das mecânicas
+    // carregados, então vem depois e por conta própria.
+    Promise.all([refreshClassModulesCache?.(), refreshMechanicsCache?.()])
+        .then(() => renderDiagnosticoTabuleiro())
+        .catch(() => renderDiagnosticoTabuleiro());
+}
+
+/* ============================================================
+   🎲 O QUE O TABULEIRO NÃO INTERPRETA — e por quê
+   Roda o MESMO interpretador do Tabuleiro (shared/skill-runtime.js) sobre
+   todas as habilidades pré-definidas. O painel não pode discordar da mesa:
+   se aqui aparece "ok", lá funciona; se aqui falta um campo, lá cai no
+   diálogo "Como aplicar". A lista diz qual campo preencher.
+   ============================================================ */
+async function renderDiagnosticoTabuleiro() {
+    const box = document.getElementById('dashTabuleiro');
+    if (!box) return;
+    box.innerHTML = '<div class="skills-category-header">🎲 Leitura do Tabuleiro <span class="skills-category-count">…</span></div>';
+
+    try {
+        const [{ indexarPredefs, interpretarSkill }, { custosDaSkill }, { custoDaMecanica }] = await Promise.all([
+            import('../../shared/skill-runtime.js?v=1'),
+            import('../../shared/skill-custo.js?v=1'),
+            import('../../shared/combate-cenas.js'),
+        ]);
+
+        const modulos = (classModulesCache || []).filter(m => m && m.publicado !== false);
+        const idx = indexarPredefs(modulos);
+        const mechPorId = (id) => (mechanicsCache || []).find(m => m.id === id);
+
+        const problemas = [];
+        let total = 0;
+        for (const mod of modulos) {
+            for (const pd of mod.itensPredefinidos || []) {
+                total++;
+                // O item da ficha nasce do pré-definido: é assim que a mesa o vê.
+                const r = interpretarSkill({ _predefId: pd.id, _predefNome: pd.nome }, {
+                    idx, custosDaSkill, mechPorId, custoDaMecanica, registroOk: true,
+                });
+                if (!r.diagnostico.ok) problemas.push({ mod, pd, d: r.diagnostico });
+            }
+        }
+
+        const ok = total - problemas.length;
+        const pct = total ? Math.round((ok / total) * 100) : 100;
+
+        const linhas = problemas.map(({ mod, pd, d }) => `
+            <tr>
+                <td><strong>${escapeHtml(pd.nome || '(sem nome)')}</strong></td>
+                <td>${escapeHtml(mod.icone || '📦')} ${escapeHtml(mod.titulo || mod.id)}</td>
+                <td>${d.faltas.map(f => `<div class="dash-falta"><code>${escapeHtml(f.campo)}</code> ${escapeHtml(f.porque)}</div>`).join('')}</td>
+            </tr>`).join('');
+
+        box.innerHTML = `
+            <div class="skills-category-header">🎲 Leitura do Tabuleiro
+                <span class="skills-category-count">${ok}/${total} · ${pct}%</span>
+            </div>
+            <div class="dash-tab-resumo ${problemas.length ? 'tem-falta' : 'tudo-ok'}">
+                ${problemas.length
+                    ? `⚠️ <strong>${problemas.length}</strong> habilidade(s) o Tabuleiro NÃO consegue aplicar sozinho — vão cair na janela “Como aplicar”. O que falta em cada uma está abaixo.`
+                    : '✅ Todas as habilidades cadastradas são aplicadas automaticamente pelo Tabuleiro.'}
+            </div>
+            ${problemas.length ? `<div class="table-container">
+                <table class="users-table items-table">
+                    <thead><tr><th>Habilidade</th><th>Módulo</th><th>O que falta preencher</th></tr></thead>
+                    <tbody>${linhas}</tbody>
+                </table>
+            </div>` : ''}`;
+    } catch (e) {
+        console.error(e);
+        box.innerHTML = `<div class="skills-category-header">🎲 Leitura do Tabuleiro</div>
+            <div class="dash-tab-resumo tem-falta">❌ Não foi possível rodar o diagnóstico: ${escapeHtml(String(e.message || e))}</div>`;
+    }
 }
 
 window.dashRefresh = () => loadDashboard();

@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v247';
+const VERSION = 'v248';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -185,6 +185,7 @@ const PRECACHE_URLS = [
   '/shared/campo-imagem.js',
   '/shared/combate-cenas.js',
   '/shared/skill-custo.js',
+  '/shared/skill-runtime.js',
   '/shared/medida-formula.js',
   '/shared/dadiva.js',
   '/shared/bonus-temporario.js',
