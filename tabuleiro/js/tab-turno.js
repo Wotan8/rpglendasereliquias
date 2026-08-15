@@ -35,6 +35,10 @@ import { templateAtingeCirculo } from './tab-templates.js';
 import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte, fonteDoParticipante } from './tab-hud.js';
 import { carregarCondicoesSistema, aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { grausDoAtaque } from './tab-conflito-calc.js';
+import { calcularDadiva, rotuloDoGanho } from '../../shared/dadiva.js?v=1';
+import { bonusDosGanhos } from '../../shared/bonus-temporario.js?v=1';
+import { porqueNaoPodeIncorporar, custoEscalonado, dadivasDoHospede, ehAncestral,
+         quemFicaInerte, CONDICAO_TRANSE } from '../../shared/incorporacao.js?v=1';
 import { logChat } from './tab-chat.js';
 
 // Abertura do arco do golpe corpo a corpo (graus). Régua de mesa da UI —
@@ -66,6 +70,10 @@ function controlaVez(p) {
     if (!p) return false;
     if (T.isMaster && T.mode === 'secret') return true;   // mestre age por todos (inclusive jogador ausente)
     if (p.characterId) return T.chars.find(c => c.id === p.characterId)?.ownerUid === T.user?.uid;
+    // 🌀 Projetor: enquanto o personagem está projetado no hóspede, quem joga o
+    // token do hóspede é o dono do personagem — na iniciativa do PRÓPRIO
+    // hóspede, que já está na cena. Ninguém muda de lugar na ordem.
+    if (p.controladoPor) return T.chars.find(c => c.id === p.controladoPor)?.ownerUid === T.user?.uid;
     return false;   // NPC/custom são do mestre
 }
 // ⚠️ A ficha do participante vem de tab-hud e de lugar nenhum mais. Havia aqui
@@ -264,6 +272,10 @@ function miraDaReguaV2(pd) {
         ...base, tipo: 'alvos',
         alcanceM: temMedida(pd.alcance) ? pd.alcance : (pd.tamanhoArea ?? 0),
         maxAlvos: Number(pd.alvosMax) || 1,
+        // 🌀 Fusão Selvagem / Transcendência: o alvo mirado tem de ser um
+        // hóspede válido, e ao confirmar não há ataque — há empréstimo.
+        exigeVinculo: pd.exigeVinculo || null,
+        incorporacao: pd.incorporacao || null,
     };
 }
 
@@ -1072,6 +1084,137 @@ function medidaDaMira(v, p, padrao = 0) {
     return resolverMedida(v, (nome) => valorComponente(nome, fonte), { padrao });
 }
 
+/**
+ * 🌀 Fecha uma incorporação: calcula a Dádiva, aplica as sobras como bônus
+ * temporários, põe Em Transe no corpo que ficou para trás e — no Projetor —
+ * passa o controle do token do hóspede para o dono do personagem.
+ *
+ * Tudo mora no participante da cena: some quando a cena acabar, e o doc do
+ * personagem no banco não é tocado.
+ */
+async function aplicarIncorporacao(m, p, tok, tokAlvo) {
+    const c = cena();
+    const pAlvo = participanteDoToken(tokAlvo);
+    const hospede = pAlvo?.npcId ? T.npcs.find(x => x.id === pAlvo.npcId) : null;
+    if (!hospede || !pAlvo) { toast('⚠️ O alvo não tem ficha para incorporar', 'warning'); cancelarMira(); return; }
+
+    const modo = m.incorporacao;                       // 'receptor' | 'projetor'
+    const meta = m.meta || {};
+    const custoAcao = meta.custoAcao || 'padrao';
+    const ancestral = ehAncestral(hospede);
+
+    // As sobras: o que o hóspede tem de melhor que quem conjura. O catálogo diz
+    // o que é Sentido, Deslocamento e perícia social — quem classifica é o
+    // CADASTRO, não este arquivo.
+    let cat = { derivedValues: [], pericias: [] };
+    try {
+        const sys = await (await import('./tab-ficha-win.js?v=12')).registroSistema();
+        cat = { derivedValues: sys.derivedValues || [], pericias: sys.skills || [] };
+    } catch (e) {
+        console.warn('registro do sistema p/ Dádiva', e);
+        toast('⚠️ Registro do sistema indisponível — a Dádiva não pôde ser calculada', 'warning');
+        cancelarMira(); return;
+    }
+    const fichaHospede = achatarFicha(hospede, cat);
+    const fichaPersonagem = achatarFicha(fonteDoParticipante(p), cat);
+    const dadivas = dadivasDoHospede(hospede, m.exigeVinculo)
+        .map(k => calcularDadiva(k, fichaHospede, fichaPersonagem, cat, { ancestral }))
+        .filter(d => d && (d.ganhos.length || d.modulos.length));
+
+    const ganhos = dadivas.flatMap(d => d.ganhos);
+    const modulos = dadivas.flatMap(d => d.modulos);
+    const unidades = dadivas.reduce((t, d) => t + (d.unidades || 0), 0);
+    const extra = custoEscalonado(unidades);
+
+    // Receptor leva as sobras; Projetor vai para o corpo do hóspede e não
+    // ganha empréstimo nenhum — ele passa a JOGAR o hóspede.
+    const bonus = modo === 'receptor' ? bonusDosGanhos(ganhos, `${meta.nome}: ${hospede.nome || '?'}`) : [];
+    const { inerte } = quemFicaInerte(modo);
+    const pidInerte = inerte === 'hospede' ? pAlvo.id : p.id;
+
+    T.mira = null; markDirty();
+    await gastar(custoAcao);
+    await pagarCustos(p);
+
+    // Um write só com tudo: bônus, controle e a marca de que a cena tem uma
+    // incorporação aberta (é por ela que o desfazer encontra o par).
+    const parts = (c.participantes || []).map(x => {
+        if (x.id === p.id) {
+            return modo === 'receptor'
+                ? { ...x, bonusTemp: bonus, modulosEmprestados: modulos, incorporacao: { modo, com: pAlvo.id, nome: hospede.nome || '' } }
+                : { ...x, incorporacao: { modo, com: pAlvo.id, nome: hospede.nome || '' } };
+        }
+        if (x.id === pAlvo.id && modo === 'projetor') {
+            return { ...x, controladoPor: p.characterId || null, incorporacao: { modo: 'hospedeiro', com: p.id, nome: p.name || '' } };
+        }
+        return x;
+    });
+    await salvarCena({ participantes: parts });
+
+    if (extra.sanidade > 0) await pagarCusto(p, { alvo: 'Sanidade', qtd: extra.sanidade });
+    await aplicarCondicaoEmVarios([pidInerte], CONDICAO_TRANSE, 0, p.id)
+        .catch(e => console.warn('Em Transe', e));
+
+    const resumo = ganhos.length ? ganhos.map(rotuloDoGanho).join(' · ') : 'nada a emprestar';
+    logChat(`🌀 ${p.name || '?'} — ${meta.nome} (${modo === 'projetor' ? 'Projetor' : 'Receptor'}) com ${hospede.nome || '?'}`
+        + (ancestral ? ' [Ancestral: dobro]' : '')
+        + (modo === 'receptor' ? ` → ${resumo}` : ` → passa a agir pelo corpo dele, na iniciativa dele`)
+        + (modulos.length ? ` · ✨ ${modulos.length} módulo(s) de habilidade emprestado(s)` : '')
+        + ` · entrega ${unidades.toFixed(2)} un`
+        + (extra.sanidade ? ` · −${extra.sanidade} Sanidade pelo excedente (${extra.excedente.toFixed(2)} un)` : ''));
+
+    toast(modo === 'projetor'
+        ? `🌀 ${p.name || '?'} projetou-se em ${hospede.nome || '?'} — jogue pelo token dele`
+        : `🌀 ${resumo}${extra.sanidade ? ` · −${extra.sanidade} SAN` : ''}`);
+    render();
+}
+
+/** Ficha achatada no formato que a Dádiva consome. */
+function achatarFicha(f, cat) {
+    if (!f) return { vds: {}, atributos: {}, pericias: {}, vitais: {}, modulos: [] };
+    const vds = {};
+    for (const dv of (cat.derivedValues || [])) {
+        const v = valorComponente(dv.nome, f);
+        if (v != null) vds[dv.key || dv.nome] = Number(v) || 0;
+    }
+    const atributos = {};
+    for (const a of ['FOR', 'DES', 'VIG', 'INT', 'RAC', 'PRS', 'PRE', 'MAN', 'AUT']) {
+        const v = valorComponente(a, f);
+        if (v != null) atributos[a] = Number(v) || 0;
+    }
+    const pericias = {};
+    for (const s of (cat.pericias || [])) {
+        const v = valorComponente(s.nome, f);
+        if (v != null) pericias[s.nome] = Number(v) || 0;
+    }
+    const vt = VITAIS.get(f.id) || null;
+    const vitais = {
+        vitMax: vt?.hpMax ?? Number(f.valoresDer?.overrides?.VIT) ?? 0,
+        enerMax: vt?.enerMax ?? Number(f.valoresDer?.overrides?.ENER) ?? 0,
+    };
+    const modulos = (f.modulosClasse || []).map(x => x.refId).filter(Boolean);
+    return { vds, atributos, pericias, vitais, modulos };
+}
+
+/**
+ * Desfaz a incorporação: o empréstimo sai, o controle volta e o Em Transe é
+ * removido dos dois lados. Chamado quando a condição sai ou a cena fecha.
+ */
+window.tbTurnoDesfazerIncorporacao = async (pid) => {
+    const c = cena();
+    const p = (c?.participantes || []).find(x => x.id === pid);
+    if (!p?.incorporacao) return;
+    const parceiro = p.incorporacao.com;
+    const parts = (c.participantes || []).map(x => {
+        if (x.id !== pid && x.id !== parceiro) return x;
+        const { incorporacao, bonusTemp, modulosEmprestados, controladoPor, ...limpo } = x;
+        return limpo;
+    });
+    await salvarCena({ participantes: parts });
+    logChat(`🌀 ${p.name || '?'}: a incorporação com ${esc(p.incorporacao.nome || '?')} terminou — o emprestado voltou`);
+    render();
+};
+
 /** Converte a mira CADASTRADA (metros) para o runtime (px no ponto do token). */
 function miraDoCadastro(m, s, custo, p) {
     // 🏹 Alcance que sai da ARMA, não do cadastro: a manobra do Caçador vale
@@ -1083,6 +1226,9 @@ function miraDoCadastro(m, s, custo, p) {
         comprimentoM: medidaDaMira(m.comprimentoM, p), larguraM: medidaDaMira(m.larguraM, p),
         angGraus: Number(m.angGraus) || 60, maxAlvos: Number(m.maxAlvos) || 1,
         afeta: m.afeta || 'todos',
+        // 🌀 Incorporação: quem o alvo tem de ser, e o que acontece ao confirmar
+        exigeVinculo: m.exigeVinculo || null,
+        incorporacao: m.incorporacao || null,
         meta: {
             nome: s.nome, efeito: s.efeito, custoSkill: s.custo, custoAcao: custo,
             condicao: m.condicaoNome ? { nome: m.condicaoNome, rodadas: Number(m.condicaoRodadas) || 0, maxAlvos: Number(m.condicaoMaxAlvos) || 0 } : null,
@@ -1247,6 +1393,16 @@ function miraClique(w) {
         if (ja >= 0) { m.alvos.splice(ja, 1); render(); markDirty(); return; }
         const intocavel = porqueNaoPodeSerAlvo(alvo);
         if (intocavel) { toast(`⚠️ ${alvo.nome || 'Alvo'} não pode ser alvo (${intocavel})`, 'warning'); return; }
+        // 🌀 Incorporação: o alvo tem de ser um hóspede válido (Aliado Animal
+        // vinculado à ficha, ou Eco). Não há seletor — a validação é aqui, e
+        // "só na cena" sai de graça: fora dela não há token para clicar.
+        if (m.exigeVinculo) {
+            const pAlvo = participanteDoToken(alvo);
+            const hospede = pAlvo?.npcId ? T.npcs.find(x => x.id === pAlvo.npcId) : null;
+            const charId = participanteDaVez(cena())?.characterId;
+            const motivo = porqueNaoPodeIncorporar({ hospede, charId, exige: m.exigeVinculo });
+            if (motivo) { toast(`⚠️ ${alvo.nome || 'Alvo'}: ${motivo}`, 'warning'); return; }
+        }
         const minha = faccaoDoToken(tok);
         if (!alvoValido(m.afeta, minha, faccaoDoToken(alvo))) { toast(`⚠️ ${alvo.nome || 'Alvo'} não é ${m.afeta === 'aliados' ? 'aliado' : 'inimigo'}`, 'warning'); return; }
         const rA = ((tok.tamanhoCelulas || 1) * gs) / 2, rB = ((alvo.tamanhoCelulas || 1) * gs) / 2;
@@ -1296,6 +1452,13 @@ window.tbTurnoConfirmarMira = async () => {
         toast(`📍 ${pts.length} local(is) marcado(s) — ponha no mapa o que a habilidade traz`);
         render();
         return;
+    }
+
+    // 🌀 Incorporação (Fusão Selvagem / Transcendência): resolve por caminho
+    // próprio — não é ataque, não abre conflito, e o que sai é um empréstimo.
+    if (m.incorporacao) {
+        const alvo = T.objects.get((m.alvos || [])[0]);
+        if (alvo) { await aplicarIncorporacao(m, p, tok, alvo); return; }
     }
 
     // alvos atingidos

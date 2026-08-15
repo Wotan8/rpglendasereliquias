@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v246';
+const VERSION = 'v247';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -188,6 +188,7 @@ const PRECACHE_URLS = [
   '/shared/medida-formula.js',
   '/shared/dadiva.js',
   '/shared/bonus-temporario.js',
+  '/shared/incorporacao.js',
   '/shared/conjuracao.js',
   '/shared/retorno-recurso.js',
   '/shared/marca-de-caca.js',

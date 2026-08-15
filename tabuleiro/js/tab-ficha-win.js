@@ -99,9 +99,23 @@ function idx() {
     return _idx;
 }
 
+/**
+ * 🌀 Este NPC é o hóspede em que ALGUM personagem meu está projetado?
+ * Enquanto durar, o dono do personagem abre a ficha dele — só para ler.
+ */
+function projetadoNeste(npcId) {
+    const c = cenaAtiva(T.combate);
+    const p = (c?.participantes || []).find(x => x.npcId === npcId && x.controladoPor);
+    if (!p) return false;
+    return T.chars.find(ch => ch.id === p.controladoPor)?.ownerUid === T.user?.uid;
+}
+
 // ===== Abertura / fechamento =====
 export async function abrirFichaWin(tipo, id) {
-    if (tipo === 'npc' && !(T.isMaster && T.mode === 'secret')) {
+    // 🌀 Quem está projetado num hóspede PRECISA ler a ficha dele para jogar
+    // com ele — só ler: a janela é a mesma, sem edição. Fora esse caso, a
+    // ficha de NPC continua sendo do Mestre no modo secreto.
+    if (tipo === 'npc' && !(T.isMaster && T.mode === 'secret') && !projetadoNeste(id)) {
         toast('⚠️ A janela de NPC é do Mestre (modo secreto)', 'warning'); return;
     }
     if (tipo === 'char') {
