@@ -378,7 +378,16 @@ function avisoCondicoes(ef) {
 }
 
 // ---------- render ----------
-const ROTULO_ACAO = { padrao: '⚡ Ação Padrão', movimento: '👣 Ação de Movimento', livre: '🕊️ Ação Livre', completa: '⏳ Ação Completa (as duas)' };
+// O que está em `.tb-so-largo` some no celular: o painel vira uma faixa de uma
+// linha só no rodapé, e "Ação de Movimento" não cabe — "👣 Movimento" cabe e
+// diz o mesmo. No desktop o rótulo continua inteiro.
+const L = (curto, resto) => `${curto}<span class="tb-so-largo">${resto}</span>`;
+const ROTULO_ACAO = {
+    padrao:    L('⚡ ', 'Ação ') + 'Padrão',
+    movimento: L('👣 ', 'Ação de ') + 'Movimento',
+    livre:     L('🕊️ ', 'Ação ') + 'Livre',
+    completa:  L('⏳ ', 'Ação ') + 'Completa' + L('', ' (as duas)'),
+};
 
 function render() {
     if (!el) return;
@@ -449,16 +458,16 @@ function render() {
             ${semAcoes ? '' : btn('movimento', ROTULO_ACAO.movimento, acoes.movimento, 'Mover pelo deslocamento da ficha')}
             ${temLivre ? btn('livre', ROTULO_ACAO.livre, true, 'Incidental — não consome ação') : ''}
             ${temCompleta && !semAcoes ? btn('completa', ROTULO_ACAO.completa, acoes.padrao && acoes.movimento, 'Habilidades que consomem o turno inteiro') : ''}
-            ${podeGuardar ? `<button class="tb-btn tb-turno-btn" onclick="tbTurnoGuardar()" title="Guarda as DUAS ações: você pode interromper e agir a qualquer momento até o fim DESTA rodada — depois perde">🛡️ Guardar Turno</button>` : ''}
+            ${podeGuardar ? `<button class="tb-btn tb-turno-btn" onclick="tbTurnoGuardar()" title="Guarda as DUAS ações: você pode interromper e agir a qualquer momento até o fim DESTA rodada — depois perde">🛡️ Guardar<span class="tb-so-largo"> Turno</span></button>` : ''}
             <button class="tb-btn tb-turno-btn ${semAcoes && !conflitoPendente() ? 'tb-btn-primary' : ''}"
                 ${conflitoPendente() ? 'disabled' : ''}
                 title="${conflitoPendente() ? 'Termine o conflito aberto antes de passar a vez' : 'Passa a vez para o próximo da ordem'}"
-                onclick="tbTurnoEncerrar()">⏭️ Encerrar Turno${conflitoPendente() ? ' <i>(conflito em curso)</i>' : ''}</button>
+                onclick="tbTurnoEncerrar()">⏭️ Encerrar<span class="tb-so-largo"> Turno</span>${conflitoPendente() ? ' <i class="tb-so-largo">(conflito em curso)</i>' : ''}</button>
         </div>`;
     }
 
     el.innerHTML = `<div class="tb-turno-head">
-            ${c.retomar ? '⚡' : '⚔️'} Vez de <b>${esc(p.name || '?')}</b>${c.retomar ? ' <span class="tb-turno-hint">(turno guardado — interrompendo)</span>' : ''} · Rodada ${c.rodada || 1}
+            ${c.retomar ? '⚡' : '⚔️'} <span class="tb-so-largo">Vez de </span><b class="tb-turno-nome">${esc(p.name || '?')}</b>${c.retomar ? ' <span class="tb-turno-hint">(turno guardado — interrompendo)</span>' : ''} <span class="tb-turno-hint">R${c.rodada || 1}</span>
             <span class="tb-turno-chips">${chip(acoes.padrao && !efCond.bloqueia.padrao, '⚡')}${chip(acoes.movimento && !efCond.bloqueia.movimento, '👣')}</span>
             ${avisoCondicoes(efCond)}
         </div>${body}`;

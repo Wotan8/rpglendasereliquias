@@ -310,4 +310,13 @@ assert.equal(condicoesAgrupadas([{ nome: '' }, { nome: 'X' }]).length, 1, 'condi
 assert.equal(condicoesAgrupadas([{ nome: 'A', expiraNaRodada: 3 }, { nome: 'A', expiraNaRodada: 7 }])[0].expiraNaRodada, 7);
 assert.equal(condicoesAgrupadas([{ nome: 'A', expiraNaRodada: null }, { nome: 'A', expiraNaRodada: 5 }])[0].expiraNaRodada, 5);
 
+// A mesma condição duas vezes na lista não pode contar o efeito duas vezes
+// (era "Deslocamento ×0 (Imobilizado, Imobilizado)": multiplicador em dobro).
+// O EFEITO conta cada cópia (regra acima), mas o texto do porquê não repete
+// nome: "Deslocamento ×0 (Imobilizado, Imobilizado)" não informa nada.
+assert.equal(porqueCondicao(ef([{ nome: 'Lento' }, { nome: 'Lento' }]), 'multDesloc'), 'Lento',
+    'o motivo diz a condição uma vez só');
+assert.equal(porqueCondicao(ef(['Lento', 'Imobilizado']), 'multDesloc'), 'Lento, Imobilizado',
+    'condições diferentes seguem listadas'); 
+
 console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições, turno mecânico, turno guardado, custo vital e de mecânica, efeito das condições e agrupamento OK');

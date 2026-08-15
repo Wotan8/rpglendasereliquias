@@ -306,6 +306,9 @@ export function efeitoDasCondicoes(condicoes, registro) {
     const mapa = new Map();
     for (const r of registro || []) mapa.set(_normCond(r.nome), r);
 
+    // ⚠️ Duas cópias da MESMA condição multiplicam de novo, de propósito
+    // (ver o teste "duas metades = um quarto"). Quem agrupa é só a EXIBIÇÃO,
+    // em porqueCondicao — o efeito continua contando cada cópia.
     for (const cd of condicoes || []) {
         const c = condDoParticipante(cd);
         const reg = mapa.get(_normCond(c.nome));
@@ -359,8 +362,13 @@ export function efeitoDasCondicoes(condicoes, registro) {
 }
 
 /** Nomes das condições que causaram `campo`, prontos para um title/tooltip. */
+/**
+ * POR QUE este campo travou/mudou — os nomes das condições responsáveis, cada
+ * uma dita UMA vez. Duas cópias da mesma condição contam duas vezes no efeito
+ * (é a regra), mas ler "(Imobilizado, Imobilizado)" na tela não informa nada.
+ */
 export function porqueCondicao(efeito, campo) {
-    return (efeito?.motivos?.[campo] || []).join(', ');
+    return [...new Set(efeito?.motivos?.[campo] || [])].join(', ');
 }
 
 /** 'dano_vit' → { sinal: -1, stat: 'VIT' }. Devolve null para efeito desconhecido. */
