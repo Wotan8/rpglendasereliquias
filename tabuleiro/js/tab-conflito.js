@@ -90,7 +90,7 @@ function enerDe(pid) {
 // ---------- VDs de Defesa e Blindagem ----------
 async function carregarSys() {
     if (_sys) return _sys;
-    const m = await import('./tab-ficha-win.js?v=10');
+    const m = await import('./tab-ficha-win.js?v=11');
     _sys = await m.registroSistema();
     render();
     return _sys;
@@ -177,6 +177,10 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
             nome: acao.nome || 'Ação', icone: acao.icone || '⚔️', dano: acao.dano || '',
             tipos: acao.tipos || [], custoAcao: acao.custoAcao || 'padrao',
             alvoAcerto: acao.alvoAcerto ?? null, efeito: acao.efeito || '',
+            // De QUE Valor Derivado saiu o Alvo. Sem isto a janela dizia só
+            // "Acerto", que não corresponde a VD nenhum da ficha do arqueiro —
+            // o dele é "Acerto à Distância".
+            acertoNome: acao.acertoNome || '', acertoIcone: acao.acertoIcone || '',
             condicao: acao.condicao || null,
             // 🏹 O maço escolhido no picker. Fica no doc porque quem resolve o
             // destino da flecha é o mesmo cliente que rolou o Acerto.
@@ -510,7 +514,8 @@ function render() {
     if (c.fase === 'acerto') {
         corpo = souAtacante
             ? linhaRolagem({
-                rotulo: '🎯 Acerto', fn: 'tbConfRolarAcerto', idManual: 'cfManualAcerto', dica: 'd10 da mesa',
+                rotulo: `${c.acao.acertoIcone || '🎯'} ${esc(c.acao.acertoNome || 'Acerto')}`,
+                fn: 'tbConfRolarAcerto', idManual: 'cfManualAcerto', dica: 'd10 da mesa',
                 extra: `<label class="tb-conflito-alvoin">Alvo <input type="number" id="cfAlvoAcerto" value="${c.acao.alvoAcerto ?? ''}" step="any" placeholder="?"></label>`,
               })
             : `<div class="tb-turno-acoes"><span class="tb-muted">⏳ esperando ${esc(c.atacante.nome)} rolar o Acerto…</span></div>`;

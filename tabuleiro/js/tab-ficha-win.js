@@ -1066,15 +1066,25 @@ export function itensCarregados(tipo, id) {
     return _itensPorChave.get(`${tipo}:${id}`) || [];
 }
 
-/** A coluna de Acerto que vale para esta linha (distância, desarmado ou c.a.c). */
-function acertoDaLinha(l) {
+/**
+ * A COLUNA de Acerto que vale para esta linha (distância, desarmado ou c.a.c).
+ * Devolve a coluna inteira e não só o número: a janela de conflito precisa do
+ * NOME para dizer "Acerto à Distância" em vez de um "Acerto" genérico que não
+ * corresponde a Valor Derivado nenhum da ficha.
+ */
+function colunaDeAcerto(l) {
     const cols = l.colunas || [];
     const acha = re => cols.find(c => re.test(c.nome || ''));
     const especifico = l.distancia ? acha(/dist[âa]ncia/i)
         : l.desarmado ? acha(/desarmad/i)
         : acha(/corpo a corpo/i);
     const generico = cols.find(c => /^\s*acerto\s*$/i.test(c.nome || ''));
-    return (especifico ?? generico)?.total ?? null;
+    return especifico ?? generico ?? null;
+}
+
+/** Só o número, para quem não liga para o nome. */
+function acertoDaLinha(l) {
+    return colunaDeAcerto(l)?.total ?? null;
 }
 
 export async function linhasDeAtaque(tipo, id) {
@@ -1093,7 +1103,12 @@ export async function linhasDeAtaque(tipo, id) {
     for (const l of linhas) {
         // ⚠️ O Acerto é calculado NO FIM: ele depende de `l.distancia`, que só
         // fica sabido algumas linhas abaixo.
-        if (l.desarmado) { l.alcanceM = 0; l.distancia = false; l.acerto = acertoDaLinha(l); continue; }
+        if (l.desarmado) {
+            l.alcanceM = 0; l.distancia = false;
+            const c = colunaDeAcerto(l);
+            l.acerto = c?.total ?? null; l.acertoNome = c?.nome || ''; l.acertoIcone = c?.icone || '';
+            continue;
+        }
         const i = itens.find(x => (x.nome || 'Item') === l.nome);
         l.alcanceM = Number(i?.alcanceM ?? (i ? tplDoItem(i)?.alcanceM : 0)) || 0;
         // 🏹 Arma a distância não tem arco de balanço: mira por alvo (ver tab-turno)

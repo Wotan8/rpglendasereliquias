@@ -1446,7 +1446,13 @@ function renderDvGrid() {
     const cellHtml = (dv, removable) => {
             const locked = dv.override !== null;
             const sysRef = (F.sys.vitalStats || []).find(x => x.key === dv.key) || (F.sys.derivedValues || []).find(x => x.key === dv.key) || {};
-            const desc = sysRef.descricao || 'Sem descrição cadastrada.';
+            // 🎒 VD de escopo "coluna" é calculado POR ITEM equipado: o valor
+            // global é 0 de propósito, e o número que vale sai na linha de cada
+            // arma. Sem dizer isso, "Acerto à Distância 0" parece defeito na
+            // ficha — a de personagem já avisava, esta não.
+            const porItem = sysRef.escopoItem === 'coluna';
+            const AVISO_ITEM = ' — 🎒 calculado POR ITEM equipado: o total sai na linha de cada arma (aba Inventário). Aqui é a base, e 0 é o esperado.';
+            const desc = (sysRef.descricao || 'Sem descrição cadastrada.') + (porItem ? AVISO_ITEM : '');
             const tip = dv.fontes.length ? dv.fontes.map(f => `${f.fonte}: ${f.texto}`).join('\n') : 'Sem mecânicas aplicáveis (base 0)';
             const editable = rapido || locked;
             const atual = dv.campoAtual
@@ -1466,7 +1472,7 @@ function renderDvGrid() {
                      onmouseenter="handleNpcTooltipEnter(event, this)" 
                      onmouseleave="hideNpcTooltip()" 
                      onmousemove="moveNpcTooltip(event)">
-                     ${dv.icone ? dv.icone + ' ' : ''}${escapeHtml(dv.nome)}${locked ? ' 🔒' : ''}
+                     ${dv.icone ? dv.icone + ' ' : ''}${escapeHtml(dv.nome)}${porItem ? ' 🎒' : ''}${locked ? ' 🔒' : ''}
                 </div>
                 <div class="npcv2-dv-value">
                     <input type="number" class="form-input npcv2-dv-input" value="${dv.final}" ${editable ? '' : 'readonly'}

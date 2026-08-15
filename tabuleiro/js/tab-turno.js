@@ -248,7 +248,7 @@ async function carregarSkills(chave, p) {
     let mechsById = {};
     let sysDVs = [];
     try {
-        const m = await import('./tab-ficha-win.js?v=10');
+        const m = await import('./tab-ficha-win.js?v=11');
         const sys = await m.registroSistema();
         mechsById = sys.mechsById || {};
         sysDVs = sys.derivedValues || [];
@@ -1157,6 +1157,7 @@ window.tbTurnoConfirmarMira = async () => {
             nome: meta.nome || 'ação', icone, efeito: meta.efeito || '', custoAcao: custo,
             dano: meta.golpe?.dano || '', tipos: meta.golpe?.tipos || [],
             alvoAcerto: meta.golpe?.acerto ?? null,
+            acertoNome: meta.golpe?.acertoNome || '', acertoIcone: meta.golpe?.acertoIcone || '',
             condicao: meta.condicao || null,
             projetil: meta.projetil || null,
         }, atingidos);
