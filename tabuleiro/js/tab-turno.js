@@ -32,7 +32,7 @@ import { melhorDisparo } from '../../shared/alcance-disparo.js';
 import { golpesDe, golpesCacheados, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes, formasDeConjurar, projeteisPara, escolherProjetil } from './tab-golpes.js';
 import { gastarUm } from '../../shared/projeteis.js';
 import { templateAtingeCirculo } from './tab-templates.js';
-import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte } from './tab-hud.js';
+import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte, fonteDoParticipante } from './tab-hud.js';
 import { carregarCondicoesSistema, aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { grausDoAtaque } from './tab-conflito-calc.js';
 import { logChat } from './tab-chat.js';
@@ -68,13 +68,10 @@ function controlaVez(p) {
     if (p.characterId) return T.chars.find(c => c.id === p.characterId)?.ownerUid === T.user?.uid;
     return false;   // NPC/custom são do mestre
 }
-// NPC: o doc INTEIRO (ver tab-combat) — recorte fura o cache dos VDs e o motor
-// de cálculo precisa de raça/classe/peculiaridades para os finais.
-const fonteDoParticipante = (p) => {
-    if (p?.characterId) return T.chars.find(c => c.id === p.characterId) || null;
-    if (p?.npcId) return T.npcs.find(x => x.id === p.npcId) || null;
-    return null;
-};
+// ⚠️ A ficha do participante vem de tab-hud e de lugar nenhum mais. Havia aqui
+// uma cópia local desta função, idêntica na aparência, que SOMBREAVA a
+// importada — e por isso o painel do turno lia a ficha CRUA, sem os bônus
+// temporários da Dádiva. Custo e mira saíam sem o empréstimo dentro.
 
 /** Vitais ATUAIS do participante ({ vit, ener, san }) — para checar custo de skill. */
 function recursosDe(p) {

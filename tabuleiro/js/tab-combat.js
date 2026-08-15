@@ -6,7 +6,7 @@ import { db, doc, setDoc, updateDoc, getDoc } from '../../painel-mestre/js/fireb
 import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, patchVitalAtualNpc, markDirty,
          registrarFlutuante, trazerParaFrente } from './tab-state.js';
 import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
-import { VITAIS, vdsCombateDaFonte, espelhosDoVitalNpc } from './tab-hud.js';
+import { VITAIS, vdsCombateDaFonte, espelhosDoVitalNpc, fonteDoParticipante } from './tab-hud.js';
 import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas, FACCOES, faccaoDoParticipante, acoesNovas, participanteDaVez, efeitoDasCondicoes, alvoDoTickRodada } from '../../shared/combate-cenas.js';
 import { rolarFormula } from './tab-conflito-calc.js';
 import { logChat } from './tab-chat.js';
@@ -119,15 +119,9 @@ function abasDeCena() {
 }
 
 // ===== 🎯 TESTES DA CENA (Graus de Sucesso) =====
-/** Ficha de onde sai o Alvo do participante (char do Tabuleiro ou NPC). */
-function fonteDoParticipante(p) {
-    if (p.characterId) return T.chars.find(c => c.id === p.characterId) || null;   // { derivedTotals, dots }
-    // NPC: o doc INTEIRO (não um recorte) — `valorComponente` lê valoresDer/
-    // atributos/pericias dele, e o motor de VD precisa de raça/classe/pecs.
-    // Recortar também trocava a identidade a cada chamada e furava os caches.
-    if (p.npcId) return T.npcs.find(x => x.id === p.npcId) || null;
-    return null;
-}
+// ⚠️ A ficha do participante vem de tab-hud e de lugar nenhum mais: havia aqui
+// uma segunda cópia desta função, e o Alvo dos testes da cena saía sem os
+// bônus temporários da Dádiva. Um Xamã incorporado testava com a ficha dele.
 /** Alvo resolvido pela ficha, ou null (mestre digita/edita na mão). */
 function alvoSugerido(t, p) {
     const r = alvoDoTeste(t.nome, fonteDoParticipante(p), t.mod || 0);
