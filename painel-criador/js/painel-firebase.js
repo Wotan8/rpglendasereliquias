@@ -4409,7 +4409,8 @@ function _buildPredefMira(data) {
                     <label>Tipo de mira</label>
                     <select data-pd-key="miraTipo">
                         <option value="" ${sel('', m.tipo || '')}>— sem mira (pergunta na hora) —</option>
-                        <option value="alvos" ${sel('alvos', m.tipo)}>🎯 Alvos escolhidos</option>
+                        <option value="alvos" ${sel('alvos', m.tipo)}>🎯 Alvos escolhidos (tokens)</option>
+                        <option value="locais" ${sel('locais', m.tipo)}>📍 Locais no mapa (chão vazio)</option>
                         <option value="geometria" ${sel('geometria', m.tipo)}>📐 Área geométrica</option>
                         <option value="cac" ${sel('cac', m.tipo)}>⚔️ Golpe (arco no token)</option>
                     </select>
@@ -4435,7 +4436,14 @@ function _buildPredefMira(data) {
                 ${_medidaField('Comprimento (m — cone/linha)', 'miraComprimentoM', m.comprimentoM, '')}
                 ${_medidaField('Largura (m — linha/retângulo)', 'miraLarguraM', m.larguraM, '')}
                 <div class="form-group"><label>Ângulo (graus — cone)</label><input type="number" min="10" max="180" data-pd-key="miraAngGraus" value="${m.angGraus ?? ''}" placeholder="60"></div>
-                <div class="form-group"><label>Máx. de alvos</label><input type="number" min="1" data-pd-key="miraMaxAlvos" value="${m.maxAlvos ?? ''}" placeholder="1"></div>
+                <div class="form-group"><label>Máx. de alvos <span class="cm-medida-hint" title="Em 📍 Locais no mapa, é quantos pontos de chão quem conjura pode marcar">?</span></label><input type="number" min="1" data-pd-key="miraMaxAlvos" value="${m.maxAlvos ?? ''}" placeholder="1"></div>
+                <div class="form-group">
+                    <label>🎲 Quantidade pelos Graus</label>
+                    <label class="npcv2-check" style="font-weight:400;font-size:.75rem">
+                        <input type="checkbox" data-pd-key="miraAlvosPorGraus" ${m.alvosPorGraus ? 'checked' : ''}>
+                        Rola a conjuração antes de mirar; cada Grau de Sucesso vale um alvo (mínimo 1 ao passar), até o máximo acima.
+                    </label>
+                </div>
                 <div class="form-group">
                     <label>Afeta</label>
                     <select data-pd-key="miraAfeta">
@@ -4762,6 +4770,7 @@ function _collectSingleModuleData(item) {
             larguraM: medida('miraLarguraM'),
             angGraus: num('miraAngGraus') ?? 60,
             maxAlvos: Math.max(1, parseInt(pdv('miraMaxAlvos'), 10) || 1),
+            alvosPorGraus: !!pd.querySelector('[data-pd-key="miraAlvosPorGraus"]')?.checked,
             afeta: pdv('miraAfeta') || 'todos',
             condicaoNome: (pdv('miraCondicaoNome') || '').trim() || null,
             condicaoRodadas: num('miraCondicaoRodadas') ?? 0,

@@ -69,3 +69,44 @@ assert.ok(soEncosta < COBERTURA_MINIMA_CONJURADOR, 'encostar na borda não põe 
 assert.equal(fracaoCoberta({ x: 5, y: 5 }, 0, disco(5, 5, 1)), 1, 'token sem raio cai no teste do centro');
 
 console.log('✅ tab-mira-calc: borda como eixo, clamp de alcance, borda-a-borda, shapes e cobertura OK');
+
+/* ===== 📍 mira por LOCAIS (a manada chega no chão vazio) ===== */
+import { porqueLocalInvalido, localSob } from './tab-mira-calc.js';
+
+const conj = { x: 0, y: 0 }, rConj = 10, alc = 100;
+const tokens = [{ x: 50, y: 0, r: 12 }, { x: -80, y: 0, r: 20 }];
+
+// ponto livre dentro do alcance passa
+assert.equal(porqueLocalInvalido(conj, rConj, alc, { x: 0, y: 60 }, tokens), '');
+
+// a borda do conjurador conta: 110 px do centro é o limite (10 + 100)
+assert.equal(porqueLocalInvalido(conj, rConj, alc, { x: 110, y: 0 }, []), '',
+    'exatamente no limite ainda vale');
+assert.equal(porqueLocalInvalido(conj, rConj, alc, { x: 111, y: 0 }, []), 'fora do alcance');
+
+// ponto em cima de token é recusado — o local é o chão, não a criatura
+assert.equal(porqueLocalInvalido(conj, rConj, alc, { x: 50, y: 0 }, tokens), 'já tem alguém aí');
+assert.equal(porqueLocalInvalido(conj, rConj, alc, { x: 56, y: 0 }, tokens), 'já tem alguém aí',
+    'dentro do raio do token ainda é "em cima dele"');
+assert.equal(porqueLocalInvalido(conj, rConj, alc, { x: 70, y: 0 }, tokens), '',
+    'passando do raio do token, o chão está livre');
+
+// dois locais não se empilham quando há folga pedida
+assert.equal(porqueLocalInvalido(conj, rConj, alc, { x: 0, y: 60 }, [], 30, [{ x: 0, y: 70 }]),
+    'perto demais de outro local');
+assert.equal(porqueLocalInvalido(conj, rConj, alc, { x: 0, y: 60 }, [], 30, [{ x: 0, y: 95 }]), '',
+    'com a folga respeitada, entra');
+assert.equal(porqueLocalInvalido(conj, rConj, alc, { x: 0, y: 60 }, [], 0, [{ x: 0, y: 60 }]), '',
+    'folga 0 = pode empilhar (o cadastro é que decide)');
+
+// desmarcar: achar o local sob o clique
+const marcados = [{ x: 0, y: 60 }, { x: 30, y: -20 }];
+assert.equal(localSob(marcados, { x: 2, y: 62 }, 12), 0);
+assert.equal(localSob(marcados, { x: 30, y: -20 }, 12), 1);
+assert.equal(localSob(marcados, { x: 200, y: 200 }, 12), -1, 'longe de todos = nenhum');
+assert.equal(localSob([], { x: 0, y: 0 }, 12), -1);
+
+// e a mira de locais não desenha forma seguindo o cursor
+assert.equal(shapeDaMira({ tipo: 'locais', maxAlvos: 3 }, { x: 0, y: 0, r: 10 }, { x: 50, y: 0 }), null);
+
+console.log('✅ mira por locais OK — alcance da borda, chão vazio, folga e desmarcar');

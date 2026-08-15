@@ -60,6 +60,7 @@ for (const d of mods.docs) {
         if (!custos.length) semCusto++;
         const fmt = (v) => ehFormula(v) ? `ƒ${String(v).trim()}=${medida(v)}` : `${v}`;
         const alvo = !mira ? '—'
+            : mira.tipo === 'locais' ? `📍locais×${mira.alvosPorGraus ? `graus(≤${mira.maxAlvos})` : mira.maxAlvos} @${fmt(mira.alcanceM)}m`
             : mira.tipo === 'alvos' ? `alvos×${mira.maxAlvos} @${fmt(mira.alcanceM)}m`
             : medida(mira.raioM) === 0 && !ehFormula(mira.raioM) ? 'só em si'
             : `${mira.forma} ${fmt(mira.raioM ?? mira.comprimentoM)}m (${mira.origem})`;

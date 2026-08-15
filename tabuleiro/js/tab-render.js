@@ -799,7 +799,7 @@ function drawMira() {
     const cor = m.afeta === 'aliados' ? '#22c55e' : m.afeta === 'todos' ? '#eab308' : '#ef4444';
 
     // aro de alcance (quando a mira tem alcance: alvos, golpe e área livre)
-    if (m.alcancePx > 0 && (m.tipo === 'alvos' || m.tipo === 'cac' || m.origem === 'livre')) {
+    if (m.alcancePx > 0 && (m.tipo === 'alvos' || m.tipo === 'locais' || m.tipo === 'cac' || m.origem === 'livre')) {
         ctx.save();
         ctx.beginPath(); ctx.arc(tok.x, tok.y, rTok + m.alcancePx, 0, Math.PI * 2);
         ctx.strokeStyle = hexA(cor, 0.55); ctx.setLineDash([hud(7), hud(6)]); ctx.lineWidth = hud(1.6);
@@ -810,6 +810,25 @@ function drawMira() {
     // shape da área/golpe seguindo o cursor
     const shape = shapeDaMira(m, { x: tok.x, y: tok.y, r: rTok }, m.cursor);
     if (shape) drawTemplate({ ...shape, cor, alpha: m.travada ? 0.4 : 0.25 });
+
+    // 📍 locais escolhidos: um X no chão, numerado na ordem em que foram
+    // marcados — é assim que se sabe onde cada bicho da manada vai cair.
+    (m.locais || []).forEach((q, i) => {
+        const r = hud(9);
+        ctx.save();
+        ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = hexA(cor, 0.18); ctx.fill();
+        ctx.strokeStyle = cor; ctx.lineWidth = hud(2); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(q.x - r * 0.5, q.y - r * 0.5); ctx.lineTo(q.x + r * 0.5, q.y + r * 0.5);
+        ctx.moveTo(q.x + r * 0.5, q.y - r * 0.5); ctx.lineTo(q.x - r * 0.5, q.y + r * 0.5);
+        ctx.stroke();
+        ctx.fillStyle = cor;
+        ctx.font = `700 ${hud(11)}px ui-sans-serif, system-ui`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText(String(i + 1), q.x, q.y - r - hud(2));
+        ctx.restore();
+    });
 
     // anéis nos alvos marcados (mira de alvos)
     for (const id of m.alvos || []) {

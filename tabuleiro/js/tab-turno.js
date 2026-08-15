@@ -25,14 +25,16 @@ import {
 } from '../../shared/combate-cenas.js';
 import { custosDaSkill, rotuloDosCustos } from '../../shared/skill-custo.js?v=1';
 import { resolverMedida, ehFormula } from '../../shared/medida-formula.js?v=1';
-import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR } from './tab-mira-calc.js';
+import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR,
+         porqueLocalInvalido, localSob } from './tab-mira-calc.js';
 import { retornoDoTurno } from '../../shared/retorno-recurso.js';
 import { melhorDisparo } from '../../shared/alcance-disparo.js';
 import { golpesDe, golpesCacheados, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes, formasDeConjurar, projeteisPara, escolherProjetil } from './tab-golpes.js';
 import { gastarUm } from '../../shared/projeteis.js';
 import { templateAtingeCirculo } from './tab-templates.js';
 import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte } from './tab-hud.js';
-import { carregarCondicoesSistema, aplicarCondicaoEmVarios } from './tab-combat.js';
+import { carregarCondicoesSistema, aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
+import { grausDoAtaque } from './tab-conflito-calc.js';
 import { logChat } from './tab-chat.js';
 
 // Abertura do arco do golpe corpo a corpo (graus). Régua de mesa da UI —
@@ -214,6 +216,21 @@ function miraDaReguaV2(pd) {
         // um Acerto que a habilidade nunca teve.
         condicaoPortao: cond?.portao || null,
     };
+
+    // 📍 LOCAIS: quem conjura aponta pedaços de CHÃO vazio dentro do alcance,
+    // na quantidade que `alvosMax` permitir. É a mira da manada que chega, da
+    // armadilha que se planta, da invocação que aparece — o alvo é o lugar, e
+    // não uma criatura que já esteja lá.
+    // Vem ANTES do "só em si": é intenção declarada e não pode ser confundida
+    // com "ponto", que ali significa "não sai de mim".
+    if (/local|locais|chao|chão/i.test(String(pd.formaArea || ''))) {
+        return {
+            ...base, tipo: 'locais',
+            alcanceM: temMedida(pd.alcance) ? pd.alcance : (pd.tamanhoArea ?? 0),
+            maxAlvos: Number(pd.alvosMax) || 1,
+            alvosPorGraus: !!pd.alvosPorGraus,
+        };
+    }
 
     // 🧍 Habilidade que só afeta quem usa ("proprio"/"nenhuma"/"unico" com
     // alcance 0): postura, buff pessoal, loção que se bebe. Vira um círculo de
@@ -477,10 +494,14 @@ function render() {
         const m = T.mira;
         const status = m.tipo === 'alvos'
             ? `${m.alvos.length}/${m.maxAlvos || 1} alvo(s)`
-            : (m.travada ? 'posição marcada' : 'clique no mapa para mirar');
-        el.innerHTML = `<div class="tb-turno-head">🎯 ${esc(m.meta?.nome || 'Mira')} <span class="tb-turno-hint">${status}</span></div>
+            : m.tipo === 'locais'
+                ? `${m.locais.length}/${m.maxAlvos || 1} local(is)`
+                : (m.travada ? 'posição marcada' : 'clique no mapa para mirar');
+        const pronto = m.tipo === 'alvos' ? m.alvos.length
+            : m.tipo === 'locais' ? m.locais.length : m.travada;
+        el.innerHTML = `<div class="tb-turno-head">${m.tipo === 'locais' ? '📍' : '🎯'} ${esc(m.meta?.nome || 'Mira')} <span class="tb-turno-hint">${status}</span></div>
             <div class="tb-turno-acoes">
-                <button class="tb-btn tb-btn-success" onclick="tbTurnoConfirmarMira()" ${m.tipo === 'alvos' ? (m.alvos.length ? '' : 'disabled') : (m.travada ? '' : 'disabled')}>✅ Confirmar</button>
+                <button class="tb-btn tb-btn-success" onclick="tbTurnoConfirmarMira()" ${pronto ? '' : 'disabled'}>✅ Confirmar</button>
                 <button class="tb-btn" onclick="_miraCancelar()">✖ Cancelar</button>
             </div>`;
         return;
@@ -765,6 +786,15 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
             }
         }
         const cfg = miraDoCadastro(s.mira, s, custo, p);
+        // 🎲 Quantidade que sai do DADO: habilidade com `alvosPorGraus` rola a
+        // conjuração ANTES de mirar, e os Graus dizem quantos alvos/locais
+        // cabem. Falhou, não há o que mirar — a ação já foi gasta.
+        if (s.mira.alvosPorGraus) {
+            const n = await alvosPelosGraus(p, s, cfg, custo);
+            if (n === false) return;       // cancelou o picker: nada gasto
+            if (n === 0) return;           // falhou: já gastou e logou
+            cfg.maxAlvos = n;
+        }
         // 🗡️ Habilidade que MACHUCA sai de uma arma, de um foco ou do corpo:
         // é de lá que vêm o Acerto (o Alvo da rolagem), o dado de dano e o tipo
         // de golpe. Com mais de um equipado, quem age escolhe.
@@ -815,6 +845,62 @@ async function municaoParaOGolpe(p, golpe) {
  * pode pegar inimigo) — buff em aliado não tem Acerto nem dano de arma.
  * @returns linha do golpe · null (segue sem arma) · false (cancelou)
  */
+/**
+ * 🎲 Quantos alvos/locais a habilidade rende NESTE uso.
+ *
+ * Habilidade cadastrada com "quantidade pelos Graus" (Convocar Manada) rola a
+ * conjuração antes de mirar: o Alvo sai da forma de conjurar escolhida, e cada
+ * Grau de Sucesso vale um alvo a mais. Passar com Grau 0 já rende 1 — passou,
+ * veio pelo menos um. Falhar não rende nada, e a ação foi gasta assim mesmo.
+ *
+ * @returns número de alvos · 0 se falhou · false se o jogador cancelou
+ */
+async function alvosPelosGraus(p, s, cfg, custo) {
+    const linhas = await golpesDe(p);
+    let acerto = null, comQue = '';
+    if (s.veiculos?.length) {
+        const formas = await formasDeConjurar(p, s.veiculos, linhas);
+        const livres = formas.filter(f => !f.indisponivel);
+        if (!livres.length) {
+            await escolherGolpe(`🪄 ${esc(p?.name || 'O personagem')} não tem como conjurar “${esc(s.nome)}” agora`,
+                formas, 'Nenhuma das formas desta magia está disponível — veja o motivo em cada uma.');
+            return false;
+        }
+        const escolhido = livres.length === 1 ? livres[0]
+            : await escolherGolpe(`🪄 Como ${esc(p?.name || 'o personagem')} conjura “${esc(s.nome)}”?`,
+                formas, 'O Acerto da rolagem decide quantos alvos a habilidade rende.');
+        if (!escolhido) return false;
+        acerto = escolhido.acerto; comQue = escolhido.nome || '';
+    }
+    if (acerto == null) {
+        toast('⚠️ Esta habilidade rende alvos pelos Graus, mas a forma de conjurar não tem Acerto na ficha', 'warning');
+        return false;
+    }
+
+    const dado = 1 + Math.floor(Math.random() * 10);
+    const graus = grausDoAtaque(acerto, dado);
+    const passou = dado !== 10 && graus >= 0;
+    const teto = Number(cfg.maxAlvos) || 99;
+    const quantos = passou ? Math.max(1, Math.min(graus || 1, teto)) : 0;
+
+    logChat(`🎲 ${p?.name || '?'} conjura ${s.nome}${comQue ? ` (${comQue})` : ''}: `
+        + `1d10 = ${dado} vs Alvo ${acerto} → ${passou ? `${graus} Grau(s)` : 'falhou'}`
+        + (passou ? ` · ${quantos} alvo(s)` : ''));
+
+    if (!passou) {
+        await gastar(custo);
+        await pagarCustos(p);
+        // 🎵 Quem devolve recurso ao fim do turno perde o retorno ao errar
+        // (Bardo: "e perde tudo se errar") — o mesmo caminho do conflito.
+        try { await marcarFalhaDeConjuracao(p.id); } catch (e) { /* sem retorno cadastrado */ }
+        toast(`🎲 ${s.nome}: falhou (1d10 = ${dado} vs ${acerto})`, 'warning');
+        render();
+        return 0;
+    }
+    toast(`🎲 ${dado} vs ${acerto} → ${graus} Grau(s): até ${quantos} alvo(s)`);
+    return quantos;
+}
+
 async function escolherGolpeDaAcao(p, s, cfg) {
     if (cfg.afeta === 'aliados') return null;
     // 🎯 Habilidade SEM PORTÃO não é ataque: ela acontece. Perguntar com o que
@@ -1091,13 +1177,15 @@ function armarMira(cfg, tok) {
         comprimentoPx: pxDe(cfg.comprimentoM, tok),
         larguraPx: pxDe(cfg.larguraM, tok),
         cursor: { x: tok.x + gs, y: tok.y },
-        alvos: [], travada: false,
+        alvos: [], locais: [], travada: false,
     };
     render();
     markDirty();
     toast(cfg.tipo === 'alvos'
         ? `🎯 Clique nos alvos (até ${cfg.maxAlvos || 1}) e confirme`
-        : '🎯 Clique no mapa para posicionar e confirme');
+        : cfg.tipo === 'locais'
+            ? `📍 Clique em até ${cfg.maxAlvos || 1} ponto(s) VAZIO(s) do mapa e confirme`
+            : '🎯 Clique no mapa para posicionar e confirme');
 }
 
 function cancelarMira() {
@@ -1130,6 +1218,25 @@ function miraClique(w) {
     const m = T.mira; if (!m) return;
     const tok = T.objects.get(m.tokenId); if (!tok) { cancelarMira(); return; }
     const gs = gridSize();
+    if (m.tipo === 'locais') {
+        // 📍 Clique marca um pedaço de CHÃO; clique em cima de um já marcado
+        // desmarca. Nada de token entra aqui — o alvo é o lugar.
+        const raioMarca = gs * 0.4;
+        const ja = localSob(m.locais, w, raioMarca);
+        if (ja >= 0) { m.locais.splice(ja, 1); render(); markDirty(); return; }
+        if (m.locais.length >= (m.maxAlvos || 1)) {
+            toast(`⚠️ Máximo de ${m.maxAlvos || 1} local(is)`, 'warning'); return;
+        }
+        const rTok = ((tok.tamanhoCelulas || 1) * gs) / 2;
+        const tokens = [...T.objects.values()]
+            .filter(o => o.tipo === 'token')
+            .map(o => ({ x: o.x, y: o.y, r: ((o.tamanhoCelulas || 1) * gs) / 2 }));
+        const motivo = porqueLocalInvalido({ x: tok.x, y: tok.y }, rTok, m.alcancePx, w, tokens, gs * 0.5, m.locais);
+        if (motivo) { toast(`⚠️ Não dá para escolher aqui: ${motivo}`, 'warning'); return; }
+        m.locais.push({ x: w.x, y: w.y });
+        render(); markDirty();
+        return;
+    }
     if (m.tipo === 'alvos') {
         // toggle de token sob o clique
         let alvo = null;
@@ -1160,7 +1267,8 @@ function miraClique(w) {
 /** Movimento do mouse com mira armada e não travada: o preview segue o cursor. */
 function miraMove(w) {
     const m = T.mira;
-    if (!m || m.travada || m.tipo === 'alvos') return;
+    // 'alvos' e 'locais' não têm forma seguindo o cursor: nada a repintar
+    if (!m || m.travada || m.tipo === 'alvos' || m.tipo === 'locais') return;
     m.cursor = w;
     markDirty();
 }
@@ -1173,6 +1281,25 @@ window.tbTurnoConfirmarMira = async () => {
     if (!p || !tok) { cancelarMira(); return; }
     const gs = gridSize();
     const rTok = ((tok.tamanhoCelulas || 1) * gs) / 2;
+
+    // 📍 Mira por LOCAIS: não atinge criatura nenhuma — o resultado é o chão
+    // escolhido. Gasta a ação, cobra o recurso e deixa os pontos no chat, em
+    // célula, para o mestre pôr o que a habilidade traz exatamente ali.
+    if (m.tipo === 'locais') {
+        const pts = m.locais || [];
+        const meta = m.meta || {};
+        const custo = meta.custoAcao || 'padrao';
+        T.mira = null; markDirty();
+        await gastar(custo);
+        await pagarCustos(p);
+        const emCelula = pts.map(q => `(${Math.round(q.x / gs)}, ${Math.round(q.y / gs)})`).join(' · ');
+        logChat(`📍 ${p.name || '?'} usou ${meta.nome || 'ação'} em ${pts.length} local(is): ${emCelula}`
+            + (meta.efeito ? ` · ${meta.efeito}` : '')
+            + (meta.custoSkill ? ` · custo: ${meta.custoSkill}` : ''));
+        toast(`📍 ${pts.length} local(is) marcado(s) — ponha no mapa o que a habilidade traz`);
+        render();
+        return;
+    }
 
     // alvos atingidos
     let atingidos = [];

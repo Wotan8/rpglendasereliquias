@@ -137,3 +137,43 @@ assert.equal(fixo.raioM, 3);
 assert.equal(fixo.larguraM, 1, 'terço de 3 tem piso 1');
 
 console.log('✅ mira com fórmula OK — medida crua na régua, número na hora de mirar');
+
+/* ===== 📍 nova forma de mira: LOCAIS no mapa ===== */
+const manada = mira({
+    nome: 'Convocar Manada', formaArea: 'locais', alcance: 12, alvosMax: 3, faccao: 'aliado',
+});
+assert.equal(manada.tipo, 'locais', 'formaArea "locais" abre a mira de chão');
+assert.equal(manada.alcanceM, 12);
+assert.equal(manada.maxAlvos, 3, 'alvosMax vira quantos pontos podem ser marcados');
+assert.equal(manada.afeta, 'aliados');
+
+// "locais" ganha de "ponto": intenção declarada não vira "só em si"
+const semAlcance = mira({ formaArea: 'locais', alcance: 0, alvosMax: 2 });
+assert.equal(semAlcance.tipo, 'locais', 'locais sem alcance ainda é locais, não "só em si"');
+
+// o resto das formas não foi contaminado
+assert.equal(mira({ formaArea: 'ponto', alcance: 0, alvosMax: 1 }).raioM, 0, '"ponto" continua só em si');
+assert.equal(mira({ formaArea: 'onda', tamanhoArea: 3 }).tipo, 'geometria');
+
+// alcance por fórmula também vale na mira de locais
+const porFormula = mira({ formaArea: 'locais', alcance: '(Liderança + PRE)', alvosMax: 5 });
+assert.equal(porFormula.tipo, 'locais');
+assert.equal(resolverMedida(porFormula.alcanceM, valorDe), 7);
+
+console.log('✅ mira de LOCAIS OK — chão vazio, quantidade por alvosMax, alcance fixo ou por fórmula');
+
+/* ===== 🎲 quantidade pelos Graus (Convocar Manada) ===== */
+const porGraus = mira({
+    nome: 'Convocar Manada', formaArea: 'locais', alcance: 'Percepção * 2',
+    alvosMax: 5, alvosPorGraus: true, faccao: 'aliado',
+});
+assert.equal(porGraus.tipo, 'locais');
+assert.equal(porGraus.alvosPorGraus, true, 'a flag viaja para o runtime rolar antes de mirar');
+assert.equal(porGraus.maxAlvos, 5, 'alvosMax vira o TETO — os Graus dizem quantos de fato');
+assert.equal(resolverMedida(porGraus.alcanceM, (n) => (n === 'Percepção' ? 6 : null)), 12,
+    'Percepção 6 × 2 = 12 m de alcance');
+
+// sem a flag, a quantidade é fixa
+assert.equal(mira({ formaArea: 'locais', alcance: 10, alvosMax: 3 }).alvosPorGraus, false);
+
+console.log('✅ quantidade pelos Graus OK — teto no cadastro, número no dado');

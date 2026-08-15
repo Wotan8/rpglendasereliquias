@@ -78,8 +78,49 @@ export const COBERTURA_MINIMA_CONJURADOR = 0.5;
  * @param cursor{ x, y }     — último clique/movimento (direção ou posição)
  * @returns { forma, origem, destino, raio, ang } ou null (mira de alvos não tem shape)
  */
+/**
+ * 📍 Um LOCAL escolhido é válido?
+ *
+ * A terceira forma de mirar (além de token-alvo e forma geométrica): quem
+ * conjura aponta pontos VAZIOS do mapa dentro do alcance — é assim que a
+ * manada aparece, que a armadilha é plantada, que a invocação chega.
+ * Duas regras, e as duas medidas da BORDA do token de quem conjura:
+ *   · o ponto tem de estar ao alcance;
+ *   · não pode ter token em cima (o ponto é o chão, não uma criatura).
+ *
+ * @param centro   { x, y } do token de quem conjura
+ * @param rTokenPx raio do token dele
+ * @param alcancePx alcance em px
+ * @param ponto    { x, y } clicado
+ * @param tokens   iterável de { x, y, r } dos tokens do mapa
+ * @param folgaPx  distância mínima entre dois locais escolhidos (0 = sem folga)
+ * @param jaEscolhidos pontos já marcados, para não empilhar dois no mesmo lugar
+ * @returns '' quando vale, ou o motivo da recusa
+ */
+export function porqueLocalInvalido(centro, rTokenPx, alcancePx, ponto, tokens, folgaPx = 0, jaEscolhidos = []) {
+    const d = Math.hypot(ponto.x - centro.x, ponto.y - centro.y) - rTokenPx;
+    if (d > alcancePx + 1e-6) return 'fora do alcance';
+    for (const t of tokens || []) {
+        if (Math.hypot(t.x - ponto.x, t.y - ponto.y) <= (t.r || 0)) return 'já tem alguém aí';
+    }
+    for (const q of jaEscolhidos) {
+        if (Math.hypot(q.x - ponto.x, q.y - ponto.y) < folgaPx) return 'perto demais de outro local';
+    }
+    return '';
+}
+
+/** Índice do local marcado sob o ponto (para desmarcar no segundo clique). */
+export function localSob(pontos, ponto, raioPx) {
+    for (let i = 0; i < (pontos || []).length; i++) {
+        if (Math.hypot(pontos[i].x - ponto.x, pontos[i].y - ponto.y) <= raioPx) return i;
+    }
+    return -1;
+}
+
 export function shapeDaMira(mira, token, cursor) {
-    if (!mira || mira.tipo === 'alvos') return null;
+    // 'alvos' escolhe criatura e 'locais' escolhe chão: nenhum dos dois desenha
+    // forma seguindo o cursor — o que aparece são os pontos já marcados.
+    if (!mira || mira.tipo === 'alvos' || mira.tipo === 'locais') return null;
     const c = { x: token.x, y: token.y };
     const dir = direcaoAte(c, cursor);
 
