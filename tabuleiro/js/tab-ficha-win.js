@@ -20,7 +20,7 @@ import {
     T, esc, toast, markDirty, vNum, dvMesa, normChave, patchVitalAtualNpc, valorComponente, dividirPilha
 } from './tab-state.js';
 import { refCombate } from './tab-main.js';
-import { VITAIS, dvsVinculadosChar, dvAplicaChar } from './tab-hud.js';
+import { VITAIS, dvsVinculadosChar, dvAplicaChar, espelhosDoVitalNpc } from './tab-hud.js';
 import { addObj } from './tab-objects.js';
 import { screenToWorld } from './tab-render.js';
 import { pontoVisivelAgora } from './tab-fog.js';
@@ -337,7 +337,7 @@ function setVital(win, sig, val) {
         const n = dadosNpc(win.id); if (!n) return;
         n.valoresDer = n.valoresDer || {};
         n.valoresDer.atual = n.valoresDer.atual || {};
-        const patch = patchVitalAtualNpc(n.valoresDer.atual, sig, v);
+        const patch = patchVitalAtualNpc(n.valoresDer.atual, sig, v, espelhosDoVitalNpc(sig));
         // otimista: o snapshot da coleção confirma depois
         for (const campo of Object.keys(patch)) n.valoresDer.atual[campo.split('.').pop()] = v;
         fila.enviar(`npcs/${win.id}#${sig}`, patch, THROTTLE);

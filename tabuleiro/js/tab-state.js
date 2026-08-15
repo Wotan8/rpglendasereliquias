@@ -636,26 +636,86 @@ const NPC_VITAL_LONGO = { vit: 'vitalidade', ener: 'energia', san: 'sanidade' };
 
 /**
  * Patch (updateDoc) que grava um vital ATUAL do NPC na sigla legada E nas
- * chaves do sistema que a espelham dentro de `valoresDer.atual` — por nome
- * ("VITALIDADE" começa com "vit") ou por valor igual ao da sigla (par formado
- * pelo editor). Sem o espelho, a Ficha de NPC abre com o número velho.
+ * chaves do sistema que a espelham dentro de `valoresDer.atual`. Sem o espelho,
+ * a Ficha de NPC abre com o número velho.
+ *
+ * Espelha por NOME ("VITALIDADE" começa com "vit") e pelos `espelhos` que o
+ * CADASTRO declara (VD com `espelhaVD` apontando para o vital).
+ *
+ * ⚠️ NÃO espelha por valor coincidente. Já espelhou, e foi um desastre
+ * silencioso: uma barda com Energia 3 e Harmonia 3 tinha os dois grudados —
+ * mexer num mexia no outro, porque "valem o mesmo" é indistinguível de "são o
+ * mesmo". Quem diz que dois recursos são o mesmo é o cadastro, não o acaso.
+ *
  * @param atualObj  valoresDer.atual como está no doc
  * @param stat      'VIT' | 'ENER' | 'SAN'
  * @param valor     novo valor atual
+ * @param espelhos  keys de VD que o cadastro declara como espelho deste vital
  */
-export function patchVitalAtualNpc(atualObj, stat, valor) {
+export function patchVitalAtualNpc(atualObj, stat, valor, espelhos = []) {
     const patch = { [`valoresDer.atual.${stat}`]: valor };
     const sigNorm = stat.toLowerCase();
-    for (const [k, v] of Object.entries(atualObj || {})) {
+    const declarados = new Set(espelhos || []);
+    for (const k of Object.keys(atualObj || {})) {
         if (NPC_ATUAL_LEGADO.has(k)) continue;
         const nomeNorm = k.toLowerCase().replace(/[^a-z]/g, '');
-        if (nomeNorm.startsWith(sigNorm) || nomeNorm.startsWith(NPC_VITAL_LONGO[sigNorm] || sigNorm)) {
-            patch[`valoresDer.atual.${k}`] = valor;
-        } else if (v === atualObj[stat]) {
+        if (nomeNorm.startsWith(sigNorm) || nomeNorm.startsWith(NPC_VITAL_LONGO[sigNorm] || sigNorm)
+            || declarados.has(k)) {
             patch[`valoresDer.atual.${k}`] = valor;
         }
     }
     return patch;
+}
+
+// ===== 🪟 EMPILHAMENTO DAS JANELAS FLUTUANTES =====
+// Combate, Sessão, Chat, Painel do Turno e Conflito flutuam sobre o mapa e se
+// cruzam. Com z-index fixo no CSS, a de cima era sempre a mesma — abrir o
+// Combate durante um turno deixava metade dele escondida atrás do painel.
+// Aqui a de cima é a ÚLTIMA aberta ou tocada, como em qualquer janela.
+//
+// Faixa 44–59: acima das barras e sub-barras, abaixo das janelas de ficha
+// (que têm a própria pilha, 60–99) e dos modais (100).
+const Z_FLUTUANTE = 44;
+const flutuantes = [];   // do fundo para a frente
+
+function reempilhar() {
+    flutuantes.forEach((e, i) => { e.style.zIndex = String(Z_FLUTUANTE + i); });
+}
+
+/** Põe a janela na frente das outras flutuantes. */
+export function trazerParaFrente(el) {
+    const i = flutuantes.indexOf(el);
+    if (i < 0 || i === flutuantes.length - 1) return;   // desconhecida ou já na frente
+    flutuantes.splice(i, 1);
+    flutuantes.push(el);
+    reempilhar();
+}
+
+/**
+ * Registra uma janela flutuante. A ordem de registro é a pilha inicial (a
+ * última registrada nasce na frente); daí em diante manda o uso.
+ */
+export function registrarFlutuante(el) {
+    if (!el || flutuantes.includes(el)) return;
+    flutuantes.push(el);
+    // captura: o toque conta mesmo quando o botão de dentro para a propagação
+    el.addEventListener('pointerdown', () => trazerParaFrente(el), true);
+    reempilhar();
+}
+
+/** Nome do Status Vital por trás da sigla legada — é o que o `espelhaVD` cita. */
+const VITAL_NOME = { VIT: 'Vitalidade', ENER: 'Energia', SAN: 'Sanidade' };
+
+/**
+ * Keys dos VDs que o CADASTRO declara como espelho de um vital (`espelhaVD`).
+ * Pura: recebe a lista de Valores Derivados do registro.
+ */
+export function espelhosDoVital(stat, derivedValues) {
+    const alvo = normChave(VITAL_NOME[stat] || stat);
+    return (derivedValues || [])
+        .filter(d => d.espelhaVD && normChave(d.espelhaVD) === alvo)
+        .map(d => d.key)
+        .filter(Boolean);
 }
 
 /**

@@ -24,7 +24,7 @@
 // Writes: 1 por etapa, no doc de combate que já existe. Nenhuma coleção nova.
 // =============================================
 import { setDoc, db as _db, doc as _doc, updateDoc as _upd, deleteDoc as _del } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, uid, normChave, valorComponente, gridSize, pxParaUnidades } from './tab-state.js';
+import { T, esc, toast, uid, normChave, valorComponente, gridSize, pxParaUnidades, registrarFlutuante, trazerParaFrente } from './tab-state.js';
 import { golpesDe, golpesCacheados, escolherGolpe, golpesCorpoACorpo, alcanceDoGolpe } from './tab-golpes.js';
 import { refCombate } from './tab-main.js';
 import { cenaAtiva, comCenaAtivaPatch } from '../../shared/combate-cenas.js';
@@ -49,6 +49,7 @@ export function initConflito() {
     el.id = 'tbConflito';
     el.className = 'tb-conflito';
     document.body.appendChild(el);
+    registrarFlutuante(el);
     window._renderConflito = render;
     render();
 }
@@ -512,7 +513,8 @@ function render() {
     const c = conflito();
     if (!c) { el.classList.remove('open'); el.innerHTML = ''; return; }
     if (!_sys) carregarSys().catch(() => {});
-    el.classList.add('open');
+    // um conflito abrindo é a coisa mais urgente da tela: vai para a frente
+    if (!el.classList.contains('open')) { el.classList.add('open'); trazerParaFrente(el); }
 
     const r = c.rolagem;
     const souAtacante = controla(c.atacante.pid);

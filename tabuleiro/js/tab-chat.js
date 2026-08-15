@@ -11,7 +11,7 @@
 //          escrito pelo cliente de quem fez a ação via logChat()/logMovimento()
 // =============================================
 import { db, collection, addDoc, onSnapshot, query, orderBy, limit } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, pxParaUnidades, fmtDist } from './tab-state.js';
+import { T, esc, pxParaUnidades, fmtDist, registrarFlutuante, trazerParaFrente } from './tab-state.js';
 
 const MAX_MSGS = 80;
 const CHAVE_IDENT = 'tb_chat_ident';
@@ -136,6 +136,7 @@ function montarJanela() {
             <button class="tb-mini-btn" id="tbChatEnviar" title="Enviar (Enter)">➤</button>
         </div>`;
     document.body.appendChild(el);
+    registrarFlutuante(el);
 
     // posição/tamanho/fundo salvos por aparelho
     const c = cfgJanela();
@@ -183,6 +184,7 @@ function toggleChat() {
     aberto = !aberto;
     el.classList.toggle('open', aberto);
     if (aberto) {
+        trazerParaFrente(el);   // abriu = vai para cima das outras
         naoLidas = 0; atualizarBadge();
         preencherIdentidades();
         render();

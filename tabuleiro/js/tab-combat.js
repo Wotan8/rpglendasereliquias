@@ -3,9 +3,10 @@
 // Sincroniza com Painel do Mestre > Mesas > Combate
 // =============================================
 import { db, doc, setDoc, updateDoc, getDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, patchVitalAtualNpc, markDirty } from './tab-state.js';
+import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, patchVitalAtualNpc, markDirty,
+         registrarFlutuante, trazerParaFrente } from './tab-state.js';
 import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
-import { VITAIS, vdsCombateDaFonte } from './tab-hud.js';
+import { VITAIS, vdsCombateDaFonte, espelhosDoVitalNpc } from './tab-hud.js';
 import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas, FACCOES, faccaoDoParticipante, acoesNovas, participanteDaVez, efeitoDasCondicoes, alvoDoTickRodada } from '../../shared/combate-cenas.js';
 import { rolarFormula } from './tab-conflito-calc.js';
 import { logChat } from './tab-chat.js';
@@ -28,6 +29,7 @@ export function initCombat() {
     // repara que está ignorando. Falha de rede degrada para "nenhum efeito".
     carregarCondicoesSistema().then(() => markDirty()).catch(() => {});
     const win = document.getElementById('tbCombatWin');
+    registrarFlutuante(win);
     // Arrastar a janela
     const head = win.querySelector('.tb-win-head');
     let drag = null;
@@ -47,7 +49,9 @@ export function initCombat() {
 
 window.tbToggleCombate = function() {
     janelaAberta = !janelaAberta;
-    document.getElementById('tbCombatWin').classList.toggle('open', janelaAberta);
+    const win = document.getElementById('tbCombatWin');
+    win.classList.toggle('open', janelaAberta);
+    if (janelaAberta) trazerParaFrente(win);   // abriu = vai para cima das outras
     render();
 };
 
@@ -568,7 +572,7 @@ window.tbCombStat = async function(pid, stat, amt) {
             const npcSnap = await getDoc(doc(db, 'npcs', p.npcId));
             if (npcSnap.exists()) {
                 await updateDoc(doc(db, 'npcs', p.npcId),
-                    patchVitalAtualNpc(npcSnap.data().valoresDer?.atual, stat, p[cur]));
+                    patchVitalAtualNpc(npcSnap.data().valoresDer?.atual, stat, p[cur], espelhosDoVitalNpc(stat)));
             }
         } catch (e) { console.warn('sync npc stat', e); }
     }

@@ -7,7 +7,7 @@
 //   (mestre) e espelham {fatias,cheias} no objeto para o público ver anônimo.
 // =============================================
 import { db, collection, doc, onSnapshot, setDoc, updateDoc, query, where } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, markDirty } from './tab-state.js';
+import { T, esc, toast, markDirty, registrarFlutuante, trazerParaFrente } from './tab-state.js';
 import { refCombate, refLegenda, trocarCanvas } from './tab-main.js';
 import { transicaoDeCena } from './tab-cena.js';
 import { updObj } from './tab-objects.js';
@@ -43,7 +43,10 @@ export function initSessao() {
 
     montarJanela();
     const btn = document.getElementById('btnSessao');
-    if (btn) btn.onclick = () => document.getElementById('tbSessaoWin').classList.toggle('open');
+    if (btn) btn.onclick = () => {
+        const win = document.getElementById('tbSessaoWin');
+        if (win.classList.toggle('open')) trazerParaFrente(win);
+    };
 }
 
 // ---------- ESPELHO DOS RELÓGIOS VINCULADOS ----------
@@ -70,6 +73,7 @@ function montarJanela() {
         <div class="tb-win-head">📋 Sessão <button class="tb-mini-btn" onclick="document.getElementById('tbSessaoWin').classList.remove('open')">✕</button></div>
         <div class="tb-win-body" id="tbSessaoBody"></div>`;
     document.body.appendChild(win);
+    registrarFlutuante(win);
     // Arrastar (mesmo padrão da janela de combate)
     const head = win.querySelector('.tb-win-head');
     let drag = null;

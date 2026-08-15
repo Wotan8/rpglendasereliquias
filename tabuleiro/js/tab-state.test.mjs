@@ -12,7 +12,7 @@ import {
     rotParaCanvas, anguloDoMovimento, deveAtualizarPasso, FOG_PASSO_CELULA, FOG_INTERVALO_MS,
     DRAG_WRITE_MS, DRAG_PASSO_CELULA, LERP_TOKEN_MS, LERP_MIN_MS, LERP_MAX_MS, duracaoLerp,
     ehEcoAtrasado, mapaSobPonto, T as TT,
-    vNum, dvMesa, patchVitalAtualNpc, dividirPilha,
+    vNum, dvMesa, patchVitalAtualNpc, espelhosDoVital, dividirPilha,
     alcanceDeVisaoDoToken, tokenInvisivel, efeitoCondDoToken,
 } from './tab-state.js';
 import { trajetoColide } from './tab-grid.js';
@@ -743,13 +743,37 @@ assert.equal(dvMesa(-1.2), -2, 'negativo é piso puro');
         'valoresDer.atual.VITALIDADE': 4,
     }, 'sigla + chave do sistema; FOLEGO (3 ≠ 5) fica quieto');
 }
-// espelho por VALOR: chave do sistema pareada por valer o mesmo que a sigla
+// espelho DECLARADO no cadastro (VD com espelhaVD apontando para o vital)
 {
-    const p = patchVitalAtualNpc({ SAN: 7, PONTOS_DE_ALMA: 7 }, 'SAN', 6.5);
+    const p = patchVitalAtualNpc({ SAN: 7, PONTOS_DE_ALMA: 7 }, 'SAN', 6.5, ['PONTOS_DE_ALMA']);
     assert.deepEqual(p, {
         'valoresDer.atual.SAN': 6.5,
         'valoresDer.atual.PONTOS_DE_ALMA': 6.5,
-    }, 'par formado pelo valor igual acompanha');
+    }, 'o espelho declarado acompanha');
+}
+// 🔒 valor coincidente NÃO é espelho: a barda com Energia 3 e Harmonia 3 tinha
+// os dois recursos grudados — mexer num mexia no outro.
+{
+    const p = patchVitalAtualNpc({ VIT: 7, ENER: 3, SAN: 18, HARMONIA: 3 }, 'ENER', 4);
+    assert.deepEqual(p, { 'valoresDer.atual.ENER': 4 },
+        '🔒 Harmonia valia o mesmo que Energia e ficou onde estava');
+}
+{
+    const p = patchVitalAtualNpc({ SAN: 7, PONTOS_DE_ALMA: 7 }, 'SAN', 6.5);
+    assert.deepEqual(p, { 'valoresDer.atual.SAN': 6.5 },
+        'sem o cadastro declarar, valor igual não arrasta ninguém');
+}
+// espelhosDoVital lê a declaração do registro
+{
+    const reg = [
+        { key: 'PONTOS_DE_ALMA', nome: 'Pontos de Alma', espelhaVD: 'Sanidade' },
+        { key: 'HARMONIA', nome: 'Harmonia', espelhaVD: '' },
+        { key: 'FOLEGO', nome: 'Fôlego', espelhaVD: 'Energia' },
+    ];
+    assert.deepEqual(espelhosDoVital('SAN', reg), ['PONTOS_DE_ALMA']);
+    assert.deepEqual(espelhosDoVital('ENER', reg), ['FOLEGO'], 'casa pelo nome do vital, sem acento');
+    assert.deepEqual(espelhosDoVital('VIT', reg), [], 'ninguém espelha Vitalidade neste registro');
+    assert.deepEqual(espelhosDoVital('ENER', null), [], 'registro ausente não explode');
 }
 // outra sigla legada nunca é arrastada junto
 {

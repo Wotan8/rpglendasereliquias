@@ -13,7 +13,7 @@
 // Alcances contam a partir da BORDA do token (tab-mira-calc).
 // =============================================
 import { setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, markDirty, gridSize, upcEm, unidadeEm, valorComponente, selecionar, deslocamentosDoToken, alcanceDeVisaoDoToken, efeitoCondDoToken } from './tab-state.js';
+import { T, esc, toast, markDirty, gridSize, upcEm, unidadeEm, valorComponente, selecionar, deslocamentosDoToken, alcanceDeVisaoDoToken, registrarFlutuante, trazerParaFrente, efeitoCondDoToken } from './tab-state.js';
 import { refCombate } from './tab-main.js';
 import { derivedDoToken } from './tab-render.js';
 import { abrirConflito } from './tab-conflito.js';
@@ -47,6 +47,7 @@ export function initTurno() {
     el.id = 'tbTurno';
     el.className = 'tb-turno';
     document.body.appendChild(el);
+    registrarFlutuante(el);
     window._renderTurno = render;
     window._miraClique = miraClique;
     window._miraMove = miraMove;
@@ -377,6 +378,13 @@ function avisoCondicoes(ef) {
     return `<div class="tb-turno-cond">${itens.join(' · ')}</div>`;
 }
 
+/** Aparecer conta como abrir: o painel da vez sobe para cima das outras janelas. */
+function abrirPainel() {
+    if (el.classList.contains('open')) return;
+    el.classList.add('open');
+    trazerParaFrente(el);
+}
+
 // ---------- render ----------
 // O que está em `.tb-so-largo` some no celular: o painel vira uma faixa de uma
 // linha só no rodapé, e "Ação de Movimento" não cabe — "👣 Movimento" cabe e
@@ -403,7 +411,7 @@ function render() {
         const guardados = (c?.iniciado && !c.retomar && !(T.isMaster && T.mode === 'public'))
             ? (c.participantes || []).filter(x => guardadoValido(c, x) && controlaVez(x)) : [];
         if (guardados.length) {
-            el.classList.add('open');
+            abrirPainel();
             el.innerHTML = `<div class="tb-turno-head">🛡️ Turno guardado <span class="tb-turno-hint">vale até o fim desta rodada</span></div>
                 <div class="tb-turno-acoes">${guardados.map(g =>
                     `<button class="tb-btn tb-turno-btn tb-btn-primary" onclick="tbTurnoAgirAgora('${g.id}')">⚡ ${esc(g.name || '?')}: agir agora</button>`).join('')}
@@ -422,7 +430,7 @@ function render() {
     const temCompleta = skills.some(s => s.acao === 'completa');
     const semAcoes = !acoes.padrao && !acoes.movimento;
 
-    el.classList.add('open');
+    abrirPainel();
 
     // 🎯 modo mira: o painel vira a barra de confirmação
     if (T.mira) {

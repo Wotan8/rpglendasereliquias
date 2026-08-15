@@ -17,7 +17,12 @@ import { readFileSync } from 'node:fs';
 /* ═══ 1. a coluna de Acerto certa ═══ */
 // Extrai `colunaDeAcerto` do próprio arquivo, para o teste quebrar se alguém
 // mexer na função.
-const src = readFileSync(new URL('./tab-ficha-win.js', import.meta.url), 'utf8');
+// O recorte procura '\n}\n', mas o repo faz checkout com core.autocrlf: basta
+// alguém salvar o arquivo com quebra do Windows para o recorte devolver vazio e
+// o teste acusar "colunaDeAcerto is not defined" — falha por quebra de linha, não
+// por regra. Normaliza antes, igual a piso-defesa.test.mjs.
+const semCR = (p) => readFileSync(new URL(p, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const src = semCR('./tab-ficha-win.js');
 const ini = src.indexOf('function colunaDeAcerto(l) {');
 const fim = src.indexOf('\n}\n', ini) + 3;
 assert.ok(ini > 0, 'colunaDeAcerto não encontrada em tab-ficha-win.js');
@@ -61,7 +66,7 @@ assert.equal(valor({}), null);
 // próprio preenchimento) vencer sempre: o mestre via 9, rolava contra 9, e a
 // marca não valia nada. Por isso a soma mora no `alvoComMarca`, que alimenta
 // os DOIS — o campo e a rolagem.
-const srcC = readFileSync(new URL('./tab-conflito.js', import.meta.url), 'utf8');
+const srcC = semCR('./tab-conflito.js');
 const iniC = srcC.indexOf('function alvoComMarca(c) {');
 const fimC = srcC.indexOf('\n}\n', iniC) + 3;
 assert.ok(iniC > 0, 'alvoComMarca não encontrada em tab-conflito.js');

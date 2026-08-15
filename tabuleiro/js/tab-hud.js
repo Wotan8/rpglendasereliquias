@@ -6,7 +6,7 @@
 // - Rolar iniciativa direto do mapa (1d10 + VD Iniciativa)
 // =============================================
 import { db, doc, onSnapshot, setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, ico, toast, markDirty, uid, can, selecionar, bonusIniciativa, DADO_INICIATIVA, tokenDoUsuario, deslocamentosDoToken, valorComponente, participanteDoToken } from './tab-state.js';
+import { T, esc, ico, toast, markDirty, uid, can, selecionar, bonusIniciativa, DADO_INICIATIVA, tokenDoUsuario, deslocamentosDoToken, valorComponente, participanteDoToken, espelhosDoVital } from './tab-state.js';
 import { refCombate } from './tab-main.js';
 import { updObj, delObj, abrirPropriedades } from './tab-objects.js';
 import { SENSORES } from './tab-fog.js';
@@ -133,6 +133,16 @@ export function valorVdDaFonte(fonte, dv) {
     if (v != null) return v;
     const o = parseFloat(fonte.valoresDer?.overrides?.[dv.key]);
     return isNaN(o) ? null : o;
+}
+
+/**
+ * Keys de VD que o CADASTRO declara como espelho de um vital (`espelhaVD`).
+ * Mora aqui porque o registro do sistema já está carregado no HUD; a conta é
+ * pura e vive em tab-state. Quem grava vital de NPC passa isto adiante, para o
+ * espelho seguir a declaração e não um valor que por acaso bateu.
+ */
+export function espelhosDoVitalNpc(stat) {
+    return espelhosDoVital(stat, _sysHud?.derivedValues);
 }
 
 /** Ficha por trás de um participante da cena (char da mesa ou NPC). */
