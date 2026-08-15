@@ -112,6 +112,38 @@ export async function carregarFormasConjuracao() {
  * @param veiculos [{ vdId, label, vdNome }] — colunas marcadas do item da skill
  * @param linhas   golpes do participante (trazem itens equipados, tags e partes)
  */
+/** Estados de equipar em que o item está MESMO em uso (na mão ou no corpo). */
+const ESTADOS_EM_USO = new Set(['empunhado', 'segurar', 'vestido', 'fixado']);
+
+/**
+ * 🎻 Os itens que servem de foco de conjuração: o que está equipado e em uso,
+ * com as tags da instância E do modelo do catálogo juntas.
+ *
+ * Vem do INVENTÁRIO cru (tab-ficha-win guarda o da última consulta de golpes),
+ * não das linhas de ataque: instrumento, foco e talismã não têm dano e nunca
+ * apareceriam ali.
+ */
+export async function itensDeConjuracao(p) {
+    const tipo = p?.npcId ? 'npc' : 'char';
+    const id = p?.npcId || p?.characterId;
+    if (!id) return [];
+    const m = await import('./tab-ficha-win.js?v=12');
+    const itens = m.itensCarregados(tipo, id) || [];
+    const catalog = await catalogoDeItens();
+    const tagsDoModelo = (i) => {
+        const tpl = i?.modeloId || i?.origemTemplateId;
+        return tpl ? ((catalog || []).find(t => t.id === tpl)?.tags || []) : [];
+    };
+    return itens
+        .filter(i => i.equipado && !i.parentItemId
+            && (!i.estadoEquip || ESTADOS_EM_USO.has(String(i.estadoEquip).toLowerCase())))
+        .map(i => ({
+            nome: i.nome || 'Item',
+            // instância + modelo: o cadastro do catálogo é quem costuma ter a tag
+            tags: [...new Set([...(i.tags || []), ...tagsDoModelo(i)])],
+        }));
+}
+
 export async function formasDeConjurar(p, veiculos, linhas) {
     if (!veiculos?.length) return [];
     const formas = await carregarFormasConjuracao();
@@ -122,9 +154,13 @@ export async function formasDeConjurar(p, veiculos, linhas) {
         acertoDoVd: nome => valorComponente(nome, fonte),
         condicoes: (p?.condicoes || []).map(c => condDoParticipante(c).nome),
         condicaoPorId: id => (T.condicoesSistema || []).find(c => c.id === id)?.nome || null,
-        // Item empunhado vira linha de ataque; a linha carrega as tags do item
-        // e do modelo (ver tab-ficha-win) — é assim que a Rabeca é reconhecida.
-        itensEquipados: equip.filter(l => !l.desarmado).map(l => ({ nome: l.nome, tags: l.tags || [] })),
+        // 🎻 O que está EQUIPADO, e não as linhas de ataque.
+        //
+        // Antes esta lista saía dos golpes, e instrumento não é arma: a Rabeca
+        // é Objeto, não tem fórmula de dano, e por isso nunca virava linha de
+        // ataque. O Bardo com a Rabeca na mão via "sem Corda equipado" — e o
+        // mesmo valia para todo foco que não machuca.
+        itensEquipados: await itensDeConjuracao(p),
         // Golpe desarmado = parte do corpo que existe e funciona.
         partesInteiras: equip.filter(l => l.desarmado).map(l => l.nome),
     });
