@@ -398,14 +398,10 @@ function render() {
     if (!p || !controlaVez(p) || (T.isMaster && T.mode === 'public')) {
         // 🛡️ Fora da minha vez: se tenho turno GUARDADO válido, o painel vira o
         // botão de agir agora (interromper). Sem interrupção encadeada.
-        const guardados = (c?.iniciado && !c.retomar && !(T.isMaster && T.mode === 'public'))
-            ? (c.participantes || []).filter(x => guardadoValido(c, x) && controlaVez(x)) : [];
+        const guardados = guardadosQuePossoAgir(c);
         if (guardados.length) {
             abrirPainel();
-            el.innerHTML = `<div class="tb-turno-head">🛡️ Turno guardado <span class="tb-turno-hint">vale até o fim desta rodada</span></div>
-                <div class="tb-turno-acoes">${guardados.map(g =>
-                    `<button class="tb-btn tb-turno-btn tb-btn-primary" onclick="tbTurnoAgirAgora('${g.id}')">⚡ ${esc(g.name || '?')}: agir agora</button>`).join('')}
-                </div>`;
+            el.innerHTML = htmlGuardados(guardados);
             return;
         }
         el.classList.remove('open'); el.innerHTML = '';
@@ -465,8 +461,8 @@ function render() {
             ${podeGuardar ? `<button class="tb-btn tb-turno-btn" onclick="tbTurnoGuardar()" title="Guarda as DUAS ações: você pode interromper e agir a qualquer momento até o fim DESTA rodada — depois perde">🛡️ Guardar<span class="tb-so-largo"> Turno</span></button>` : ''}
             <button class="tb-btn tb-turno-btn ${semAcoes && !conflitoPendente() ? 'tb-btn-primary' : ''}"
                 ${conflitoPendente() ? 'disabled' : ''}
-                title="${conflitoPendente() ? 'Termine o conflito aberto antes de passar a vez' : 'Passa a vez para o próximo da ordem'}"
-                onclick="tbTurnoEncerrar()">⏭️ Encerrar<span class="tb-so-largo"> Turno</span>${conflitoPendente() ? ' <i class="tb-so-largo">(conflito em curso)</i>' : ''}</button>
+                title="${esc(motivoConflito() || 'Passa a vez para o próximo da ordem')}"
+                onclick="tbTurnoEncerrar()">⏭️ Encerrar<span class="tb-so-largo"> Turno</span>${conflitoPendente() ? ` <i class="tb-so-largo">(${cena()?.conflito?.fase === 'fim' ? 'feche o conflito' : 'conflito em curso'})</i>` : ''}</button>
         </div>`;
     }
 
@@ -474,7 +470,36 @@ function render() {
             ${c.retomar ? '⚡' : '⚔️'} <span class="tb-so-largo">Vez de </span><b class="tb-turno-nome">${esc(p.name || '?')}</b>${c.retomar ? ' <span class="tb-turno-hint">(turno guardado — interrompendo)</span>' : ''} <span class="tb-turno-hint">R${c.rodada || 1}</span>
             <span class="tb-turno-chips">${chip(acoes.padrao && !efCond.bloqueia.padrao, '⚡')}${chip(acoes.movimento && !efCond.bloqueia.movimento, '👣')}</span>
             ${avisoCondicoes(efCond)}
-        </div>${body}`;
+        </div>${body}${htmlGuardados(guardadosQuePossoAgir(c))}`;
+}
+
+/**
+ * 🛡️ Quem guardou o turno e EU posso mandar agir agora.
+ *
+ * O mestre controla todo mundo — e era justamente ele que nunca via esta
+ * lista: o bloco só era desenhado no ramo "não é a minha vez", e a vez é
+ * sempre do mestre quando ele joga no modo secreto. NPC que guardava o turno
+ * ficava sem botão nenhum, e o mestre não tinha como fazê-lo interromper.
+ * Agora a tira aparece TAMBÉM embaixo do painel normal.
+ *
+ * Fora: interrupção encadeada (`c.retomar`), o próprio dono da vez, e o mestre
+ * espiando o modo público — ali ele não age por ninguém.
+ */
+function guardadosQuePossoAgir(c) {
+    if (!c?.iniciado || c.retomar) return [];
+    if (T.isMaster && T.mode === 'public') return [];
+    const daVez = participanteDaVez(c);
+    return (c.participantes || [])
+        .filter(x => guardadoValido(c, x) && controlaVez(x) && x.id !== daVez?.id);
+}
+
+/** A tira de "⚡ fulano: agir agora" — vazia quando ninguém guardou. */
+function htmlGuardados(guardados) {
+    if (!guardados.length) return '';
+    return `<div class="tb-turno-head">🛡️ Turno guardado <span class="tb-turno-hint">vale até o fim desta rodada</span></div>
+        <div class="tb-turno-acoes">${guardados.map(g =>
+            `<button class="tb-btn tb-turno-btn tb-btn-primary" onclick="tbTurnoAgirAgora('${g.id}')">⚡ ${esc(g.name || '?')}: agir agora</button>`).join('')}
+        </div>`;
 }
 
 /**
@@ -539,14 +564,32 @@ window.tbTurnoSub = (qual) => { sub = qual; render(); };
  * o conflito já está resolvido (só falta fechar a janela) e a vez pode passar.
  * O MESTRE nunca fica preso: ele destrava a mesa quando algo emperra.
  */
+/**
+ * Há janela de conflito no ar? Enquanto houver, ninguém passa a vez.
+ *
+ * Vale até a janela ser FECHADA, não até o conflito ser resolvido: na fase
+ * 'fim' o resultado ainda está na tela esperando o "✅ Fechar", e passar a vez
+ * ali some com o placar do golpe antes de todo mundo ler. `tbConfFechar` apaga
+ * o conflito da cena, e é isso que solta o botão.
+ *
+ * O mestre no modo secreto é isento: é ele quem conduz a mesa.
+ */
 function conflitoPendente() {
     if (T.isMaster && T.mode === 'secret') return false;
+    return !!cena()?.conflito;
+}
+
+/** Por que o Encerrar Turno está travado — a tela tem de dizer o que fazer. */
+function motivoConflito() {
     const cf = cena()?.conflito;
-    return !!cf && cf.fase !== 'fim';
+    if (!cf || (T.isMaster && T.mode === 'secret')) return '';
+    return cf.fase === 'fim'
+        ? 'Feche a janela do conflito antes de passar a vez'
+        : 'Termine o conflito aberto antes de passar a vez';
 }
 
 window.tbTurnoEncerrar = async () => {
-    if (conflitoPendente()) { toast('⚠️ Resolva o conflito aberto antes de encerrar o turno', 'warning'); return; }
+    if (conflitoPendente()) { toast('⚠️ ' + motivoConflito(), 'warning'); return; }
     sub = null;
     logChat(`⏭️ ${participanteDaVez(cena())?.name || '?'} encerrou o turno`);
     await window.tbCombTurno(1);

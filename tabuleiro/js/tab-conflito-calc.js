@@ -78,11 +78,16 @@ export function rolarFormula(formula, opts = {}) {
  * @param bruto      resultado da fórmula
  * @param blindagem  Blindagem do alvo (do tipo do golpe, quando houver)
  * @param meia       true = Absorver (recebe no corpo: metade, não letal)
+ * @param critico    true = 1 no d10 — o Absorver não vale (ver abaixo)
  * @returns número >= 1, com meio ponto preservado (a ficha aceita 21,5)
  */
-export function danoFinal(bruto, blindagem, meia) {
+export function danoFinal(bruto, blindagem, meia, critico) {
     const base = (Number(bruto) || 0) - (Number(blindagem) || 0);
-    const v = Math.round((meia ? base / 2 : base) * 100) / 100;
+    // ✨ Crítico atravessa o Absorver: encaixar o golpe no corpo ampara uma
+    // estocada comum, não uma perfeita. A Blindagem continua aparando — ela é
+    // a peça de armadura, não a postura de quem se defende.
+    const partiu = !!meia && !critico;
+    const v = Math.round((partiu ? base / 2 : base) * 100) / 100;
     return Math.max(1, v);
 }
 

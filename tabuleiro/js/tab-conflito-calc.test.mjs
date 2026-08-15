@@ -43,6 +43,17 @@ assert.equal(danoFinal(3, 5, false), 1, 'Blindagem maior que o dano ainda machuc
 assert.equal(danoFinal(9, 2, true), 3.5, 'Absorver recebe metade (meio ponto vale)');
 assert.equal(danoFinal(3, 2, true), 1, 'metade de 1 ainda respeita o piso');
 
+// ✨ CRÍTICO ATRAVESSA O ABSORVER: encaixar o golpe no corpo ampara uma
+// estocada comum, não uma perfeita. A Blindagem continua aparando — ela é a
+// peça de armadura, não a postura de quem se defende.
+assert.equal(danoFinal(9, 2, true, true), 7, '🔒 no crítico o Absorver não parte o dano ao meio');
+assert.equal(danoFinal(9, 2, true, false), 3.5, 'sem crítico, Absorver segue valendo metade');
+assert.equal(danoFinal(9, 2, false, true), 7, 'crítico sem Absorver não muda nada');
+assert.equal(danoFinal(9, 0, true, true), 9, 'sem blindagem, o crítico entra inteiro');
+assert.equal(danoFinal(3, 5, true, true), 1, 'o piso de 1 vale até no crítico');
+// chamada antiga (3 argumentos) não pode mudar de comportamento
+assert.equal(danoFinal(9, 2, true), 3.5, 'sem o 4º argumento, Absorver parte como sempre partiu');
+
 // --- Orçamento de defesas da rodada (§6.2) ---
 assert.equal(defesasLivres(4), 3, 'Reflexo 4 → 3 defesas grátis');
 assert.equal(defesasLivres(1), 1, 'Reflexo 1 → o mínimo de 1');

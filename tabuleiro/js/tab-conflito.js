@@ -358,7 +358,10 @@ window.tbConfRolarDano = async (naMesa) => {
         const bl = blindagemDe(a.pid, c.acao.tipos);
         // 🎯 só a linha da presa leva a marca — o dano é por alvo
         const bruto = total + (Number(c.marca?.danoPorPid?.[a.pid]) || 0);
-        return { ...a, bruto, blindagem: bl, dano: danoFinal(bruto, bl, a.meia) };
+        // ✨ Crítico atravessa o Absorver — a metade não vale contra dado 1.
+        const critico = !!c.rolagem?.critico;
+        return { ...a, bruto, blindagem: bl, criticoPassou: critico && !!a.meia,
+            dano: danoFinal(bruto, bl, a.meia, critico) };
     });
     const marcados = alvos.filter(a => Number(c.marca?.danoPorPid?.[a.pid]) > 0);
     const bonusDano = marcados.length ? Number(c.marca.danoPorPid[marcados[0].pid]) : 0;
@@ -494,7 +497,7 @@ async function aplicar(c) {
         }
         if (c.fase === 'aplicar') {
             const linha = alvos.map(a => a.passou
-                ? `${a.nome}: −${a.dano} VIT${a.blindagem ? ` (blindagem ${a.blindagem})` : ''}${a.meia ? ' 🪨 absorvido, não letal' : ''}`
+                ? `${a.nome}: −${a.dano} VIT${a.blindagem ? ` (blindagem ${a.blindagem})` : ''}${a.criticoPassou ? ' ✨ crítico atravessou o Absorver' : a.meia ? ' 🪨 absorvido, não letal' : ''}`
                 : c.rolagem?.falha ? `${a.nome}: o golpe passou longe`
                 : `${a.nome}: defendeu com ${a.defesaNome || '—'}${a.defesa ? ` (${a.defesa})` : ''}${a.defesaPaga ? ' · 1 Energia' : ''}`).join(' · ');
             logChat(`⚔️ ${c.acao.nome} → ${linha || 'sem alvos'}`);
@@ -612,7 +615,7 @@ function linhaAlvo(c, a, i) {
             : '<span class="tb-muted">⏳ escolhendo a defesa…</span>';
     } else if (a.passou) {
         dir = `<b class="tb-conflito-hit">☠️ passou</b> ${a.defesaNome && a.defesaNome !== '—' ? `<span class="tb-muted">(${esc(a.defesaNome)} ${a.defesa}${a.defesaPaga ? ' · 1 ENER' : ''})</span>` : ''}`
-            + (a.dano != null ? ` <b>−${a.dano} VIT</b>${a.blindagem ? ` <span class="tb-muted">após blindagem ${a.blindagem}</span>` : ''}${a.meia ? ' 🪨' : ''}` : '');
+            + (a.dano != null ? ` <b>−${a.dano} VIT</b>${a.blindagem ? ` <span class="tb-muted">após blindagem ${a.blindagem}</span>` : ''}${a.criticoPassou ? ' <span class="tb-muted">✨ crítico atravessou o Absorver</span>' : a.meia ? ' 🪨' : ''}` : '');
     } else if (c.rolagem?.falha) {
         dir = '<b class="tb-conflito-miss">💀 passou longe</b>';
     } else {
