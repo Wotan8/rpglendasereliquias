@@ -11,6 +11,7 @@ import { refCombate } from './tab-main.js';
 import { updObj, delObj, abrirPropriedades } from './tab-objects.js';
 import { SENSORES } from './tab-fog.js';
 import { cenaAtiva, comCenaAtivaPatch, condicoesAgrupadas } from '../../shared/combate-cenas.js';
+import { fichaComBonus } from '../../shared/bonus-temporario.js?v=1';
 import { logChat } from './tab-chat.js';
 
 // charId -> { hp, hpMax, ener, enerMax, san, sanMax, conds:[{icone,nome}] }
@@ -145,11 +146,20 @@ export function espelhosDoVitalNpc(stat) {
     return espelhosDoVital(stat, _sysHud?.derivedValues);
 }
 
-/** Ficha por trás de um participante da cena (char da mesa ou NPC). */
+/**
+ * Ficha por trás de um participante da cena (char da mesa ou NPC).
+ *
+ * 🌀 Quando o participante carrega bônus TEMPORÁRIOS (as sobras da Dádiva, de
+ * quem está incorporado), a ficha sai daqui já somada. É o ponto único por
+ * onde toda leitura passa — mira, conflito, HUD e golpes enxergam o empréstimo
+ * sem nenhum deles precisar saber que existe incorporação acontecendo. E o doc
+ * do personagem no banco continua intocado: o urso é da cena, não da ficha.
+ */
 export function fonteDoParticipante(p) {
-    if (p?.characterId) return T.chars.find(c => c.id === p.characterId) || null;
-    if (p?.npcId) return T.npcs.find(x => x.id === p.npcId) || null;
-    return null;
+    const base = p?.characterId ? (T.chars.find(c => c.id === p.characterId) || null)
+        : p?.npcId ? (T.npcs.find(x => x.id === p.npcId) || null)
+        : null;
+    return base && p?.bonusTemp?.length ? fichaComBonus(base, p.bonusTemp) : base;
 }
 
 export function vdsCombateDoToken(o) {
