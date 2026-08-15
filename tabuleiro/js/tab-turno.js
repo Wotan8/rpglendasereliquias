@@ -24,6 +24,7 @@ import {
     guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica,
 } from '../../shared/combate-cenas.js';
 import { custosDaSkill, rotuloDosCustos } from '../../shared/skill-custo.js?v=1';
+import { resolverMedida, ehFormula } from '../../shared/medida-formula.js?v=1';
 import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR } from './tab-mira-calc.js';
 import { retornoDoTurno } from '../../shared/retorno-recurso.js';
 import { melhorDisparo } from '../../shared/alcance-disparo.js';
@@ -187,9 +188,12 @@ function acaoDoRotulo(rotulo) {
  * Converte para o formato do runtime; null quando o predef não tem nada disso.
  * "onda" = área a partir do próprio conjurador (círculo da borda do token).
  */
+/** A medida existe? Vale um número positivo OU uma fórmula da ficha. */
+const temMedida = (v) => ehFormula(v) || Number(v) > 0;
+
 function miraDaReguaV2(pd) {
     if (!pd) return null;
-    const temArea = !!pd.formaArea && Number(pd.tamanhoArea) > 0;
+    const temArea = !!pd.formaArea && temMedida(pd.tamanhoArea);
     const temAlvos = Number(pd.alvosMax) > 0;
     if (!temArea && !temAlvos) return null;
     const afeta = pd.faccao === 'inimigo' ? 'inimigos' : pd.faccao === 'aliado' ? 'aliados' : 'todos';
@@ -216,7 +220,7 @@ function miraDaReguaV2(pd) {
     // raio 0 no próprio token — o conjurador já entra por cobertura, ninguém
     // mais alcança, e `afeta: aliados` faz o efeito cair direto, sem abrir
     // janela de conflito contra si mesmo.
-    const soEmSi = !temArea && temAlvos && !(Number(pd.alcance) > 0)
+    const soEmSi = !temArea && temAlvos && !temMedida(pd.alcance)
         && /proprio|próprio|nenhuma|unico|único|ponto/i.test(String(pd.formaArea || ''));
     if (soEmSi) {
         return {
@@ -225,22 +229,26 @@ function miraDaReguaV2(pd) {
         };
     }
 
+    // As medidas seguem CRUAS daqui (número ou fórmula): quem resolve é o
+    // miraDoCadastro, que tem a ficha de quem está conjurando em mãos.
     if (temArea) {
         const forma = /cone/i.test(pd.formaArea) ? 'cone' : /linha/i.test(pd.formaArea) ? 'linha' : 'circulo';
+        const tam = pd.tamanhoArea;
         return {
             ...base, tipo: 'geometria', forma,
-            origem: (forma === 'circulo' && Number(pd.alcance) > 0) ? 'livre' : 'token',
-            alcanceM: Number(pd.alcance) || 0,
-            raioM: Number(pd.tamanhoArea) || 0,
-            comprimentoM: Number(pd.tamanhoArea) || 0,
-            larguraM: Math.max(1, (Number(pd.tamanhoArea) || 0) / 3),
+            origem: (forma === 'circulo' && temMedida(pd.alcance)) ? 'livre' : 'token',
+            alcanceM: pd.alcance ?? 0,
+            raioM: tam, comprimentoM: tam,
+            // A largura da linha é um terço do comprimento; com fórmula, a
+            // divisão viaja junto para ser feita depois, com o número na mão.
+            larguraM: ehFormula(tam) ? `(${String(tam).trim()}) / 3` : Math.max(1, (Number(tam) || 0) / 3),
             angGraus: Number(pd.anguloCone) || 60,
             maxAlvos: 99,
         };
     }
     return {
         ...base, tipo: 'alvos',
-        alcanceM: Number(pd.alcance) || Number(pd.tamanhoArea) || 0,
+        alcanceM: temMedida(pd.alcance) ? pd.alcance : (pd.tamanhoArea ?? 0),
         maxAlvos: Number(pd.alvosMax) || 1,
     };
 }
@@ -970,15 +978,26 @@ function alcanceDoDisparoDe(p) {
     return melhorDisparo(golpesCacheados(p) || [], forca);
 }
 
+/**
+ * Uma medida da mira já resolvida em metros para ESTE conjurador.
+ * O cadastro pode trazer número ("4") ou fórmula da ficha ("(Liderança + PRE)"
+ * — o Raio de ERGUER FANTOCHES). Quem resolve o nome é o valorComponente, que
+ * já acha atributo, perícia e Valor Derivado tanto em ficha quanto em NPC.
+ */
+function medidaDaMira(v, p, padrao = 0) {
+    const fonte = fonteDoParticipante(p);
+    return resolverMedida(v, (nome) => valorComponente(nome, fonte), { padrao });
+}
+
 /** Converte a mira CADASTRADA (metros) para o runtime (px no ponto do token). */
 function miraDoCadastro(m, s, custo, p) {
     // 🏹 Alcance que sai da ARMA, não do cadastro: a manobra do Caçador vale
     // até onde a flecha dele chega, e isso muda quando ele troca de arco.
-    const alcance = m.alcanceDoDisparo ? alcanceDoDisparoDe(p).metros : (Number(m.alcanceM) || 0);
+    const alcance = m.alcanceDoDisparo ? alcanceDoDisparoDe(p).metros : medidaDaMira(m.alcanceM, p);
     return {
         tipo: m.tipo, forma: m.forma || 'circulo', origem: m.origem || 'token',
-        alcanceM: alcance, raioM: Number(m.raioM) || 0,
-        comprimentoM: Number(m.comprimentoM) || 0, larguraM: Number(m.larguraM) || 0,
+        alcanceM: alcance, raioM: medidaDaMira(m.raioM, p),
+        comprimentoM: medidaDaMira(m.comprimentoM, p), larguraM: medidaDaMira(m.larguraM, p),
         angGraus: Number(m.angGraus) || 60, maxAlvos: Number(m.maxAlvos) || 1,
         afeta: m.afeta || 'todos',
         meta: {

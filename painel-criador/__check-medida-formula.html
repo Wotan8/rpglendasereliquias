@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — campo de medida com fórmula</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="css/painel-criador.css">
+<script>
+  // O CSS é editado durante o trabalho; o cache do navegador devolvia a versão
+  // velha e a conferência aparecia sem cor.
+  for (const l of document.querySelectorAll('link[href*="painel-criador.css"]')) l.href += '?cb=' + Date.now();
+</script>
+<style>
+  body { margin:0; padding:16px; font:14px/1.6 Inter, system-ui, sans-serif; }
+  table { border-collapse:collapse; font:11px ui-monospace, monospace; width:100%; margin-bottom:14px; }
+  td { border:1px solid var(--lr-border); padding:2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight:700; }
+  #placar { font-weight:800; margin:8px 0 16px; padding-top:8px; border-top:1px solid var(--lr-border); }
+  h1 { font-size:1rem; margin:0 0 4px; } p { margin:0 0 10px; color:var(--lr-text-2); font-size:.8rem; }
+  .form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; max-width:900px; }
+</style></head>
+<body>
+<h1>📏 Campo de medida da mira — número ou fórmula</h1>
+<p>O HTML do campo é o REAL, recortado de <code>painel-firebase.js</code>, com o
+   CSS real. Confere que fórmula é aceita, que a conferência ao vivo lista os
+   componentes e que caractere proibido é reprovado na hora.</p>
+
+<table id="saida"></table>
+<div id="placar"></div>
+
+<div class="form-grid" id="alvo"></div>
+
+<script type="module">
+const src = (await (await fetch('js/painel-firebase.js?cb=' + Date.now())).text()).replace(/\r\n/g, '\n');
+
+// _medidaField e o handler _conferirMedida saem do próprio arquivo do Criador.
+const i0 = src.indexOf('function _medidaField(');
+const campoFn = new Function('escapeHtml', src.slice(i0, src.indexOf('\n}\n', i0) + 3) + '\nreturn _medidaField;')
+    (s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'));
+const i1 = src.indexOf('window._conferirMedida = async function');
+new Function(src.slice(i1, src.indexOf('\n};\n', i1) + 4))();
+
+document.getElementById('alvo').innerHTML =
+      campoFn('Alcance (m)', 'miraAlcanceM', 12, 'até onde mira/alvo')
+    + campoFn('Raio (m — círculo)', 'miraRaioM', '(Liderança + PRE)', 'raio da área')
+    + campoFn('Comprimento (m)', 'miraComprimentoM', '', '')
+    + campoFn('Largura (m)', 'miraLarguraM', '', '');
+
+const linhas = [];
+const t = (nome, cond) => linhas.push(`<tr><td>${nome}</td><td class="${cond?'ok':'fail'}">${cond?'OK':'FALHOU'}</td></tr>`);
+const campo = (k) => document.querySelector(`[data-pd-key="${k}"]`);
+const check = (k) => campo(k).parentElement.querySelector('.cm-medida-check');
+const digitar = async (k, v) => { campo(k).value = v; await window._conferirMedida(campo(k)); };
+
+t('campo é texto (aceita fórmula), não number', campo('miraRaioM').type === 'text');
+t('fórmula salva sobrevive ao render', campo('miraRaioM').value === '(Liderança + PRE)');
+t('número puro continua no campo', campo('miraAlcanceM').value === '12');
+t('rótulo mostra o ƒ de "aceita fórmula"', !!campo('miraRaioM').closest('.form-group').querySelector('.cm-medida-hint'));
+
+await digitar('miraRaioM', '(Liderança + PRE)');
+t('fórmula válida lista os componentes', /Liderança/.test(check('miraRaioM').textContent) && /PRE/.test(check('miraRaioM').textContent));
+t('fórmula válida fica em cor de ok', check('miraRaioM').classList.contains('ok'));
+
+await digitar('miraRaioM', '4');
+t('número puro não polui a conferência', check('miraRaioM').textContent === '');
+
+await digitar('miraRaioM', 'Liderança + [PRE]');
+t('caractere proibido é reprovado', check('miraRaioM').classList.contains('erro'));
+t('erro explica o motivo', /não permitido/i.test(check('miraRaioM').textContent));
+
+await digitar('miraRaioM', '(Liderança + PRE');
+t('parêntese aberto é reprovado', /Parênteses/.test(check('miraRaioM').textContent));
+
+await digitar('miraRaioM', '');
+t('campo vazio não acusa nada', check('miraRaioM').textContent === '');
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const falhas = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML = falhas
+  ? `<span class="fail">${falhas} FALHA(S) de ${linhas.length}</span>`
+  : `<span class="ok">✅ ${linhas.length} asserções OK</span>`;
+window.__placar = { total: linhas.length, falhas };
+</script>
+</body></html>

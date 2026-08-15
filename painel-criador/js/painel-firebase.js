@@ -4349,6 +4349,45 @@ function _buildPredefItemRow(moduleIdx, itemIdx, data, schema) {
  * todo alcance com o token como eixo conta a partir da BORDA dele.
  * `tipo` vazio = sem mira cadastrada (o Tabuleiro pergunta na hora de usar).
  */
+/**
+ * Campo de medida da mira (alcance/raio/comprimento/largura).
+ *
+ * É `text` e não `number` de propósito: a medida pode ser um número OU uma
+ * fórmula da ficha de quem conjura — "Raio: (Liderança + PRE) metros" é regra
+ * do Adepto, e antes só cabia na prosa, onde o Tabuleiro não lia.
+ * A conferência ao vivo (shared/medida-formula.js) mostra os componentes que
+ * a fórmula cita, para um nome digitado errado aparecer na hora e não na mesa.
+ */
+function _medidaField(label, key, valor, dica) {
+    const v = valor ?? '';
+    return `<div class="form-group">
+        <label>${label} <span class="cm-medida-hint" title="Aceita número (4) ou fórmula com nomes da ficha: (Liderança + PRE), Percepção * 2">ƒ</span></label>
+        <input type="text" inputmode="text" data-pd-key="${key}" value="${escapeHtml(String(v))}"
+            placeholder="${escapeHtml(dica || 'número ou fórmula')}"
+            oninput="window._conferirMedida(this)">
+        <small class="cm-medida-check" data-for="${key}"></small>
+    </div>`;
+}
+
+/** Conferência ao vivo do campo de medida — só avisa, nunca impede de salvar. */
+window._conferirMedida = async function (input) {
+    const saida = input.parentElement?.querySelector('.cm-medida-check');
+    if (!saida) return;
+    try {
+        const { conferirMedida } = await import('../../shared/medida-formula.js?v=1');
+        const r = conferirMedida(input.value);
+        if (r.vazio) { saida.textContent = ''; saida.className = 'cm-medida-check'; return; }
+        if (!r.ok) {
+            saida.textContent = `⚠️ ${r.erro}`;
+            saida.className = 'cm-medida-check erro';
+            return;
+        }
+        if (!r.formula) { saida.textContent = ''; saida.className = 'cm-medida-check'; return; }
+        saida.textContent = `ƒ usa da ficha: ${r.componentes.join(' · ')}`;
+        saida.className = 'cm-medida-check ok';
+    } catch (e) { /* sem conferência, o campo continua salvando */ }
+};
+
 function _buildPredefMira(data) {
     const m = data.mira || {};
     const custoAcao = data.custoAcao || 'padrao';
@@ -4391,10 +4430,10 @@ function _buildPredefMira(data) {
                         <option value="livre" ${sel('livre', m.origem)}>Ponto livre dentro do alcance</option>
                     </select>
                 </div>
-                <div class="form-group"><label>Alcance (m)</label><input type="number" step="0.5" min="0" data-pd-key="miraAlcanceM" value="${m.alcanceM ?? ''}" placeholder="até onde mira/alvo"></div>
-                <div class="form-group"><label>Raio (m — círculo)</label><input type="number" step="0.5" min="0" data-pd-key="miraRaioM" value="${m.raioM ?? ''}" placeholder="raio da área"></div>
-                <div class="form-group"><label>Comprimento (m — cone/linha)</label><input type="number" step="0.5" min="0" data-pd-key="miraComprimentoM" value="${m.comprimentoM ?? ''}" placeholder=""></div>
-                <div class="form-group"><label>Largura (m — linha/retângulo)</label><input type="number" step="0.5" min="0" data-pd-key="miraLarguraM" value="${m.larguraM ?? ''}" placeholder=""></div>
+                ${_medidaField('Alcance (m)', 'miraAlcanceM', m.alcanceM, 'até onde mira/alvo')}
+                ${_medidaField('Raio (m — círculo)', 'miraRaioM', m.raioM, 'raio da área')}
+                ${_medidaField('Comprimento (m — cone/linha)', 'miraComprimentoM', m.comprimentoM, '')}
+                ${_medidaField('Largura (m — linha/retângulo)', 'miraLarguraM', m.larguraM, '')}
                 <div class="form-group"><label>Ângulo (graus — cone)</label><input type="number" min="10" max="180" data-pd-key="miraAngGraus" value="${m.angGraus ?? ''}" placeholder="60"></div>
                 <div class="form-group"><label>Máx. de alvos</label><input type="number" min="1" data-pd-key="miraMaxAlvos" value="${m.maxAlvos ?? ''}" placeholder="1"></div>
                 <div class="form-group">
@@ -4703,15 +4742,24 @@ function _collectSingleModuleData(item) {
         // 🎯 Mira & Ação do Tabuleiro (combate por turno)
         const pdv = (k) => pd.querySelector(`[data-pd-key="${k}"]`)?.value ?? '';
         const num = (k) => { const n = parseFloat(pdv(k)); return isNaN(n) ? null : n; };
+        // 📏 Medida: número vira número (o formato de sempre); fórmula é
+        // guardada como TEXTO e resolvida na hora do uso, contra a ficha de
+        // quem conjura (shared/medida-formula.js).
+        const medida = (k) => {
+            const s = String(pdv(k)).trim();
+            if (s === '') return 0;
+            const n = parseFloat(s.replace(',', '.'));
+            return (!isNaN(n) && String(n) === s.replace(',', '.')) ? n : s;
+        };
         const miraTipo = pdv('miraTipo');
         const mira = miraTipo ? {
             tipo: miraTipo,
             forma: pdv('miraForma') || 'circulo',
             origem: pdv('miraOrigem') || 'token',
-            alcanceM: num('miraAlcanceM') ?? 0,
-            raioM: num('miraRaioM') ?? 0,
-            comprimentoM: num('miraComprimentoM') ?? 0,
-            larguraM: num('miraLarguraM') ?? 0,
+            alcanceM: medida('miraAlcanceM'),
+            raioM: medida('miraRaioM'),
+            comprimentoM: medida('miraComprimentoM'),
+            larguraM: medida('miraLarguraM'),
             angGraus: num('miraAngGraus') ?? 60,
             maxAlvos: Math.max(1, parseInt(pdv('miraMaxAlvos'), 10) || 1),
             afeta: pdv('miraAfeta') || 'todos',

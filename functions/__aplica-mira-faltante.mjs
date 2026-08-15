@@ -56,6 +56,20 @@ const MUDANCAS = [
         porque: 'a passagem abre num raio de 4 m em volta de quem conjura',
         campos: { formaArea: 'onda', tamanhoArea: 4 },
     },
+    {
+        modulo: 'TbRKh68m2hvr9KUVrOXb', predef: 'pdi_inv_1785107140941_0', nome: 'Selo Negativo',
+        prova: 'jaula de Tecido Espacial Físico (2–4m)',
+        porque: 'decisão de mesa: a jaula vale 4 m (o texto dava a faixa 2–4)',
+        campos: { formaArea: 'onda', tamanhoArea: 4, faccao: 'inimigo' },
+    },
+    {
+        // 📏 Primeiro cadastro com medida por FÓRMULA: o raio depende da ficha
+        // de quem conjura, e o campo passou a aceitar isso (medida-formula.js).
+        modulo: 'ritual_necro', predef: 'pdi_1783818960240_52weue', nome: 'ERGUER FANTOCHES',
+        prova: '(Liderança + PRE) metros',
+        porque: 'o raio é (Liderança + PRE) — agora cabe no campo, resolvido na hora do uso',
+        campos: { formaArea: 'onda', tamanhoArea: '(Liderança + PRE)', faccao: 'aliado' },
+    },
 ];
 
 /**

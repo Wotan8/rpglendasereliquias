@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
 import { custosDaSkill, rotuloDosCustos } from '../shared/skill-custo.js';
+import { ehFormula, resolverMedida } from '../shared/medida-formula.js';
 const require = createRequire(import.meta.url);
 const admin = require('firebase-admin');
 admin.initializeApp({ credential: admin.credential.cert(
@@ -29,10 +30,14 @@ function custoDaMecanica(mech) {
 // miraDaReguaV2 recortada do próprio tab-turno.js — sem cópia de regra
 const src = readFileSync(new URL('../tabuleiro/js/tab-turno.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const i0 = src.indexOf('function miraDaReguaV2(');
-const sandbox = { r: null };
+const iTem = src.indexOf('const temMedida =');
+const sandbox = { r: null, ehFormula };
 vm.createContext(sandbox);
-vm.runInContext(src.slice(i0, src.indexOf('\n}\n', i0) + 3), sandbox);
+vm.runInContext(src.slice(iTem, src.indexOf('\n', iTem)) + '\n' + src.slice(i0, src.indexOf('\n}\n', i0) + 3), sandbox);
 const miraDe = (pd) => { sandbox.pd = pd; vm.runInContext('r = JSON.stringify(miraDaReguaV2(pd) ?? null)', sandbox); return JSON.parse(sandbox.r); };
+// Ficha de referência só para a cobertura mostrar um número no lugar da fórmula
+const FICHA_EX = { 'Liderança': 4, 'PRE': 3 };
+const medida = (v) => resolverMedida(v, (n) => FICHA_EX[n] ?? null);
 
 const mods = await db.collection('system/data/classModules').get();
 const mechs = await db.collection('system/data/mechanics').get();
@@ -53,10 +58,11 @@ for (const d of mods.docs) {
         const mira = pd.mira || miraDe(pd);
         if (!mira) semMira++;
         if (!custos.length) semCusto++;
+        const fmt = (v) => ehFormula(v) ? `ƒ${String(v).trim()}=${medida(v)}` : `${v}`;
         const alvo = !mira ? '—'
-            : mira.tipo === 'alvos' ? `alvos×${mira.maxAlvos} @${mira.alcanceM}m`
-            : mira.raioM === 0 ? 'só em si'
-            : `${mira.forma} ${mira.raioM || mira.comprimentoM}m (${mira.origem})`;
+            : mira.tipo === 'alvos' ? `alvos×${mira.maxAlvos} @${fmt(mira.alcanceM)}m`
+            : medida(mira.raioM) === 0 && !ehFormula(mira.raioM) ? 'só em si'
+            : `${mira.forma} ${fmt(mira.raioM ?? mira.comprimentoM)}m (${mira.origem})`;
         const conds = (mira?.condicoes || []).map(c => c.nome).join('+');
         const linha = `  ${mira ? '🎯' : '  '}${custos.length ? '💰' : '  '} ${String(pd.nome).slice(0, 34).padEnd(35)}`
             + `${rotuloDosCustos(custos).padEnd(26)} ${alvo.padEnd(24)} ${conds}`;

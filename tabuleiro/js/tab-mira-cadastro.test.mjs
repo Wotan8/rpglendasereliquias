@@ -17,15 +17,19 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { ehFormula, resolverMedida } from '../../shared/medida-formula.js';
 
 const src = readFileSync(new URL('./tab-turno.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const ini = src.indexOf('function miraDaReguaV2(');
 assert.ok(ini > 0, 'miraDaReguaV2 não encontrada');
 const fim = src.indexOf('\n}\n', ini) + 3;
 
-const sandbox = { r: null };
+// `ehFormula` vem do módulo de verdade — o temMedida sai do próprio fonte.
+const iTem = src.indexOf('const temMedida =');
+assert.ok(iTem > 0 && iTem < ini, 'temMedida não encontrado antes de miraDaReguaV2');
+const sandbox = { r: null, ehFormula };
 vm.createContext(sandbox);
-vm.runInContext(src.slice(ini, fim), sandbox);
+vm.runInContext(src.slice(iTem, src.indexOf('\n', iTem)) + '\n' + src.slice(ini, fim), sandbox);
 // JSON no meio do caminho: objeto criado dentro do vm tem outro protótipo, e
 // o deepEqual estrito reprova comparação entre realms.
 const mira = (pd) => {
@@ -102,3 +106,34 @@ assert.equal(mira({ formaArea: '', alvosMax: 0 }), null);
 assert.equal(mira(null), null);
 
 console.log('✅ mira do cadastro OK — onda/cone/linha, só-em-si, alvos e todas as condições');
+
+/* ===== medida por FÓRMULA (Raio: (Liderança + PRE) metros) ===== */
+// A régua reconhece a área mesmo com a medida em fórmula...
+const fantoches = mira({
+    nome: 'ERGUER FANTOCHES', formaArea: 'onda', tamanhoArea: '(Liderança + PRE)',
+    alcance: null, alvosMax: null, faccao: 'aliado',
+});
+assert.equal(fantoches.tipo, 'geometria', 'fórmula no tamanho ainda é área');
+assert.equal(fantoches.forma, 'circulo');
+assert.equal(fantoches.raioM, '(Liderança + PRE)',
+    'a medida segue CRUA daqui — quem resolve tem a ficha na mão');
+assert.equal(fantoches.larguraM, '((Liderança + PRE)) / 3',
+    'o terço da largura viaja como conta, para ser feito com o número depois');
+
+// ...e a resolução com a ficha do conjurador dá o número da mesa.
+const ficha = { 'Liderança': 4, 'PRE': 3 };
+const valorDe = (n) => (n in ficha ? ficha[n] : null);
+assert.equal(resolverMedida(fantoches.raioM, valorDe), 7, 'Liderança 4 + PRE 3 = 7 m de raio');
+assert.equal(resolverMedida(fantoches.larguraM, valorDe), 7 / 3);
+
+// Fórmula no ALCANCE também conta como alcance de verdade (círculo solto)
+const soltoF = mira({ formaArea: 'circulo', tamanhoArea: 3, alcance: 'Percepção * 2' });
+assert.equal(soltoF.origem, 'livre', 'alcance por fórmula abre o círculo no mapa');
+assert.equal(resolverMedida(soltoF.alcanceM, (n) => (n === 'Percepção' ? 5 : null)), 10);
+
+// Número puro continua exatamente como era
+const fixo = mira({ formaArea: 'onda', tamanhoArea: 3, faccao: 'inimigo' });
+assert.equal(fixo.raioM, 3);
+assert.equal(fixo.larguraM, 1, 'terço de 3 tem piso 1');
+
+console.log('✅ mira com fórmula OK — medida crua na régua, número na hora de mirar');
