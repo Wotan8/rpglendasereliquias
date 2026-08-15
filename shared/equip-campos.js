@@ -115,6 +115,13 @@ export const CAMPOS_EQUIPAMENTO = [
     // braço no momento do disparo não entra — é o que a torna a arma de tiro
     // de quem não tem Força. Ver shared/alcance-disparo.js.
     { key: 'ignoraLimiteForDisparo', label: '🎯 Alcance NÃO é limitado pela FOR (besta, arma de manivela)', type: 'boolean', showWhen: { field: 'tipo', value: 'Arma' } },
+    // 🏹 Munição: a arma gasta projétil, e SÓ do tipo certo. As tags são as que
+    // o próprio projétil já carrega (Flecha, Virote, Zarabatana), então nada
+    // precisa ser recadastrado do lado dele. Vazio = arma que não gasta munição.
+    { key: 'tipoProjetil', label: '🏹 Munição que esta arma gasta (tags do projétil)', type: 'tags', placeholder: 'Ex: Flecha · Virote — vazio = não gasta munição', showWhen: { field: 'tipo', value: 'Arma' } },
+    // 🎯 Quanto do que foi disparado dá para catar de volta depois da luta.
+    // 0 = sempre quebra; 100 = sempre recupera. Vazio usa o padrão do sistema.
+    { key: 'chanceRecuperar', label: '♻️ Chance de sobrar inteiro para recolher (%)', type: 'number', placeholder: 'Ex: 50 — vazio usa o padrão', showWhen: { field: 'tipo', value: 'Projétil' } },
     {
         // Qual Blindagem TIPADA do alvo barra este dano. 1 ou mais — um machado
         // de guerra corta E esmaga. Antes só existia via script

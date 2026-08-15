@@ -26,7 +26,8 @@ import {
 import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR } from './tab-mira-calc.js';
 import { retornoDoTurno } from '../../shared/retorno-recurso.js';
 import { melhorDisparo } from '../../shared/alcance-disparo.js';
-import { golpesDe, golpesCacheados, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes, formasDeConjurar } from './tab-golpes.js';
+import { golpesDe, golpesCacheados, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes, formasDeConjurar, projeteisPara, escolherProjetil } from './tab-golpes.js';
+import { gastarUm } from '../../shared/projeteis.js';
 import { templateAtingeCirculo } from './tab-templates.js';
 import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte } from './tab-hud.js';
 import { carregarCondicoesSistema, aplicarCondicaoEmVarios } from './tab-combat.js';
@@ -689,6 +690,12 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
         const golpe = await escolherGolpeDaAcao(p, s, cfg);
         if (golpe === false) return;   // cancelou o picker: nada foi gasto
         if (golpe) cfg.meta.golpe = metaDoGolpe(golpe);
+        // 🏹 Arma que gasta munição: escolhe o maço ANTES de armar a mira. Sem
+        // flecha não há tiro, e é melhor descobrir isso agora que depois de
+        // gastar a ação.
+        const proj = await municaoParaOGolpe(p, golpe);
+        if (proj === false) return;
+        if (proj) cfg.meta.projetil = proj;
         armarMira(cfg, tok);
         sub = null;
         return;
@@ -705,6 +712,22 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
     }
     abrirMiraManual(s, custo, tok);
 };
+
+/**
+ * 🏹 Escolhe (e reserva) a munição do golpe.
+ * @returns maço escolhido · null (arma não gasta munição) · false (aborta)
+ */
+async function municaoParaOGolpe(p, golpe) {
+    if (!golpe || !(golpe.tipoProjetil || []).length) return null;
+    const macos = await projeteisPara(p, golpe);
+    if (!macos.length) {
+        toast(`🏹 Sem munição para ${golpe.nome}: falta ${(golpe.tipoProjetil || []).join(' ou ')}`, 'warning');
+        return false;
+    }
+    const escolhido = await escolherProjetil(`🏹 Qual munição ${esc(p?.name || '')} usa no disparo?`, macos);
+    if (!escolhido) return false;
+    return escolhido;
+}
 
 /**
  * Com o que esta habilidade vai bater? Só pergunta em ação OFENSIVA (a que
@@ -1110,6 +1133,7 @@ window.tbTurnoConfirmarMira = async () => {
             dano: meta.golpe?.dano || '', tipos: meta.golpe?.tipos || [],
             alvoAcerto: meta.golpe?.acerto ?? null,
             condicao: meta.condicao || null,
+            projetil: meta.projetil || null,
         }, atingidos);
         return;
     }

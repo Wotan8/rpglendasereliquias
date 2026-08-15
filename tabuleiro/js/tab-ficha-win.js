@@ -1055,6 +1055,17 @@ export async function registroSistema() { return carregarSys(); }
  * UMA query de itens (sem listener — o painel pede na hora de abrir o menu).
  * Cada linha ganha `alcanceM` (instância > modelo > 0) para a régua do golpe.
  */
+// Inventário da última consulta de golpes, por participante. O picker de
+// projétil precisa do inventário INTEIRO (a flecha pode estar na aljava), e
+// não só das linhas de ataque — refazer a query seria uma leitura a mais por
+// disparo.
+const _itensPorChave = new Map();
+
+/** Inventário cru de quem já teve os golpes carregados (ou [] se não teve). */
+export function itensCarregados(tipo, id) {
+    return _itensPorChave.get(`${tipo}:${id}`) || [];
+}
+
 export async function linhasDeAtaque(tipo, id) {
     await carregarSys();
     let itens = [];
@@ -1062,6 +1073,7 @@ export async function linhasDeAtaque(tipo, id) {
         const s = await getDocs(query(collection(db, 'items'), where('characterId', '==', id)));
         s.forEach(d => itens.push({ id: d.id, ...d.data() }));
     } catch (e) { console.warn('itens do turno', e); }
+    _itensPorChave.set(`${tipo}:${id}`, itens);
     const win = { tipo, id, itens };
     const linhas = tipo === 'npc'
         ? (() => { const n = dadosNpc(id); return n ? linhasAtaqueNpc(win, n) : []; })()
@@ -1082,6 +1094,9 @@ export async function linhasDeAtaque(tipo, id) {
         // 🏹 Besta e afins: o alcance delas não passa pelo braço (ver
         // shared/alcance-disparo.js).
         l.ignoraLimiteForDisparo = !!(i?.ignoraLimiteForDisparo ?? tpl?.ignoraLimiteForDisparo);
+        // 🏹 Munição que esta arma gasta — vazio quer dizer "não gasta".
+        l.tipoProjetil = i?.tipoProjetil?.length ? i.tipoProjetil : (tpl?.tipoProjetil || []);
+        l.itemId = i?.id || null;
     }
     return linhas;
 }

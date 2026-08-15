@@ -23,12 +23,14 @@
 //
 // Writes: 1 por etapa, no doc de combate que já existe. Nenhuma coleção nova.
 // =============================================
-import { setDoc } from '../../painel-mestre/js/firebase-config.js';
+import { setDoc, db as _db, doc as _doc, updateDoc as _upd, deleteDoc as _del } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, toast, uid, normChave, valorComponente, gridSize, pxParaUnidades } from './tab-state.js';
 import { golpesDe, golpesCacheados, escolherGolpe, golpesCorpoACorpo, alcanceDoGolpe } from './tab-golpes.js';
 import { refCombate } from './tab-main.js';
 import { cenaAtiva, comCenaAtivaPatch } from '../../shared/combate-cenas.js';
 import { bonusDoAtaque } from '../../shared/marca-de-caca.js';
+import { destinoDoProjetil, gastarUm } from '../../shared/projeteis.js';
+import { addObj } from './tab-objects.js';
 import { participanteDoToken, valorVdDaFonte, fonteDoParticipante, VITAIS } from './tab-hud.js';
 import { aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { logChat } from './tab-chat.js';
@@ -176,6 +178,9 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
             tipos: acao.tipos || [], custoAcao: acao.custoAcao || 'padrao',
             alvoAcerto: acao.alvoAcerto ?? null, efeito: acao.efeito || '',
             condicao: acao.condicao || null,
+            // 🏹 O maço escolhido no picker. Fica no doc porque quem resolve o
+            // destino da flecha é o mesmo cliente que rolou o Acerto.
+            projetil: acao.projetil || null,
         },
         // 🎯 Marca de Caça: medida AQUI, na abertura, e guardada no doc — quem
         // rola o dado pode ser outro cliente, e a ficha do caçador não está lá.
@@ -231,9 +236,56 @@ window.tbConfRolarAcerto = async (naMesa) => {
     // 🔁 A música quebrou: quem tem retorno de recurso no fim do turno perde o
     // que juntou. Marca aqui porque é o único ponto que sabe se o teste passou.
     if (graus <= 0) await marcarFalhaDeConjuracao(c.atacante?.pid);
+    // 🏹 A flecha saiu: gasta do maço e decide se sobrou inteira.
+    if (c.acao?.projetil) await resolverProjetil(c, graus > 0);
     logChat(`🎯 ${c.atacante.nome} ataca com ${c.acao.nome}: d10 ${dado}${naMesa ? ' (mesa)' : ''} vs Alvo ${alvo}${bonusMarca ? ` (${c.acao.alvoAcerto} +${bonusMarca} da Marca de Caça)` : ''} → ${graus > 0 ? '+' : ''}${graus} Graus`
         + (dado === 1 ? ' ✨ crítico!' : dado === 10 ? ' 💀 falha crítica!' : ''));
 };
+
+/**
+ * 🏹 O que acontece com a munição depois do tiro.
+ *
+ * Gasta 1 do maço SEMPRE (a flecha saiu, acertando ou não) e então sorteia se
+ * ela sobrou inteira. Sobrando, vira loot no mapa: onde o alvo está se acertou
+ * (cravada nele), por perto se errou (passou batido). Não sobrando, o chat
+ * avisa que quebrou — senão a munição sumiria sem explicação.
+ *
+ * Só o dono do tiro executa: dois clientes com a aba aberta gastariam duas.
+ */
+async function resolverProjetil(c, acertou) {
+    const pj = c.acao.projetil;
+    if (!pj?.id || !controla(c.atacante?.pid)) return;
+
+    // 1) tira do inventário
+    try {
+        const g = gastarUm(pj);
+        if (g.acabou) await _del(_doc(_db, 'items', pj.id));
+        else await _upd(_doc(_db, 'items', pj.id), { quantidade: g.restante });
+    } catch (e) { console.warn('gastar projétil', e); }
+
+    const d = destinoDoProjetil({ acertou, chanceRecuperar: pj.chanceRecuperar });
+    if (!d.caiu) {
+        logChat(`🏹 ${esc(pj.nome)} quebrou no disparo`);
+        return;
+    }
+
+    // 2) cai no mapa. Onde o alvo está (cravada), ou perto dele quando errou.
+    // O `addObj` já anuncia todo loot no chat — não repetir a linha aqui.
+    const tokAlvo = T.objects.get(c.alvos?.[0]?.tokenId);
+    if (!tokAlvo) return;
+    const g = gridSize() || 50;
+    const desvio = () => (Math.random() - 0.5) * g * 2;   // ~1 quadrado para cada lado
+    const x = tokAlvo.x + (d.onde === 'perto' ? desvio() : 0);
+    const y = tokAlvo.y + (d.onde === 'perto' ? desvio() : 0);
+
+    try {
+        await addObj({
+            tipo: 'loot', layerId: 'tokens', x, y,
+            nome: pj.nome, quantidade: 1, visivelPublico: true,
+            item: { nome: pj.nome, quantidade: 1, modeloId: pj.modeloId || null, tipo: 'Projétil' },
+        });
+    } catch (e) { console.warn('dropar projétil', e); }
+}
 
 // ---------- 2) defesa ----------
 window.tbConfDefesa = async (i, valor, nome) => {

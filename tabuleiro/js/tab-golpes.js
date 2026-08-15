@@ -18,6 +18,7 @@ import { avaliarFormas } from '../../shared/conjuracao.js';
 import { abrirModal, fecharModal } from './tab-main.js';
 import { fonteDoParticipante } from './tab-hud.js';
 import { db, getDocs, collection } from '../../painel-mestre/js/firebase-config.js';
+import { projeteisCompativeis, municaoDaArma } from '../../shared/projeteis.js';
 
 const cache = new Map();   // 'char:id' | 'npc:id' -> linhas
 
@@ -173,6 +174,63 @@ export function escolherGolpe(titulo, linhas, dica) {
             ${lista.map((l, i) => `<button class="tb-btn tb-btn-small" style="display:block;width:100%;margin-bottom:6px;text-align:left"
                 ${l.indisponivel ? 'disabled' : ''} onclick="__tbGolpeEscolhido(${i})">${rotulo(l)}</button>`).join('')}
             <div class="tb-modal-actions"><button class="tb-btn" onclick="__tbGolpeEscolhido(-1)">✖ Cancelar</button></div>
+        `);
+    });
+}
+
+
+// =============================================
+// 🏹 PROJÉTEIS — escolher a munição antes do tiro
+//
+// A arma diz o que come (`tipoProjetil`), o projétil carrega a tag, e a munição
+// conta esteja onde estiver na mochila — inclusive dentro da aljava. Quem
+// decide o que casa é shared/projeteis.js; aqui é só I/O e tela.
+// =============================================
+
+/** O catálogo de equipamento do sistema (para instância→modelo do projétil). */
+async function catalogoDeItens() {
+    try {
+        const m = await import('./tab-ficha-win.js?v=9');
+        return (await m.registroSistema())?.equipment || [];
+    } catch (e) { console.warn('catálogo de itens', e); return []; }
+}
+
+/** Os maços que servem para esta arma, com o inventário já carregado. */
+export async function projeteisPara(p, linha) {
+    if (!linha || !municaoDaArma(linha, []).length) {
+        // A linha já traz `tipoProjetil` resolvido (instância > modelo), então
+        // não precisa do catálogo para saber SE gasta munição.
+        if (!(linha?.tipoProjetil || []).length) return [];
+    }
+    const m = await import('./tab-ficha-win.js?v=9');
+    const itens = m.itensCarregados(p?.npcId ? 'npc' : 'char', p?.npcId || p?.characterId);
+    const catalog = await catalogoDeItens();
+    return projeteisCompativeis(itens, catalog, linha);
+}
+
+/**
+ * Pergunta qual munição usar. Uma opção decide sozinha; nenhuma devolve
+ * `false`, e quem chama aborta o tiro — atirar sem flecha não é opção.
+ * @returns Promise<maço|null|false>
+ */
+export function escolherProjetil(titulo, macos) {
+    const lista = macos || [];
+    if (!lista.length) return Promise.resolve(false);
+    if (lista.length === 1) return Promise.resolve(lista[0]);
+    return new Promise(resolve => {
+        window.__tbProjEscolhido = (i) => {
+            delete window.__tbProjEscolhido;
+            fecharModal();
+            resolve(i < 0 ? null : lista[i]);
+        };
+        abrirModal(titulo, `
+            <div class="tb-muted" style="font-size:.8rem;margin-bottom:10px">O maço escolhido perde 1 no disparo.</div>
+            ${lista.map((m, i) => `<button class="tb-btn tb-btn-small" style="display:block;width:100%;margin-bottom:6px;text-align:left"
+                onclick="__tbProjEscolhido(${i})">🏹 <b>${esc(m.nome)}</b>
+                <span class="tb-muted">×${m.quantidade}</span>
+                ${m.dentroDe ? '<span class="tb-muted">· na bolsa</span>' : ''}
+                <span class="tb-muted">· ${m.chanceRecuperar}% de sobrar</span></button>`).join('')}
+            <div class="tb-modal-actions"><button class="tb-btn" onclick="__tbProjEscolhido(-1)">✖ Cancelar</button></div>
         `);
     });
 }

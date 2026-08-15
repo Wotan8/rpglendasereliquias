@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v228';
+const VERSION = 'v229';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -188,6 +188,7 @@ const PRECACHE_URLS = [
   '/shared/retorno-recurso.js',
   '/shared/marca-de-caca.js',
   '/shared/alcance-disparo.js',
+  '/shared/projeteis.js',
   '/shared/equip-slots.js',
   '/shared/ficha-aliado.css',
   '/shared/imagem-zoom.js',
