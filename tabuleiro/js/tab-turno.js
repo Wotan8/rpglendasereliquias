@@ -186,6 +186,11 @@ function miraDaReguaV2(pd) {
         condicaoNome: cond?.condicao || null,
         condicaoRodadas: Number(cond?.rodadas) || 0,
         condicaoMaxAlvos: Number(cond?.alvos) || 0,   // 0 = todos os atingidos
+        // 🚪 O PORTÃO é o que torna a habilidade contestável (§6.1): Chance ou
+        // teste de resistência. Sem portão e sem dano não há o que rolar — o
+        // efeito simplesmente acontece, e abrir janela de conflito seria pedir
+        // um Acerto que a habilidade nunca teve.
+        condicaoPortao: cond?.portao || null,
     };
     if (temArea) {
         const forma = /cone/i.test(pd.formaArea) ? 'cone' : /linha/i.test(pd.formaArea) ? 'linha' : 'circulo';
@@ -908,6 +913,7 @@ function miraDoCadastro(m, s, custo, p) {
         meta: {
             nome: s.nome, efeito: s.efeito, custoSkill: s.custo, custoAcao: custo,
             condicao: m.condicaoNome ? { nome: m.condicaoNome, rodadas: Number(m.condicaoRodadas) || 0, maxAlvos: Number(m.condicaoMaxAlvos) || 0 } : null,
+            portao: m.condicaoPortao || null,
         },
     };
 }
@@ -1111,9 +1117,13 @@ window.tbTurnoConfirmarMira = async () => {
     await gastar(custo);
     await pagarCustos(p);   // 💰 debita o recurso (mecânica ou texto do cadastro)
     if (custo === 'livre') render();
-    // 🤝 Ação de apoio (só aliados): ninguém se defende de um buff — segue o
-    // caminho antigo, aplicando a condição direto nos atingidos.
-    if (atingidos.length && m.afeta === 'aliados') {
+    // 🤝 Aplica direto, SEM janela de conflito, quando não há o que rolar:
+    //   · buff em aliado — ninguém se defende de um buff;
+    //   · habilidade SEM PORTÃO e sem dano — marcar não é atacar. A Presa do
+    //     Caçador escolhe o alvo e pronto; pedir um Acerto ali seria inventar
+    //     uma rolagem que o cadastro não tem (portão 'nenhum', §6.1).
+    const semRolagem = !meta.golpe?.dano && (!meta.portao || meta.portao === 'nenhum');
+    if (atingidos.length && (m.afeta === 'aliados' || semRolagem)) {
         let pids = atingidos.map(o => participanteDoToken(o)?.id).filter(Boolean);
         if (meta.condicao?.nome && pids.length) {
             if (meta.condicao.maxAlvos > 0 && pids.length > meta.condicao.maxAlvos) {
@@ -1122,7 +1132,9 @@ window.tbTurnoConfirmarMira = async () => {
             }
             aplicarCondicaoEmVarios(pids, meta.condicao.nome, meta.condicao.rodadas || 0, p?.id).catch(e => console.warn('condição da skill', e));
         }
-        toast(`${icone} ${nomes.length} aliado(s): ${nomes.join(', ')}`);
+        // "aliado(s)" só quando forem mesmo aliados — A Presa marca inimigo.
+        const quem = m.afeta === 'aliados' ? 'aliado(s)' : 'alvo(s)';
+        toast(`${icone} ${nomes.length} ${quem}: ${nomes.join(', ')}`);
         return;
     }
     // ⚔️ Com alvo, a ação vira CONFLITO: acerto → defesa → dano → aplicação.
