@@ -108,6 +108,12 @@ export function miraDeCadastro(pd) {
         incorporacao: pd.incorporacao || null,
         alcanceVisao: !!pd.alcanceVisao,
         alcanceDoDisparo: !!pd.alcanceDoDisparo,
+        // 🕯️ ritual de N rodadas · ⏪ desfaz o turno do alvo · 🌀 segundo estágio
+        ritualRodadas: Number(pd.ritualRodadas) || 0,
+        ritualSemDefesa: !!pd.ritualSemDefesa,
+        desfazTurno: !!pd.desfazTurno,
+        depoisLocais: Number(pd.depoisLocais) || 0,
+        alcanceDestinoM: pd.alcanceDestinoM ?? null,
     };
 
     if (ehLocais) {

@@ -1,42 +1,19 @@
 /**
- * Leitura da MIRA do cadastro (miraDaReguaV2, em tab-turno.js).
+ * Leitura da MIRA do cadastro — agora em shared/skill-runtime.js
+ * (miraDeCadastro), a MESMA função que o Painel do Criador usa. Antes havia
+ * uma cópia em tab-turno e este teste apontava para ela; duas cópias da mesma
+ * regra foi o que produziu o bug do sombreamento, então ficou uma só.
  *
  * Os casos são pré-definidos REAIS de system/data/classModules, um por forma
- * que o Painel do Criador grava. O que se trava aqui:
- *   · "onda"/"zona"/"circulo" com tamanho = área de geometria, e o alcance é
- *     que decide se o círculo nasce no token ou solto no mapa;
- *   · "proprio"/"nenhuma"/"unico"/"ponto" com alcance 0 = só em quem usa —
- *     vira raio 0 no próprio token e cai como aliado, sem janela de conflito
- *     contra si mesmo (eram 28 habilidades mirando a 0 m em modo "alvos");
- *   · TODAS as condições do cadastro viajam, não só a primeira (Postura
- *     Defensiva dá Blindado E Abalado);
- *   · sem área e sem alvos não há mira — a habilidade cai no diálogo manual.
+ * que o Painel do Criador grava.
  *
  * Roda com: node tabuleiro/js/tab-mira-cadastro.test.mjs
  */
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
 import { ehFormula, resolverMedida } from '../../shared/medida-formula.js';
+import { miraDeCadastro } from '../../shared/skill-runtime.js';
 
-const src = readFileSync(new URL('./tab-turno.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
-const ini = src.indexOf('function miraDaReguaV2(');
-assert.ok(ini > 0, 'miraDaReguaV2 não encontrada');
-const fim = src.indexOf('\n}\n', ini) + 3;
-
-// `ehFormula` vem do módulo de verdade — o temMedida sai do próprio fonte.
-const iTem = src.indexOf('const temMedida =');
-assert.ok(iTem > 0 && iTem < ini, 'temMedida não encontrado antes de miraDaReguaV2');
-const sandbox = { r: null, ehFormula };
-vm.createContext(sandbox);
-vm.runInContext(src.slice(iTem, src.indexOf('\n', iTem)) + '\n' + src.slice(ini, fim), sandbox);
-// JSON no meio do caminho: objeto criado dentro do vm tem outro protótipo, e
-// o deepEqual estrito reprova comparação entre realms.
-const mira = (pd) => {
-    sandbox.pd = pd;
-    vm.runInContext('r = JSON.stringify(miraDaReguaV2(pd) ?? null)', sandbox);
-    return JSON.parse(sandbox.r);
-};
+const mira = (pd) => miraDeCadastro(pd);
 
 /* ===== Bardo: "onda" — área a partir do próprio conjurador ===== */
 const grito = mira({

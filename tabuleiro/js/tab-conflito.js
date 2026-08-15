@@ -29,6 +29,7 @@ import { golpesDe, golpesCacheados, escolherGolpe, golpesCorpoACorpo, alcanceDoG
 import { refCombate } from './tab-main.js';
 import { cenaAtiva, comCenaAtivaPatch } from '../../shared/combate-cenas.js';
 import { bonusDoAtaque } from '../../shared/marca-de-caca.js';
+import { ritualProibeDefesa } from '../../shared/turno-efeitos.js?v=1';
 import { destinoDoProjetil, gastarUm } from '../../shared/projeteis.js';
 import { addObj } from './tab-objects.js';
 import { participanteDoToken, valorVdDaFonte, fonteDoParticipante, VITAIS } from './tab-hud.js';
@@ -104,6 +105,10 @@ function defesasDoSistema() {
 
 /** Defesas COM valor para esta ficha: [{ nome, curto, valor }]. */
 function defesasDe(pid) {
+    // 🕯️ Ritual que proíbe defesa (Invocação Abissal): quem está no meio do
+    // rito não interrompe para se defender. Nenhuma Defesa fica disponível —
+    // é o preço da Invocação, e o número zero na tela é a regra à mostra.
+    if (ritualProibeDefesa(part(pid))) return [];
     const fonte = fonteDoParticipante(part(pid));
     if (!fonte) return [];
     const out = [];

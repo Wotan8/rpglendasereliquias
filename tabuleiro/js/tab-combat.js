@@ -9,6 +9,7 @@ import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
 import { VITAIS, vdsCombateDaFonte, espelhosDoVitalNpc, fonteDoParticipante } from './tab-hud.js';
 import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas, FACCOES, faccaoDoParticipante, acoesNovas, participanteDaVez, efeitoDasCondicoes, alvoDoTickRodada } from '../../shared/combate-cenas.js';
 import { rolarFormula } from './tab-conflito-calc.js';
+import { tirarRetrato, avancarRitual } from '../../shared/turno-efeitos.js?v=1';
 import { logChat } from './tab-chat.js';
 
 let janelaAberta = false;
@@ -377,11 +378,22 @@ window.tbCombTurno = async function(dir) {
             await window.tbFecharTurnoRetorno?.(saindo.id, !!(c.acoesTurno || {}).movimento);
         }
     }
+    // ⏪ Retrato do turno que COMEÇA: onde cada token está e como estão os
+    // vitais de todos. É o que Estilhaçar Causa desfaz — sem ele, "voltar ao
+    // estado de antes" não teria a que voltar. Um por participante, sobrescrito
+    // a cada turno dele.
+    // 🕯️ E é aqui que os rituais de N rodadas avançam uma etapa.
+    let partsNovos = c.participantes || [];
+    if (dir > 0) {
+        partsNovos = comRetratoDoTurno(partsNovos, parts[turno]?.id, rodada);
+        if (rodada > rodadaAntes) partsNovos = await avancarRituais(partsNovos, rodada);
+    }
+
     // ⚔️ turno novo = ações cheias (1 Padrão + 1 Movimento, §6.2).
     // A expiração de condições NÃO acontece aqui: quem vira a rodada pode ser
     // um jogador (encerrando o próprio turno) e as rules não deixam ele limpar
     // ficha de NPC — o MESTRE expira pelo snapshot (checarCondicoesRodada).
-    await salvar(c.participantes || [], { turnoAtual: turno, rodada, acoesTurno: acoesNovas() });
+    await salvar(partsNovos, { turnoAtual: turno, rodada, acoesTurno: acoesNovas() });
     if (c.iniciado) {
         const vez = participanteDaVez({ ...c, turnoAtual: turno });
         if (vez) logChat(`▶️ Vez de ${vez.name || '?'}${rodada !== rodadaAntes ? ` (Rodada ${rodada})` : ''}`);
@@ -392,6 +404,53 @@ window.tbCombTurno = async function(dir) {
         try { const m = await import('./tab-templates.js'); m.expirarTemplates(rodada); } catch (e) {}
     }
 };
+
+/** Vitais atuais de um participante, no formato do retrato. */
+function vitaisDoParticipante(p) {
+    if (p.characterId) {
+        const v = VITAIS.get(p.characterId);
+        return { pid: p.id, vit: v?.hp ?? null, ener: v?.ener ?? null, san: v?.san ?? null };
+    }
+    const vd = T.npcs.find(x => x.id === p.npcId)?.valoresDer?.atual || {};
+    return { pid: p.id, vit: vd.VIT ?? null, ener: vd.ENER ?? null, san: vd.SAN ?? null };
+}
+
+/**
+ * ⏪ Guarda no participante o retrato do turno que começa agora.
+ * É o que Estilhaçar Causa desfaz: posição dos tokens e vitais de todos.
+ */
+function comRetratoDoTurno(participantes, pid, rodada) {
+    if (!pid) return participantes;
+    const tokens = [...T.objects.values()]
+        .filter(o => o.tipo === 'token')
+        .map(o => ({ id: o.id, x: o.x, y: o.y }));
+    const vitais = participantes.map(vitaisDoParticipante);
+    const retrato = tirarRetrato({ pid, rodada, tokens, vitais });
+    return participantes.map(x => x.id === pid ? { ...x, retratoTurno: retrato } : x);
+}
+
+/**
+ * 🕯️ Rituais de N rodadas avançam uma etapa por rodada. No fim de cada uma,
+ * resolve-se a parte dela; ao completar, o ritual sai do participante e a mesa
+ * é avisada de que chegou a hora do desfecho.
+ */
+async function avancarRituais(participantes, rodada) {
+    let mudou = false;
+    const out = participantes.map(p => {
+        if (!p.ritual) return p;
+        const r = avancarRitual(p.ritual);
+        mudou = true;
+        if (r.completou) {
+            logChat(`🕯️ ${p.name || '?'}: ${p.ritual.nome} — ritual COMPLETO (${r.etapa}/${r.total}). `
+                + `O Mestre resolve o desfecho no lugar do rito.`);
+            const { ritual, ...limpo } = p;
+            return limpo;
+        }
+        logChat(`🕯️ ${p.name || '?'}: ${p.ritual.nome} — ${r.etapa}/${r.total} dos passos resolvidos`);
+        return { ...p, ritual: r.ritual };
+    });
+    return mudou ? out : participantes;
+}
 
 // ---- ⏱️ Expiração de condições — SEMPRE no cliente do mestre (secreto) ----
 // Disparada pelo snapshot do doc de combate: qualquer cliente pode ter virado a

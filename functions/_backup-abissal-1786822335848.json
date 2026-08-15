@@ -1,0 +1,395 @@
+{
+ "custoExpLabel": "",
+ "bloqueioMecanicaIds": [],
+ "custoEquipamentos": [],
+ "custoExpPorItem": 0,
+ "custoCriacaoMecanicaId": null,
+ "mecanicaLimiteId": null,
+ "custoEdicaoMecanicaId": null,
+ "limiteMecanicaIds": [],
+ "custoRemocaoMecanicaId": null,
+ "custoEdicaoAtivo": false,
+ "custoRemocaoMecanicaIds": [],
+ "custoCriacaoMecanicaIds": [],
+ "custoRemocaoAtivo": false,
+ "criadoEm": {
+  "_seconds": 1784511789,
+  "_nanoseconds": 25000000
+ },
+ "custoEdicaoMecanicaIds": [],
+ "criadoPor": "M2rZzlQkzxTrrddeFQ10S6zsfX62",
+ "tipo": "lista",
+ "titulo": "Rituais de Invocação Abissal",
+ "limiteFixo": null,
+ "icone": "🌑",
+ "id": "TbRKh68m2hvr9KUVrOXb",
+ "cadastrarBloqueio": false,
+ "permitirCriacaoJogador": false,
+ "publicado": true,
+ "versao": 14,
+ "schema": [
+  {
+   "placeholder": "",
+   "key": "1",
+   "largura": "full",
+   "tipo": "textarea",
+   "somenteLeitura": true,
+   "label": "O que faz:"
+  },
+  {
+   "somenteLeitura": true,
+   "label": "CA mínimo:",
+   "tipo": "number",
+   "placeholder": "",
+   "key": "2",
+   "largura": ""
+  },
+  {
+   "largura": "",
+   "key": "3",
+   "placeholder": "",
+   "label": "Teste:",
+   "somenteLeitura": true,
+   "tipo": "select_vd",
+   "ehVeiculo": true
+  },
+  {
+   "key": "4",
+   "placeholder": "",
+   "ocultarSeVazio": true,
+   "largura": "",
+   "label": "Redutor:",
+   "somenteLeitura": true,
+   "tipo": "number"
+  },
+  {
+   "tipo": "number",
+   "label": "Custo Sanidade:",
+   "somenteLeitura": true,
+   "largura": "",
+   "ocultarSeVazio": true,
+   "key": "5",
+   "placeholder": ""
+  },
+  {
+   "key": "acao",
+   "tipo": "select",
+   "label": "Ação:",
+   "largura": "quarto",
+   "placeholder": "",
+   "somenteLeitura": true,
+   "opcoes": [
+    "Ação Padrão",
+    "Ação de Movimento",
+    "Ação Livre",
+    "Ação Completa (turno inteiro)",
+    "Reação",
+    "Sustentada (1 Padrão/turno)",
+    "Fora de combate"
+   ]
+  },
+  {
+   "somenteLeitura": true,
+   "label": "Custo em Energia",
+   "tipo": "number",
+   "key": "6",
+   "placeholder": "",
+   "ocultarSeVazio": true,
+   "largura": ""
+  },
+  {
+   "derivedValueId": "hH1U9UXrqgXtxNTpJchU",
+   "tipo": "valor_derivado",
+   "label": "CA",
+   "somenteLeitura": true,
+   "key": "7",
+   "placeholder": "",
+   "largura": ""
+  },
+  {
+   "tipo": "contador",
+   "label": "Graus Obtidos",
+   "key": "8",
+   "placeholder": "",
+   "largura": ""
+  },
+  {
+   "tipo": "select_botao",
+   "label": "🔮 Conjurar Ritual",
+   "somenteLeitura": true,
+   "largura": "",
+   "key": "9",
+   "placeholder": ""
+  }
+ ],
+ "updatedAt": {
+  "_seconds": 1786751444,
+  "_nanoseconds": 426000000
+ },
+ "atualizadoEm": {
+  "_seconds": 1786814237,
+  "_nanoseconds": 386000000
+ },
+ "itensPredefinidos": [
+  {
+   "custoExpProprio": null,
+   "custoCriacaoMecanicaIds": null,
+   "custoEquipamentos": null,
+   "valores": {
+    "1": "Chama uma entidade abissal. Reporte ao Mestre seu CA atual e os Graus de Sucesso do teste — ele gera a criatura em segredo. Requer Sacrifício. Quanto mais insano (CA alto), maior e mais indócil tende a ser o que responde.",
+    "2": "2",
+    "3": "J4dtnjgEqVZvkGOleGK4",
+    "4": "",
+    "5": "4",
+    "6": "1",
+    "8": "0",
+    "9": "xZaVZcl6p6XUmjA5f1wM",
+    "acao": "Fora de combate"
+   },
+   "id": "pdi_1784604406980_bbkqom",
+   "nome": "Invocação Abissal",
+   "descricao": "Rasga o véu e puxa uma criatura da Oitava Camada para a realidade. O que vem, o Abismo decide.",
+   "alcance": null,
+   "formaArea": "nenhuma",
+   "tamanhoArea": null,
+   "alvosMax": null,
+   "duracaoValor": null,
+   "duracaoUnidade": null,
+   "condicoesAplicadas": [],
+   "criaturasVinculadas": [
+    {
+     "npcId": "ZAQmjd1H2zml9Wzwi8cg",
+     "nome": "Cria Menor do Véu"
+    },
+    {
+     "npcId": "j5Nn1e38L0kzINuX6nBe",
+     "nome": "Cria da Fenda"
+    },
+    {
+     "npcId": "HTU0ep2gVzkqh0rQ0kzk",
+     "nome": "Horror Rastejante"
+    },
+    {
+     "npcId": "qoGly5KjYvcIkmyWQb3w",
+     "nome": "Horror Maior"
+    },
+    {
+     "npcId": "e0FdHrT6OlxIYlMvXtA2",
+     "nome": "Entidade da Oitava"
+    }
+   ]
+  },
+  {
+   "id": "pdi_inv_1785107140941_0",
+   "nome": "Selo Negativo",
+   "descricao": "Ergue uma jaula espacial que aprisiona o alvo no tecido da realidade.",
+   "custoExpProprio": null,
+   "custoCriacaoMecanicaIds": null,
+   "custoEquipamentos": null,
+   "valores": {
+    "1": "Conter ou aprisionar um alvo. Redutor: −(3 + AI do alvo). Custo: 2 Energia + 1 Sanidade OU 3 Sanidade. Falha: o selo inverte — a área vira limiar (Fenda Menor por 1 turno). Efeito: cria uma jaula de Tecido Espacial Físico (2–4m); presos testam (FOR/PRS + AUT) vs seus Graus de Sucesso para escapar.",
+    "2": "6",
+    "3": "zAlnZyvt1WJLwTyrDMdl",
+    "4": "0",
+    "5": "1",
+    "6": "2",
+    "8": "0",
+    "9": "KLf8ewjI908BaTca9ibp",
+    "acao": "Ação Padrão"
+   },
+   "alcance": null,
+   "formaArea": "onda",
+   "tamanhoArea": 4,
+   "alvosMax": null,
+   "duracaoValor": 1,
+   "duracaoUnidade": "turno",
+   "condicoesAplicadas": [],
+   "faccao": "inimigo"
+  },
+  {
+   "id": "pdi_inv_1785107140941_1",
+   "nome": "Ocultação de Eco Abissal",
+   "descricao": "Dissolve os ecos deixados pela magia abissal, ocultando rastros.",
+   "custoExpProprio": null,
+   "custoCriacaoMecanicaIds": null,
+   "custoEquipamentos": null,
+   "valores": {
+    "1": "Apagar rastros abissais. Área 6m. Requer Sacrifício e CA 3+. Custo: 1 Energia OU 1 Sanidade. Redutor: −3. Falha: você absorve parte do Eco; −1 Sanidade imediato. Efeito: apaga rastros abissais; rituais rastreadores na área sofrem −2 até o fim da cena.",
+    "2": "3",
+    "3": "zAlnZyvt1WJLwTyrDMdl",
+    "4": "-3",
+    "5": "0",
+    "6": "1",
+    "8": "0",
+    "9": "gT5DZcIaG69aYuEjdXwQ",
+    "acao": "Fora de combate"
+   },
+   "alcance": null,
+   "formaArea": "nenhuma",
+   "tamanhoArea": null,
+   "alvosMax": null,
+   "duracaoValor": 1,
+   "duracaoUnidade": "cena",
+   "condicoesAplicadas": []
+  },
+  {
+   "id": "pdi_inv_1785107140941_2",
+   "nome": "Laço de Nome",
+   "descricao": "Amarra a vontade da criatura invocada usando o poder do nome.",
+   "custoExpProprio": null,
+   "custoCriacaoMecanicaIds": null,
+   "custoEquipamentos": null,
+   "valores": {
+    "1": "Dominar uma criatura abissal. Requer CA 3+. Custo: 1 Energia OU 1 Sanidade. Redutor: −(3 + Risco do Aspecto + AI da criatura). Falha: a criatura aprende seu nome verdadeiro e −1 na Disposição. Efeito: +1 imediato na Disposição da criatura invocada.",
+    "2": "3",
+    "3": "zAlnZyvt1WJLwTyrDMdl",
+    "4": "-3",
+    "5": "0",
+    "6": "1",
+    "8": "0",
+    "9": "gT5DZcIaG69aYuEjdXwQ",
+    "acao": "Ação Padrão"
+   },
+   "alcance": null,
+   "formaArea": "alvo",
+   "tamanhoArea": null,
+   "alvosMax": 1,
+   "duracaoValor": null,
+   "duracaoUnidade": null,
+   "condicoesAplicadas": [],
+   "alcanceVisao": true,
+   "faccao": "inimigo"
+  },
+  {
+   "id": "pdi_inv_1785107140941_3",
+   "nome": "Plano Inferior",
+   "descricao": "Abre uma passagem para a primeira camada de realidade abaixo do plano base.",
+   "custoExpProprio": null,
+   "custoCriacaoMecanicaIds": null,
+   "custoEquipamentos": null,
+   "valores": {
+    "1": "Acesso a outro plano. Duração 1 cena. Raio 4m. Requer CA 4+. Custo: 1 Energia OU 1 Sanidade. Redutor: −2. Falha: o portal rompe até a Oitava, criando uma Fenda Menor. Efeito: cria passagem para uma bolha de realidade fixa na primeira camada inferior ao plano base.",
+    "2": "4",
+    "3": "J4dtnjgEqVZvkGOleGK4",
+    "4": "-2",
+    "5": "0",
+    "6": "1",
+    "8": "0",
+    "9": "gT5DZcIaG69aYuEjdXwQ",
+    "acao": "Ação Padrão"
+   },
+   "alcance": null,
+   "formaArea": "onda",
+   "tamanhoArea": 4,
+   "alvosMax": null,
+   "duracaoValor": 1,
+   "duracaoUnidade": "cena",
+   "condicoesAplicadas": []
+  },
+  {
+   "id": "pdi_inv_1785107140941_4",
+   "nome": "Plano Mental Inferior",
+   "descricao": "Cria um refúgio mental pessoal numa camada inferior da realidade.",
+   "custoExpProprio": null,
+   "custoCriacaoMecanicaIds": null,
+   "custoEquipamentos": null,
+   "valores": {
+    "1": "Acessar uma bolha mental pessoal. Duração 1 cena. Raio 4m. Requer CA 5+. Custo: 1 Energia OU 1 Sanidade. Redutor: −2. Falha: o portal rompe até a Oitava, criando uma Fenda Menor. Efeito: cria passagem para uma bolha na segunda camada inferior — espaço mental pessoal, moldável pelo Invocador.",
+    "2": "5",
+    "3": "zAlnZyvt1WJLwTyrDMdl",
+    "4": "-2",
+    "5": "0",
+    "6": "1",
+    "8": "0",
+    "9": "gT5DZcIaG69aYuEjdXwQ",
+    "acao": "Fora de combate"
+   },
+   "alcance": null,
+   "formaArea": "nenhuma",
+   "tamanhoArea": null,
+   "alvosMax": null,
+   "duracaoValor": 1,
+   "duracaoUnidade": "cena",
+   "condicoesAplicadas": []
+  },
+  {
+   "id": "pdi_inv_1785107140941_5",
+   "nome": "Vórtice na Fenda",
+   "descricao": "Rasga uma fenda e atravessa o plano invertido para reaparecer longe.",
+   "custoExpProprio": null,
+   "custoCriacaoMecanicaIds": null,
+   "custoEquipamentos": null,
+   "valores": {
+    "1": "Teleportar usando o plano invertido. Tempo: 6 Ações (3 turnos). Alvo: o usuário e mais um alvo tocado. Requer CA 7+. Custo: 1 Energia + 1 Sanidade OU 2 Sanidade. Redutor: −4. Falha: volta perdido (Defesa 0 por 1 cena). Falha Crítica: fica preso no plano invertido por 1 cena. Efeito: teleporta por uma fenda visível (até 10m) e retorna no mesmo turno em um ponto de até 200m da origem.",
+    "2": "7",
+    "3": "J4dtnjgEqVZvkGOleGK4",
+    "4": "-4",
+    "5": "1",
+    "6": "1",
+    "8": "0",
+    "9": "7zRZ3yazPmgjUgXDmX1c",
+    "acao": "Ação Padrão"
+   },
+   "alcance": 3,
+   "formaArea": "alvo",
+   "tamanhoArea": null,
+   "alvosMax": 2,
+   "duracaoValor": 1,
+   "duracaoUnidade": "cena",
+   "condicoesAplicadas": [],
+   "faccao": "aliado"
+  },
+  {
+   "id": "pdi_inv_1785107140941_6",
+   "nome": "Fechamento de Fenda",
+   "descricao": "Costura o tecido da realidade, selando uma fenda abissal passo a passo.",
+   "custoExpProprio": null,
+   "custoCriacaoMecanicaIds": null,
+   "custoEquipamentos": null,
+   "valores": {
+    "1": "Selar uma fenda. Tempo: 6 Ações (3 turnos). Requer Sacrifício e CA 5+. Custo: 1 Energia + 1 Sanidade OU 2 Sanidade. Redutor: −2 − tamanho da Fenda (Menor=1, Maior=3, Verdadeira=5). Falha: a Fenda aumenta 1 passo. Efeito: reduz a fenda 1 passo por Grau de Sucesso; ao zerar, sela completamente.",
+    "2": "5",
+    "3": "zAlnZyvt1WJLwTyrDMdl",
+    "4": "-2",
+    "5": "1",
+    "6": "1",
+    "8": "0",
+    "9": "7zRZ3yazPmgjUgXDmX1c",
+    "acao": "Fora de combate"
+   },
+   "alcance": null,
+   "formaArea": "nenhuma",
+   "tamanhoArea": null,
+   "alvosMax": null,
+   "duracaoValor": 3,
+   "duracaoUnidade": "turno",
+   "condicoesAplicadas": []
+  },
+  {
+   "id": "pdi_inv_1785107140941_7",
+   "nome": "Estilhaçar Causa",
+   "descricao": "Desfaz o último evento da realidade — a um custo terrível para a mente.",
+   "custoExpProprio": null,
+   "custoCriacaoMecanicaIds": null,
+   "custoEquipamentos": null,
+   "valores": {
+    "1": "Anular o último evento. Requer CA 8+. Custo: Sacrifício + 2 Energia + 1 Sanidade. Redutor: −6. Falha: o evento retorna pior (o alvo ganha +1 Grau de Sucesso adicional no evento original). Efeito: cancela o último evento (um ataque, queda, rolagem); memórias ficam turvas e deixa Eco Forte. Consequência: pessoas afetadas testam Sanidade ou perdem 1 ponto. ⚠ Um dos rituais mais poderosos e perigosos da Abismancia.",
+    "2": "8",
+    "3": "J4dtnjgEqVZvkGOleGK4",
+    "4": "-6",
+    "5": "1",
+    "6": "2",
+    "8": "0",
+    "9": "KLf8ewjI908BaTca9ibp",
+    "acao": "Fora de combate"
+   },
+   "alcance": null,
+   "formaArea": "nenhuma",
+   "tamanhoArea": null,
+   "alvosMax": null,
+   "duracaoValor": null,
+   "duracaoUnidade": null,
+   "condicoesAplicadas": []
+  }
+ ]
+}

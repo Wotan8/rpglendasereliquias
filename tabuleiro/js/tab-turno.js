@@ -33,6 +33,7 @@ import { melhorDisparo } from '../../shared/alcance-disparo.js';
 import { golpesDe, golpesCacheados, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes, formasDeConjurar, projeteisPara, escolherProjetil } from './tab-golpes.js';
 import { gastarUm } from '../../shared/projeteis.js';
 import { templateAtingeCirculo } from './tab-templates.js';
+import { updObj } from './tab-objects.js';
 import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte, fonteDoParticipante } from './tab-hud.js';
 import { carregarCondicoesSistema, aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { grausDoAtaque } from './tab-conflito-calc.js';
@@ -40,6 +41,7 @@ import { calcularDadiva, rotuloDoGanho } from '../../shared/dadiva.js?v=1';
 import { bonusDosGanhos } from '../../shared/bonus-temporario.js?v=1';
 import { porqueNaoPodeIncorporar, custoEscalonado, dadivasDoHospede, ehAncestral,
          quemFicaInerte, CONDICAO_TRANSE } from '../../shared/incorporacao.js?v=1';
+import { oQueDesfazer, comecarRitual, precisaSegundoEstagio, miraDoSegundoEstagio } from '../../shared/turno-efeitos.js?v=1';
 import { logChat } from './tab-chat.js';
 
 // Abertura do arco do golpe corpo a corpo (graus). Régua de mesa da UI —
@@ -196,89 +198,10 @@ function acaoDoRotulo(rotulo) {
  * Converte para o formato do runtime; null quando o predef não tem nada disso.
  * "onda" = área a partir do próprio conjurador (círculo da borda do token).
  */
-/** A medida existe? Vale um número positivo OU uma fórmula da ficha. */
-const temMedida = (v) => ehFormula(v) || Number(v) > 0;
-
-function miraDaReguaV2(pd) {
-    if (!pd) return null;
-    const temArea = !!pd.formaArea && temMedida(pd.tamanhoArea);
-    const temAlvos = Number(pd.alvosMax) > 0;
-    if (!temArea && !temAlvos) return null;
-    const afeta = pd.faccao === 'inimigo' ? 'inimigos' : pd.faccao === 'aliado' ? 'aliados' : 'todos';
-    // TODAS as condições do cadastro viajam: a Postura Defensiva dá Blindado E
-    // Abalado, e ficar só com a primeira comia metade da manobra.
-    const condicoes = (pd.condicoesAplicadas || [])
-        .filter(c => c?.condicao)
-        .map(c => ({ nome: c.condicao, rodadas: Number(c.rodadas) || 0, maxAlvos: Number(c.alvos) || 0 }));
-    const cond = (pd.condicoesAplicadas || [])[0] || null;
-    const base = {
-        afeta, condicoes,
-        condicaoNome: cond?.condicao || null,
-        condicaoRodadas: Number(cond?.rodadas) || 0,
-        condicaoMaxAlvos: Number(cond?.alvos) || 0,   // 0 = todos os atingidos
-        // 🚪 O PORTÃO é o que torna a habilidade contestável (§6.1): Chance ou
-        // teste de resistência. Sem portão e sem dano não há o que rolar — o
-        // efeito simplesmente acontece, e abrir janela de conflito seria pedir
-        // um Acerto que a habilidade nunca teve.
-        condicaoPortao: cond?.portao || null,
-    };
-
-    // 📍 LOCAIS: quem conjura aponta pedaços de CHÃO vazio dentro do alcance,
-    // na quantidade que `alvosMax` permitir. É a mira da manada que chega, da
-    // armadilha que se planta, da invocação que aparece — o alvo é o lugar, e
-    // não uma criatura que já esteja lá.
-    // Vem ANTES do "só em si": é intenção declarada e não pode ser confundida
-    // com "ponto", que ali significa "não sai de mim".
-    if (/local|locais|chao|chão/i.test(String(pd.formaArea || ''))) {
-        return {
-            ...base, tipo: 'locais',
-            alcanceM: temMedida(pd.alcance) ? pd.alcance : (pd.tamanhoArea ?? 0),
-            maxAlvos: Number(pd.alvosMax) || 1,
-            alvosPorGraus: !!pd.alvosPorGraus,
-        };
-    }
-
-    // 🧍 Habilidade que só afeta quem usa ("proprio"/"nenhuma"/"unico" com
-    // alcance 0): postura, buff pessoal, loção que se bebe. Vira um círculo de
-    // raio 0 no próprio token — o conjurador já entra por cobertura, ninguém
-    // mais alcança, e `afeta: aliados` faz o efeito cair direto, sem abrir
-    // janela de conflito contra si mesmo.
-    const soEmSi = !temArea && temAlvos && !temMedida(pd.alcance)
-        && /proprio|próprio|nenhuma|unico|único|ponto/i.test(String(pd.formaArea || ''));
-    if (soEmSi) {
-        return {
-            ...base, afeta: 'aliados', tipo: 'geometria', forma: 'circulo', origem: 'token',
-            alcanceM: 0, raioM: 0, comprimentoM: 0, larguraM: 1, angGraus: 60, maxAlvos: 1,
-        };
-    }
-
-    // As medidas seguem CRUAS daqui (número ou fórmula): quem resolve é o
-    // miraDoCadastro, que tem a ficha de quem está conjurando em mãos.
-    if (temArea) {
-        const forma = /cone/i.test(pd.formaArea) ? 'cone' : /linha/i.test(pd.formaArea) ? 'linha' : 'circulo';
-        const tam = pd.tamanhoArea;
-        return {
-            ...base, tipo: 'geometria', forma,
-            origem: (forma === 'circulo' && temMedida(pd.alcance)) ? 'livre' : 'token',
-            alcanceM: pd.alcance ?? 0,
-            raioM: tam, comprimentoM: tam,
-            // A largura da linha é um terço do comprimento; com fórmula, a
-            // divisão viaja junto para ser feita depois, com o número na mão.
-            larguraM: ehFormula(tam) ? `(${String(tam).trim()}) / 3` : Math.max(1, (Number(tam) || 0) / 3),
-            angGraus: Number(pd.anguloCone) || 60,
-            maxAlvos: 99,
-        };
-    }
-    return {
-        ...base, tipo: 'alvos',
-        alcanceM: temMedida(pd.alcance) ? pd.alcance : (pd.tamanhoArea ?? 0),
-        maxAlvos: Number(pd.alvosMax) || 1,
-        // 🌀 Fusão Selvagem / Transcendência: o alvo mirado tem de ser um
-        // hóspede válido, e ao confirmar não há ataque — há empréstimo.
-        exigeVinculo: pd.exigeVinculo || null,
-        incorporacao: pd.incorporacao || null,
-    };
-}
+/* A leitura da mira do cadastro mora em shared/skill-runtime.js
+ * (miraDeCadastro) — a MESMA que o Painel do Criador usa para dizer o que
+ * está incompleto. Havia aqui uma segunda cópia, e duas cópias da mesma
+ * regra foi o que já produziu o bug do sombreamento. Uma só. */
 
 let skillsCache = null;   // { chave: 'tipo:id', lista } — resolvido 1x por vez/turno
 
@@ -1178,6 +1101,106 @@ async function aplicarIncorporacao(m, p, tok, tokAlvo) {
     render();
 }
 
+/**
+ * 🌀 Vórtice na Fenda: quem conjura e o token tocado somem daqui e aparecem no
+ * destino escolhido. Os dois vão juntos e lado a lado.
+ */
+async function aplicarTeleporte(m, p, tok) {
+    const destino = (m.locais || [])[0];
+    if (!destino) { toast('⚠️ Escolha o destino', 'warning'); return; }
+    const meta = m.meta || {};
+    const custo = meta.custoAcao || 'padrao';
+    const gs = gridSize();
+    const levados = [tok, ...(m.alvos || []).map(id => T.objects.get(id)).filter(Boolean)]
+        .filter((o, i, a) => o && a.indexOf(o) === i);
+
+    T.mira = null; markDirty();
+    await gastar(custo);
+    await pagarCustos(p);
+
+    // Lado a lado no destino, para dois tokens não ocuparem o mesmo ponto
+    levados.forEach((o, i) => {
+        const dx = i === 0 ? 0 : gs * (i % 2 ? 1 : -1) * Math.ceil(i / 2);
+        updObj(o.id, { x: destino.x + dx, y: destino.y });
+    });
+
+    logChat(`🌀 ${p.name || '?'} usou ${meta.nome || 'Vórtice'} → ${levados.map(o => o.nome || '?').join(' e ')} `
+        + `atravessam para (${Math.round(destino.x / gs)}, ${Math.round(destino.y / gs)})`);
+    toast(`🌀 ${levados.length} atravessaram a fenda`);
+    render();
+}
+
+/**
+ * 🕯️ Invocação Abissal: o rito ocupa rodadas. Marca o participante, cobra o
+ * custo agora e deixa o resto para o fim de cada rodada (tab-combat avança as
+ * etapas). Enquanto dura, quem conjura não tem Defesa.
+ */
+async function comecarRitualDaSkill(m, p) {
+    const c = cena();
+    const meta = m.meta || {};
+    T.mira = null; markDirty();
+    await gastar(meta.custoAcao || 'padrao');
+    await pagarCustos(p);
+
+    const ritual = comecarRitual({
+        nome: meta.nome || 'Ritual', rodadas: m.ritualRodadas,
+        rodadaAtual: c?.rodada || 1, semDefesa: !!m.ritualSemDefesa,
+    });
+    await salvarCena({
+        participantes: (c.participantes || []).map(x => x.id === p.id ? { ...x, ritual } : x),
+    });
+    logChat(`🕯️ ${p.name || '?'} começou ${ritual.nome} — ${ritual.total} rodadas`
+        + (ritual.semDefesa ? ', e não pode se defender enquanto dura' : '')
+        + `. Cada rodada resolve uma parte dos passos.`);
+    toast(`🕯️ ${ritual.nome}: ${ritual.total} rodadas${ritual.semDefesa ? ' · sem Defesa' : ''}`);
+    render();
+}
+
+/**
+ * ⏪ Estilhaçar Causa: o alvo volta ao estado de antes do último turno dele.
+ * Volta para onde estava, e o dano que causou desde então se recupera.
+ * O retrato foi tirado por tab-combat no começo do turno do alvo.
+ */
+async function desfazerTurnoDoAlvo(m, p, tokAlvo) {
+    const c = cena();
+    const pAlvo = participanteDoToken(tokAlvo);
+    const meta = m.meta || {};
+    const custo = meta.custoAcao || 'padrao';
+
+    T.mira = null; markDirty();
+    await gastar(custo);
+    await pagarCustos(p);
+
+    const retrato = pAlvo?.retratoTurno;
+    if (!retrato) {
+        logChat(`⏪ ${p.name || '?'} usou ${meta.nome} em ${tokAlvo.nome || '?'} — mas não há turno dele registrado para desfazer`);
+        toast('⏪ Este alvo ainda não teve turno nesta cena — nada a desfazer', 'warning');
+        render(); return;
+    }
+
+    const agora = {
+        tokens: [...T.objects.values()].filter(o => o.tipo === 'token').map(o => ({ id: o.id, x: o.x, y: o.y })),
+        vitais: (c.participantes || []).map(x => {
+            if (x.characterId) { const v = VITAIS.get(x.characterId); return { pid: x.id, vit: v?.hp ?? null }; }
+            return { pid: x.id, vit: T.npcs.find(n => n.id === x.npcId)?.valoresDer?.atual?.VIT ?? null };
+        }),
+    };
+    const d = oQueDesfazer(retrato, agora);
+
+    for (const t of d.tokens) updObj(t.id, { x: t.x, y: t.y });
+    for (const v of d.vitais) {
+        const alvoP = (c.participantes || []).find(x => x.id === v.pid);
+        if (alvoP) await window.tbCombSetVital?.(v.pid, 'VIT', v.vit);
+    }
+
+    const quem = d.vitais.map(v => (c.participantes || []).find(x => x.id === v.pid)?.name || '?');
+    logChat(`⏪ ${p.name || '?'} usou ${meta.nome} em ${tokAlvo.nome || '?'} — o último turno dele foi desfeito`
+        + (d.tokens.length ? ` · voltou para onde estava` : '')
+        + (quem.length ? ` · dano recuperado em ${quem.join(', ')}` : ''));
+    toast(`⏪ Turno de ${tokAlvo.nome || '?'} desfeito`);
+    render();
+}
+
 /** Ficha achatada no formato que a Dádiva consome. */
 function achatarFicha(f, cat) {
     if (!f) return { vds: {}, atributos: {}, pericias: {}, vitais: {}, modulos: [] };
@@ -1244,6 +1267,12 @@ function miraDoCadastro(m, s, custo, p) {
         // 🌀 Incorporação: quem o alvo tem de ser, e o que acontece ao confirmar
         exigeVinculo: m.exigeVinculo || null,
         incorporacao: m.incorporacao || null,
+        // 🕯️/⏪/🌀 mecânicas que atravessam o turno
+        ritualRodadas: Number(m.ritualRodadas) || 0,
+        ritualSemDefesa: !!m.ritualSemDefesa,
+        desfazTurno: !!m.desfazTurno,
+        depoisLocais: Number(m.depoisLocais) || 0,
+        alcanceDestinoM: m.alcanceDestinoM ?? null,
         meta: {
             nome: s.nome, efeito: s.efeito, custoSkill: s.custo, custoAcao: custo,
             condicao: m.condicaoNome ? { nome: m.condicaoNome, rodadas: Number(m.condicaoRodadas) || 0, maxAlvos: Number(m.condicaoMaxAlvos) || 0 } : null,
@@ -1469,11 +1498,34 @@ window.tbTurnoConfirmarMira = async () => {
         return;
     }
 
+    // 🌀 Mira em dois estágios (Vórtice na Fenda): escolhidos os tokens que
+    // vão junto, agora se escolhe PARA ONDE. Não confirma nada ainda.
+    if (precisaSegundoEstagio(m, m.alvos) && m.estagio !== 2) {
+        const nova = miraDoSegundoEstagio(m);
+        T.mira = { ...m, ...nova, estagio: 2, locais: [],
+            alcancePx: pxDe(medidaDaMira(nova.alcanceM, p), tok), travada: false };
+        render(); markDirty();
+        toast('🌀 Agora clique no destino — um ponto vazio do mapa');
+        return;
+    }
+    // Chegou ao destino: leva quem foi tocado (e quem conjura) para lá.
+    if (m.estagio === 2) { await aplicarTeleporte(m, p, tok); return; }
+
     // 🌀 Incorporação (Fusão Selvagem / Transcendência): resolve por caminho
     // próprio — não é ataque, não abre conflito, e o que sai é um empréstimo.
     if (m.incorporacao) {
         const alvo = T.objects.get((m.alvos || [])[0]);
         if (alvo) { await aplicarIncorporacao(m, p, tok, alvo); return; }
+    }
+
+    // 🕯️ Ritual de N rodadas (Invocação Abissal): não resolve agora. Ocupa as
+    // rodadas, e enquanto dura quem conjura fica sem Defesa.
+    if (m.ritualRodadas > 1) { await comecarRitualDaSkill(m, p); return; }
+
+    // ⏪ Desfazer o último turno do alvo (Estilhaçar Causa).
+    if (m.desfazTurno) {
+        const alvo = T.objects.get((m.alvos || [])[0]);
+        if (alvo) { await desfazerTurnoDoAlvo(m, p, alvo); return; }
     }
 
     // alvos atingidos
