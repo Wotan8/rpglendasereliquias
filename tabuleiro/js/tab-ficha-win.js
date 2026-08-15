@@ -1066,6 +1066,17 @@ export function itensCarregados(tipo, id) {
     return _itensPorChave.get(`${tipo}:${id}`) || [];
 }
 
+/** A coluna de Acerto que vale para esta linha (distância, desarmado ou c.a.c). */
+function acertoDaLinha(l) {
+    const cols = l.colunas || [];
+    const acha = re => cols.find(c => re.test(c.nome || ''));
+    const especifico = l.distancia ? acha(/dist[âa]ncia/i)
+        : l.desarmado ? acha(/desarmad/i)
+        : acha(/corpo a corpo/i);
+    const generico = cols.find(c => /^\s*acerto\s*$/i.test(c.nome || ''));
+    return (especifico ?? generico)?.total ?? null;
+}
+
 export async function linhasDeAtaque(tipo, id) {
     await carregarSys();
     let itens = [];
@@ -1080,9 +1091,9 @@ export async function linhasDeAtaque(tipo, id) {
         : (() => { const ch = dadosChar(id); return ch ? linhasAtaqueChar(win, ch) : []; })();
     // alcance do golpe: o item da linha (match por nome — as linhas saem do item)
     for (const l of linhas) {
-        // 🎯 Alvo do ataque: a coluna Acerto da própria linha (item + ficha)
-        l.acerto = (l.colunas || []).find(c => /acerto/i.test(c.nome || ''))?.total ?? null;
-        if (l.desarmado) { l.alcanceM = 0; l.distancia = false; continue; }
+        // ⚠️ O Acerto é calculado NO FIM: ele depende de `l.distancia`, que só
+        // fica sabido algumas linhas abaixo.
+        if (l.desarmado) { l.alcanceM = 0; l.distancia = false; l.acerto = acertoDaLinha(l); continue; }
         const i = itens.find(x => (x.nome || 'Item') === l.nome);
         l.alcanceM = Number(i?.alcanceM ?? (i ? tplDoItem(i)?.alcanceM : 0)) || 0;
         // 🏹 Arma a distância não tem arco de balanço: mira por alvo (ver tab-turno)
@@ -1094,6 +1105,12 @@ export async function linhasDeAtaque(tipo, id) {
         // 🏹 Besta e afins: o alcance delas não passa pelo braço (ver
         // shared/alcance-disparo.js).
         l.ignoraLimiteForDisparo = !!(i?.ignoraLimiteForDisparo ?? tpl?.ignoraLimiteForDisparo);
+        // 🎯 Alvo do ataque. Existem CINCO VDs de acerto (Corpo a Corpo, à
+        // Distância, Mágico, Desarmado e o genérico) e todos chegam como
+        // coluna — pegar o primeiro que casasse com /acerto/ dava "Corpo a
+        // Corpo" para um arco, que é 0. Agora escolhe pelo tipo da linha, e
+        // por isso precisa de `l.distancia` já resolvido.
+        l.acerto = acertoDaLinha(l);
         // 🏹 Munição que esta arma gasta — vazio quer dizer "não gasta".
         l.tipoProjetil = i?.tipoProjetil?.length ? i.tipoProjetil : (tpl?.tipoProjetil || []);
         l.itemId = i?.id || null;

@@ -741,6 +741,12 @@ async function municaoParaOGolpe(p, golpe) {
  */
 async function escolherGolpeDaAcao(p, s, cfg) {
     if (cfg.afeta === 'aliados') return null;
+    // 🎯 Habilidade SEM PORTÃO não é ataque: ela acontece. Perguntar com o que
+    // ela bate faria a ação herdar o dado de dano da arma escolhida — foi o
+    // que transformou A Presa (que só marca) numa janela de conflito pedindo
+    // Acerto. Habilidade sem condição cadastrada tem portão nulo e continua
+    // perguntando, que é o caso do ataque comum com arma.
+    if (cfg.meta?.portao === 'nenhum') return null;
     const linhas = await golpesDe(p);
 
     // 🪄 Magia declara COM O QUE se conjura (colunas marcadas no módulo da
