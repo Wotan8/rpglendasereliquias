@@ -248,7 +248,7 @@ async function carregarSkills(chave, p) {
     let mechsById = {};
     let sysDVs = [];
     try {
-        const m = await import('./tab-ficha-win.js?v=9');
+        const m = await import('./tab-ficha-win.js?v=10');
         const sys = await m.registroSistema();
         mechsById = sys.mechsById || {};
         sysDVs = sys.derivedValues || [];
@@ -317,6 +317,13 @@ async function carregarSkills(chave, p) {
     const lista = itensBrutos(p).map(it => {
         // item de NPC nem sempre carrega _predefId — o nome resolve o registro
         const ref = (it._predefId && predefPorId.get(it._predefId)) || predefPorNome.get(normNome(S_NOME(it))) || null;
+        // Sem o predefinido não há mira, e a habilidade cai no diálogo manual
+        // "não tem mira cadastrada" — que parece bug de mira e é, na verdade,
+        // o REGISTRO não ter chegado. Deixa o motivo no console.
+        if (!ref) {
+            console.warn(`⚠️ Skill "${S_NOME(it)}": predefinido não encontrado`,
+                { _predefId: it._predefId || null, predefsIndexados: predefPorId.size });
+        }
         const pd = ref?.pd || null;
         const custos = custosDaSkill(it, ref?.schema, pd);
         // texto: os custos declarados por mecânica mandam; senão campo/Régua v2

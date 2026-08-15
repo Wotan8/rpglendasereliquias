@@ -90,7 +90,7 @@ function enerDe(pid) {
 // ---------- VDs de Defesa e Blindagem ----------
 async function carregarSys() {
     if (_sys) return _sys;
-    const m = await import('./tab-ficha-win.js?v=9');
+    const m = await import('./tab-ficha-win.js?v=10');
     _sys = await m.registroSistema();
     render();
     return _sys;
