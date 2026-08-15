@@ -625,35 +625,45 @@ html, body {
 /* ===== ⚔️ Painel do Turno no CELULAR =====
    Numa tela de mão o painel comia metade do mapa: título em versalete que
    quebrava em três linhas, o aviso de condição em parágrafo e cinco botões
-   empilhados. Aqui ele vira uma FAIXA no rodapé, de no máximo 10% da altura:
-   uma linha de cabeçalho e uma fileira de botões que rola de lado.
-   O `.tb-so-largo` some — "Ação de Movimento" vira "👣 Movimento". */
+   empilhados. Aqui ele vira uma FAIXA no canto de baixo, com uma linha de
+   cabeçalho e uma fileira de botões que rola de lado.
+   O `.tb-so-largo` some — "Ação de Movimento" vira "👣 Movimento".
+
+   Onde ele cabe: DEPOIS da barra de ferramentas (que desce até o rodapé) e
+   ACIMA do zoom e das coordenadas. Ocupando a largura toda ele cobria os
+   últimos botões da barra — o mapa perdia ferramenta em vez de ganhar espaço.
+
+   ⚠️ Medidas em PIXEL, não em rem: no Android o usuário escala a fonte do
+   sistema, e com rem o painel crescia junto até virar de novo meia tela. Aqui
+   a altura é a mesma em qualquer aparelho, e o teto duplo (10vh OU 88px, o que
+   for menor) é o limite duro. */
 @media (max-width: 720px), (max-height: 520px) {
     .tb-so-largo { display: none; }
 
     .tb-turno {
-        left: var(--lr-space-1); right: var(--lr-space-1); transform: none;
-        /* encosta no rodapé sem cobrir o zoom (36px) nem as coordenadas */
-        bottom: 52px;
+        left: 60px;                       /* livre da barra de ferramentas */
+        right: var(--lr-space-1);
+        bottom: 52px;                     /* livre do zoom e das coordenadas */
+        transform: none;
         max-width: none;
-        max-height: 10vh;
-        gap: 2px;
-        padding: var(--lr-space-1) var(--lr-space-2);
+        max-height: min(10vh, 88px);
+        gap: 1px;
+        padding: 3px 6px;
         overflow-y: auto;
     }
     /* fonte de texto (não a de título, que é versalete e ocupa o dobro) */
     .tb-turno-head {
-        font-family: var(--lr-font-body); font-size: var(--lr-fs-xs);
-        flex-wrap: nowrap; gap: var(--lr-space-1); min-height: 0;
+        font-family: var(--lr-font-body); font-size: 11px; line-height: 1.3;
+        flex-wrap: nowrap; gap: 4px; min-height: 0;
     }
     /* o nome longo encolhe com reticências em vez de empurrar a linha inteira */
     .tb-turno-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-    .tb-turno-head > .tb-turno-hint { white-space: nowrap; flex: none; }
+    .tb-turno-head > .tb-turno-hint { white-space: nowrap; flex: none; font-size: 10px; }
     .tb-turno-chips { flex: none; }
 
     /* aviso das condições: uma linha só, o resto no toque longo (title) */
     .tb-turno-cond {
-        margin-top: 2px; padding-top: 2px; font-size: .64rem; line-height: 1.3;
+        margin-top: 1px; padding-top: 1px; font-size: 10px; line-height: 1.25;
         white-space: nowrap; overflow-x: auto; scrollbar-width: none;
     }
     .tb-turno-cond::-webkit-scrollbar { display: none; }
@@ -661,10 +671,18 @@ html, body {
     /* botões: uma fileira que rola de lado, nunca uma pilha */
     .tb-turno-acoes, .tb-turno-lista {
         flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start;
-        max-height: none; gap: var(--lr-space-1); scrollbar-width: none;
+        max-height: none; gap: 4px; scrollbar-width: none;
     }
     .tb-turno-acoes::-webkit-scrollbar, .tb-turno-lista::-webkit-scrollbar { display: none; }
-    .tb-turno-btn, .tb-turno-lista .tb-btn { flex: none; white-space: nowrap; padding: 3px 6px; font-size: .68rem; }
+    .tb-turno-btn, .tb-turno-lista .tb-btn {
+        flex: none; white-space: nowrap; padding: 2px 6px; font-size: 11px; line-height: 1.4;
+    }
+}
+
+/* Celular DEITADO: a barra de ferramentas quebra em DUAS colunas (regra lá em
+   cima) e fica mais larga — o painel do turno começa depois dela também aqui. */
+@media (max-height: 460px) {
+    .tb-turno { left: 84px; }
 }
 
 /* ===== ⚔️ Janela de Conflito (acerto → defesa → dano) ===== */
