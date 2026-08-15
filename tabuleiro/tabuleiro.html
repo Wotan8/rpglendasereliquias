@@ -3,8 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <!-- 📱 O Tabuleiro é a tela que mais se usa no celular: declara o manifest
+         para instalar como app a partir DAQUI (sem barra de endereço), e pinta
+         a barra do sistema com o preto do mapa em vez do roxo do tema. -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0A0D12">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>🗺️ Tabuleiro — Lendas e Relíquias</title>
-    <link rel="stylesheet" href="css/tabuleiro.css?v=23">
+    <link rel="stylesheet" href="css/tabuleiro.css?v=24">
     <script type="module" src="/js/global-favicon.js"></script>
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
