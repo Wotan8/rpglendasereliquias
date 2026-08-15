@@ -496,6 +496,21 @@
 }
 /* Bloco de VD dobrado não deixa o buraco da margem para trás. */
 .npcv2-dv-bloco:not([open]) > .npcv2-dv-bloco-title { margin-bottom: 0; }
+/* 🏹 Célula CALCULADA (alcance do disparo): não é Valor Derivado — sai da arma
+   equipada e da FOR. Sem input, sem ✕: é leitura. */
+.npcv2-dv-calc { border-style: dashed; }
+.npcv2-dv-calc-val {
+    display: block;
+    font-size: var(--lr-fs-md);
+    font-weight: 700;
+    color: var(--lr-gold-2);
+    padding: 2px 0;
+}
+/* A FOR está cortando o alcance da arma. O ⚠️ no rótulo carrega a informação
+   sem depender de cor. */
+.npcv2-dv-calc.is-limitado { border-color: var(--lr-blood); }
+.npcv2-dv-calc.is-limitado .npcv2-dv-calc-val { color: var(--lr-blood-3); }
+
 /* Override travado pelo Mestre = estado, e estado é ouro. */
 .npcv2-dv-cell.locked { border-color: var(--lr-gold); }
 .npcv2-dv-label {

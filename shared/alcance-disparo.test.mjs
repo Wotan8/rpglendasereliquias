@@ -2,7 +2,7 @@
 // A arma tem capacidade; o atirador tem braço. Vale o menor dos dois — menos
 // para a besta, que é armada por manivela antes do tiro.
 import assert from 'node:assert/strict';
-import { alcanceDeDisparo, melhorDisparo, METROS_POR_FOR } from './alcance-disparo.js';
+import { alcanceDeDisparo, melhorDisparo, linhasDeDisparo, METROS_POR_FOR } from './alcance-disparo.js';
 
 const ARCO_LONGO = { nome: 'Arco Longo', alcanceM: 60, distancia: true };
 const ARCO_SIMPLES = { nome: 'Arco Simples', alcanceM: 30, distancia: true };
@@ -72,5 +72,33 @@ assert.equal(alcanceDeDisparo(ARCO_LONGO, -3).metros, 0, 'FOR negativa não vira
 assert.equal(alcanceDeDisparo(null, 5).metros, 0);
 assert.equal(melhorDisparo(null, 5).metros, 0);
 assert.equal(melhorDisparo([], 5).arma, null);
+
+/* ═══ inventário cru → linhas de disparo (ficha e NPC usam o mesmo) ═══ */
+const CAT = [
+    { id: 'tpl_arco', categoriaArma: 'distancia', alcanceM: 60 },
+    { id: 'tpl_besta', categoriaArma: 'distancia', alcanceM: 30, ignoraLimiteForDisparo: true },
+    { id: 'tpl_adaga', categoriaArma: 'leve', alcanceM: 0.5 },
+];
+const INV = [
+    { nome: 'Arco Longo', modeloId: 'tpl_arco', equipado: true },
+    { nome: 'Adaga', modeloId: 'tpl_adaga', equipado: true },          // não é disparo
+    { nome: 'Besta guardada', modeloId: 'tpl_besta', equipado: false }, // na mochila
+    { nome: 'Besta velha', origemTemplateId: 'tpl_besta', equipado: true }, // item LEGADO
+];
+const ls = linhasDeDisparo(INV, CAT);
+assert.deepEqual(ls.map(l => l.nome), ['Arco Longo', 'Besta velha'],
+    'só arma de disparo EQUIPADA entra');
+assert.equal(ls[1].alcanceM, 30, 'item legado acha o modelo por origemTemplateId');
+assert.equal(ls[1].ignoraLimiteForDisparo, true, 'e herda o "ignora FOR" do modelo');
+
+// instância vence modelo (arco encantado com alcance próprio)
+assert.equal(linhasDeDisparo([{ nome: 'Arco+', modeloId: 'tpl_arco', equipado: true, alcanceM: 80 }], CAT)[0].alcanceM, 80);
+// sem catálogo não explode
+assert.deepEqual(linhasDeDisparo([{ nome: 'X', modeloId: 'tpl_arco', equipado: true }], null), []);
+assert.deepEqual(linhasDeDisparo(null, CAT), []);
+
+// e o fim a fim: esse inventário com FOR 2 rende a besta legada (30), não o arco
+assert.equal(melhorDisparo(ls, 2).arma, 'Besta velha');
+assert.equal(melhorDisparo(ls, 2).metros, 30);
 
 console.log('✅ alcance-disparo: braço e arma como gargalo, besta livre da FOR, campo vazio = sem tiro, melhor arma em mãos OK');

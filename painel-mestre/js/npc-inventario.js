@@ -5,6 +5,7 @@
 // Respeita a lógica de logs do painel (addLog → coleção 'logs').
 // =============================================
 import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, query, where, updateDoc, writeBatch } from './firebase-config.js';
+import { linhasDeDisparo } from '../../shared/alcance-disparo.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
@@ -393,6 +394,11 @@ function _cachesDoForm() {
 
 const _catalogo = () => (window._npcSys?.equipment || window._systemData?.equipment || [])
     .filter(t => t.publicado !== false);
+
+/** 🏹 Armas de disparo EQUIPADAS do NPC, no formato de shared/alcance-disparo.js. */
+export function linhasDeDisparoNpc() {
+    return linhasDeDisparo(NI.items || [], _catalogo());
+}
 
 /** Redesenha os campos do formulário para um item (ou semente de modelo). */
 function _pintarCamposItem(item, modelo) {

@@ -26,13 +26,6 @@
         .then(m => { _alc = m; if (typeof renderCombatPanel === 'function') renderCombatPanel(); })
         .catch(e => console.warn('regua do disparo indisponivel', e));
 
-    /** Campo do item com fallback pro modelo do catálogo (instância vence). */
-    function _campoArma(item, key) {
-        if (item[key] !== undefined && item[key] !== null && item[key] !== '') return item[key];
-        const tpl = (window._inventoryState?.catalog || []).find(t => t.id === item.modeloId);
-        return tpl ? tpl[key] : undefined;
-    }
-
     /**
      * 🏹 O disparo mais longo que o personagem tem EM MÃOS, já cortado pela FOR.
      * Devolve null quando não há arma de tiro equipada — o chip some, em vez de
@@ -40,14 +33,8 @@
      */
     function alcanceDoDisparo() {
         if (!_alc || !window._inventoryState) return null;
-        const linhas = (window._inventoryState.items || [])
-            .filter(i => i.equipado && _campoArma(i, 'categoriaArma') === 'distancia')
-            .map(i => ({
-                nome: i.nome || 'Arma',
-                distancia: true,
-                alcanceM: Number(_campoArma(i, 'alcanceM')) || 0,
-                ignoraLimiteForDisparo: !!_campoArma(i, 'ignoraLimiteForDisparo'),
-            }));
+        const linhas = _alc.linhasDeDisparo(
+            window._inventoryState.items || [], window._inventoryState.catalog || []);
         if (!linhas.length) return null;
 
         const forca = typeof getEffectiveDotValue === 'function' ? getEffectiveDotValue('attr_for') : 0;

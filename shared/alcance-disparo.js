@@ -67,3 +67,34 @@ export function melhorDisparo(linhas, forca) {
     }
     return melhor;
 }
+
+/**
+ * Transforma inventário cru em linhas de disparo — o formato que
+ * `melhorDisparo` lê. Serve à ficha de personagem E à de NPC: as duas guardam
+ * item e modelo do mesmo jeito, e antes cada uma resolvia isso por conta.
+ *
+ * Item LEGADO guarda o modelo em `origemTemplateId` em vez de `modeloId`; sem
+ * cobrir os dois, uma besta antiga perderia o alcance em silêncio.
+ *
+ * @param itens   [{ nome, equipado, modeloId|origemTemplateId, ...campos }]
+ * @param catalog [{ id, categoriaArma, alcanceM, ignoraLimiteForDisparo }]
+ */
+export function linhasDeDisparo(itens, catalog) {
+    const cat = catalog || [];
+    const tplDe = i => cat.find(t => t.id === (i.modeloId || i.origemTemplateId));
+    // Instância vence modelo, mas só quando ela REALMENTE tem valor: 0 e ''
+    // são "não preenchido" aqui, não "zero de propósito".
+    const campo = (i, k) => {
+        const v = i[k];
+        if (v !== undefined && v !== null && v !== '') return v;
+        return tplDe(i)?.[k];
+    };
+    return (itens || [])
+        .filter(i => i && i.equipado && campo(i, 'categoriaArma') === 'distancia')
+        .map(i => ({
+            nome: i.nome || 'Arma',
+            distancia: true,
+            alcanceM: Number(campo(i, 'alcanceM')) || 0,
+            ignoraLimiteForDisparo: !!campo(i, 'ignoraLimiteForDisparo'),
+        }));
+}

@@ -5,8 +5,10 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassModule } from './npc-system-data.js?v=1.5';
 import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.9';
-import './npc-inventario.js?v=7'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
+import './npc-inventario.js?v=8'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 import { npcNaMesa, mesasDoNpc, espelhoMesaId } from '../../shared/npc-mesas.js';
+import { melhorDisparo, METROS_POR_FOR } from '../../shared/alcance-disparo.js';
+import { linhasDeDisparoNpc } from './npc-inventario.js?v=8';
 
 let currentEditingNpc = null;
 let _npcModalUnsubscribe = null;
@@ -1477,6 +1479,44 @@ function renderDvGrid() {
             </div>`;
     };
 
+    /**
+     * 🏹 Célula CALCULADA do alcance do disparo — mesma régua da ficha de
+     * personagem (shared/alcance-disparo.js): vale o MENOR entre o alcance da
+     * arma e FOR × 10 m, e a besta escapa do limite porque é armada por
+     * manivela. Não é Valor Derivado, então não tem input nem ✕ de desvincular.
+     * Devolve '' quando o NPC não tem arma de tiro equipada — célula vazia
+     * seria pior que célula nenhuma.
+     */
+    const disparoCellHtml = () => {
+        let linhas = [];
+        try { linhas = linhasDeDisparoNpc(); } catch (e) { return ''; }
+        if (!linhas.length) return '';
+
+        const forca = Number(F.npc.atributos?.FOR) || 0;
+        const d = melhorDisparo(linhas, forca);
+        const cap = Math.max(...linhas.map(l => l.alcanceM));
+        const valor = d.metros ? `${d.metros} m` : '—';
+        const dica = !d.metros
+            ? `${linhas[0].nome}: alcance não cadastrado no Painel do Criador`
+            : d.limitadoPorFor
+                ? `${d.arma} alcança ${cap} m, mas FOR ${forca} sustenta ${forca * METROS_POR_FOR} m `
+                  + `(${METROS_POR_FOR} m por ponto de FOR). Vale o menor dos dois.`
+                : `${d.arma} — o alcance da arma, que a FOR sustenta inteiro.`;
+
+        return `<div class="npcv2-dv-cell npcv2-dv-calc${d.limitadoPorFor ? ' is-limitado' : ''}">
+                <div class="npcv2-dv-label"
+                     data-tt-title="Alcance do Disparo"
+                     data-tt-desc="${escapeHtml(dica)}"
+                     data-tt-extra="Sai da arma equipada e da FOR — não é Valor Derivado."
+                     onmouseenter="handleNpcTooltipEnter(event, this)"
+                     onmouseleave="hideNpcTooltip()"
+                     onmousemove="moveNpcTooltip(event)">
+                     🏹 Alcance do Disparo${d.limitadoPorFor ? ' ⚠️' : ''}
+                </div>
+                <div class="npcv2-dv-value"><b class="npcv2-dv-calc-val">${escapeHtml(valor)}</b></div>
+            </div>`;
+    };
+
     const vazio = msg => `<div class="npcv2-empty">${msg}</div>`;
 
     // Status Vital é do sistema (não se desvincula); VD de combate veio de um
@@ -1501,11 +1541,18 @@ function renderDvGrid() {
         // Mesma régua da ficha de personagem (combat-panel.js): bloco com
         // blocoOrdem abaixo de BLOCO_ABERTO_ATE nasce aberto — os primeiros da
         // escala, que são os de consulta na rodada. O resto fica dobrado.
-        dGrid.innerHTML = [...blocos.values()].map(b => `
+        // 🏹 O alcance do disparo entra no bloco de Combate, no fim — igual à
+        // ficha de personagem. Se o NPC não tiver bloco de Combate vinculado,
+        // ele não aparece: sem contexto, o número não diz nada.
+        const disparo = disparoCellHtml();
+        dGrid.innerHTML = [...blocos.values()].map(b => {
+            const extra = (disparo && /^combate$/i.test(b.nome)) ? disparo : '';
+            return `
             <details class="npcv2-dv-bloco npcv2-dobra"${Number(b.ordem) < NPC_BLOCO_ABERTO_ATE ? ' open' : ''}>
-                <summary class="npcv2-dv-bloco-title">${escapeHtml(b.nome)} <span class="npcv2-hint">${b.dvs.length}</span></summary>
-                <div class="npcv2-dv-grid">${b.dvs.map(dv => cellHtml(dv, true)).join('')}</div>
-            </details>`).join('');
+                <summary class="npcv2-dv-bloco-title">${escapeHtml(b.nome)} <span class="npcv2-hint">${b.dvs.length + (extra ? 1 : 0)}</span></summary>
+                <div class="npcv2-dv-grid">${b.dvs.map(dv => cellHtml(dv, true)).join('')}${extra}</div>
+            </details>`;
+        }).join('');
     }
 
     renderDvPicker();
