@@ -369,6 +369,16 @@ window.tbCombTurno = async function(dir) {
         if (turno < 0) { turno = n - 1; rodada = Math.max(1, rodada - 1); }
     }
     if (pulados.length) logChat(`💤 Turno pulado: ${pulados.join(', ')}`);
+    // 🔁 O turno de quem estava na vez ACABOU: é agora, antes das ações serem
+    // repostas, que dá para saber se ele ficou parado. Quem credita é o
+    // tab-turno (é lá que moram os helpers de VD); voltar o turno não paga
+    // retorno de novo — é correção de engano do mestre.
+    if (dir > 0) {
+        const saindo = participanteDaVez(c);
+        if (saindo?.retornoTurno?.retornoRecurso) {
+            await window.tbFecharTurnoRetorno?.(saindo.id, !!(c.acoesTurno || {}).movimento);
+        }
+    }
     // ⚔️ turno novo = ações cheias (1 Padrão + 1 Movimento, §6.2).
     // A expiração de condições NÃO acontece aqui: quem vira a rodada pode ser
     // um jogador (encerrando o próprio turno) e as rules não deixam ele limpar
@@ -406,6 +416,17 @@ export async function checarCondicoesRodada() {
     // Depois de expirar: quem sobrou sangra, regenera e tenta se soltar.
     await aplicarTickDeRodada(participantes);
     await pedirTestesDeSaida(participantes, 'virada_da_rodada');
+}
+
+/** 🔁 A conjuração falhou: marca no acumulador do turno de quem conjurou. */
+export async function marcarFalhaDeConjuracao(pid) {
+    if (!pid) return;
+    const c = cenaAtiva(T.combate);
+    const p = (c?.participantes || []).find(x => x.id === pid);
+    if (!p?.retornoTurno?.retornoRecurso || p.retornoTurno.falhou) return;
+    const parts = c.participantes.map(x => x.id !== pid ? x
+        : { ...x, retornoTurno: { ...x.retornoTurno, falhou: true } });
+    await salvar(parts);
 }
 
 /**

@@ -24,6 +24,7 @@ import {
     guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica, custoVital,
 } from '../../shared/combate-cenas.js';
 import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR } from './tab-mira-calc.js';
+import { retornoDoTurno } from '../../shared/retorno-recurso.js';
 import { golpesDe, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes, formasDeConjurar } from './tab-golpes.js';
 import { templateAtingeCirculo } from './tab-templates.js';
 import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte } from './tab-hud.js';
@@ -72,12 +73,13 @@ const fonteDoParticipante = (p) => {
 function recursosDe(p) {
     if (p?.characterId) {
         const v = VITAIS.get(p.characterId);
-        return v ? { vit: v.hp, ener: v.ener, san: v.san } : null;
+        return v ? { vit: v.hp, ener: v.ener, san: v.san, vitMax: v.hpMax, enerMax: v.enerMax, sanMax: v.sanMax } : null;
     }
     if (p?.npcId) {
         const vd = T.npcs.find(x => x.id === p.npcId)?.valoresDer || {};
         const at = vd.atual || {};
-        return { vit: at.VIT ?? vd.VIT, ener: at.ENER ?? vd.ENER, san: at.SAN ?? vd.SAN };
+        return { vit: at.VIT ?? vd.VIT, ener: at.ENER ?? vd.ENER, san: at.SAN ?? vd.SAN,
+                 vitMax: vd.VIT, enerMax: vd.ENER, sanMax: vd.SAN };
     }
     return { vit: p?.hpCurrent, ener: p?.enerCurrent, san: p?.sanCurrent };
 }
@@ -94,13 +96,15 @@ const _norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').to
 function temDoRecurso(p, alvo) {
     const a = _norm(alvo);
     const vitais = recursosDe(p) || {};
-    if (/^(energia|ener)/.test(a)) return { tem: vitais.ener ?? null, nome: 'Energia' };
-    if (/^(vitalidade|vit)/.test(a)) return { tem: vitais.vit ?? null, nome: 'Vitalidade' };
-    if (/^(sanidade|san)/.test(a)) return { tem: vitais.san ?? null, nome: 'Sanidade' };
+    // `max` só interessa a quem DEVOLVE recurso (retorno de fim de turno); quem
+    // gasta nunca encosta nele.
+    if (/^(energia|ener)/.test(a)) return { tem: vitais.ener ?? null, max: vitais.enerMax ?? null, nome: 'Energia' };
+    if (/^(vitalidade|vit)/.test(a)) return { tem: vitais.vit ?? null, max: vitais.vitMax ?? null, nome: 'Vitalidade' };
+    if (/^(sanidade|san)/.test(a)) return { tem: vitais.san ?? null, max: vitais.sanMax ?? null, nome: 'Sanidade' };
     // VD (recurso de classe): o atual manda; sem atual, o máximo
     const dv = vdsCombateDaFonte(fonteDoParticipante(p)).find(d => _norm(d.nome) === a);
     if (!dv) return null;
-    return { tem: dv.atual ?? dv.valor, nome: dv.nome };
+    return { tem: dv.atual ?? dv.valor, max: dv.valor ?? null, nome: dv.nome };
 }
 
 /** Falta recurso para ESTA forma de pagar? { nome, tem, qtd } ou null. */
@@ -243,7 +247,7 @@ async function carregarSkills(chave, p) {
         sysDVs = sys.derivedValues || [];
         for (const mod of Object.values(sys.classModulesById || {})) {
             for (const pd of mod.itensPredefinidos || []) {
-                const ref = { pd, schema: mod.schema || [] };
+                const ref = { pd, schema: mod.schema || [], retorno: cfgRetorno(mod) };
                 predefPorId.set(pd.id, ref);
                 predefPorNome.set(normNome(pd.nome), ref);
             }
@@ -264,6 +268,15 @@ async function carregarSkills(chave, p) {
         }
         return out;
     };
+
+    // 🔁 Retorno de recurso: regra do MÓDULO, não da magia (ver
+    // shared/retorno-recurso.js). Só viaja se estiver ligada no cadastro.
+    const cfgRetorno = mod => (String(mod?.retornoRecurso || '').trim() ? {
+        retornoRecurso: String(mod.retornoRecurso).trim(),
+        retornoBonusParado: Number(mod.retornoBonusParado) || 0,
+        retornoExigeSucesso: !!mod.retornoExigeSucesso,
+        retornoZeraSeFalhar: !!mod.retornoZeraSeFalhar,
+    } : null);
 
     // 🪄 Formas de conjurar da skill: as colunas do módulo marcadas com
     // "é forma de conjurar" no Criador. Cada uma aponta o VD que dá o Acerto —
@@ -308,6 +321,7 @@ async function carregarSkills(chave, p) {
             efeito: S_EFEITO(it) || S_EFEITO(pd?.valores || {}) || pd?.descricao || '',
             custo, custos,
             veiculos: veiculosDaSkill(it, ref?.schema, pd),
+            retorno: ref?.retorno || null,
             mira: it.mira || pd?.mira || miraDaReguaV2(pd),
             acao: it.custoAcao || pd?.custoAcao || pd?.mira?.custoAcao || acaoDoRotulo(it.acao || pd?.valores?.acao),   // §6.2
         };
@@ -641,6 +655,7 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
         const f = faltaPara(p, s.custos[formaPaga]);
         if (f) { toast(`⚠️ Não tem ${f.nome} o suficiente (${f.tem}/${f.qtd})`, 'warning'); return; }
         _custosAPagar = [s.custos[formaPaga]];   // debitado na confirmação da mira
+        _retornoCfg = s.retorno;
     } else {
         // re-checa o custo em texto na hora do clique (o HTML pode estar velho)
         const falta = recursoInsuficiente(s.custo, recursosDe(p));
@@ -648,6 +663,7 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
         // 💰 Custo só em TEXTO ("2 ENER") também é debitado: era o furo — quem
         // não tinha mecânica de custo cadastrada usava a habilidade de graça.
         _custosAPagar = custosDoTexto(s.custo);
+        _retornoCfg = s.retorno;
     }
     const tok = tokenAtivoDoCombate();
     if (!tok) { toast('⚠️ O participante da vez não tem token neste canvas', 'warning'); return; }
@@ -718,6 +734,8 @@ async function escolherGolpeDaAcao(p, s, cfg) {
 
 // Custos da skill em uso, debitados na confirmação da mira.
 let _custosAPagar = [];
+// Config de retorno da skill em uso — anda junto com o custo até o débito.
+let _retornoCfg = null;
 
 /** Custo em TEXTO ("2 ENER + 1 SAN") no mesmo formato dos custos por mecânica. */
 function custosDoTexto(txt) {
@@ -746,8 +764,69 @@ function escolherComoPagar(s, custoAcao, i, pagaveis) {
  */
 async function pagarCustos(p) {
     const lista = _custosAPagar;
-    _custosAPagar = [];
+    const cfg = _retornoCfg;
+    _custosAPagar = []; _retornoCfg = null;
     for (const c of lista) await pagarCusto(p, c);
+    await acumularRetorno(p, cfg, lista);
+}
+
+/**
+ * 🔁 Guarda no participante quanto saiu DO recurso que volta no fim do turno.
+ * Fica no doc da cena (e não numa variável) porque quem fecha o turno pode ser
+ * outro cliente — o mestre virando a ordem enquanto o jogador conjurou.
+ */
+async function acumularRetorno(p, cfg, custosPagos) {
+    if (!cfg?.retornoRecurso || !p) return;
+    const alvo = _norm(cfg.retornoRecurso);
+    const gasto = (custosPagos || [])
+        .filter(c => _norm(c.alvo) === alvo)
+        .reduce((t, c) => t + (Number(c.qtd) || 0), 0);
+    if (!gasto) return;   // conjurou pagando outra moeda: não gera retorno
+    const c = cena();
+    const parts = (c.participantes || []).map(x => x.id !== p.id ? x : {
+        ...x, retornoTurno: { ...cfg, gastou: ((x.retornoTurno?.gastou) || 0) + gasto, falhou: !!x.retornoTurno?.falhou },
+    });
+    await salvarCena({ participantes: parts });
+}
+
+/**
+ * 🔁 Fecha o turno: devolve o recurso que a classe manda devolver, ou zera se a
+ * conjuração falhou. Chamado por tab-combat na virada — mora aqui porque é aqui
+ * que estão os helpers que sabem escrever num VD de classe.
+ *
+ * @param parado ainda tinha a Ação de Movimento quando o turno acabou
+ */
+window.tbFecharTurnoRetorno = async function (pid, parado) {
+    const c = cena();
+    const p = (c?.participantes || []).find(x => x.id === pid);
+    const pend = p?.retornoTurno;
+    if (!p || !pend?.retornoRecurso) return;
+
+    const { ganho, zera, motivo } = retornoDoTurno(pend, { ...pend, parado });
+    const r = temDoRecurso(p, pend.retornoRecurso);
+
+    if ((zera || ganho > 0) && r?.tem != null) {
+        // Teto: o recurso não passa do máximo da ficha.
+        const novo = zera ? 0 : (r.max != null ? Math.min(r.max, r.tem + ganho) : r.tem + ganho);
+        await creditarRecurso(p, pend.retornoRecurso, novo);
+        logChat(zera
+            ? `🔇 ${p.name || '?'}: ${motivo} (${r.nome} ${r.tem} → 0)`
+            : `🎵 ${p.name || '?'} recupera ${novo - r.tem} de ${r.nome} — ${motivo} (${r.tem} → ${novo})`);
+    }
+    // Zera o acumulador SEMPRE, mesmo sem ganho: senão o gasto deste turno
+    // pagaria o retorno do turno seguinte.
+    await salvarCena({ participantes: (c.participantes || []).map(x => x.id !== pid ? x : { ...x, retornoTurno: null }) });
+};
+
+/** Escreve um recurso (vital ou VD de classe) num valor absoluto. */
+async function creditarRecurso(p, nome, novo) {
+    const a = _norm(nome);
+    const vital = /^(energia|ener)/.test(a) ? 'ENER' : /^(vitalidade|vit)/.test(a) ? 'VIT' : /^(sanidade|san)/.test(a) ? 'SAN' : null;
+    try {
+        if (vital) return void await window.tbCombSetVital?.(p.id, vital, novo);
+        const dv = vdsCombateDaFonte(fonteDoParticipante(p)).find(d => _norm(d.nome) === a);
+        if (dv) await window.tbCombSetVd?.(p.id, dv.key, novo);
+    } catch (e) { console.warn('creditar recurso', e); }
 }
 
 async function pagarCusto(p, custo) {

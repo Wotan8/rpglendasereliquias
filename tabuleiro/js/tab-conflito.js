@@ -29,7 +29,7 @@ import { golpesDe, golpesCacheados, escolherGolpe, golpesCorpoACorpo, alcanceDoG
 import { refCombate } from './tab-main.js';
 import { cenaAtiva, comCenaAtivaPatch } from '../../shared/combate-cenas.js';
 import { participanteDoToken, valorVdDaFonte, fonteDoParticipante, VITAIS } from './tab-hud.js';
-import { aplicarCondicaoEmVarios } from './tab-combat.js';
+import { aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { logChat } from './tab-chat.js';
 import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal,
          defesasLivres, custoDaDefesa, soODado,
@@ -217,6 +217,9 @@ window.tbConfRolarAcerto = async (naMesa) => {
     const erroSeco = dado === 10;
     const alvos = c.alvos.map(a => erroSeco ? { ...a, escolhido: true, passou: false, defesaNome: '—', defesa: 0 } : a);
     await salvar({ ...c, rolagem, alvos, fase: erroSeco ? 'aplicar' : 'defesa' });
+    // 🔁 A música quebrou: quem tem retorno de recurso no fim do turno perde o
+    // que juntou. Marca aqui porque é o único ponto que sabe se o teste passou.
+    if (graus <= 0) await marcarFalhaDeConjuracao(c.atacante?.pid);
     logChat(`🎯 ${c.atacante.nome} ataca com ${c.acao.nome}: d10 ${dado}${naMesa ? ' (mesa)' : ''} vs Alvo ${alvo} → ${graus > 0 ? '+' : ''}${graus} Graus`
         + (dado === 1 ? ' ✨ crítico!' : dado === 10 ? ' 💀 falha crítica!' : ''));
 };

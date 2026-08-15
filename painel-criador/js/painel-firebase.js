@@ -4018,6 +4018,43 @@ function _buildClassModuleEditorRow(idx, data) {
                 <div style="font-size:.62rem;color:var(--muted);margin-top:4px">O módulo lê dinamicamente todos os Elementos Rúnicos cadastrados (ᛟ) e seus custos de EXP/tempo por nível — nada é fixo no código.</div>
             </div>
 
+            <!-- 🔁 RETORNO DE RECURSO — regra da CLASSE, não da magia.
+                 O Bardo recupera Harmonia igual ao que gastou, +1 se ficou
+                 parado, e perde tudo se a música quebrar. Cadastrar isso por
+                 skill repetiria a mesma linha em trinta itens. -->
+            <div class="cm-bloco">
+                <div class="cm-mini-title">🔁 Retorno de Recurso no fim do turno</div>
+                <div style="font-size:.62rem;color:var(--muted);margin-bottom:6px">
+                    Deixe o recurso em branco para desligar. Vale para quem usa habilidade DESTE módulo.
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Recurso que volta</label>
+                        <input type="text" data-cm-key="retornoRecurso" value="${escapeHtml(data.retornoRecurso || '')}" placeholder="Ex: Harmonia">
+                        <div style="font-size:.6rem;color:var(--muted)">Volta o MESMO valor que foi gasto dele na conjuração.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Bônus se não gastou a Ação de Movimento</label>
+                        <input type="number" step="1" data-cm-key="retornoBonusParado" value="${data.retornoBonusParado ?? 0}" placeholder="0">
+                        <div style="font-size:.6rem;color:var(--muted)">Valor fixo. Só entra se houve conjuração no turno.</div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:6px">
+                            <input type="checkbox" data-cm-key="retornoExigeSucesso" ${data.retornoExigeSucesso ? 'checked' : ''}>
+                            Exige sucesso no teste
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:6px">
+                            <input type="checkbox" data-cm-key="retornoZeraSeFalhar" ${data.retornoZeraSeFalhar ? 'checked' : ''}>
+                            Falhou → zera o recurso acumulado
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <div class="cm-section">
                 <div class="cm-section-title-row">
                     <div class="cm-section-title">📋 Schema de Campos</div>
@@ -4588,6 +4625,12 @@ function _collectSingleModuleData(item) {
         mod.runoDescontoPorNivel = parseFloat(g('runoDescontoPorNivel')) || 0;
         mod.runoCustoExpMult = parseFloat(g('runoCustoExpMult')) || 1;
     }
+
+    // 🔁 Retorno de recurso no fim do turno (ver shared/retorno-recurso.js)
+    mod.retornoRecurso = (g('retornoRecurso') || '').trim();
+    mod.retornoBonusParado = parseInt(g('retornoBonusParado'), 10) || 0;
+    mod.retornoExigeSucesso = !!item.querySelector('[data-cm-key="retornoExigeSucesso"]')?.checked;
+    mod.retornoZeraSeFalhar = !!item.querySelector('[data-cm-key="retornoZeraSeFalhar"]')?.checked;
 
     // Collect schema fields
     const schemaContainer = item.querySelector('.schema-fields-container');
