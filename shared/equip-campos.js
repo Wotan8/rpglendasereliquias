@@ -108,7 +108,13 @@ export const CAMPOS_EQUIPAMENTO = [
     { key: 'formulaDano2Maos', label: '💥 Fórmula de Dano (empunhada com 2 mãos)', type: 'text', placeholder: 'Ex: 1d12 — vazio = o mesmo dado de 1 mão' },
     // ⚔️ Régua do golpe no Tabuleiro: alcance efetivo = alcanceM + 5% do VD
     // Tamanho do usuário, nunca menor que 1 m — contado da BORDA do token.
-    { key: 'alcanceM', label: '📏 Alcance do golpe (m) — o Tabuleiro soma 5% do Tamanho; vazio = mínimo 1 m', type: 'number', placeholder: 'Ex: 0,5 adaga · 2 lança', showWhen: { field: 'tipo', value: 'Arma' } },
+    { key: 'alcanceM', label: '📏 Alcance (m) — corpo a corpo: soma 5% do Tamanho, vazio = mínimo 1 m · a distância: até onde a arma lança', type: 'number', placeholder: 'Ex: 0,5 adaga · 2 lança · 60 arco longo', showWhen: { field: 'tipo', value: 'Arma' } },
+    // 🏹 O braço do atirador limita o tiro: alcance real = menor entre o
+    // alcance da arma e FOR × 10 m (1 ponto de FOR = 1 Deslocamento base).
+    // A BESTA escapa: é armada por manivela ANTES do tiro, então a força do
+    // braço no momento do disparo não entra — é o que a torna a arma de tiro
+    // de quem não tem Força. Ver shared/alcance-disparo.js.
+    { key: 'ignoraLimiteForDisparo', label: '🎯 Alcance NÃO é limitado pela FOR (besta, arma de manivela)', type: 'boolean', showWhen: { field: 'tipo', value: 'Arma' } },
     {
         // Qual Blindagem TIPADA do alvo barra este dano. 1 ou mais — um machado
         // de guerra corta E esmaga. Antes só existia via script

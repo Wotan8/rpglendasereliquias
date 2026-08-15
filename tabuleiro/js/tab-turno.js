@@ -25,6 +25,7 @@ import {
 } from '../../shared/combate-cenas.js';
 import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR } from './tab-mira-calc.js';
 import { retornoDoTurno } from '../../shared/retorno-recurso.js';
+import { melhorDisparo } from '../../shared/alcance-disparo.js';
 import { golpesDe, golpesCacheados, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes, formasDeConjurar } from './tab-golpes.js';
 import { templateAtingeCirculo } from './tab-templates.js';
 import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte } from './tab-hud.js';
@@ -668,6 +669,19 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
     const tok = tokenAtivoDoCombate();
     if (!tok) { toast('⚠️ O participante da vez não tem token neste canvas', 'warning'); return; }
     if (s.mira?.tipo) {
+        // 🏹 Habilidade que mira "ao alcance do disparo": sem arma de tiro em
+        // mãos (ou com o alcance dela não cadastrado) a mira abriria com 0 m e
+        // nada seria alvo. Diz o motivo em vez de abrir uma mira morta.
+        if (s.mira.alcanceDoDisparo) {
+            const d = alcanceDoDisparoDe(p);
+            if (!d.metros) {
+                toast('⚠️ Sem arma de disparo em mãos (ou o alcance dela não está cadastrado)', 'warning');
+                return;
+            }
+            if (d.limitadoPorFor) {
+                toast(`🏹 ${d.arma}: ${d.metros} m — a sua FOR limita o alcance da arma`);
+            }
+        }
         const cfg = miraDoCadastro(s.mira, s, custo, p);
         // 🗡️ Habilidade que MACHUCA sai de uma arma, de um foco ou do corpo:
         // é de lá que vêm o Acerto (o Alvo da rolagem), o dado de dano e o tipo
@@ -848,20 +862,20 @@ async function pagarCusto(p, custo) {
 }
 
 /**
- * O alcance do DISPARO deste participante: a maior distância entre as armas a
- * distância que ele tem equipadas. É o que "ao alcance do seu disparo" quer
- * dizer — sem arma de tiro em mãos, não há alcance e a mira não abre.
+ * O alcance do DISPARO deste participante: o maior tiro que ele tem em mãos,
+ * já cortado pela FOR (ver shared/alcance-disparo.js). Sem arma de tiro — ou
+ * com o alcance dela não cadastrado — dá 0, e a mira não abre.
  */
 function alcanceDoDisparoDe(p) {
-    const linhas = golpesCacheados(p) || [];
-    return linhas.filter(l => l.distancia).reduce((mx, l) => Math.max(mx, Number(l.alcanceM) || 0), 0);
+    const forca = valorComponente('FOR', fonteDoParticipante(p));
+    return melhorDisparo(golpesCacheados(p) || [], forca);
 }
 
 /** Converte a mira CADASTRADA (metros) para o runtime (px no ponto do token). */
 function miraDoCadastro(m, s, custo, p) {
     // 🏹 Alcance que sai da ARMA, não do cadastro: a manobra do Caçador vale
     // até onde a flecha dele chega, e isso muda quando ele troca de arco.
-    const alcance = m.alcanceDoDisparo ? alcanceDoDisparoDe(p) : (Number(m.alcanceM) || 0);
+    const alcance = m.alcanceDoDisparo ? alcanceDoDisparoDe(p).metros : (Number(m.alcanceM) || 0);
     return {
         tipo: m.tipo, forma: m.forma || 'circulo', origem: m.origem || 'token',
         alcanceM: alcance, raioM: Number(m.raioM) || 0,

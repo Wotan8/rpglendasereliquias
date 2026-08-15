@@ -1201,5 +1201,7 @@ html, body {
     font-size: .72rem;
     font-weight: 700;
     background: var(--lr-blood-soft, rgba(155, 44, 44, .18));
-    color: var(--lr-blood-2);
+    /* --lr-blood-3 e nao --lr-blood-2: o 2 da 4.05:1 sobre este fundo e o
+       guarda de contraste barra (shared/contraste.test.mjs). */
+    color: var(--lr-blood-3);
 }

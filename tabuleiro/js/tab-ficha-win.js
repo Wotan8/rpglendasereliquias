@@ -1079,6 +1079,9 @@ export async function linhasDeAtaque(tipo, id) {
         // reconhece o foco/instrumento equipado ("instrumento-sopro" na Rabeca).
         const tpl = i ? tplDoItem(i) : null;
         l.tags = [...new Set([...(i?.tags || []), ...(tpl?.tags || [])])];
+        // 🏹 Besta e afins: o alcance delas não passa pelo braço (ver
+        // shared/alcance-disparo.js).
+        l.ignoraLimiteForDisparo = !!(i?.ignoraLimiteForDisparo ?? tpl?.ignoraLimiteForDisparo);
     }
     return linhas;
 }
