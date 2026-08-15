@@ -357,6 +357,16 @@
 .cbt-chip.is-fraqueza .cbt-chip-nm::after { content: ' ▼'; }
 .cbt-chip.is-resistencia .cbt-chip-nm::after { content: ' ▲'; }
 
+/* 🏹 Chip CALCULADO (alcance do disparo): não é Valor Derivado, sai da arma
+   equipada e da FOR. Borda dourada o separa dos VDs sem gritar. */
+.cbt-chip-calc { border-color: var(--lr-gold); }
+.cbt-chip-calc .cbt-chip-vl { color: var(--lr-gold); }
+
+/* A FOR está cortando o alcance da arma: o jogador precisa ver que o arco dele
+   não está rendendo tudo. O ⚠️ no nome carrega a informação sem depender de cor. */
+.cbt-chip-calc.is-limitado { border-color: var(--lr-blood); }
+.cbt-chip-calc.is-limitado .cbt-chip-vl { color: var(--lr-blood-3); }
+
 .cbt-chip-ic { font-size: 11px; flex-shrink: 0; }
 
 .cbt-chip-nm {
@@ -412,6 +422,9 @@
     .cbt-step { width: 26px; height: 26px; font-size: 14px; }
     .cbt-bar { height: 4px; }
     .cbt-chip { font-size: 10px; }
+    /* Alvo de toque: o chip é `cursor: help` e só mostra title no hover, que
+       no celular não existe — então ele precisa ser tocável de verdade. */
+    .cbt-chip-calc { min-height: 32px; padding: 4px 10px 4px 8px; }
 }
 
 @media print {

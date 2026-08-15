@@ -17,6 +17,59 @@
         ENER_MAX: 'var(--lr-arcane)',
     };
 
+    /* 🏹 A régua do disparo mora em shared/alcance-disparo.js (a mesma que o
+       Tabuleiro usa). Este arquivo é script clássico, então entra por import()
+       dinâmico: enquanto não chega, o chip simplesmente não aparece, e o
+       próximo recalcAll o traz. Nunca duplicar METROS_POR_FOR aqui. */
+    let _alc = null;
+    import('../../shared/alcance-disparo.js')
+        .then(m => { _alc = m; if (typeof renderCombatPanel === 'function') renderCombatPanel(); })
+        .catch(e => console.warn('regua do disparo indisponivel', e));
+
+    /** Campo do item com fallback pro modelo do catálogo (instância vence). */
+    function _campoArma(item, key) {
+        if (item[key] !== undefined && item[key] !== null && item[key] !== '') return item[key];
+        const tpl = (window._inventoryState?.catalog || []).find(t => t.id === item.modeloId);
+        return tpl ? tpl[key] : undefined;
+    }
+
+    /**
+     * 🏹 O disparo mais longo que o personagem tem EM MÃOS, já cortado pela FOR.
+     * Devolve null quando não há arma de tiro equipada — o chip some, em vez de
+     * mostrar "0 m" e parecer defeito.
+     */
+    function alcanceDoDisparo() {
+        if (!_alc || !window._inventoryState) return null;
+        const linhas = (window._inventoryState.items || [])
+            .filter(i => i.equipado && _campoArma(i, 'categoriaArma') === 'distancia')
+            .map(i => ({
+                nome: i.nome || 'Arma',
+                distancia: true,
+                alcanceM: Number(_campoArma(i, 'alcanceM')) || 0,
+                ignoraLimiteForDisparo: !!_campoArma(i, 'ignoraLimiteForDisparo'),
+            }));
+        if (!linhas.length) return null;
+
+        const forca = typeof getEffectiveDotValue === 'function' ? getEffectiveDotValue('attr_for') : 0;
+        const d = _alc.melhorDisparo(linhas, forca);
+        if (!d.metros) {
+            // Tem arco na mão mas o alcance dele não está cadastrado: dizer
+            // isso é mais útil que esconder o chip.
+            return { valor: '—', nome: 'Alcance do Disparo',
+                     dica: `${linhas[0].nome}: alcance não cadastrado no Painel do Criador` };
+        }
+        const cap = Math.max(...linhas.map(l => l.alcanceM));
+        return {
+            valor: `${d.metros} m`,
+            nome: 'Alcance do Disparo',
+            dica: d.limitadoPorFor
+                ? `${d.arma} alcança ${cap} m, mas a sua FOR sustenta ${forca * _alc.METROS_POR_FOR} m `
+                  + `(${_alc.METROS_POR_FOR} m por ponto de FOR). Vale o menor dos dois.`
+                : `${d.arma} — o alcance da arma, que a sua FOR sustenta inteiro.`,
+            limitado: d.limitadoPorFor,
+        };
+    }
+
     /** Blocos com blocoOrdem abaixo disto nascem abertos na aba Combate. */
     const BLOCO_ABERTO_ATE = 30;
 
@@ -101,6 +154,14 @@
             });
             if (dvs.length) blocks.push({ nome, ordem, dvs });
         });
+        // 🏹 O alcance do disparo não é VD: sai da arma equipada e da FOR. Entra
+        // no bloco de Combate como chip de leitura, ao lado do resto da rodada.
+        const disparo = alcanceDoDisparo();
+        if (disparo) {
+            const combate = blocks.find(b => /^combate$/i.test(b.nome));
+            if (combate) combate.extras = [disparo];
+            else blocks.unshift({ nome: 'Combate', ordem: 1, dvs: [], extras: [disparo] });
+        }
         return blocks;
     }
 
@@ -165,9 +226,19 @@
             <b class="cbt-chip-vl">—</b>
         </button>`).join('');
 
+        // Chip calculado (sem data-dv-key): o syncCombatPanel não mexe nele,
+        // porque o valor já vem pronto e é remontado quando muda.
+        const extras = (b.extras || []).map(x => `<button type="button" class="cbt-chip cbt-chip-calc${x.limitado ? ' is-limitado' : ''}"
+                data-tooltip-type="texto" data-tooltip-text="${_esc(x.dica || '')}"
+                title="${_esc(x.dica || '')}">
+            <span class="cbt-chip-ic">🏹</span>
+            <span class="cbt-chip-nm">${_esc(x.nome)}${x.limitado ? ' ⚠️' : ''}</span>
+            <b class="cbt-chip-vl">${_esc(x.valor)}</b>
+        </button>`).join('');
+
         return `<details class="cbt-block"${open ? ' open' : ''}>
-            <summary>${_esc(b.nome)}<span class="cbt-block-n">${b.dvs.length}</span></summary>
-            <div class="cbt-chips">${chips}</div>
+            <summary>${_esc(b.nome)}<span class="cbt-block-n">${b.dvs.length + (b.extras || []).length}</span></summary>
+            <div class="cbt-chips">${chips}${extras}</div>
         </details>`;
     }
 
@@ -178,8 +249,11 @@
 
         const vitals = collectVitals();
         const blocks = collectBlocks();
+        // O valor dos extras entra na assinatura: sem isso, trocar de arco (ou
+        // subir FOR) não remontaria o bloco e o chip mostraria o número velho.
         const sig = vitals.map(v => v.id).join(',') + '|' +
-            blocks.map(b => b.nome + ':' + b.dvs.map(d => d.key).join('-')).join(',');
+            blocks.map(b => b.nome + ':' + b.dvs.map(d => d.key).join('-')
+                + ':' + (b.extras || []).map(x => x.valor).join('-')).join(',');
 
         // Só remonta quando a estrutura muda — preserva foco de digitação e
         // quais blocos o jogador deixou abertos.
@@ -233,7 +307,10 @@
         });
 
         const derived = (window.state && window.state.derived) || {};
-        document.querySelectorAll('#combatValuesBlocks .cbt-chip').forEach(chip => {
+        // `[data-dv-key]` exclui o chip CALCULADO (alcance do disparo): o valor
+        // dele já vem pronto do render, e sem este filtro o sync não acharia o
+        // VD correspondente e escreveria "—" por cima.
+        document.querySelectorAll('#combatValuesBlocks .cbt-chip[data-dv-key]').forEach(chip => {
             const v = derived[chip.dataset.dvKey];
             const dv = _dvByKey(chip.dataset.dvKey);
             chip.querySelector('.cbt-chip-vl').textContent =

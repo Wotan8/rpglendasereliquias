@@ -151,8 +151,25 @@
                 { nome: 'Marcado', icone: '🎯', descricao: '', tempoRestante: '' },
             ],
         };
+        /* 🏹 Stubs do alcance do disparo: inventário + FOR.
+           Arco Longo (60 m, puxado pelo braço) e Besta Leve (30 m, manivela).
+           Com FOR 2 o arco cai para 20 e a besta mantém 30. */
+        window._inventoryState = {
+            catalog: [
+                { id: 'tpl_arco', categoriaArma: 'distancia', alcanceM: 60 },
+                { id: 'tpl_besta', categoriaArma: 'distancia', alcanceM: 30, ignoraLimiteForDisparo: true },
+                { id: 'tpl_adaga', categoriaArma: 'leve', alcanceM: 0.5 },
+            ],
+            items: [
+                { nome: 'Arco Longo', modeloId: 'tpl_arco', equipado: true },
+                { nome: 'Adaga', modeloId: 'tpl_adaga', equipado: true },
+                { nome: 'Besta Leve', modeloId: 'tpl_besta', equipado: false },
+            ],
+        };
+        window.FOR_DE_TESTE = 2;
+        function getEffectiveDotValue(k) { return k === 'attr_for' ? window.FOR_DE_TESTE : 0; }
     </script>
-    <script src="js/combat-panel.js?v=4"></script>
+    <script src="js/combat-panel.js?v=5"></script>
     <script>
         const out = document.getElementById('out');
         let fails = 0;
@@ -165,7 +182,7 @@
         const q = (s) => document.querySelector(s);
         const canon = (k) => q(`[data-key="${k}"]`);
 
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             renderCombatPanel();
 
             const cards = document.querySelectorAll('#combatVitalsGrid .cbt-vital');
@@ -196,7 +213,9 @@
             // Abre por blocoOrdem, não por posição: Combate(1) sim, Capacidade(70) não
             eq('bloco de ordem baixa nasce aberto', blocks[0].open, true);
             eq('bloco de ordem alta nasce fechado', blocks[2].open, false);
-            const chips = blocks[0].querySelectorAll('.cbt-chip');
+            // `[data-dv-key]` = só os chips de Valor Derivado. O chip CALCULADO
+            // (alcance do disparo) não é VD e não entra nesta conta.
+            const chips = blocks[0].querySelectorAll('.cbt-chip[data-dv-key]');
             eq('Blindagem saiu dos chips (está no HUD)', chips.length, 2);
             eq('Iniciativa mostra state.derived', chips[0].querySelector('.cbt-chip-vl').textContent, '4');
             eq('Reação mostra state.derived', chips[1].querySelector('.cbt-chip-vl').textContent, '2');
@@ -309,6 +328,36 @@
 
             setCombatInitiative(null, []);
             eq('removido do combate esconde a faixa', strip.hidden, true);
+
+            /* ═══ 🏹 Alcance do Disparo no bloco de Combate ═══ */
+            // O import() do módulo puro é assíncrono: espera ele chegar.
+            await new Promise(r => setTimeout(r, 300));
+            renderCombatPanel();
+
+            const chip = document.querySelector('#combatValuesBlocks .cbt-chip-calc');
+            eq('chip do disparo aparece', !!chip, true);
+            // Arco Longo alcança 60, mas FOR 2 sustenta 20. Vale o menor.
+            eq('FOR corta o alcance da arma', chip?.querySelector('.cbt-chip-vl')?.textContent, '20 m');
+            eq('marca que foi a FOR que cortou', chip?.classList.contains('is-limitado'), true);
+            eq('a dica funciona no toque (não só title)', !!chip?.dataset.tooltipText, true);
+
+            // Equipando a besta (manivela): 30 m, sem corte de FOR.
+            window._inventoryState.items[2].equipado = true;
+            renderCombatPanel();
+            const chip2 = document.querySelector('#combatValuesBlocks .cbt-chip-calc');
+            eq('besta ignora a FOR e rende mais', chip2?.querySelector('.cbt-chip-vl')?.textContent, '30 m');
+            eq('sem corte de FOR, sem aviso', chip2?.classList.contains('is-limitado'), false);
+
+            // FOR 6 solta o arco inteiro (60 > 30 da besta).
+            window.FOR_DE_TESTE = 6;
+            renderCombatPanel();
+            eq('FOR alta libera o arco inteiro',
+                document.querySelector('#combatValuesBlocks .cbt-chip-calc .cbt-chip-vl')?.textContent, '60 m');
+
+            // Sem arma de tiro equipada o chip some, em vez de mostrar 0 m.
+            window._inventoryState.items.forEach(i => { if (i.modeloId !== 'tpl_adaga') i.equipado = false; });
+            renderCombatPanel();
+            eq('sem arma de tiro o chip some', !document.querySelector('#combatValuesBlocks .cbt-chip-calc'), true);
 
             out.innerHTML += fails === 0
                 ? '<span style="color:green">\n✅ tudo passou</span>'

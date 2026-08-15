@@ -644,6 +644,10 @@ const _DV_TOOLTIP_POR_TIPO = {
     attribute: _dvTooltipAtributo,
     skill: _dvTooltipPericia,
     peculiaridade: _dvTooltipPeculiaridade,
+    // Texto pronto em `data-tooltip-text`, para o que NÃO é Valor Derivado —
+    // o alcance do disparo sai da arma equipada e da FOR, não do cadastro.
+    // Sem isto o chip só teria `title`, que no celular ninguém vê.
+    texto: el => el.dataset.tooltipText ? _dvDesc(el.dataset.tooltipText) : '',
 };
 
 /** Encosta o tooltip no label e puxa de volta se estourar a janela. */
