@@ -31,7 +31,7 @@ export async function golpesDe(p) {
     if (!chave) return [];
     if (cache.has(chave)) return cache.get(chave);
     try {
-        const m = await import('./tab-ficha-win.js?v=11');
+        const m = await import('./tab-ficha-win.js?v=12');
         const linhas = await m.linhasDeAtaque(p.npcId ? 'npc' : 'char', p.npcId || p.characterId);
         cache.set(chave, linhas);
         return linhas;
@@ -192,7 +192,7 @@ export function escolherGolpe(titulo, linhas, dica) {
 /** O catálogo de equipamento do sistema (para instância→modelo do projétil). */
 async function catalogoDeItens() {
     try {
-        const m = await import('./tab-ficha-win.js?v=11');
+        const m = await import('./tab-ficha-win.js?v=12');
         return (await m.registroSistema())?.equipment || [];
     } catch (e) { console.warn('catálogo de itens', e); return []; }
 }
@@ -204,7 +204,7 @@ export async function projeteisPara(p, linha) {
         // não precisa do catálogo para saber SE gasta munição.
         if (!(linha?.tipoProjetil || []).length) return [];
     }
-    const m = await import('./tab-ficha-win.js?v=11');
+    const m = await import('./tab-ficha-win.js?v=12');
     const itens = m.itensCarregados(p?.npcId ? 'npc' : 'char', p?.npcId || p?.characterId);
     const catalog = await catalogoDeItens();
     return projeteisCompativeis(itens, catalog, linha);

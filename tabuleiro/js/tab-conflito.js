@@ -91,7 +91,7 @@ function enerDe(pid) {
 // ---------- VDs de Defesa e Blindagem ----------
 async function carregarSys() {
     if (_sys) return _sys;
-    const m = await import('./tab-ficha-win.js?v=11');
+    const m = await import('./tab-ficha-win.js?v=12');
     _sys = await m.registroSistema();
     render();
     return _sys;
@@ -183,6 +183,9 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
             // o dele é "Acerto à Distância".
             acertoNome: acao.acertoNome || '', acertoIcone: acao.acertoIcone || '',
             condicao: acao.condicao || null,
+            // Uma ação pode aplicar mais de uma condição (Postura Defensiva:
+            // Blindado + Abalado). `condicao` fica pelo doc antigo.
+            condicoes: acao.condicoes || [],
             // 🏹 O maço escolhido no picker. Fica no doc porque quem resolve o
             // destino da flecha é o mesmo cliente que rolou o Acerto.
             projetil: acao.projetil || null,
@@ -463,10 +466,16 @@ async function aplicar(c) {
             if (a.defesaPaga && !a.enerPaga) { await window.tbCombStat?.(a.pid, 'ENER', -1); a.enerPaga = true; }
         }
         let condAplicada = !!c.condAplicada;
-        if (!condAplicada && c.acao.condicao?.nome) {
-            let pids = alvos.filter(a => a.passou && a.pid).map(a => a.pid);
-            if (c.acao.condicao.maxAlvos > 0 && pids.length > c.acao.condicao.maxAlvos) pids = pids.slice(0, c.acao.condicao.maxAlvos);
-            if (pids.length) await aplicarCondicaoEmVarios(pids, c.acao.condicao.nome, c.acao.condicao.rodadas || 0, c.atacante?.pid).catch(e => console.warn('condição do conflito', e));
+        // Lista nova quando existe; senão a condição única do formato antigo.
+        const conds = c.acao.condicoes?.length ? c.acao.condicoes
+            : (c.acao.condicao?.nome ? [c.acao.condicao] : []);
+        if (!condAplicada && conds.length) {
+            const passaram = alvos.filter(a => a.passou && a.pid).map(a => a.pid);
+            for (const cd of conds) {
+                let pids = passaram;
+                if (cd.maxAlvos > 0 && pids.length > cd.maxAlvos) pids = pids.slice(0, cd.maxAlvos);
+                if (pids.length) await aplicarCondicaoEmVarios(pids, cd.nome, cd.rodadas || 0, c.atacante?.pid).catch(e => console.warn('condição do conflito', e));
+            }
             condAplicada = true;
         }
         const contra = (c.contra || []).map(x => ({ ...x }));

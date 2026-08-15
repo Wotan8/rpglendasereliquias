@@ -21,8 +21,9 @@ import {
     cenaAtiva, comCenaAtivaPatch, participanteDaVez, faccaoDoParticipante,
     acoesNovas, podeGastar, gastarAcao, alvoValido, alcanceGolpe,
     efeitoDasCondicoes, porqueCondicao,
-    guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica, custoVital,
+    guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica,
 } from '../../shared/combate-cenas.js';
+import { custosDaSkill, rotuloDosCustos } from '../../shared/skill-custo.js?v=1';
 import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR } from './tab-mira-calc.js';
 import { retornoDoTurno } from '../../shared/retorno-recurso.js';
 import { melhorDisparo } from '../../shared/alcance-disparo.js';
@@ -110,11 +111,18 @@ function temDoRecurso(p, alvo) {
     return { tem: dv.atual ?? dv.valor, max: dv.valor ?? null, nome: dv.nome };
 }
 
-/** Falta recurso para ESTA forma de pagar? { nome, tem, qtd } ou null. */
-function faltaPara(p, custo) {
-    const r = temDoRecurso(p, custo.alvo);
-    if (!r || r.tem == null) return null;   // desconhecido não bloqueia
-    return r.tem < custo.qtd ? { nome: r.nome, tem: r.tem, qtd: custo.qtd } : null;
+/**
+ * Falta recurso para ESTA forma de pagar? { nome, tem, qtd } ou null.
+ * Uma forma pode ser composta ("1 Energia + 2 Sanidade"): falta uma parte,
+ * falta a forma inteira — pagar metade de um ritual não é pagar.
+ */
+function faltaPara(p, forma) {
+    for (const parte of forma?.partes || []) {
+        const r = temDoRecurso(p, parte.alvo);
+        if (!r || r.tem == null) continue;   // desconhecido não bloqueia
+        if (r.tem < parte.qtd) return { nome: r.nome, tem: r.tem, qtd: parte.qtd };
+    }
+    return null;
 }
 
 /** Botão de skill: custo sempre visível; sem recurso = desabilitado com o motivo. */
@@ -181,9 +189,14 @@ function miraDaReguaV2(pd) {
     const temAlvos = Number(pd.alvosMax) > 0;
     if (!temArea && !temAlvos) return null;
     const afeta = pd.faccao === 'inimigo' ? 'inimigos' : pd.faccao === 'aliado' ? 'aliados' : 'todos';
+    // TODAS as condições do cadastro viajam: a Postura Defensiva dá Blindado E
+    // Abalado, e ficar só com a primeira comia metade da manobra.
+    const condicoes = (pd.condicoesAplicadas || [])
+        .filter(c => c?.condicao)
+        .map(c => ({ nome: c.condicao, rodadas: Number(c.rodadas) || 0, maxAlvos: Number(c.alvos) || 0 }));
     const cond = (pd.condicoesAplicadas || [])[0] || null;
     const base = {
-        afeta,
+        afeta, condicoes,
         condicaoNome: cond?.condicao || null,
         condicaoRodadas: Number(cond?.rodadas) || 0,
         condicaoMaxAlvos: Number(cond?.alvos) || 0,   // 0 = todos os atingidos
@@ -193,6 +206,21 @@ function miraDaReguaV2(pd) {
         // um Acerto que a habilidade nunca teve.
         condicaoPortao: cond?.portao || null,
     };
+
+    // 🧍 Habilidade que só afeta quem usa ("proprio"/"nenhuma"/"unico" com
+    // alcance 0): postura, buff pessoal, loção que se bebe. Vira um círculo de
+    // raio 0 no próprio token — o conjurador já entra por cobertura, ninguém
+    // mais alcança, e `afeta: aliados` faz o efeito cair direto, sem abrir
+    // janela de conflito contra si mesmo.
+    const soEmSi = !temArea && temAlvos && !(Number(pd.alcance) > 0)
+        && /proprio|próprio|nenhuma|unico|único|ponto/i.test(String(pd.formaArea || ''));
+    if (soEmSi) {
+        return {
+            ...base, afeta: 'aliados', tipo: 'geometria', forma: 'circulo', origem: 'token',
+            alcanceM: 0, raioM: 0, comprimentoM: 0, larguraM: 1, angGraus: 60, maxAlvos: 1,
+        };
+    }
+
     if (temArea) {
         const forma = /cone/i.test(pd.formaArea) ? 'cone' : /linha/i.test(pd.formaArea) ? 'linha' : 'circulo';
         return {
@@ -231,16 +259,27 @@ function itensBrutos(p) {
     return out;
 }
 
+/** Quantas vezes se insiste no registro antes de desistir e seguir sem ele. */
+const SKILLS_MAX_TENTATIVAS = 3;
+
 function skillsDe(p) {
     const chave = p?.npcId ? 'npc:' + p.npcId : p?.characterId ? 'char:' + p.characterId : null;
     if (!chave) return [];
-    if (skillsCache?.chave === chave) return skillsCache.lista || [];
-    carregarSkills(chave, p);
+    if (skillsCache?.chave === chave) {
+        // Lista montada sem o registro: insiste (o registro pode ter chegado
+        // agora) e devolve o que já tem para o painel não piscar vazio.
+        if (skillsCache.parcial && skillsCache.tentativas < SKILLS_MAX_TENTATIVAS) {
+            carregarSkills(chave, p, skillsCache.tentativas);
+        }
+        return skillsCache.lista || [];
+    }
+    carregarSkills(chave, p, 0);
     return [];
 }
 
-async function carregarSkills(chave, p) {
-    skillsCache = { chave, lista: [] };
+async function carregarSkills(chave, p, tentativas = 0) {
+    // marcador de "carregando": impede o render seguinte de disparar outra
+    skillsCache = { chave, lista: skillsCache?.chave === chave ? (skillsCache.lista || []) : [], parcial: false, tentativas };
     // índice global de pré-definidos (o id `pdi_...` é único entre módulos).
     // Se o registro falhar, as skills da FICHA continuam listadas — só ficam
     // sem a mira cadastrada (caem no fluxo de "mira não cadastrada").
@@ -248,34 +287,23 @@ async function carregarSkills(chave, p) {
     const predefPorId = new Map(), predefPorNome = new Map();
     let mechsById = {};
     let sysDVs = [];
+    let registroOk = false;
     try {
-        const m = await import('./tab-ficha-win.js?v=11');
+        const m = await import('./tab-ficha-win.js?v=12');
         const sys = await m.registroSistema();
         mechsById = sys.mechsById || {};
         sysDVs = sys.derivedValues || [];
         for (const mod of Object.values(sys.classModulesById || {})) {
             for (const pd of mod.itensPredefinidos || []) {
-                const ref = { pd, schema: mod.schema || [], retorno: cfgRetorno(mod) };
+                // O MÓDULO inteiro viaja junto: o custo do Bardo está no título
+                // dele ("Custo 3 — Clímax"), não no pré-definido.
+                const ref = { pd, modulo: mod, schema: mod.schema || [], retorno: cfgRetorno(mod) };
                 predefPorId.set(pd.id, ref);
                 predefPorNome.set(normNome(pd.nome), ref);
             }
         }
+        registroOk = predefPorId.size > 0;
     } catch (e) { console.warn('registro do sistema p/ skills do turno', e); }
-
-    // 💰 Custos REAIS: cada campo `select_botao` do schema aponta uma mecânica
-    // de custo ("Pagar Energia" → -1 ENER · "Pagar Graça" → -1 Graça). Uma skill
-    // com dois desses tem DUAS formas de pagar, e quem usa escolhe qual.
-    const custosDaSkill = (it, schema, pd) => {
-        const out = [];
-        for (const f of schema || []) {
-            if (f.tipo !== 'select_botao') continue;
-            const mechId = it?.[f.key] || pd?.valores?.[f.key];
-            if (!mechId) continue;
-            const c = custoDaMecanica(mechsById[mechId]);
-            if (c && !out.some(x => x.alvo === c.alvo && x.qtd === c.qtd)) out.push({ ...c, label: f.label || '' });
-        }
-        return out;
-    };
 
     // 🔁 Retorno de recurso: regra do MÓDULO, não da magia (ver
     // shared/retorno-recurso.js). Só viaja se estiver ligada no cadastro.
@@ -304,17 +332,6 @@ async function carregarSkills(chave, p) {
         return out;
     };
 
-    // Custo pelo SCHEMA: o campo cujo LABEL fala em custo (a key é numérica nos
-    // módulos — "3" pode ser "Redutor", que NÃO é custo). Sem label de custo,
-    // vale o custo auditado pela Régua v2 (regua.custo, em ENER).
-    const custoDoSchema = (it, schema) => {
-        for (const f of schema || []) {
-            if (!/custo/i.test(f.label || '')) continue;
-            const v = it?.[f.key];
-            if (v != null && v !== '' && v !== '0') return v;
-        }
-        return '';
-    };
     const lista = itensBrutos(p).map(it => {
         // item de NPC nem sempre carrega _predefId — o nome resolve o registro
         const ref = (it._predefId && predefPorId.get(it._predefId)) || predefPorNome.get(normNome(S_NOME(it))) || null;
@@ -326,11 +343,16 @@ async function carregarSkills(chave, p) {
                 { _predefId: it._predefId || null, predefsIndexados: predefPorId.size });
         }
         const pd = ref?.pd || null;
-        const custos = custosDaSkill(it, ref?.schema, pd);
-        // texto: os custos declarados por mecânica mandam; senão campo/Régua v2
-        const custo = custos.length ? custos.map(c => c.rotulo).join(' ou ')
-            : (custoDoSchema(it, ref?.schema) || S_CUSTO(it) || S_CUSTO(pd?.valores || {})
-               || (pd?.regua?.custo > 0 ? `${pd.regua.custo} ENER` : ''));
+        // 💰 As formas de pagar saem do cadastro por shared/skill-custo.js — é
+        // ele que sabe ler as quatro gerações de módulo (mecânica de custo,
+        // campo de texto, degrau no título do Bardo, e "não custa nada").
+        const custos = custosDaSkill({
+            modulo: ref?.modulo, predef: pd, item: it,
+            mechPorId: (id) => mechsById[id], custoDaMecanica,
+        });
+        // Texto do botão: o que o cadastro declara. Sem custo cadastrado o
+        // campo livre da ficha ainda vale como AVISO (não é debitado).
+        const custo = rotuloDosCustos(custos) || S_CUSTO(it) || S_CUSTO(pd?.valores || {});
         return {
             nome: S_NOME(it),
             efeito: S_EFEITO(it) || S_EFEITO(pd?.valores || {}) || pd?.descricao || '',
@@ -341,7 +363,11 @@ async function carregarSkills(chave, p) {
             acao: it.custoAcao || pd?.custoAcao || pd?.mira?.custoAcao || acaoDoRotulo(it.acao || pd?.valores?.acao),   // §6.2
         };
     });
-    skillsCache = { chave, lista };
+    // Registro que não chegou não pode virar cache definitivo: com ele fora
+    // TODA skill fica sem custo e sem mira, e o painel manteria esse estado
+    // torto até a vez virar. Marca como parcial para o próximo render tentar
+    // de novo — com teto, senão um registro indisponível viraria laço.
+    skillsCache = { chave, lista, parcial: !registroOk, tentativas: (tentativas + 1) };
     render();
 }
 
@@ -685,15 +711,15 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
     if (s.custos?.length) {
         const f = faltaPara(p, s.custos[formaPaga]);
         if (f) { toast(`⚠️ Não tem ${f.nome} o suficiente (${f.tem}/${f.qtd})`, 'warning'); return; }
-        _custosAPagar = [s.custos[formaPaga]];   // debitado na confirmação da mira
+        // uma forma pode ser composta ("1 Energia + 2 Sanidade"): paga inteira
+        _custosAPagar = s.custos[formaPaga].partes;   // debitado na confirmação da mira
         _retornoCfg = s.retorno;
     } else {
-        // re-checa o custo em texto na hora do clique (o HTML pode estar velho)
+        // Sem custo cadastrado: o campo livre da ficha ainda avisa, mas não há
+        // o que debitar — inventar um débito aqui cobraria a moeda errada.
         const falta = recursoInsuficiente(s.custo, recursosDe(p));
         if (falta) { toast(`⚠️ Não tem ${RECURSO_NOME[falta.recurso]} o suficiente (${falta.tem}/${falta.qtd})`, 'warning'); return; }
-        // 💰 Custo só em TEXTO ("2 ENER") também é debitado: era o furo — quem
-        // não tinha mecânica de custo cadastrada usava a habilidade de graça.
-        _custosAPagar = custosDoTexto(s.custo);
+        _custosAPagar = [];
         _retornoCfg = s.retorno;
     }
     const tok = tokenAtivoDoCombate();
@@ -809,23 +835,20 @@ let _custosAPagar = [];
 // Config de retorno da skill em uso — anda junto com o custo até o débito.
 let _retornoCfg = null;
 
-/** Custo em TEXTO ("2 ENER + 1 SAN") no mesmo formato dos custos por mecânica. */
-function custosDoTexto(txt) {
-    return custoVital(txt).map(c => ({
-        alvo: RECURSO_NOME[c.recurso], qtd: c.qtd, rotulo: `−${c.qtd} ${RECURSO_NOME[c.recurso]}`,
-    }));
-}
-
 /** Skill com mais de uma forma de pagar: quem usa escolhe qual recurso gasta. */
 function escolherComoPagar(s, custoAcao, i, pagaveis) {
     const p = participanteDaVez(cena());
     window._tbAbrirModal(`💰 Como pagar “${esc(s.nome)}”?`, `
         <div class="tb-muted" style="font-size:.8rem;margin-bottom:10px">Esta habilidade aceita mais de uma forma de pagamento — escolha qual recurso gastar:</div>
         ${pagaveis.map(({ c, k }) => {
-            const r = temDoRecurso(p, c.alvo);
+            // Cada parte da forma mostra quanto o personagem tem daquela moeda
+            const tem = (c.partes || []).map(parte => {
+                const r = temDoRecurso(p, parte.alvo);
+                return r?.tem != null ? `${esc(r.nome)} ${r.tem}` : null;
+            }).filter(Boolean).join(' · ');
             return `<button class="tb-btn tb-btn-small" style="display:block;width:100%;margin-bottom:6px;text-align:left"
                 onclick="tbFecharModal();tbTurnoSkill('${custoAcao}',${i},${k})">
-                ${esc(c.label || 'Pagar')} — <b>${esc(c.rotulo)}</b>${r?.tem != null ? ` <span class="tb-muted">(tem ${r.tem} de ${esc(r.nome)})</span>` : ''}</button>`;
+                ${esc(c.label || 'Pagar')} — <b>${esc(c.rotulo)}</b>${tem ? ` <span class="tb-muted">(tem ${tem})</span>` : ''}</button>`;
         }).join('')}
     `);
 }
@@ -915,7 +938,7 @@ async function pagarCusto(p, custo) {
             const dv = vdsCombateDaFonte(fonteDoParticipante(p)).find(d => _norm(d.nome) === a);
             if (dv) await window.tbCombSetVd?.(p.id, dv.key, novo);
         }
-        logChat(`💰 ${p.name || '?'}: ${custo.rotulo} (${r.nome} ${r.tem} → ${novo})`);
+        logChat(`💰 ${p.name || '?'}: −${custo.qtd} ${r.nome} (${r.tem} → ${novo})`);
     } catch (e) { console.warn('pagar custo', e); }
 }
 
@@ -943,9 +966,16 @@ function miraDoCadastro(m, s, custo, p) {
         meta: {
             nome: s.nome, efeito: s.efeito, custoSkill: s.custo, custoAcao: custo,
             condicao: m.condicaoNome ? { nome: m.condicaoNome, rodadas: Number(m.condicaoRodadas) || 0, maxAlvos: Number(m.condicaoMaxAlvos) || 0 } : null,
+            condicoes: m.condicoes || [],
             portao: m.condicaoPortao || null,
         },
     };
+}
+
+/** As condições que a ação aplica: a lista nova, ou a única do formato antigo. */
+function condicoesDaAcao(acao) {
+    if (acao?.condicoes?.length) return acao.condicoes;
+    return acao?.condicao?.nome ? [acao.condicao] : [];
 }
 
 /** Skill sem mira cadastrada: o MESTRE configura na hora (parâmetro é regra). */
@@ -1154,13 +1184,17 @@ window.tbTurnoConfirmarMira = async () => {
     //     uma rolagem que o cadastro não tem (portão 'nenhum', §6.1).
     const semRolagem = !meta.golpe?.dano && (!meta.portao || meta.portao === 'nenhum');
     if (atingidos.length && (m.afeta === 'aliados' || semRolagem)) {
-        let pids = atingidos.map(o => participanteDoToken(o)?.id).filter(Boolean);
-        if (meta.condicao?.nome && pids.length) {
-            if (meta.condicao.maxAlvos > 0 && pids.length > meta.condicao.maxAlvos) {
-                pids = pids.slice(0, meta.condicao.maxAlvos);
-                toast(`☠️ Condição limitada a ${meta.condicao.maxAlvos} alvo(s) pelo cadastro — valem os primeiros`, 'warning');
+        const pidsTodos = atingidos.map(o => participanteDoToken(o)?.id).filter(Boolean);
+        // Uma habilidade pode aplicar mais de uma condição (Postura Defensiva
+        // dá Blindado e Abalado). Cada uma tem o seu próprio teto de alvos.
+        for (const cd of condicoesDaAcao(meta)) {
+            let pids = pidsTodos;
+            if (!pids.length) break;
+            if (cd.maxAlvos > 0 && pids.length > cd.maxAlvos) {
+                pids = pids.slice(0, cd.maxAlvos);
+                toast(`☠️ ${cd.nome} limitada a ${cd.maxAlvos} alvo(s) pelo cadastro — valem os primeiros`, 'warning');
             }
-            aplicarCondicaoEmVarios(pids, meta.condicao.nome, meta.condicao.rodadas || 0, p?.id).catch(e => console.warn('condição da skill', e));
+            aplicarCondicaoEmVarios(pids, cd.nome, cd.rodadas || 0, p?.id).catch(e => console.warn('condição da skill', e));
         }
         // "aliado(s)" só quando forem mesmo aliados — A Presa marca inimigo.
         const quem = m.afeta === 'aliados' ? 'aliado(s)' : 'alvo(s)';
@@ -1176,6 +1210,7 @@ window.tbTurnoConfirmarMira = async () => {
             alvoAcerto: meta.golpe?.acerto ?? null,
             acertoNome: meta.golpe?.acertoNome || '', acertoIcone: meta.golpe?.acertoIcone || '',
             condicao: meta.condicao || null,
+            condicoes: meta.condicoes || [],
             projetil: meta.projetil || null,
         }, atingidos);
         return;

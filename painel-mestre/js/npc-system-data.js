@@ -24,7 +24,13 @@ export async function ensureNpcSystemData() {
     _loading = (async () => {
         if (!window._systemData) window._systemData = {};
 
-        await Promise.all(COLLECTIONS.map(async (col) => {
+        // allSettled e não all: uma coleção que falhe (rede caindo, regra de
+        // leitura, cache offline frio) derrubava a carga INTEIRA, e quem
+        // consome ficava sem registro nenhum — no Tabuleiro isso apagava custo
+        // e mira de todas as habilidades de uma vez. Agora o que chegou vale, e
+        // o que faltou é registrado para a próxima chamada tentar de novo.
+        let faltou = false;
+        const r = await Promise.allSettled(COLLECTIONS.map(async (col) => {
             // Reaproveita coleções já carregadas por outros módulos do painel
             if (Array.isArray(window._systemData[col]) && window._systemData[col].length > 0) return;
             const snap = await getDocs(collection(db, `system/data/${col}`));
@@ -35,6 +41,12 @@ export async function ensureNpcSystemData() {
             });
             window._systemData[col] = arr;
         }));
+        r.forEach((x, i) => {
+            if (x.status === 'rejected') {
+                faltou = true;
+                console.warn(`⚠️ registro do sistema: "${COLLECTIONS[i]}" não carregou`, x.reason);
+            }
+        });
 
         const sd = window._systemData;
         const byId = arr => { const m = {}; (arr || []).forEach(x => m[x.id] = x); return m; };
@@ -99,6 +111,10 @@ export async function ensureNpcSystemData() {
         sys.tribesByNome = byNome(sys.tribes);
         sys.norm = norm;
 
+        // Carga incompleta não vira cache definitivo: `loaded` false faz a
+        // próxima chamada refazer o que faltou (as coleções que já vieram
+        // ficam em window._systemData e não são relidas).
+        sys.loaded = !faltou;
         window._npcSys = sys;
         return sys;
     })();

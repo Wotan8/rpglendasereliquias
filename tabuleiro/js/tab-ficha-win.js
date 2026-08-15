@@ -71,8 +71,12 @@ async function carregarSys() {
     _resolveMod = m.resolveNpcClassModule;
     _calcNpc = eng.calcularNpc;
     _golpes = window.computeGolpesDesarmados;
-    _sys = await m.ensureNpcSystemData();
-    return _sys;
+    const sys = await m.ensureNpcSystemData();
+    // Carga incompleta (`loaded` false) não é memoizada: pinar aqui deixaria a
+    // sessão inteira sem os módulos de classe — e portanto sem custo nem mira
+    // nas habilidades — até recarregar a página.
+    if (sys?.loaded !== false) _sys = sys;
+    return sys;
 }
 
 // Índice de VD por TODAS as chaves possíveis (nome normalizado da ficha, key
