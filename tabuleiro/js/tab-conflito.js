@@ -28,6 +28,7 @@ import { T, esc, toast, uid, normChave, valorComponente, gridSize, pxParaUnidade
 import { golpesDe, golpesCacheados, escolherGolpe, golpesCorpoACorpo, alcanceDoGolpe } from './tab-golpes.js';
 import { refCombate } from './tab-main.js';
 import { cenaAtiva, comCenaAtivaPatch } from '../../shared/combate-cenas.js';
+import { bonusDoAtaque } from '../../shared/marca-de-caca.js';
 import { participanteDoToken, valorVdDaFonte, fonteDoParticipante, VITAIS } from './tab-hud.js';
 import { aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { logChat } from './tab-chat.js';
@@ -176,6 +177,14 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
             alvoAcerto: acao.alvoAcerto ?? null, efeito: acao.efeito || '',
             condicao: acao.condicao || null,
         },
+        // 🎯 Marca de Caça: medida AQUI, na abertura, e guardada no doc — quem
+        // rola o dado pode ser outro cliente, e a ficha do caçador não está lá.
+        marca: bonusDoAtaque(
+            alvos.map(o => { const p = participanteDoToken(o); return { pid: p?.id || null, condicoes: p?.condicoes || [] }; }),
+            {
+                cacadorPid: atacante?.id || null,
+                marcaDeCaca: valorComponente('Marca de Caça', fonteDoParticipante(atacante)),
+            }),
         rolagem: null, contra: [], condAplicada: false,
         alvos: alvos.map(o => {
             const p = participanteDoToken(o);
@@ -201,7 +210,9 @@ function manual(id) {
 window.tbConfRolarAcerto = async (naMesa) => {
     const c = conflito(); if (!c || c.fase !== 'acerto') return;
     if (!controla(c.atacante.pid)) return;
-    const alvo = manual('cfAlvoAcerto') ?? c.acao.alvoAcerto;
+    // O Alvo digitado à mão manda (o mestre corrigindo); senão soma a marca.
+    const bonusMarca = Number(c.marca?.acerto) || 0;
+    const alvo = manual('cfAlvoAcerto') ?? (c.acao.alvoAcerto == null ? null : c.acao.alvoAcerto + bonusMarca);
     if (alvo == null || isNaN(alvo)) { toast('⚠️ Informe o Alvo do ataque (Acerto + modificadores)', 'warning'); return; }
     let dado;
     if (naMesa) {
@@ -220,7 +231,7 @@ window.tbConfRolarAcerto = async (naMesa) => {
     // 🔁 A música quebrou: quem tem retorno de recurso no fim do turno perde o
     // que juntou. Marca aqui porque é o único ponto que sabe se o teste passou.
     if (graus <= 0) await marcarFalhaDeConjuracao(c.atacante?.pid);
-    logChat(`🎯 ${c.atacante.nome} ataca com ${c.acao.nome}: d10 ${dado}${naMesa ? ' (mesa)' : ''} vs Alvo ${alvo} → ${graus > 0 ? '+' : ''}${graus} Graus`
+    logChat(`🎯 ${c.atacante.nome} ataca com ${c.acao.nome}: d10 ${dado}${naMesa ? ' (mesa)' : ''} vs Alvo ${alvo}${bonusMarca ? ` (${c.acao.alvoAcerto} +${bonusMarca} da Marca de Caça)` : ''} → ${graus > 0 ? '+' : ''}${graus} Graus`
         + (dado === 1 ? ' ✨ crítico!' : dado === 10 ? ' 💀 falha crítica!' : ''));
 };
 
@@ -265,10 +276,14 @@ window.tbConfRolarDano = async (naMesa) => {
     const alvos = c.alvos.map(a => {
         if (!a.passou) return { ...a, bruto: 0, dano: 0 };
         const bl = blindagemDe(a.pid, c.acao.tipos);
-        return { ...a, bruto: total, blindagem: bl, dano: danoFinal(total, bl, a.meia) };
+        // 🎯 só a linha da presa leva a marca — o dano é por alvo
+        const bruto = total + (Number(c.marca?.danoPorPid?.[a.pid]) || 0);
+        return { ...a, bruto, blindagem: bl, dano: danoFinal(bruto, bl, a.meia) };
     });
     await salvar({ ...c, alvos, brutoDetalhe: detalhe, fase: 'aplicar' });
-    logChat(`💥 Dano de ${c.acao.nome}: ${detalhe} = ${total}`);
+    const marcados = alvos.filter(a => Number(c.marca?.danoPorPid?.[a.pid]) > 0);
+    logChat(`💥 Dano de ${c.acao.nome}: ${detalhe} = ${total}`
+        + (marcados.length ? ` · 🎯 +${c.marca.danoPorPid[marcados[0].pid]} da Marca de Caça em ${marcados.map(a => a.nome).join(', ')}` : ''));
 };
 
 // ---------- 4) contra-ataque (§6.8) ----------
@@ -376,7 +391,7 @@ async function aplicar(c) {
         if (!condAplicada && c.acao.condicao?.nome) {
             let pids = alvos.filter(a => a.passou && a.pid).map(a => a.pid);
             if (c.acao.condicao.maxAlvos > 0 && pids.length > c.acao.condicao.maxAlvos) pids = pids.slice(0, c.acao.condicao.maxAlvos);
-            if (pids.length) await aplicarCondicaoEmVarios(pids, c.acao.condicao.nome, c.acao.condicao.rodadas || 0).catch(e => console.warn('condição do conflito', e));
+            if (pids.length) await aplicarCondicaoEmVarios(pids, c.acao.condicao.nome, c.acao.condicao.rodadas || 0, c.atacante?.pid).catch(e => console.warn('condição do conflito', e));
             condAplicada = true;
         }
         const contra = (c.contra || []).map(x => ({ ...x }));

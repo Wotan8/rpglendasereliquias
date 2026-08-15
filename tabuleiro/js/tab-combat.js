@@ -822,15 +822,28 @@ async function sincAdicaoFicha(p, cond, tpl) {
  * uma vez (1 write no doc + espelho nas fichas). O nome resolve contra o
  * registro do sistema (ícone/descrição); sem registro vira personalizada.
  */
-export async function aplicarCondicaoEmVarios(pids, nome, rodadas) {
+export async function aplicarCondicaoEmVarios(pids, nome, rodadas, porPid) {
     if (!pids?.length || !nome) return;
     const tpl = (await carregarCondicoesSistema()).find(c => (c.nome || '').toLowerCase() === nome.toLowerCase()) || null;
     const rodada = cenaAtiva(T.combate).rodada || 1;
-    const parts = partsDaCena().map(p => ({ ...p }));
+    let parts = partsDaCena().map(p => ({ ...p }));
     const cond = {
         nome: tpl?.nome || nome, icone: tpl?.icone || '☠️', descricao: tpl?.descricao || '',
         expiraNaRodada: rodadas > 0 ? rodada + rodadas : null,
+        // Quem aplicou: só a Presa do Caçador usa hoje, mas guardar sempre não
+        // custa nada e é o que permite "a marca é de quem marcou".
+        porPid: porPid || null,
     };
+    // 🎯 Condição EXCLUSIVA: uma presa por caçador. Marcar outra solta a
+    // anterior, senão o Caçador acumularia presas de graça.
+    if (tpl?.exclusivaPorAplicador && porPid) {
+        parts = parts.map(p => ({
+            ...p,
+            condicoes: (p.condicoes || []).filter(cd =>
+                !(cd && typeof cd === 'object' && cd.porPid === porPid
+                  && String(cd.nome || '').toLowerCase() === String(cond.nome).toLowerCase())),
+        }));
+    }
     const alvos = [];
     const subiram = [];
     for (const pid of pids) {

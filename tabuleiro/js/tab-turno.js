@@ -25,7 +25,7 @@ import {
 } from '../../shared/combate-cenas.js';
 import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR } from './tab-mira-calc.js';
 import { retornoDoTurno } from '../../shared/retorno-recurso.js';
-import { golpesDe, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes, formasDeConjurar } from './tab-golpes.js';
+import { golpesDe, golpesCacheados, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes, formasDeConjurar } from './tab-golpes.js';
 import { templateAtingeCirculo } from './tab-templates.js';
 import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte } from './tab-hud.js';
 import { carregarCondicoesSistema, aplicarCondicaoEmVarios } from './tab-combat.js';
@@ -668,7 +668,7 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
     const tok = tokenAtivoDoCombate();
     if (!tok) { toast('⚠️ O participante da vez não tem token neste canvas', 'warning'); return; }
     if (s.mira?.tipo) {
-        const cfg = miraDoCadastro(s.mira, s, custo);
+        const cfg = miraDoCadastro(s.mira, s, custo, p);
         // 🗡️ Habilidade que MACHUCA sai de uma arma, de um foco ou do corpo:
         // é de lá que vêm o Acerto (o Alvo da rolagem), o dado de dano e o tipo
         // de golpe. Com mais de um equipado, quem age escolhe.
@@ -847,11 +847,24 @@ async function pagarCusto(p, custo) {
     } catch (e) { console.warn('pagar custo', e); }
 }
 
+/**
+ * O alcance do DISPARO deste participante: a maior distância entre as armas a
+ * distância que ele tem equipadas. É o que "ao alcance do seu disparo" quer
+ * dizer — sem arma de tiro em mãos, não há alcance e a mira não abre.
+ */
+function alcanceDoDisparoDe(p) {
+    const linhas = golpesCacheados(p) || [];
+    return linhas.filter(l => l.distancia).reduce((mx, l) => Math.max(mx, Number(l.alcanceM) || 0), 0);
+}
+
 /** Converte a mira CADASTRADA (metros) para o runtime (px no ponto do token). */
-function miraDoCadastro(m, s, custo) {
+function miraDoCadastro(m, s, custo, p) {
+    // 🏹 Alcance que sai da ARMA, não do cadastro: a manobra do Caçador vale
+    // até onde a flecha dele chega, e isso muda quando ele troca de arco.
+    const alcance = m.alcanceDoDisparo ? alcanceDoDisparoDe(p) : (Number(m.alcanceM) || 0);
     return {
         tipo: m.tipo, forma: m.forma || 'circulo', origem: m.origem || 'token',
-        alcanceM: Number(m.alcanceM) || 0, raioM: Number(m.raioM) || 0,
+        alcanceM: alcance, raioM: Number(m.raioM) || 0,
         comprimentoM: Number(m.comprimentoM) || 0, larguraM: Number(m.larguraM) || 0,
         angGraus: Number(m.angGraus) || 60, maxAlvos: Number(m.maxAlvos) || 1,
         afeta: m.afeta || 'todos',
@@ -1070,7 +1083,7 @@ window.tbTurnoConfirmarMira = async () => {
                 pids = pids.slice(0, meta.condicao.maxAlvos);
                 toast(`☠️ Condição limitada a ${meta.condicao.maxAlvos} alvo(s) pelo cadastro — valem os primeiros`, 'warning');
             }
-            aplicarCondicaoEmVarios(pids, meta.condicao.nome, meta.condicao.rodadas || 0).catch(e => console.warn('condição da skill', e));
+            aplicarCondicaoEmVarios(pids, meta.condicao.nome, meta.condicao.rodadas || 0, p?.id).catch(e => console.warn('condição da skill', e));
         }
         toast(`${icone} ${nomes.length} aliado(s): ${nomes.join(', ')}`);
         return;

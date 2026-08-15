@@ -236,6 +236,9 @@ export function condDoParticipante(c) {
         // Condição que acumula guarda em que nível está. Ausente = nível 1:
         // a condição comum é só o nível 1 de uma escada de um degrau.
         nivel: Number(c?.nivel) > 0 ? Number(c.nivel) : 1,
+        // Quem aplicou. Quase toda condição não liga; a Presa do Caçador liga,
+        // porque o bônus dela é de quem marcou e não do marcado.
+        porPid: c?.porPid || null,
     };
 }
 
