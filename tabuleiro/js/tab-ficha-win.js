@@ -1093,11 +1093,22 @@ export function itensCarregados(tipo, id) {
 function colunaDeAcerto(l) {
     const cols = l.colunas || [];
     const acha = re => cols.find(c => re.test(c.nome || ''));
-    const especifico = l.distancia ? acha(/dist[âa]ncia/i)
-        : l.desarmado ? acha(/desarmad/i)
-        : acha(/corpo a corpo/i);
+
+    // 1º) A coluna que O PRÓPRIO ITEM alimenta. É o cadastro falando: a espada
+    // vincula Acerto Corpo a Corpo, o arco vincula Acerto à Distância, e o
+    // instrumento vincula Acerto Mágico. Decidir pelo TIPO da linha dava
+    // "Corpo a Corpo" (quase sempre 0) para tudo que não fosse arco nem soco —
+    // uma rabeca entregava o Alvo errado sem avisar ninguém.
+    const alimentadas = cols.filter(c => /acerto/i.test(c.nome || '') && c.bonus !== 0 && c.bonus != null);
+    if (alimentadas.length === 1) return alimentadas[0];
+
+    const porTipo = l.distancia ? /dist[âa]ncia/i : l.desarmado ? /desarmad/i : /corpo a corpo/i;
+    // Mais de uma alimentada: desempata pelo tipo da linha, senão a primeira.
+    if (alimentadas.length > 1) return alimentadas.find(c => porTipo.test(c.nome || '')) ?? alimentadas[0];
+
+    // 2º) Item sem vínculo de acerto: vale o tipo da linha, como sempre valeu.
     const generico = cols.find(c => /^\s*acerto\s*$/i.test(c.nome || ''));
-    return especifico ?? generico ?? null;
+    return acha(porTipo) ?? generico ?? null;
 }
 
 /** Só o número, para quem não liga para o nome. */

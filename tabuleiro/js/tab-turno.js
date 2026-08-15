@@ -268,7 +268,7 @@ async function carregarSkills(chave, p, tentativas = 0) {
     let idx = indexarPredefs([]);
     let registroOk = false;
     try {
-        const m = await import('./tab-ficha-win.js?v=12');
+        const m = await import('./tab-ficha-win.js?v=13');
         const sys = await m.registroSistema();
         mechsById = sys.mechsById || {};
         sysDVs = sys.derivedValues || [];
@@ -1046,7 +1046,7 @@ async function aplicarIncorporacao(m, p, tok, tokAlvo) {
     // CADASTRO, não este arquivo.
     let cat = { derivedValues: [], pericias: [] };
     try {
-        const sys = await (await import('./tab-ficha-win.js?v=12')).registroSistema();
+        const sys = await (await import('./tab-ficha-win.js?v=13')).registroSistema();
         cat = { derivedValues: sys.derivedValues || [], pericias: sys.skills || [] };
     } catch (e) {
         console.warn('registro do sistema p/ Dádiva', e);
