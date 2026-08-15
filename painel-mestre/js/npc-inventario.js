@@ -21,6 +21,7 @@ import {
     camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo,
 } from '../../shared/equip-campos.js?v=6';
+import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML } from '../../shared/restaurar-item.js?v=1';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário
 // (shared/inventario-motor.js), o mesmo da Ficha de Combate do Tabuleiro.
@@ -477,6 +478,7 @@ window.openNpcItemForm = function(editItemId) {
             ${isEdit ? `<input type="hidden" id="nif_editId" value="${escapeHtml(item.id)}">` : ''}
         </div>
         <div class="inv-modal-footer">
+            ${isEdit && modelo ? botaoRestaurarHTML('window.restaurarNpcItemDoModelo()') : ''}
             <button class="inv-btn-cancel" onclick="this.closest('.inv-modal').remove()">Cancelar</button>
             <button class="inv-btn-save" onclick="window.saveNpcItemForm()">💾 Salvar</button>
         </div>
@@ -516,6 +518,30 @@ window._npcUsarModelo = function(templateId) {
     const tpl = _catalogo().find(t => t.id === templateId);
     if (!tpl) return;
     _pintarCamposItem(instanciarDoModelo(tpl), tpl);
+};
+
+/** ♻️ Joga o cadastro do catálogo por cima do que foi alterado nesta peça. */
+window.restaurarNpcItemDoModelo = async function() {
+    const editId = document.getElementById('nif_editId')?.value || '';
+    const item = NI.items.find(i => i.id === editId);
+    const tpl = item ? tplDoItem(item, window._npcSys || window._systemData || {}) : null;
+    const patch = patchRestauracao(tpl);
+    if (!patch) { showAlert('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.', 'warning'); return; }
+    if (!confirm(textoConfirmacao(item, tpl))) return;
+    try {
+        await setDoc(doc(db, 'items', editId), patch, { merge: true });
+        addLog(S.currentUser?.email, `♻️ Item "${item.nome || ''}" do NPC restaurado ao cadastro de "${tpl.nome}"`,
+            _npcNome(), 'items', {
+                charId: _npcId(), mesaId: _npcMesaId() || S.currentMesaId || null, category: 'Inventário',
+                changes: [{ label: 'Item', from: item.nome || '', to: tpl.nome || '' }]
+            });
+        showAlert('♻️ Item restaurado ao cadastro!', 'success');
+        document.getElementById('npcItemFormModal')?.remove();
+        await loadNpcInventory();
+    } catch (e) {
+        console.error('❌ Erro ao restaurar item do NPC:', e);
+        showAlert('❌ Erro: ' + e.message, 'danger');
+    }
 };
 
 window.saveNpcItemForm = async function() {

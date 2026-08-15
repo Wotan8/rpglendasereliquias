@@ -846,7 +846,7 @@ async function abrirFichaMestreNpc(npc) {
 
         const [S] = await Promise.all([
             import('../../painel-mestre/js/state.js'),
-            import('../../painel-mestre/js/area-npcs.js?v=v59')
+            import('../../painel-mestre/js/area-npcs.js?v=v60')
         ]);
 
         // Garante o NPC atual no estado compartilhado usado pelo componente
@@ -874,7 +874,7 @@ async function abrirFichaAliadoNpc(npc, opts = {}) {
         window.db = window.db || db;
 
         // Inventário do aliado (script clássico, opcional)
-        try { await _tbInjectScript('../ficha-v1.7_1/js/aliado-inventario.js?v=6', 'tbScriptAliadoInv'); }
+        try { await _tbInjectScript('../ficha-v1.7_1/js/aliado-inventario.js?v=8', 'tbScriptAliadoInv'); }
         catch (e) { console.warn('⚠️ aliado-inventario indisponível no tabuleiro:', e); }
 
         if (!window.openAliadoModal) {

@@ -18,6 +18,16 @@
 
     const FIRESTORE_URL = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
+    /* ♻️ Restaurar item ao cadastro. shared/restaurar-item.js é MÓDULO e este
+       arquivo é script clássico: entra por import dinâmico e fica em cache
+       aqui. Se falhar, o botão só não aparece — nada quebra. */
+    let _RI = null;
+    import('../../shared/restaurar-item.js?v=1')
+        .then(m => { _RI = m; })
+        .catch(e => console.error('❌ shared/restaurar-item.js não carregou:', e));
+
+    const _catalogo = () => window._systemData?.equipment || window._inventoryState?.catalog || [];
+
     const TIPO_EMOJI = {
         'Arma': '⚔️', 'Vestimenta': '🧥', 'Acessório': '💍', 'Projétil': '🎯',
         'Container': '📦', 'Objeto': '📦', 'Consumível': '🧪', 'Relíquia': '✨'
@@ -261,6 +271,8 @@
                 ${isEdit ? `<input type="hidden" id="aif_editId" value="${item.id}">` : ''}
             </div>
             <div class="inv-modal-footer">
+                ${(isEdit && _RI?.modeloDoItem(item, _catalogo()))
+                    ? _RI.botaoRestaurarHTML('AliadoInventario.restaurar()') : ''}
                 <button class="inv-btn-cancel" onclick="this.closest('.inv-modal').remove()">Cancelar</button>
                 <button class="inv-btn-save" onclick="AliadoInventario.saveForm()">💾 Salvar</button>
             </div>
@@ -280,6 +292,31 @@
                 qty.style.display = 'none';
                 const qi = document.getElementById('aif_quantidade'); if (qi) qi.value = 1;
             } else qty.style.display = 'flex';
+        }
+    }
+
+    /** ♻️ Joga o cadastro do catálogo por cima do que foi alterado nesta peça. */
+    async function restaurar() {
+        if (!_RI) return;
+        const editId = document.getElementById('aif_editId')?.value || '';
+        const item = AI.items.find(i => i.id === editId);
+        const tpl = _RI.modeloDoItem(item, _catalogo());
+        const patch = _RI.patchRestauracao(tpl);
+        if (!patch) { alert('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.'); return; }
+        if (!confirm(_RI.textoConfirmacao(item, tpl))) return;
+        try {
+            const { doc, setDoc } = await _fs();
+            await setDoc(doc(window.db, 'items', editId), patch, { merge: true });
+            _log(`♻️ Item "${item.nome || ''}" do aliado "${_npcNome()}" restaurado ao cadastro de "${tpl.nome}"`, [
+                { label: 'Aliado', from: _npcNome(), to: _npcNome() },
+                { label: 'Item', from: item.nome || '', to: tpl.nome || '' }
+            ]);
+            document.getElementById('aliadoItemFormModal')?.remove();
+            await _loadItems();
+            _renderList();
+        } catch (e) {
+            console.error('❌ Erro ao restaurar item do aliado:', e);
+            alert('Erro ao restaurar item: ' + e.message);
         }
     }
 
@@ -655,7 +692,7 @@
     /* ============ API PÚBLICA ============ */
     window.AliadoInventario = {
         open: window.renderAliadoInventario,
-        openForm, saveForm, remove,
+        openForm, saveForm, restaurar, remove,
         openEquip, confirmEquip, unequip,
         openTransfer, executeTransfer,
         _toggleFormFields

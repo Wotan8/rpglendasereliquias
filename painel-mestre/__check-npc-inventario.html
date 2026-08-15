@@ -320,12 +320,29 @@ teste('T26 · com 29 campos o corpo rola e o Salvar continua à vista',
     && corpoNovo.scrollHeight > corpoNovo.clientHeight
     && antesDeRolar && rodDentro());
 
+// criar não tem o que restaurar: a peça ainda não existe
+const semRestaurar = !$('.inv-modal-footer button[onclick*="restaurar"]', novo);
+
 // editar item existente não oferece troca de modelo
 novo.remove();
 window.openNpcItemForm('i9');
 teste('T25 · ao EDITAR não há troca de modelo (apagaria o ajuste feito na peça)',
     !$('#nif_buscaCat', $('#npcItemFormModal')));
+
+// ♻️ restaurar ao cadastro: só existe editando peça que veio do catálogo
+const btRest = $('#npcItemFormModal .inv-modal-footer button[onclick*="restaurarNpcItemDoModelo"]');
+teste('T27 · editando peça do catálogo aparece o ♻️ Restaurar do cadastro',
+    !!btRest && btRest.textContent.includes('Restaurar') && semRestaurar
+    && typeof window.restaurarNpcItemDoModelo === 'function');
 $('#npcItemFormModal').remove();
+
+// item sem modelo é personalizado: não há cadastro a que voltar
+window._npcInv.items.push({ id: 'i10', nome: 'Lembrança do Pai', tipo: 'Objeto', peso: 0.2 });
+window.openNpcItemForm('i10');
+teste('T28 · peça personalizada (sem modelo) não ganha botão de restaurar',
+    !$('#npcItemFormModal .inv-modal-footer button[onclick*="restaurar"]'));
+$('#npcItemFormModal').remove();
+window._npcInv.items = window._npcInv.items.filter(i => i.id !== 'i10');
 
 // ---- placar ----
 $('#saida').innerHTML = linhas.map(([n, p]) =>

@@ -3,6 +3,15 @@
    Itens ficam na coleção Firestore 'items', não no gatherData().
    Pressão = peso efetivo de itens equipados, alimenta o DV "Carga" via mechanicBonuses. */
 
+/* ♻️ Restaurar item ao cadastro. shared/restaurar-item.js é MÓDULO e este
+   arquivo é script clássico, então entra por import dinâmico e fica em cache
+   aqui. Carrega junto com a página; se por algum motivo falhar, o botão
+   simplesmente não aparece — nada quebra. */
+let _RestaurarItem = null;
+import('../../shared/restaurar-item.js?v=1')
+    .then(m => { _RestaurarItem = m; })
+    .catch(e => console.error('❌ shared/restaurar-item.js não carregou:', e));
+
 // ===== BODY SLOTS — Configuração de Slots Anatômicos =====
 // ===== BODY SLOTS — Dinâmico =====
 function _getCharacterBodySlots() {
@@ -2520,6 +2529,8 @@ window.openItemFormModal = function(title, item, containerId) {
             ${isEdit ? `<input type="hidden" id="invFormEditId" value="${item.id}">` : ''}
         </div>
         <div class="inv-modal-footer">
+            ${(isEdit && _RestaurarItem?.modeloDoItem(item, catalog))
+                ? _RestaurarItem.botaoRestaurarHTML('restaurarItemDoModelo()') : ''}
             <button class="inv-btn-cancel" onclick="closeItemFormModal()">Cancelar</button>
             <button class="inv-btn-save" onclick="saveInventoryItemForm()">💾 Salvar</button>
         </div>
@@ -2547,6 +2558,28 @@ window.openItemFormModal = function(title, item, containerId) {
 
 window.closeItemFormModal = function() {
     document.getElementById('invFormModal')?.remove();
+};
+
+/** ♻️ Joga o cadastro do catálogo por cima do que foi alterado nesta peça. */
+window.restaurarItemDoModelo = async function() {
+    if (!_RestaurarItem) return;
+    const editId = document.getElementById('invFormEditId')?.value || '';
+    const item = window._inventoryState.items.find(i => i.id === editId);
+    const tpl = _RestaurarItem.modeloDoItem(item, window._inventoryState.catalog || []);
+    const patch = _RestaurarItem.patchRestauracao(tpl);
+    if (!patch) { alert('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.'); return; }
+    if (!confirm(_RestaurarItem.textoConfirmacao(item, tpl))) return;
+    try {
+        await _firestoreSetDoc('items', editId, patch);
+        closeItemFormModal();
+        // Recarrega inteiro: restaurar mexe em vínculo (VD, atributo, perícia),
+        // e esses só voltam ao lugar no recálculo completo.
+        if (window.currentCharacterId) await loadCharacterItems(window.currentCharacterId);
+        else { renderEquippedItems(); renderInventoryTab(); recalcInventoryPressure(); }
+    } catch (e) {
+        console.error('❌ Erro ao restaurar item:', e);
+        alert('Erro ao restaurar item: ' + e.message);
+    }
 };
 
 window.fillFromCatalog = function(templateId) {

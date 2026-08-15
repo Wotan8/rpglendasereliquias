@@ -5,6 +5,10 @@ import { db, collection, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc } fr
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { buildMechanicSelectorHTML } from '../../painel-criador/js/painel-mechanics.js';
+import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML, modeloDoItem } from '../../shared/restaurar-item.js?v=1';
+
+const _catalogoMestre = () => (window._systemData?.equipment || window._mestreCatalog || [])
+    .filter(t => t.publicado !== false);
 
 window._loadMesaInventarios = loadMesaInventarios;
 window._loadPersonagensInventario = loadPersonagensInventario;
@@ -475,6 +479,7 @@ window._openMestreItemFormModal = async function(mesaId, editItemId, targetCharI
             ${isEdit ? `<input type="hidden" id="mif_editId" value="${item.id}">` : ''}
         </div>
         <div class="inv-modal-footer">
+            ${isEdit && modeloDoItem(item, _catalogoMestre()) ? botaoRestaurarHTML('window._restaurarMestreItem()') : ''}
             <button class="inv-btn-cancel" onclick="this.closest('.inv-modal').remove()">Cancelar</button>
             <button class="inv-btn-save" onclick="_saveMestreItem()">💾 Salvar</button>
         </div>
@@ -500,6 +505,38 @@ window._toggleMestreModalFields = function() {
         } else {
             qtyGroup.style.display = 'flex';
         }
+    }
+};
+
+/** ♻️ Joga o cadastro do catálogo por cima do que foi alterado nesta peça. */
+window._restaurarMestreItem = async function() {
+    const editId = document.getElementById('mif_editId')?.value || '';
+    if (!editId) return;
+    try {
+        const snap = await getDoc(doc(db, 'items', editId));
+        const item = snap.exists() ? { id: snap.id, ...snap.data() } : null;
+        const tpl = modeloDoItem(item, _catalogoMestre());
+        const patch = patchRestauracao(tpl);
+        if (!patch) { showAlert('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.', 'warning'); return; }
+        if (!confirm(textoConfirmacao(item, tpl))) return;
+
+        await setDoc(doc(db, 'items', editId), patch, { merge: true });
+        if (window.addLog) {
+            window.addLog(S.currentUser?.email, `♻️ Item "${item.nome || ''}" restaurado ao cadastro de "${tpl.nome}"`,
+                '', 'items', {
+                    charId: item.characterId || null, mesaId: S.currentMesaId, category: 'Inventário',
+                    changes: [{ label: 'Item', from: item.nome || '', to: tpl.nome || '' }]
+                });
+        }
+        showAlert('♻️ Item restaurado ao cadastro!', 'success');
+        document.getElementById('invFormModal')?.remove();
+        loadMesaInventarios();
+        if (document.getElementById('mesaCharactersInventoryContainer')?.style.display !== 'none') {
+            loadPersonagensInventario();
+        }
+    } catch (e) {
+        console.error('❌ Erro ao restaurar item:', e);
+        showAlert('❌ Erro: ' + e.message, 'danger');
     }
 };
 

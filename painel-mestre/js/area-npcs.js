@@ -5,10 +5,10 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassModule } from './npc-system-data.js?v=1.5';
 import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.9';
-import './npc-inventario.js?v=8'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
+import './npc-inventario.js?v=9'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 import { npcNaMesa, mesasDoNpc, espelhoMesaId } from '../../shared/npc-mesas.js';
 import { melhorDisparo, METROS_POR_FOR } from '../../shared/alcance-disparo.js';
-import { linhasDeDisparoNpc } from './npc-inventario.js?v=8';
+import { linhasDeDisparoNpc } from './npc-inventario.js?v=9';
 
 let currentEditingNpc = null;
 let _npcModalUnsubscribe = null;
