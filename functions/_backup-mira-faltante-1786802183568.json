@@ -1,0 +1,1445 @@
+{
+ "sonoro_c2": {
+  "limiteMecanicaIds": [],
+  "bloqueioMecanicaIds": [
+   "R7HOER5hK6Z85ing8CTU"
+  ],
+  "custoExpPorItem": 0,
+  "mecanicaLimiteId": null,
+  "custoEquipamentos": [],
+  "limiteFixo": null,
+  "titulo": "Custo 2 — Desenvolvimento",
+  "permitirCriacaoJogador": false,
+  "publicado": true,
+  "icone": "🎼",
+  "cadastrarBloqueio": true,
+  "criadoPor": "M2rZzlQkzxTrrddeFQ10S6zsfX62",
+  "tipo": "lista",
+  "criadoEm": {
+   "_seconds": 1784256029,
+   "_nanoseconds": 424000000
+  },
+  "custoExpLabel": "",
+  "id": "sonoro_c2",
+  "versao": 2,
+  "atualizadoEm": {
+   "_seconds": 1786658299,
+   "_nanoseconds": 904000000
+  },
+  "itensPredefinidos": [
+   {
+    "id": "pdi_sono_1785112141051_c20",
+    "nome": "ACORDE DEBILITANTE [C, P]",
+    "descricao": "ACORDE DEBILITANTE [C, P]",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "ACORDE DEBILITANTE [C, P]",
+     "2": "Furioso/Grave",
+     "3": "0",
+     "4": "",
+     "5": "EC7HrGVvjCGPAJ4aC5lB",
+     "6": "mTFcaFH2obP8uwEcB9Mv",
+     "7": "",
+     "9": "1 cena",
+     "10": "Todos os inimigos no raio testam AUT vs GS. Falha: Abalado 2 e Drenado 1 por 1 cena.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "onda",
+    "tamanhoArea": 3,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": [
+     {
+      "condicao": "Abalado",
+      "portao": "resistencia",
+      "chance": null,
+      "alvos": 1,
+      "rodadas": 5
+     },
+     {
+      "condicao": "Drenado",
+      "portao": "resistencia",
+      "chance": null,
+      "alvos": 1,
+      "rodadas": 5
+     }
+    ],
+    "regua": {
+     "razao": 1.08,
+     "unidades": 3.24,
+     "custo": 3,
+     "em": "2026-08-13"
+    },
+    "anguloCone": null,
+    "bloqueavel": false,
+    "faccao": "inimigo"
+   },
+   {
+    "id": "pdi_sono_1785112141051_c21",
+    "nome": "RITMO DE GUERRA [P, V]",
+    "descricao": "RITMO DE GUERRA [P, V]",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "RITMO DE GUERRA [P, V]",
+     "2": "Marcial/Épico",
+     "3": "0",
+     "4": "c71FVX70xj1mZdqNt3tc",
+     "5": "",
+     "6": "mTFcaFH2obP8uwEcB9Mv",
+     "7": "",
+     "9": "1 cena (manter ritmo)",
+     "10": "Todos os aliados no raio ficam Fortalecido 1 por 1 cena (+1 no Alvo de Ataque).",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "onda",
+    "tamanhoArea": 5,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "sustentada",
+    "condicoesAplicadas": [
+     {
+      "condicao": "Fortalecido",
+      "portao": null,
+      "chance": null,
+      "alvos": 5,
+      "rodadas": 5
+     }
+    ],
+    "regua": {
+     "razao": 1.39,
+     "unidades": 4.16,
+     "custo": 3,
+     "em": "2026-08-13"
+    },
+    "anguloCone": null,
+    "bloqueavel": false,
+    "faccao": "aliado"
+   },
+   {
+    "id": "pdi_sono_1785112141051_c22",
+    "nome": "NANA DO ENTORPECIMENTO [V, C]",
+    "descricao": "Todos os inimigos no raio testam AUT vs GS. Falha: Lento e Ofuscado por 1 cena.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "NANA DO ENTORPECIMENTO [V, C]",
+     "2": "Melancólico/Sedutor",
+     "3": "0",
+     "4": "c71FVX70xj1mZdqNt3tc",
+     "5": "EC7HrGVvjCGPAJ4aC5lB",
+     "6": "",
+     "7": "",
+     "9": "1 cena",
+     "10": "Todos os inimigos no raio testam AUT vs GS. Falha: Lento e Ofuscado por 1 cena.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "onda",
+    "tamanhoArea": 4,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": [
+     {
+      "condicao": "Lento",
+      "portao": "resistencia",
+      "chance": null,
+      "alvos": 3,
+      "rodadas": 5
+     },
+     {
+      "condicao": "Ofuscado",
+      "portao": "resistencia",
+      "chance": null,
+      "alvos": 3,
+      "rodadas": 5
+     }
+    ],
+    "regua": {
+     "razao": 1.57,
+     "unidades": 4.7,
+     "custo": 3,
+     "em": "2026-08-13"
+    },
+    "anguloCone": null,
+    "bloqueavel": false,
+    "faccao": "inimigo"
+   },
+   {
+    "id": "pdi_sono_1785112141051_c23",
+    "nome": "CHAMADO DO LONGE [S]",
+    "descricao": "CHAMADO DO LONGE [S]",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "CHAMADO DO LONGE [S]",
+     "2": "Épico",
+     "3": "0",
+     "4": "",
+     "5": "",
+     "6": "",
+     "7": "fs7RpqMQeIm5h97ZMXNb",
+     "9": "Instantâneo",
+     "10": "Som a (Composição × 100)m. Alerta aliados, ativa dispositivos, atrai ou afasta criaturas.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": 0,
+    "formaArea": "ponto",
+    "tamanhoArea": null,
+    "alvosMax": 1,
+    "duracaoValor": 0,
+    "duracaoUnidade": "instantaneo",
+    "condicoesAplicadas": [],
+    "anguloCone": null,
+    "bloqueavel": false
+   },
+   {
+    "id": "pdi_sono_1785112141051_c24",
+    "nome": "SILÊNCIO COMANDADO [V]",
+    "descricao": "SILÊNCIO COMANDADO [V]",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "SILÊNCIO COMANDADO [V]",
+     "2": "(Nenhum)",
+     "3": "0",
+     "4": "c71FVX70xj1mZdqNt3tc",
+     "5": "",
+     "6": "",
+     "7": "",
+     "9": "1 cena",
+     "10": "Cria uma zona de 3m sem som. Nenhuma Sonoromancia funciona dentro dela.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": 6,
+    "formaArea": "zona",
+    "tamanhoArea": 3,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": [],
+    "anguloCone": null,
+    "bloqueavel": false
+   },
+   {
+    "id": "pdi_sono_1785112141051_c25",
+    "nome": "CANÇÃO DO ABRIGO [V, C]",
+    "descricao": "CANÇÃO DO ABRIGO [V, C]",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "CANÇÃO DO ABRIGO [V, C]",
+     "2": "Melancólico/Sedutor",
+     "3": "0",
+     "4": "c71FVX70xj1mZdqNt3tc",
+     "5": "EC7HrGVvjCGPAJ4aC5lB",
+     "6": "",
+     "7": "",
+     "9": "Enquanto tocar",
+     "10": "Barreira harmônica de 3m. Inimigos testam AUT vs GS para entrar.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "sustentada",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_sono_1785112141051_c26",
+    "nome": "DISTORÇÃO ESPACIAL ILUSÓRIA [C, S]",
+    "descricao": "DISTORÇÃO ESPACIAL ILUSÓRIA [C, S]",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "DISTORÇÃO ESPACIAL ILUSÓRIA [C, S]",
+     "2": "Agudo/Sedutor",
+     "3": "0",
+     "4": "",
+     "5": "EC7HrGVvjCGPAJ4aC5lB",
+     "6": "",
+     "7": "fs7RpqMQeIm5h97ZMXNb",
+     "9": "1 cena",
+     "10": "Todos os inimigos no raio ficam Abalado 2 por 1 cena; mover-se exige teste de RAC.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "onda",
+    "tamanhoArea": 5,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": [
+     {
+      "condicao": "Abalado",
+      "portao": "resistencia",
+      "chance": null,
+      "alvos": 4,
+      "rodadas": 5
+     }
+    ],
+    "regua": {
+     "razao": 1.58,
+     "unidades": 4.75,
+     "custo": 3,
+     "em": "2026-08-13"
+    },
+    "anguloCone": null,
+    "bloqueavel": false,
+    "faccao": "inimigo"
+   }
+  ],
+  "schema": [
+   {
+    "key": "1",
+    "somenteLeitura": true,
+    "largura": "full",
+    "label": "Nome",
+    "tipo": "text",
+    "placeholder": ""
+   },
+   {
+    "key": "acao",
+    "tipo": "select",
+    "label": "Ação:",
+    "largura": "quarto",
+    "placeholder": "",
+    "somenteLeitura": true,
+    "opcoes": [
+     "Ação Padrão",
+     "Ação de Movimento",
+     "Ação Livre",
+     "Ação Completa (turno inteiro)",
+     "Reação",
+     "Sustentada (1 Padrão/turno)",
+     "Fora de combate"
+    ]
+   },
+   {
+    "label": "Tom",
+    "placeholder": "",
+    "tipo": "text",
+    "key": "2",
+    "largura": "",
+    "somenteLeitura": true
+   },
+   {
+    "key": "3",
+    "largura": "",
+    "somenteLeitura": true,
+    "label": "Redutor",
+    "tipo": "text",
+    "ocultarSeVazio": true,
+    "placeholder": ""
+   },
+   {
+    "label": "Vocal",
+    "ocultarSeVazio": true,
+    "tipo": "select_vd",
+    "placeholder": "",
+    "key": "4",
+    "somenteLeitura": true,
+    "largura": "quarto",
+    "ehVeiculo": true
+   },
+   {
+    "tipo": "select_vd",
+    "placeholder": "",
+    "ocultarSeVazio": true,
+    "label": "Inst. Corda",
+    "largura": "quarto",
+    "somenteLeitura": true,
+    "key": "5",
+    "ehVeiculo": true
+   },
+   {
+    "label": "Inst. Percussão",
+    "tipo": "select_vd",
+    "placeholder": "",
+    "ocultarSeVazio": true,
+    "key": "6",
+    "somenteLeitura": true,
+    "largura": "quarto",
+    "ehVeiculo": true
+   },
+   {
+    "label": "Inst. Sopro",
+    "placeholder": "",
+    "tipo": "select_vd",
+    "ocultarSeVazio": true,
+    "key": "7",
+    "largura": "",
+    "somenteLeitura": true,
+    "ehVeiculo": true
+   },
+   {
+    "key": "8",
+    "somenteLeitura": true,
+    "largura": "",
+    "label": "",
+    "placeholder": "",
+    "tipo": "separador"
+   },
+   {
+    "largura": "",
+    "somenteLeitura": true,
+    "key": "9",
+    "placeholder": "",
+    "tipo": "text",
+    "ocultarSeVazio": true,
+    "label": "Duração"
+   },
+   {
+    "placeholder": "",
+    "tipo": "textarea",
+    "label": "Efeito",
+    "largura": "",
+    "somenteLeitura": true,
+    "key": "10"
+   }
+  ],
+  "retornoZeraSeFalhar": true,
+  "retornoExigeSucesso": true,
+  "retornoRecurso": "Harmonia",
+  "retornoBonusParado": 1,
+  "updatedAt": {
+   "_seconds": 1786756662,
+   "_nanoseconds": 460000000
+  }
+ },
+ "sonoro_c3": {
+  "mecanicaLimiteId": null,
+  "custoEquipamentos": [],
+  "limiteFixo": null,
+  "titulo": "Custo 3 — Clímax",
+  "criadoEm": {
+   "_seconds": 1784256029,
+   "_nanoseconds": 534000000
+  },
+  "id": "sonoro_c3",
+  "custoExpLabel": "",
+  "tipo": "lista",
+  "criadoPor": "M2rZzlQkzxTrrddeFQ10S6zsfX62",
+  "permitirCriacaoJogador": false,
+  "publicado": true,
+  "icone": "🎶",
+  "cadastrarBloqueio": true,
+  "limiteMecanicaIds": [],
+  "bloqueioMecanicaIds": [
+   "ABXR4Unmk5x7pDdewrzg"
+  ],
+  "custoExpPorItem": 0,
+  "versao": 2,
+  "atualizadoEm": {
+   "_seconds": 1786658299,
+   "_nanoseconds": 994000000
+  },
+  "itensPredefinidos": [
+   {
+    "id": "pdi_sono_1785112141051_c30",
+    "nome": "FÚRIA INSPIRADA [V]",
+    "descricao": "Todos os aliados no raio recuperam 1 de Energia e ficam Fortalecido 1 por 1 cena.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "FÚRIA INSPIRADA [V]",
+     "2": "Épico/Marcial",
+     "3": "0",
+     "4": "c71FVX70xj1mZdqNt3tc",
+     "5": "",
+     "6": "",
+     "7": "",
+     "9": "1 cena",
+     "10": "Todos os aliados no raio recuperam 1 de Energia e ficam Fortalecido 1 por 1 cena.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "onda",
+    "tamanhoArea": 4,
+    "alvosMax": null,
+    "duracaoValor": 0,
+    "duracaoUnidade": "instantaneo",
+    "condicoesAplicadas": [
+     {
+      "condicao": "Fortalecido",
+      "portao": null,
+      "chance": null,
+      "alvos": 3,
+      "rodadas": 5
+     }
+    ],
+    "regua": {
+     "razao": 1.62,
+     "unidades": 6.47,
+     "custo": 4,
+     "em": "2026-08-13"
+    },
+    "anguloCone": null,
+    "bloqueavel": false,
+    "faccao": "aliado"
+   },
+   {
+    "id": "pdi_sono_1785112141051_c31",
+    "nome": "ONDA DE CHOQUE SONORAL [P, S]",
+    "descricao": "ONDA DE CHOQUE SONORAL [P, S]",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "ONDA DE CHOQUE SONORAL [P, S]",
+     "2": "Grave/Furioso",
+     "3": "0",
+     "4": "",
+     "5": "",
+     "6": "mTFcaFH2obP8uwEcB9Mv",
+     "7": "fs7RpqMQeIm5h97ZMXNb",
+     "9": "1 turno",
+     "10": "Explosão: todos os inimigos no raio sofrem 1d10 de impacto, são empurrados 1,5m por GS e testam VIG ou ficam Atordoados.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "onda",
+    "tamanhoArea": 3,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "turno",
+    "condicoesAplicadas": [
+     {
+      "condicao": "Atordoado",
+      "portao": "resistencia",
+      "chance": null,
+      "alvos": 3,
+      "rodadas": 1
+     }
+    ],
+    "regua": {
+     "razao": 1.15,
+     "unidades": 4.6,
+     "custo": 4,
+     "em": "2026-08-13"
+    },
+    "anguloCone": null,
+    "bloqueavel": false,
+    "faccao": "inimigo"
+   },
+   {
+    "id": "pdi_sono_1785112141051_c32",
+    "nome": "ECO FANTASMA [V, S]",
+    "descricao": "ECO FANTASMA [V, S]",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "ECO FANTASMA [V, S]",
+     "2": "Sedutor/Agudo",
+     "3": "0",
+     "4": "c71FVX70xj1mZdqNt3tc",
+     "5": "",
+     "6": "",
+     "7": "fs7RpqMQeIm5h97ZMXNb",
+     "9": "1 cena",
+     "10": "Ilusão auditiva complexa em 10m. RAC + Percepção vs GS para distinguir do real.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_sono_1785112141051_c33",
+    "nome": "CADÊNCIA ACELERADORA [P, C]",
+    "descricao": "CADÊNCIA ACELERADORA [P, C]",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "CADÊNCIA ACELERADORA [P, C]",
+     "2": "Marcial/Agudo",
+     "3": "0",
+     "4": "",
+     "5": "EC7HrGVvjCGPAJ4aC5lB",
+     "6": "mTFcaFH2obP8uwEcB9Mv",
+     "7": "",
+     "9": "1 cena (manter ritmo)",
+     "10": "Todos os aliados no raio ficam Acelerado por 1 cena (+1 ação adicional por turno).",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "onda",
+    "tamanhoArea": 2,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "sustentada",
+    "condicoesAplicadas": [
+     {
+      "condicao": "Acelerado",
+      "portao": null,
+      "chance": null,
+      "alvos": 1,
+      "rodadas": 5
+     }
+    ],
+    "regua": {
+     "razao": 1.25,
+     "unidades": 5,
+     "custo": 4,
+     "em": "2026-08-13"
+    },
+    "anguloCone": null,
+    "bloqueavel": false,
+    "faccao": "aliado"
+   },
+   {
+    "id": "pdi_sono_1785112141051_c34",
+    "nome": "COMPOSIÇÃO DE BATALHA [Qualquer]",
+    "descricao": "Escolha na conjuração: todos os aliados no raio ficam Fortalecido 2, ou todos os inimigos ficam Abalado 2, pela cena.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "COMPOSIÇÃO DE BATALHA [Qualquer]",
+     "2": "Épico/Marcial",
+     "3": "0",
+     "4": "c71FVX70xj1mZdqNt3tc",
+     "5": "EC7HrGVvjCGPAJ4aC5lB",
+     "6": "mTFcaFH2obP8uwEcB9Mv",
+     "7": "fs7RpqMQeIm5h97ZMXNb",
+     "9": "Toda a cena",
+     "10": "Escolha na conjuração: todos os aliados no raio ficam Fortalecido 2, ou todos os inimigos ficam Abalado 2, pela cena.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "onda",
+    "tamanhoArea": 4,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": [
+     {
+      "condicao": "Fortalecido",
+      "portao": null,
+      "chance": null,
+      "alvos": 3,
+      "rodadas": 5
+     }
+    ],
+    "regua": {
+     "razao": 1.49,
+     "unidades": 5.94,
+     "custo": 4,
+     "em": "2026-08-13"
+    },
+    "anguloCone": null,
+    "bloqueavel": false,
+    "faccao": "ambos"
+   }
+  ],
+  "schema": [
+   {
+    "key": "1",
+    "somenteLeitura": true,
+    "largura": "full",
+    "label": "Nome",
+    "tipo": "text",
+    "placeholder": ""
+   },
+   {
+    "key": "acao",
+    "tipo": "select",
+    "label": "Ação:",
+    "largura": "quarto",
+    "placeholder": "",
+    "somenteLeitura": true,
+    "opcoes": [
+     "Ação Padrão",
+     "Ação de Movimento",
+     "Ação Livre",
+     "Ação Completa (turno inteiro)",
+     "Reação",
+     "Sustentada (1 Padrão/turno)",
+     "Fora de combate"
+    ]
+   },
+   {
+    "largura": "",
+    "somenteLeitura": true,
+    "key": "2",
+    "placeholder": "",
+    "tipo": "text",
+    "label": "Tom"
+   },
+   {
+    "ocultarSeVazio": true,
+    "tipo": "text",
+    "placeholder": "",
+    "label": "Redutor",
+    "largura": "",
+    "somenteLeitura": true,
+    "key": "3"
+   },
+   {
+    "key": "4",
+    "largura": "",
+    "somenteLeitura": true,
+    "label": "Vocal",
+    "placeholder": "",
+    "ocultarSeVazio": true,
+    "tipo": "select_vd",
+    "ehVeiculo": true
+   },
+   {
+    "label": "Inst. Corda",
+    "tipo": "select_vd",
+    "ocultarSeVazio": true,
+    "placeholder": "",
+    "key": "5",
+    "largura": "",
+    "somenteLeitura": true,
+    "ehVeiculo": true
+   },
+   {
+    "label": "Inst. Percussão",
+    "ocultarSeVazio": true,
+    "tipo": "select_vd",
+    "placeholder": "",
+    "key": "6",
+    "somenteLeitura": true,
+    "largura": "",
+    "ehVeiculo": true
+   },
+   {
+    "key": "7",
+    "largura": "",
+    "somenteLeitura": true,
+    "label": "Inst. Sopro",
+    "ocultarSeVazio": true,
+    "tipo": "select_vd",
+    "placeholder": "",
+    "ehVeiculo": true
+   },
+   {
+    "largura": "full",
+    "somenteLeitura": true,
+    "key": "8",
+    "tipo": "separador",
+    "placeholder": "",
+    "label": ""
+   },
+   {
+    "label": "Duração",
+    "placeholder": "",
+    "tipo": "text",
+    "ocultarSeVazio": true,
+    "key": "9",
+    "largura": "",
+    "somenteLeitura": true
+   },
+   {
+    "largura": "full",
+    "somenteLeitura": true,
+    "key": "10",
+    "placeholder": "",
+    "tipo": "textarea",
+    "label": "Efeito"
+   }
+  ],
+  "retornoZeraSeFalhar": true,
+  "retornoExigeSucesso": true,
+  "retornoRecurso": "Harmonia",
+  "retornoBonusParado": 1,
+  "updatedAt": {
+   "_seconds": 1786756662,
+   "_nanoseconds": 526000000
+  }
+ },
+ "sonoro_c5": {
+  "tipo": "lista",
+  "criadoEm": {
+   "_seconds": 1784256029,
+   "_nanoseconds": 705000000
+  },
+  "id": "sonoro_c5",
+  "custoExpLabel": "",
+  "permitirCriacaoJogador": false,
+  "publicado": true,
+  "cadastrarBloqueio": true,
+  "icone": "🌌",
+  "criadoPor": "M2rZzlQkzxTrrddeFQ10S6zsfX62",
+  "custoEquipamentos": [],
+  "mecanicaLimiteId": null,
+  "titulo": "Custo 5 — Opus Magnum",
+  "limiteFixo": null,
+  "custoExpPorItem": 0,
+  "limiteMecanicaIds": [],
+  "bloqueioMecanicaIds": [
+   "6dWgswlRrQI93u1JtlBL"
+  ],
+  "versao": 2,
+  "atualizadoEm": {
+   "_seconds": 1786658300,
+   "_nanoseconds": 178000000
+  },
+  "schema": [
+   {
+    "placeholder": "",
+    "tipo": "text",
+    "label": "Nome",
+    "largura": "full",
+    "key": "1"
+   },
+   {
+    "key": "acao",
+    "tipo": "select",
+    "label": "Ação:",
+    "largura": "quarto",
+    "placeholder": "",
+    "somenteLeitura": true,
+    "opcoes": [
+     "Ação Padrão",
+     "Ação de Movimento",
+     "Ação Livre",
+     "Ação Completa (turno inteiro)",
+     "Reação",
+     "Sustentada (1 Padrão/turno)",
+     "Fora de combate"
+    ]
+   },
+   {
+    "label": "Tom",
+    "placeholder": "",
+    "tipo": "text",
+    "key": "2",
+    "largura": ""
+   },
+   {
+    "largura": "",
+    "key": "3",
+    "tipo": "text",
+    "placeholder": "",
+    "label": "Redutor"
+   },
+   {
+    "largura": "quarto",
+    "key": "4",
+    "tipo": "select_vd",
+    "placeholder": "",
+    "label": "Vocal",
+    "ehVeiculo": true
+   },
+   {
+    "placeholder": "",
+    "tipo": "select_vd",
+    "label": "Inst. Corda",
+    "largura": "quarto",
+    "key": "5",
+    "ehVeiculo": true
+   },
+   {
+    "key": "6",
+    "largura": "quarto",
+    "label": "Inst. Percussão",
+    "placeholder": "",
+    "tipo": "select_vd",
+    "ehVeiculo": true
+   },
+   {
+    "key": "7",
+    "largura": "quarto",
+    "label": "Inst. Sopro",
+    "tipo": "select_vd",
+    "placeholder": "",
+    "ehVeiculo": true
+   },
+   {
+    "label": "",
+    "tipo": "separador",
+    "placeholder": "",
+    "key": "8",
+    "largura": "full"
+   },
+   {
+    "tipo": "text",
+    "placeholder": "",
+    "label": "Duração",
+    "largura": "",
+    "key": "9"
+   },
+   {
+    "tipo": "textarea",
+    "placeholder": "",
+    "label": "Efeito",
+    "largura": "full",
+    "key": "10"
+   }
+  ],
+  "retornoZeraSeFalhar": true,
+  "retornoExigeSucesso": true,
+  "retornoRecurso": "Harmonia",
+  "retornoBonusParado": 1,
+  "itensPredefinidos": [
+   {
+    "id": "pdi_sono_1785112141051_c50",
+    "nome": "A SINFONIA [Todas]",
+    "descricao": "Todos os aliados no raio ficam Fortalecido 2 e Blindado 1 por 1 cena e recuperam 2 de Energia. Você lança 1 efeito de Custo 1 por turno sem gastar Harmonia.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "A SINFONIA [Todas]",
+     "2": "Épico",
+     "3": "0",
+     "4": "c71FVX70xj1mZdqNt3tc",
+     "5": "EC7HrGVvjCGPAJ4aC5lB",
+     "6": "mTFcaFH2obP8uwEcB9Mv",
+     "7": "fs7RpqMQeIm5h97ZMXNb",
+     "9": "Enquanto tocar",
+     "10": "Todos os aliados no raio ficam Fortalecido 2 e Blindado 1 por 1 cena e recuperam 2 de Energia. Você lança 1 efeito de Custo 1 por turno sem gastar Harmonia.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "onda",
+    "tamanhoArea": 3,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "sustentada",
+    "condicoesAplicadas": [
+     {
+      "condicao": "Fortalecido",
+      "portao": null,
+      "chance": null,
+      "alvos": 2,
+      "rodadas": 5
+     },
+     {
+      "condicao": "Blindado",
+      "portao": null,
+      "chance": null,
+      "alvos": 2,
+      "rodadas": 5
+     }
+    ],
+    "regua": {
+     "razao": 1.56,
+     "unidades": 9.38,
+     "custo": 6,
+     "em": "2026-08-13"
+    },
+    "anguloCone": null,
+    "bloqueavel": false,
+    "faccao": "aliado"
+   },
+   {
+    "id": "pdi_sono_1785112141051_c51",
+    "nome": "NOTA FUNDAMENTAL [V]",
+    "descricao": "NOTA FUNDAMENTAL [V]",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "NOTA FUNDAMENTAL [V]",
+     "2": "Nota pura",
+     "3": "0",
+     "4": "c71FVX70xj1mZdqNt3tc",
+     "5": "",
+     "6": "",
+     "7": "",
+     "9": "1 cena",
+     "10": "Custo: 5 + 1 SAN. Concede controle sobre 1 Essência (exceto Âmbar-Incandescente) por 1 cena. Falha Crítica: a Essência se volta contra o Bardo.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_sono_1785112141051_c52",
+    "nome": "HARMONIA DAS ESFERAS [C, P]",
+    "descricao": "Zona de 10m: aliados +1, inimigos -1, redireciona 1 efeito mágico por turno. Falha Crítica: a zona se inverte.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "HARMONIA DAS ESFERAS [C, P]",
+     "2": "Épico/Grave",
+     "3": "0",
+     "4": "",
+     "5": "EC7HrGVvjCGPAJ4aC5lB",
+     "6": "mTFcaFH2obP8uwEcB9Mv",
+     "7": "",
+     "9": "Enquanto tocar",
+     "10": "Zona de 10m: aliados +1, inimigos -1, redireciona 1 efeito mágico por turno. Falha Crítica: a zona se inverte.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "zona",
+    "tamanhoArea": 10,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "sustentada",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_sono_1785112141051_c53",
+    "nome": "TROMBETA DO JULGAMENTO [S]",
+    "descricao": "Todos os inimigos no raio testam VIG vs GS. Falha: 2d6 de dano, empurrados 3m por GS e Atordoados por 1 turno. Ouvido a 1km. Falha Crítica: ricocheteia.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "TROMBETA DO JULGAMENTO [S]",
+     "2": "Épico/Agudo",
+     "3": "0",
+     "4": "",
+     "5": "",
+     "6": "",
+     "7": "fs7RpqMQeIm5h97ZMXNb",
+     "9": "1 cena",
+     "10": "Todos os inimigos no raio testam VIG vs GS. Falha: 2d6 de dano, empurrados 3m por GS e Atordoados por 1 turno. Ouvido a 1km. Falha Crítica: ricocheteia.",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "onda",
+    "tamanhoArea": 4,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "turno",
+    "condicoesAplicadas": [
+     {
+      "condicao": "Atordoado",
+      "portao": "resistencia",
+      "chance": null,
+      "alvos": 4,
+      "rodadas": 1
+     }
+    ],
+    "regua": {
+     "razao": 1.62,
+     "unidades": 9.69,
+     "custo": 6,
+     "em": "2026-08-13"
+    },
+    "anguloCone": 60,
+    "bloqueavel": false,
+    "faccao": "inimigo"
+   }
+  ],
+  "updatedAt": {
+   "_seconds": 1786757252,
+   "_nanoseconds": 267000000
+  }
+ },
+ "TbRKh68m2hvr9KUVrOXb": {
+  "custoExpLabel": "",
+  "bloqueioMecanicaIds": [],
+  "custoEquipamentos": [],
+  "custoExpPorItem": 0,
+  "custoCriacaoMecanicaId": null,
+  "mecanicaLimiteId": null,
+  "custoEdicaoMecanicaId": null,
+  "limiteMecanicaIds": [],
+  "custoRemocaoMecanicaId": null,
+  "custoEdicaoAtivo": false,
+  "custoRemocaoMecanicaIds": [],
+  "custoCriacaoMecanicaIds": [],
+  "custoRemocaoAtivo": false,
+  "criadoEm": {
+   "_seconds": 1784511789,
+   "_nanoseconds": 25000000
+  },
+  "custoEdicaoMecanicaIds": [],
+  "criadoPor": "M2rZzlQkzxTrrddeFQ10S6zsfX62",
+  "tipo": "lista",
+  "titulo": "Rituais de Invocação Abissal",
+  "limiteFixo": null,
+  "icone": "🌑",
+  "id": "TbRKh68m2hvr9KUVrOXb",
+  "cadastrarBloqueio": false,
+  "permitirCriacaoJogador": false,
+  "atualizadoEm": {
+   "_seconds": 1784611027,
+   "_nanoseconds": 781000000
+  },
+  "publicado": true,
+  "versao": 14,
+  "itensPredefinidos": [
+   {
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Chama uma entidade abissal. Reporte ao Mestre seu CA atual e os Graus de Sucesso do teste — ele gera a criatura em segredo. Requer Sacrifício. Quanto mais insano (CA alto), maior e mais indócil tende a ser o que responde.",
+     "2": "2",
+     "3": "J4dtnjgEqVZvkGOleGK4",
+     "4": "",
+     "5": "4",
+     "6": "1",
+     "8": "0",
+     "9": "xZaVZcl6p6XUmjA5f1wM",
+     "acao": "Ação Padrão"
+    },
+    "id": "pdi_1784604406980_bbkqom",
+    "nome": "Invocação Abissal",
+    "descricao": "Rasga o véu e puxa uma criatura da Oitava Camada para a realidade. O que vem, o Abismo decide.",
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": [],
+    "criaturasVinculadas": [
+     {
+      "npcId": "ZAQmjd1H2zml9Wzwi8cg",
+      "nome": "Cria Menor do Véu"
+     },
+     {
+      "npcId": "j5Nn1e38L0kzINuX6nBe",
+      "nome": "Cria da Fenda"
+     },
+     {
+      "npcId": "HTU0ep2gVzkqh0rQ0kzk",
+      "nome": "Horror Rastejante"
+     },
+     {
+      "npcId": "qoGly5KjYvcIkmyWQb3w",
+      "nome": "Horror Maior"
+     },
+     {
+      "npcId": "e0FdHrT6OlxIYlMvXtA2",
+      "nome": "Entidade da Oitava"
+     }
+    ]
+   },
+   {
+    "id": "pdi_inv_1785107140941_0",
+    "nome": "Selo Negativo",
+    "descricao": "Ergue uma jaula espacial que aprisiona o alvo no tecido da realidade.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Conter ou aprisionar um alvo. Redutor: −(3 + AI do alvo). Custo: 2 Energia + 1 Sanidade OU 3 Sanidade. Falha: o selo inverte — a área vira limiar (Fenda Menor por 1 turno). Efeito: cria uma jaula de Tecido Espacial Físico (2–4m); presos testam (FOR/PRS + AUT) vs seus Graus de Sucesso para escapar.",
+     "2": "6",
+     "3": "zAlnZyvt1WJLwTyrDMdl",
+     "4": "0",
+     "5": "1",
+     "6": "2",
+     "8": "0",
+     "9": "KLf8ewjI908BaTca9ibp",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "turno",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_1",
+    "nome": "Ocultação de Eco Abissal",
+    "descricao": "Dissolve os ecos deixados pela magia abissal, ocultando rastros.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Apagar rastros abissais. Área 6m. Requer Sacrifício e CA 3+. Custo: 1 Energia OU 1 Sanidade. Redutor: −3. Falha: você absorve parte do Eco; −1 Sanidade imediato. Efeito: apaga rastros abissais; rituais rastreadores na área sofrem −2 até o fim da cena.",
+     "2": "3",
+     "3": "zAlnZyvt1WJLwTyrDMdl",
+     "4": "-3",
+     "5": "0",
+     "6": "1",
+     "8": "0",
+     "9": "gT5DZcIaG69aYuEjdXwQ",
+     "acao": "Fora de combate"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_2",
+    "nome": "Laço de Nome",
+    "descricao": "Amarra a vontade da criatura invocada usando o poder do nome.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Dominar uma criatura abissal. Requer CA 3+. Custo: 1 Energia OU 1 Sanidade. Redutor: −(3 + Risco do Aspecto + AI da criatura). Falha: a criatura aprende seu nome verdadeiro e −1 na Disposição. Efeito: +1 imediato na Disposição da criatura invocada.",
+     "2": "3",
+     "3": "zAlnZyvt1WJLwTyrDMdl",
+     "4": "-3",
+     "5": "0",
+     "6": "1",
+     "8": "0",
+     "9": "gT5DZcIaG69aYuEjdXwQ",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_3",
+    "nome": "Plano Inferior",
+    "descricao": "Abre uma passagem para a primeira camada de realidade abaixo do plano base.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Acesso a outro plano. Duração 1 cena. Raio 4m. Requer CA 4+. Custo: 1 Energia OU 1 Sanidade. Redutor: −2. Falha: o portal rompe até a Oitava, criando uma Fenda Menor. Efeito: cria passagem para uma bolha de realidade fixa na primeira camada inferior ao plano base.",
+     "2": "4",
+     "3": "J4dtnjgEqVZvkGOleGK4",
+     "4": "-2",
+     "5": "0",
+     "6": "1",
+     "8": "0",
+     "9": "gT5DZcIaG69aYuEjdXwQ",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_4",
+    "nome": "Plano Mental Inferior",
+    "descricao": "Cria um refúgio mental pessoal numa camada inferior da realidade.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Acessar uma bolha mental pessoal. Duração 1 cena. Raio 4m. Requer CA 5+. Custo: 1 Energia OU 1 Sanidade. Redutor: −2. Falha: o portal rompe até a Oitava, criando uma Fenda Menor. Efeito: cria passagem para uma bolha na segunda camada inferior — espaço mental pessoal, moldável pelo Invocador.",
+     "2": "5",
+     "3": "zAlnZyvt1WJLwTyrDMdl",
+     "4": "-2",
+     "5": "0",
+     "6": "1",
+     "8": "0",
+     "9": "gT5DZcIaG69aYuEjdXwQ",
+     "acao": "Fora de combate"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_5",
+    "nome": "Vórtice na Fenda",
+    "descricao": "Rasga uma fenda e atravessa o plano invertido para reaparecer longe.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Teleportar usando o plano invertido. Tempo: 6 Ações (3 turnos). Alvo: o usuário e mais um alvo tocado. Requer CA 7+. Custo: 1 Energia + 1 Sanidade OU 2 Sanidade. Redutor: −4. Falha: volta perdido (Defesa 0 por 1 cena). Falha Crítica: fica preso no plano invertido por 1 cena. Efeito: teleporta por uma fenda visível (até 10m) e retorna no mesmo turno em um ponto de até 200m da origem.",
+     "2": "7",
+     "3": "J4dtnjgEqVZvkGOleGK4",
+     "4": "-4",
+     "5": "1",
+     "6": "1",
+     "8": "0",
+     "9": "7zRZ3yazPmgjUgXDmX1c",
+     "acao": "Ação Padrão"
+    },
+    "alcance": 10,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 1,
+    "duracaoUnidade": "cena",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_6",
+    "nome": "Fechamento de Fenda",
+    "descricao": "Costura o tecido da realidade, selando uma fenda abissal passo a passo.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Selar uma fenda. Tempo: 6 Ações (3 turnos). Requer Sacrifício e CA 5+. Custo: 1 Energia + 1 Sanidade OU 2 Sanidade. Redutor: −2 − tamanho da Fenda (Menor=1, Maior=3, Verdadeira=5). Falha: a Fenda aumenta 1 passo. Efeito: reduz a fenda 1 passo por Grau de Sucesso; ao zerar, sela completamente.",
+     "2": "5",
+     "3": "zAlnZyvt1WJLwTyrDMdl",
+     "4": "-2",
+     "5": "1",
+     "6": "1",
+     "8": "0",
+     "9": "7zRZ3yazPmgjUgXDmX1c",
+     "acao": "Ação Completa (turno inteiro)"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": 3,
+    "duracaoUnidade": "turno",
+    "condicoesAplicadas": []
+   },
+   {
+    "id": "pdi_inv_1785107140941_7",
+    "nome": "Estilhaçar Causa",
+    "descricao": "Desfaz o último evento da realidade — a um custo terrível para a mente.",
+    "custoExpProprio": null,
+    "custoCriacaoMecanicaIds": null,
+    "custoEquipamentos": null,
+    "valores": {
+     "1": "Anular o último evento. Requer CA 8+. Custo: Sacrifício + 2 Energia + 1 Sanidade. Redutor: −6. Falha: o evento retorna pior (o alvo ganha +1 Grau de Sucesso adicional no evento original). Efeito: cancela o último evento (um ataque, queda, rolagem); memórias ficam turvas e deixa Eco Forte. Consequência: pessoas afetadas testam Sanidade ou perdem 1 ponto. ⚠ Um dos rituais mais poderosos e perigosos da Abismancia.",
+     "2": "8",
+     "3": "J4dtnjgEqVZvkGOleGK4",
+     "4": "-6",
+     "5": "1",
+     "6": "2",
+     "8": "0",
+     "9": "KLf8ewjI908BaTca9ibp",
+     "acao": "Ação Padrão"
+    },
+    "alcance": null,
+    "formaArea": "nenhuma",
+    "tamanhoArea": null,
+    "alvosMax": null,
+    "duracaoValor": null,
+    "duracaoUnidade": null,
+    "condicoesAplicadas": []
+   }
+  ],
+  "schema": [
+   {
+    "placeholder": "",
+    "key": "1",
+    "largura": "full",
+    "tipo": "textarea",
+    "somenteLeitura": true,
+    "label": "O que faz:"
+   },
+   {
+    "somenteLeitura": true,
+    "label": "CA mínimo:",
+    "tipo": "number",
+    "placeholder": "",
+    "key": "2",
+    "largura": ""
+   },
+   {
+    "largura": "",
+    "key": "3",
+    "placeholder": "",
+    "label": "Teste:",
+    "somenteLeitura": true,
+    "tipo": "select_vd",
+    "ehVeiculo": true
+   },
+   {
+    "key": "4",
+    "placeholder": "",
+    "ocultarSeVazio": true,
+    "largura": "",
+    "label": "Redutor:",
+    "somenteLeitura": true,
+    "tipo": "number"
+   },
+   {
+    "tipo": "number",
+    "label": "Custo Sanidade:",
+    "somenteLeitura": true,
+    "largura": "",
+    "ocultarSeVazio": true,
+    "key": "5",
+    "placeholder": ""
+   },
+   {
+    "key": "acao",
+    "tipo": "select",
+    "label": "Ação:",
+    "largura": "quarto",
+    "placeholder": "",
+    "somenteLeitura": true,
+    "opcoes": [
+     "Ação Padrão",
+     "Ação de Movimento",
+     "Ação Livre",
+     "Ação Completa (turno inteiro)",
+     "Reação",
+     "Sustentada (1 Padrão/turno)",
+     "Fora de combate"
+    ]
+   },
+   {
+    "somenteLeitura": true,
+    "label": "Custo em Energia",
+    "tipo": "number",
+    "key": "6",
+    "placeholder": "",
+    "ocultarSeVazio": true,
+    "largura": ""
+   },
+   {
+    "derivedValueId": "hH1U9UXrqgXtxNTpJchU",
+    "tipo": "valor_derivado",
+    "label": "CA",
+    "somenteLeitura": true,
+    "key": "7",
+    "placeholder": "",
+    "largura": ""
+   },
+   {
+    "tipo": "contador",
+    "label": "Graus Obtidos",
+    "key": "8",
+    "placeholder": "",
+    "largura": ""
+   },
+   {
+    "tipo": "select_botao",
+    "label": "🔮 Conjurar Ritual",
+    "somenteLeitura": true,
+    "largura": "",
+    "key": "9",
+    "placeholder": ""
+   }
+  ],
+  "updatedAt": {
+   "_seconds": 1786751444,
+   "_nanoseconds": 426000000
+  }
+ }
+}
