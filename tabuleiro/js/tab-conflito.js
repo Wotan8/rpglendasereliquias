@@ -209,6 +209,20 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
 
 // ---------- 1) acerto ----------
 /** Lê o campo de resultado manual (dado rolado na mesa). null quando vazio. */
+/**
+ * 🎯 O Alvo do ataque com a Marca de Caça já somada.
+ *
+ * A soma tem que acontecer AQUI e não só na rolagem: o campo "Alvo" da janela
+ * nasce preenchido, e `manual()` lê o que está nele. Somar só na rolagem fazia
+ * o `??` nunca cair no ramo do bônus — o mestre via 9, rolava contra 9, e a
+ * marca não valia nada. Agora o que ele vê é o que rola.
+ */
+function alvoComMarca(c) {
+    const base = c?.acao?.alvoAcerto;
+    if (base == null) return null;
+    return base + (Number(c?.marca?.acerto) || 0);
+}
+
 function manual(id) {
     const v = document.getElementById(id)?.value;
     if (v == null || String(v).trim() === '') return null;
@@ -219,9 +233,10 @@ function manual(id) {
 window.tbConfRolarAcerto = async (naMesa) => {
     const c = conflito(); if (!c || c.fase !== 'acerto') return;
     if (!controla(c.atacante.pid)) return;
-    // O Alvo digitado à mão manda (o mestre corrigindo); senão soma a marca.
+    // O Alvo digitado à mão manda (o mestre corrigindo); o campo já nasce com
+    // a marca somada, então os dois caminhos dão o mesmo número.
     const bonusMarca = Number(c.marca?.acerto) || 0;
-    const alvo = manual('cfAlvoAcerto') ?? (c.acao.alvoAcerto == null ? null : c.acao.alvoAcerto + bonusMarca);
+    const alvo = manual('cfAlvoAcerto') ?? alvoComMarca(c);
     if (alvo == null || isNaN(alvo)) { toast('⚠️ Informe o Alvo do ataque (Acerto + modificadores)', 'warning'); return; }
     let dado;
     if (naMesa) {
@@ -336,10 +351,13 @@ window.tbConfRolarDano = async (naMesa) => {
         const bruto = total + (Number(c.marca?.danoPorPid?.[a.pid]) || 0);
         return { ...a, bruto, blindagem: bl, dano: danoFinal(bruto, bl, a.meia) };
     });
-    await salvar({ ...c, alvos, brutoDetalhe: detalhe, fase: 'aplicar' });
     const marcados = alvos.filter(a => Number(c.marca?.danoPorPid?.[a.pid]) > 0);
+    const bonusDano = marcados.length ? Number(c.marca.danoPorPid[marcados[0].pid]) : 0;
+    // O detalhe mostra a marca: sem isso o jogador via "1d8[8] +2" e não tinha
+    // como saber se os 3 da Marca entraram no bruto.
+    await salvar({ ...c, alvos, brutoDetalhe: detalhe + (bonusDano ? ` +${bonusDano} 🎯` : ''), fase: 'aplicar' });
     logChat(`💥 Dano de ${c.acao.nome}: ${detalhe} = ${total}`
-        + (marcados.length ? ` · 🎯 +${c.marca.danoPorPid[marcados[0].pid]} da Marca de Caça em ${marcados.map(a => a.nome).join(', ')}` : ''));
+        + (bonusDano ? ` · 🎯 +${bonusDano} da Marca de Caça em ${marcados.map(a => a.nome).join(', ')} = ${total + bonusDano}` : ''));
 };
 
 // ---------- 4) contra-ataque (§6.8) ----------
@@ -516,7 +534,8 @@ function render() {
             ? linhaRolagem({
                 rotulo: `${c.acao.acertoIcone || '🎯'} ${esc(c.acao.acertoNome || 'Acerto')}`,
                 fn: 'tbConfRolarAcerto', idManual: 'cfManualAcerto', dica: 'd10 da mesa',
-                extra: `<label class="tb-conflito-alvoin">Alvo <input type="number" id="cfAlvoAcerto" value="${c.acao.alvoAcerto ?? ''}" step="any" placeholder="?"></label>`,
+                extra: `<label class="tb-conflito-alvoin">Alvo <input type="number" id="cfAlvoAcerto" value="${alvoComMarca(c) ?? ''}" step="any" placeholder="?"></label>`
+                    + (c.marca?.acerto ? `<span class="tb-conflito-marca" title="A presa está marcada por este caçador">🎯 +${c.marca.acerto} Marca de Caça (base ${c.acao.alvoAcerto})</span>` : ''),
               })
             : `<div class="tb-turno-acoes"><span class="tb-muted">⏳ esperando ${esc(c.atacante.nome)} rolar o Acerto…</span></div>`;
     } else {

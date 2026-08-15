@@ -55,6 +55,28 @@ assert.equal(nome({ colunas: [] }), '', 'sem coluna não inventa nome');
 assert.equal(valor({ colunas: [] }), null);
 assert.equal(valor({}), null);
 
+/* ═══ 1b. a Marca de Caça tem que entrar no Alvo QUE APARECE ═══ */
+// O campo "Alvo" da janela de conflito nasce PREENCHIDO, e a rolagem lê o que
+// está nele. Somar a marca só na hora de rolar fazia o valor digitado (o
+// próprio preenchimento) vencer sempre: o mestre via 9, rolava contra 9, e a
+// marca não valia nada. Por isso a soma mora no `alvoComMarca`, que alimenta
+// os DOIS — o campo e a rolagem.
+const srcC = readFileSync(new URL('./tab-conflito.js', import.meta.url), 'utf8');
+const iniC = srcC.indexOf('function alvoComMarca(c) {');
+const fimC = srcC.indexOf('\n}\n', iniC) + 3;
+assert.ok(iniC > 0, 'alvoComMarca não encontrada em tab-conflito.js');
+const alvoComMarca = new Function(`${srcC.slice(iniC, fimC)}; return alvoComMarca;`)();
+
+assert.equal(alvoComMarca({ acao: { alvoAcerto: 9 }, marca: { acerto: 3 } }), 12,
+    'Acerto 9 + Marca 3 = 12, e é ISSO que o campo mostra e a rolagem usa');
+assert.equal(alvoComMarca({ acao: { alvoAcerto: 9 }, marca: { acerto: 0 } }), 9, 'sem marca, o Alvo é o da arma');
+assert.equal(alvoComMarca({ acao: { alvoAcerto: 9 } }), 9, 'conflito sem marca nenhuma');
+assert.equal(alvoComMarca({ acao: { alvoAcerto: 0 }, marca: { acerto: 3 } }), 3, 'Acerto 0 continua somando');
+assert.equal(alvoComMarca({ acao: { alvoAcerto: null }, marca: { acerto: 3 } }), null,
+    'sem Acerto na ficha não inventa número: o mestre digita');
+assert.equal(alvoComMarca({}), null);
+assert.equal(alvoComMarca(null), null);
+
 /* ═══ 2. o portão decide se há rolagem ═══ */
 // Mesma expressão do tab-turno, nos casos que importam.
 const semRolagem = (dano, portao) => !dano && (!portao || portao === 'nenhum');

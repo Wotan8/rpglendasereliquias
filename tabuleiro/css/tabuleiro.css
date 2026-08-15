@@ -1205,3 +1205,13 @@ html, body {
        guarda de contraste barra (shared/contraste.test.mjs). */
     color: var(--lr-blood-3);
 }
+
+/* 🎯 Marca de Caça somada no Alvo: o mestre precisa ver de onde veio o número,
+   senão "Alvo 12" com Acerto 9 na ficha parece erro de conta. */
+.tb-conflito-marca {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--lr-gold-2);
+}
