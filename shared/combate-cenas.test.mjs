@@ -286,6 +286,38 @@ assert.equal(porqueCondicao(atordImob, 'bloqueia_padrao'), 'Atordoado');
 assert.equal(porqueCondicao(ef(['Lento', 'Imobilizado']), 'multDesloc'), 'Lento, Imobilizado');
 assert.equal(porqueCondicao(zero, 'bloqueia_padrao'), '', 'sem motivo devolve string vazia, não undefined');
 
+// 🎯 MODIFICADOR NO ALVO — o "−2 no Alvo de todos os testes" do Abalado era só
+// texto na tela. Agora é número no cadastro, e o Tabuleiro subtrai sozinho.
+{
+    const reg = [
+        { nome: 'Abalado', acumulaNiveis: true, nivelMaximo: 3, efeitoPorNivel: [
+            { nivel: 1, efeito: '−1 no Alvo', modAlvo: -1 },
+            { nivel: 2, efeito: '−2 no Alvo', modAlvo: -2 },
+            { nivel: 3, efeito: '−3 no Alvo', modAlvo: -3 },
+        ] },
+        { nome: 'Focado', modAlvoTestes: 1 },
+        { nome: 'Enjoado', modAlvoTestes: -1, acumulaNiveis: true,
+          efeitoPorNivel: [{ nivel: 1, efeito: 'enjoo' }] },   // nível sem modAlvo próprio
+        { nome: 'Molhado' },                                    // não mexe no Alvo
+    ];
+    const mod = (conds) => efeitoDasCondicoes(conds, reg).modAlvo;
+    assert.equal(mod([{ nome: 'Abalado', nivel: 2 }]), -2, 'o nível manda: Abalado 2 tira 2');
+    assert.equal(mod([{ nome: 'Abalado', nivel: 3 }]), -3, 'e o 3 tira 3');
+    assert.equal(mod([{ nome: 'Abalado', nivel: 1 }]), -1);
+    assert.equal(mod([{ nome: 'Focado' }]), 1, 'condição pode SOMAR no Alvo');
+    assert.equal(mod([{ nome: 'Enjoado', nivel: 1 }]), -1, 'nível sem número próprio cai no da condição');
+    assert.equal(mod([{ nome: 'Molhado' }]), 0, 'condição que não mexe no Alvo não mexe');
+    assert.equal(mod([]), 0);
+    // vários modificadores SOMAM
+    assert.equal(mod([{ nome: 'Abalado', nivel: 2 }, { nome: 'Focado' }]), -1, '−2 e +1 dão −1');
+    assert.equal(mod([{ nome: 'Abalado', nivel: 2 }, { nome: 'Enjoado', nivel: 1 }]), -3, '−2 e −1 dão −3');
+    // e o motivo diz de onde veio
+    assert.equal(porqueCondicao(efeitoDasCondicoes([{ nome: 'Abalado', nivel: 2 }], reg), 'modAlvo'), 'Abalado');
+    // 🔒 dano NÃO é teste: nada aqui encosta em dano (não existe campo para isso)
+    assert.equal(efeitoDasCondicoes([{ nome: 'Abalado', nivel: 2 }], reg).modDano, undefined,
+        'a régua não tem modificador de dano — dano não é teste');
+}
+
 // o nome casa sem ligar para acento/caixa (o mestre digita como quiser)
 assert.equal(ef(['imobilizado']).bloqueia.movimento, true);
 assert.equal(ef(['EXAUSTAO']).testes.length, 1, 'casa sem acento');

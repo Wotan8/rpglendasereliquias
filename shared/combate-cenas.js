@@ -301,6 +301,7 @@ export function efeitoDasCondicoes(condicoes, registro) {
         multVisao: 1, enxergaNoEscuro: false, deixaInvisivel: false,
         naoPodeSerAlvo: false, atraiAlvo: false, faccaoForcada: null,
         porRodada: [], testes: [], niveis: [],
+        modAlvo: 0,    // soma dos modificadores no Alvo de QUALQUER teste (§2)
         motivos: {},   // campo -> [nomes das condições] — para dizer POR QUE travou
     };
     const mapa = new Map();
@@ -315,10 +316,22 @@ export function efeitoDasCondicoes(condicoes, registro) {
         if (!reg) continue;   // condição personalizada (sem cadastro) não configura nada
         const marca = campo => { (out.motivos[campo] = out.motivos[campo] || []).push(c.nome); };
 
+        const linhaNivel = reg.acumulaNiveis
+            ? (reg.efeitoPorNivel || []).find(l => Number(l?.nivel) === c.nivel) : null;
         if (reg.acumulaNiveis) {
-            const linha = (reg.efeitoPorNivel || []).find(l => Number(l?.nivel) === c.nivel);
-            out.niveis.push({ nome: c.nome, icone: c.icone, nivel: c.nivel, maximo: reg.nivelMaximo ?? null, efeito: linha?.efeito || '' });
+            out.niveis.push({ nome: c.nome, icone: c.icone, nivel: c.nivel, maximo: reg.nivelMaximo ?? null, efeito: linhaNivel?.efeito || '' });
         }
+
+        // 🎯 MODIFICADOR NO ALVO (§2). O "−2 no Alvo de todos os testes" do
+        // Abalado era só texto na tela — ninguém subtraía nada. Agora é número:
+        // o nível manda quando a linha dele traz um valor; senão vale o da
+        // condição inteira. Vários modificadores SOMAM (−2 e −1 dão −3).
+        // Só mexe no ALVO: dano não é teste e não entra aqui.
+        const modNivel = Number(linhaNivel?.modAlvo);
+        const modGeral = Number(reg.modAlvoTestes);
+        const mod = !isNaN(modNivel) && linhaNivel?.modAlvo !== '' && linhaNivel?.modAlvo != null
+            ? modNivel : (isNaN(modGeral) ? 0 : modGeral);
+        if (mod) { out.modAlvo += mod; marca('modAlvo'); }
         if (reg.testeParaSair && reg.testeNome) {
             out.testes.push({
                 condicao: c.nome, icone: c.icone, nome: reg.testeNome,

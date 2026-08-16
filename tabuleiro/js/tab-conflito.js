@@ -27,7 +27,7 @@ import { setDoc, db as _db, doc as _doc, updateDoc as _upd, deleteDoc as _del } 
 import { T, esc, toast, uid, normChave, valorComponente, gridSize, pxParaUnidades, registrarFlutuante, trazerParaFrente } from './tab-state.js';
 import { golpesDe, golpesCacheados, escolherGolpe, golpesCorpoACorpo, alcanceDoGolpe } from './tab-golpes.js';
 import { refCombate } from './tab-main.js';
-import { cenaAtiva, comCenaAtivaPatch } from '../../shared/combate-cenas.js';
+import { cenaAtiva, comCenaAtivaPatch, efeitoDasCondicoes, porqueCondicao } from '../../shared/combate-cenas.js';
 import { bonusDoAtaque } from '../../shared/marca-de-caca.js';
 import { ritualProibeDefesa } from '../../shared/turno-efeitos.js?v=1';
 import { destinoDoProjetil, gastarUm } from '../../shared/projeteis.js';
@@ -241,7 +241,27 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
 function alvoComMarca(c) {
     const base = c?.acao?.alvoAcerto;
     if (base == null) return null;
-    return base + (Number(c?.marca?.acerto) || 0);
+    return base + (Number(c?.marca?.acerto) || 0) + modAlvoDoAtacante(c);
+}
+
+/**
+ * 😟 Modificador de CONDIÇÃO no Alvo de quem ataca (Abalado −2 e afins).
+ * Atacar é um teste, então a condição que penaliza "todos os testes" penaliza
+ * o acerto. Entra aqui pelo mesmo motivo da Marca: alimenta o campo que o
+ * mestre vê E a rolagem — se entrasse só na rolagem, o valor exibido venceria.
+ */
+function modAlvoDoAtacante(c) {
+    const p = part(c?.atacante?.pid);
+    if (!p) return 0;
+    return efeitoDasCondicoes(p.condicoes || [], T.condicoesSistema).modAlvo || 0;
+}
+
+/** Texto do porquê, para o mestre ver de onde veio o desconto no Alvo. */
+function porqueModAlvo(c) {
+    const p = part(c?.atacante?.pid);
+    if (!p) return '';
+    const ef = efeitoDasCondicoes(p.condicoes || [], T.condicoesSistema);
+    return ef.modAlvo ? porqueCondicao(ef, 'modAlvo') : '';
 }
 
 function manual(id) {
@@ -573,7 +593,10 @@ function render() {
                 rotulo: `${c.acao.acertoIcone || '🎯'} ${esc(c.acao.acertoNome || 'Acerto')}`,
                 fn: 'tbConfRolarAcerto', idManual: 'cfManualAcerto', dica: 'd10 da mesa',
                 extra: `<label class="tb-conflito-alvoin">Alvo <input type="number" id="cfAlvoAcerto" value="${alvoComMarca(c) ?? ''}" step="any" placeholder="?"></label>`
-                    + (c.marca?.acerto ? `<span class="tb-conflito-marca" title="A presa está marcada por este caçador">🎯 +${c.marca.acerto} Marca de Caça (base ${c.acao.alvoAcerto})</span>` : ''),
+                    + (c.marca?.acerto ? `<span class="tb-conflito-marca" title="A presa está marcada por este caçador">🎯 +${c.marca.acerto} Marca de Caça (base ${c.acao.alvoAcerto})</span>` : '')
+                    // 😟 De onde saiu o desconto: sem isto o Alvo aparece menor
+                    // e ninguém sabe por quê — o mestre desconfia do sistema.
+                    + (modAlvoDoAtacante(c) ? `<span class="tb-conflito-marca" title="Condição em ${esc(c.atacante.nome)}">😟 ${modAlvoDoAtacante(c) > 0 ? '+' : ''}${modAlvoDoAtacante(c)} ${esc(porqueModAlvo(c))} (base ${c.acao.alvoAcerto})</span>` : ''),
               })
             : `<div class="tb-turno-acoes"><span class="tb-muted">⏳ esperando ${esc(c.atacante.nome)} rolar o Acerto…</span></div>`;
     } else {

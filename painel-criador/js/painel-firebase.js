@@ -254,7 +254,17 @@ const MODULE_DEFS = {
                 arrayFields: [
                     { key: 'nivel', label: 'Nível', type: 'number', placeholder: '1' },
                     { key: 'efeito', label: 'Efeito neste nível', type: 'textarea', placeholder: 'Ex: Deslocamento pela metade' },
+                    // 🎯 O número que o Tabuleiro subtrai sozinho. O campo de
+                    // cima é texto de mesa (o motor não lê); este é a regra.
+                    { key: 'modAlvo', label: '🎯 Modificador no Alvo neste nível', type: 'number', placeholder: 'Ex: -2 (vazio = usa o da condição)' },
                 ]
+            },
+            // Vale enquanto a condição durar, em QUALQUER teste (ataque incluso).
+            // Nível com `modAlvo` próprio manda nele; sem isso, vale este aqui.
+            // Só mexe no Alvo — dano não é teste.
+            {
+                key: 'modAlvoTestes', label: '🎯 Modificador no Alvo de todos os testes', type: 'number',
+                placeholder: 'Ex: -2 · vazio = a condição não mexe no Alvo'
             },
 
             // ===== 🎲 TESTE PARA SAIR =====

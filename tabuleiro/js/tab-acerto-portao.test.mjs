@@ -70,10 +70,21 @@ const srcC = semCR('./tab-conflito.js');
 const iniC = srcC.indexOf('function alvoComMarca(c) {');
 const fimC = srcC.indexOf('\n}\n', iniC) + 3;
 assert.ok(iniC > 0, 'alvoComMarca não encontrada em tab-conflito.js');
-const alvoComMarca = new Function(`${srcC.slice(iniC, fimC)}; return alvoComMarca;`)();
+// A função lê as condições do atacante (Abalado −2 e afins) por
+// `modAlvoDoAtacante`, que precisa da cena viva. Aqui ele é injetado: este
+// bloco tranca a soma da MARCA; o modificador de condição tem teste próprio
+// em shared/combate-cenas.test.mjs. O parâmetro deixa os dois observáveis.
+const comMod = (modAlvo = 0) =>
+    new Function('modAlvoDoAtacante', `${srcC.slice(iniC, fimC)}; return alvoComMarca;`)(() => modAlvo);
+const alvoComMarca = comMod(0);
 
 assert.equal(alvoComMarca({ acao: { alvoAcerto: 9 }, marca: { acerto: 3 } }), 12,
     'Acerto 9 + Marca 3 = 12, e é ISSO que o campo mostra e a rolagem usa');
+// 😟 condição entra no MESMO lugar, pelo mesmo motivo: o campo e a rolagem
+assert.equal(comMod(-2)({ acao: { alvoAcerto: 9 }, marca: { acerto: 3 } }), 10,
+    'Abalado −2 desce o Alvo que aparece na janela, não só o da rolagem');
+assert.equal(comMod(-2)({ acao: { alvoAcerto: 9 } }), 7, 'sem marca, só a condição');
+assert.equal(comMod(-2)({ acao: { alvoAcerto: null } }), null, 'sem Acerto, condição nenhuma inventa número');
 assert.equal(alvoComMarca({ acao: { alvoAcerto: 9 }, marca: { acerto: 0 } }), 9, 'sem marca, o Alvo é o da arma');
 assert.equal(alvoComMarca({ acao: { alvoAcerto: 9 } }), 9, 'conflito sem marca nenhuma');
 assert.equal(alvoComMarca({ acao: { alvoAcerto: 0 }, marca: { acerto: 3 } }), 3, 'Acerto 0 continua somando');

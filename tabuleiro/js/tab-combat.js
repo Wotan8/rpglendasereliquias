@@ -125,7 +125,10 @@ function abasDeCena() {
 // bônus temporários da Dádiva. Um Xamã incorporado testava com a ficha dele.
 /** Alvo resolvido pela ficha, ou null (mestre digita/edita na mão). */
 function alvoSugerido(t, p) {
-    const r = alvoDoTeste(t.nome, fonteDoParticipante(p), t.mod || 0);
+    // 😟 A condição que penaliza "todos os testes" penaliza ESTE também: o
+    // Abalado −2 entra aqui junto com o modificador de dificuldade do pedido.
+    const mod = (t.mod || 0) + (efeitoDasCondicoes(p?.condicoes || [], T.condicoesSistema).modAlvo || 0);
+    const r = alvoDoTeste(t.nome, fonteDoParticipante(p), mod);
     return (!r.partes.length || r.incompleto) ? null : r.alvo;
 }
 /** Linhas de teste do card de um participante. */
