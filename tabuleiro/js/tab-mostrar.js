@@ -836,7 +836,7 @@ function _tbEnsureAliadoModalDom() {
 async function abrirFichaMestreNpc(npc) {
     try {
         _tbInjectCss('../painel-mestre/css/modais.css', 'tbCssPmModais');
-        _tbInjectCss('../painel-mestre/css/area-npcs.css?v=7', 'tbCssPmAreaNpcs');
+        _tbInjectCss('../painel-mestre/css/area-npcs.css?v=10', 'tbCssPmAreaNpcs');
         // O que a aba Inventário do modal usa e o Tabuleiro não tem: o seletor
         // de mecânicas (.mechsel-*, em layout.css) e os modais de item/equipar
         // da ficha. Sem eles o formulário de item abre cru, sem caixa nem grade.
@@ -849,7 +849,7 @@ async function abrirFichaMestreNpc(npc) {
 
         const [S] = await Promise.all([
             import('../../painel-mestre/js/state.js'),
-            import('../../painel-mestre/js/area-npcs.js?v=v60')
+            import('../../painel-mestre/js/area-npcs.js?v=v61')
         ]);
 
         // Garante o NPC atual no estado compartilhado usado pelo componente

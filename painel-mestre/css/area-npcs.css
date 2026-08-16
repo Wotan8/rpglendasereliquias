@@ -735,3 +735,36 @@
     .npcv2-attrs-grid { grid-template-columns: repeat(3, 1fr); }
     .npcv2-dv-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 }
+
+/* ---------- 🤝 MORAL com os personagens ---------- */
+/* Uma linha por personagem, com os botões na mão: isto é usado NO MEIO da
+   cena, então o Mestre não pode ter de abrir nada para somar ou subtrair. */
+.npc-moral-linha {
+    display: grid; grid-template-columns: 1fr auto; gap: 6px 10px;
+    padding: 8px 0; border-bottom: 1px solid var(--line, rgba(255,255,255,.08));
+    align-items: center;
+}
+.npc-moral-linha:last-child { border-bottom: none; }
+.npc-moral-quem { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.npc-moral-faixa { font-size: .74rem; opacity: .8; white-space: nowrap; }
+.npc-moral-ctrl { display: flex; align-items: center; gap: 4px; }
+.npc-moral-ctrl .btn { min-width: 30px; padding: 2px 7px; }
+.npc-moral-val {
+    min-width: 34px; text-align: center; font-variant-numeric: tabular-nums;
+    font-size: 1.05rem;
+}
+.npc-moral-val.bom  { color: var(--success, #22c55e); }
+.npc-moral-val.ruim { color: var(--danger, #ef4444); }
+.npc-moral-motivo { grid-column: 1 / -1; font-size: .8rem; }
+.npc-moral-hist { grid-column: 1 / -1; font-size: .76rem; opacity: .85; }
+.npc-moral-hist summary { cursor: pointer; opacity: .7; }
+.npc-moral-h {
+    display: flex; gap: 8px; align-items: baseline; padding: 3px 0 3px 12px;
+}
+.npc-moral-h b { min-width: 26px; font-variant-numeric: tabular-nums; }
+.npc-moral-h span { flex: 1; min-width: 0; }
+.npc-moral-h i { opacity: .55; font-size: .7rem; white-space: nowrap; }
+@media (max-width: 560px) {
+    .npc-moral-linha { grid-template-columns: 1fr; }
+    .npc-moral-ctrl { justify-content: space-between; }
+}

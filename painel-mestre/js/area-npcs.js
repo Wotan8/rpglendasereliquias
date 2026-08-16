@@ -1,5 +1,5 @@
 // ÁREA NPCs — Full CRUD, Export/Import, Modal Form
-import { db, collection, getDocs, setDoc, deleteDoc, doc, addDoc, onSnapshot, query, where } from './firebase-config.js';
+import { db, collection, getDocs, setDoc, deleteDoc, doc, addDoc, updateDoc, onSnapshot, query, where } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
@@ -861,9 +861,105 @@ function _npcSecaoVinculos() {
             </div>
             <div class="npcv2-hint" style="margin-top:6px">Vínculos criados na criação de personagem aparecerão aqui com a origem "criação".</div>
         </div>
+
+        <div class="npcv2-card">
+            <div class="npcv2-block-title">🤝 Moral com os Personagens</div>
+            <div id="npcMoralLista"><div class="npcv2-hint">Carregando…</div></div>
+            <div class="npcv2-hint" style="margin-top:6px">Memória de mesa: o que este NPC sente por cada um. O motivo é opcional — no meio da cena, clique e siga.</div>
+        </div>
     </div>
 `;
 }
+
+/* =====================================================================
+   🤝 MORAL — memória de mesa, por personagem
+   ---------------------------------------------------------------------
+   A régua mora em shared/moral.js (pura, testada). Aqui é só tela e escrita.
+   O Mestre precisa disto NO MEIO da cena, então cada linha tem os botões na
+   mão e o motivo é um campo que ele preenche se quiser — nunca obrigatório.
+   ===================================================================== */
+
+async function _moralMod() { return import('../../shared/moral.js?v=1'); }
+
+/** Redesenha a lista de moral do NPC aberto. */
+window.renderNpcMoral = async function () {
+    const el = document.getElementById('npcMoralLista');
+    if (!el) return;
+    const npc = window.F?.npc;
+    if (!npc?.id) { el.innerHTML = '<div class="npcv2-hint">Salve o NPC para registrar moral.</div>'; return; }
+    const { linhasDeMoral } = await _moralMod();
+    // ⚠️ Não depende da aba de Vínculos ter sido aberta: a moral é usada no
+    // meio da cena, e "Carregando…" para sempre porque o Mestre não clicou
+    // noutra aba seria um bug invisível. Se a lista não estiver pronta, busca.
+    let chars = window._npcVincChars || [];
+    if (!chars.length) {
+        try {
+            const q = S.currentMesaId
+                ? query(collection(db, 'char'), where('mesaId', '==', S.currentMesaId))
+                : query(collection(db, 'char'), where('ownerUid', '==', S.currentUser?.uid || ''));
+            const snap = await getDocs(q);
+            chars = [];
+            snap.forEach(d => { const r = d.data(); chars.push({ id: d.id, nome: r.fields?.nome || r.nome || 'Sem nome' }); });
+            window._npcVincChars = chars;
+        } catch (e) { console.warn('personagens para a moral', e); }
+    }
+    if (!chars.length) { el.innerHTML = '<div class="npcv2-hint">Nenhum personagem na mesa ainda.</div>'; return; }
+
+    const linhas = linhasDeMoral(npc, chars);
+    el.innerHTML = linhas.map(l => `
+        <div class="npc-moral-linha" data-char="${escapeHtml(l.charId)}">
+            <div class="npc-moral-quem">
+                <b>${escapeHtml(l.nome)}</b>
+                <span class="npc-moral-faixa" title="${escapeHtml(l.faixa.desc)}">${l.faixa.icone} ${escapeHtml(l.faixa.nome)}</span>
+            </div>
+            <div class="npc-moral-ctrl">
+                <button class="btn btn-small" onclick="npcMoralDelta('${l.charId}',-3)" title="−3">−−</button>
+                <button class="btn btn-small" onclick="npcMoralDelta('${l.charId}',-1)" title="−1">−</button>
+                <b class="npc-moral-val ${l.valor < 0 ? 'ruim' : l.valor > 0 ? 'bom' : ''}">${l.valor > 0 ? '+' : ''}${l.valor}</b>
+                <button class="btn btn-small" onclick="npcMoralDelta('${l.charId}',1)" title="+1">+</button>
+                <button class="btn btn-small" onclick="npcMoralDelta('${l.charId}',3)" title="+3">++</button>
+            </div>
+            <input type="text" class="form-input npc-moral-motivo" id="npcMoralMotivo_${escapeHtml(l.charId)}"
+                placeholder="Motivo (opcional) — some depois de registrar">
+            ${l.historico.length ? `<details class="npc-moral-hist"><summary>${l.historico.length} registro(s)</summary>${
+                l.historico.map(h => `<div class="npc-moral-h">
+                    <b>${h.delta > 0 ? '+' : ''}${h.delta}</b>
+                    <span>${escapeHtml(h.motivo || '— sem motivo anotado')}</span>
+                    <i>${new Date(h.em).toLocaleDateString('pt-BR')}</i>
+                </div>`).join('')}</details>` : ''}
+        </div>`).join('');
+};
+
+/** Soma/subtrai e grava. O motivo do campo vai junto e o campo se limpa. */
+window.npcMoralDelta = async function (charId, delta) {
+    const npc = window.F?.npc;
+    if (!npc?.id) return;
+    const { aplicarMoral } = await _moralMod();
+    const campo = document.getElementById('npcMoralMotivo_' + charId);
+    const motivo = campo?.value?.trim() || '';
+    const r = aplicarMoral(npc, charId, delta, motivo, S.currentUser?.email || null);
+    if (!r.mudou) {
+        showAlert(`⚠️ A moral já está no ${delta > 0 ? 'máximo' : 'mínimo'} — nada a registrar.`, 'warning');
+        return;
+    }
+    npc.moral = r.moral;              // otimista: a tela responde na hora
+    if (campo) campo.value = '';
+    await renderNpcMoral();
+    try {
+        await updateDoc(doc(db, 'npcs', npc.id), { moral: r.moral, lastUpdate: new Date().toISOString() });
+        const nome = (window._npcVincChars || []).find(c => c.id === charId)?.nome || 'personagem';
+        addLog(S.currentUser?.email,
+            `🤝 Moral de "${npc.nome || 'NPC'}" com ${nome}: ${r.antes} → ${r.depois}${motivo ? ` (${motivo})` : ''}`,
+            npc.nome || '', 'npcs', {
+                charId, mesaId: S.currentMesaId || null, category: 'Moral',
+                changes: [{ label: nome, from: String(r.antes), to: String(r.depois) },
+                          ...(motivo ? [{ label: 'Motivo', from: '', to: motivo }] : [])],
+            });
+    } catch (e) {
+        console.error('gravar moral', e);
+        showAlert('❌ Não consegui gravar a moral — veja o console.', 'danger');
+    }
+};
 
 function buildNpcForm() {
     return _npcTopo()
@@ -1695,6 +1791,8 @@ async function loadVinculosUI() {
             chars = []; snap.forEach(d => { const raw = d.data(); const f = raw.fields || {}; chars.push({ id: d.id, nome: f.nome || raw.nome || 'Sem nome', jogador: raw.ownerEmail || f.jogador || '', mesaId: raw.mesaId || f.mesaId || '' }); });
         }
         window._npcVincChars = chars;
+        // 🤝 A moral só sabe listar depois que os personagens da mesa chegam.
+        window.renderNpcMoral?.();
         if (picker) picker.innerHTML = '<option value="">Selecione um personagem...</option>' +
             chars.sort((a, b) => (a.nome || '').localeCompare(b.nome || '')).map(c => `<option value="${c.id}">${escapeHtml(c.nome || 'Sem nome')}${c.jogador ? ` (${escapeHtml(c.jogador)})` : ''}</option>`).join('');
     } catch (e) { if (picker) picker.innerHTML = '<option value="">Erro ao carregar personagens</option>'; }
