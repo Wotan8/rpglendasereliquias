@@ -1185,6 +1185,9 @@ export async function linhasDeAtaque(tipo, id) {
         l.acerto = acertoDaLinha(l);
         // 🏹 Munição que esta arma gasta — vazio quer dizer "não gasta".
         l.tipoProjetil = i?.tipoProjetil?.length ? i.tipoProjetil : (tpl?.tipoProjetil || []);
+        // 💀 O que a PEÇA aplica ao acertar (cadastro: "Condições Aplicadas ao
+        // Usar"). É por aqui que a lâmina serrilhada sangra e a flecha envenena.
+        l.condicaoIds = i?.condicaoIds?.length ? i.condicaoIds : (tpl?.condicaoIds || []);
         l.itemId = i?.id || null;
     }
     return linhas;

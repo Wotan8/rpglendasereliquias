@@ -92,6 +92,65 @@ export function danoFinal(bruto, blindagem, meia, critico) {
 }
 
 /**
+ * 🪨 ABSORVER é a defesa que nunca zera e nunca protege inteiro.
+ *
+ * Todas as outras defesas são binárias: seguraram, o golpe não entra. O
+ * Absorver troca isso por um contrato diferente — quem recebe o golpe no
+ * corpo SEMPRE leva alguma coisa, e em troca não depende de sorte para não
+ * levar tudo:
+ *
+ *   defesa segurou  → METADE do dano (não zero)
+ *   defesa falhou   → dano INTEIRO (sem a metade de consolação)
+ *
+ * @returns { entra, meia } — `entra` diz se há dano; `meia` se ele parte ao meio
+ */
+export function absorverResolve(passou, critico) {
+    if (critico) return { entra: true, meia: false };   // crítico atravessa
+    return passou ? { entra: true, meia: false } : { entra: true, meia: true };
+}
+
+/* ===================== 📏 TAMANHO ===================== */
+
+/**
+ * O VD Tamanho é o TRIPLO da Altura, então três pontos ≈ um metro de altura.
+ * É essa a unidade da regra: um metro de diferença vale um ponto.
+ * Humano de 1,75 m ≈ 5,25 · ogro de 3 m ≈ 9 · dragão de 6 m ≈ 18.
+ */
+export const TAMANHO_POR_PONTO = 3;
+/** Teto para os dois lados: sem ele, um dragão seria imperdível e imbatível. */
+export const TAMANHO_TETO = 3;
+
+/**
+ * 📏 O que a diferença de tamanho faz na troca de golpes.
+ *
+ * Alvo MAIOR é mais fácil de acertar — mais área, menos onde se esconder. Alvo
+ * MENOR é mais difícil. E no corpo a corpo o peso entra junto: quem é maior
+ * bate mais forte, quem é menor bate mais fraco.
+ *
+ * O mesmo número, com sinais opostos — não é coincidência, é a mesma diferença
+ * física lida de dois jeitos. Por isso um ogro é fácil de acertar E machuca
+ * mais quando acerta você.
+ *
+ * @returns { pontos, acerto, danoCaC } — `pontos` é a diferença já em degraus
+ */
+export function ajusteDeTamanho(tamAtacante, tamAlvo) {
+    const dif = (Number(tamAlvo) || 0) - (Number(tamAtacante) || 0);
+    // ⚠️ Arredonda a MAGNITUDE e devolve o sinal depois. `Math.round` empurra
+    // para +Infinito nos meios exatos: round(1,5)=2 mas round(−1,5)=−1, e a
+    // mesma diferença física renderia números diferentes conforme quem ataca
+    // quem. Um ogro contra um halfling tem de ser o espelho exato do contrário.
+    const bruto = Math.sign(dif) * Math.round(Math.abs(dif) / TAMANHO_POR_PONTO);
+    const pontos = Math.max(-TAMANHO_TETO, Math.min(TAMANHO_TETO, bruto));
+    return {
+        pontos,
+        acerto: pontos,      // alvo maior: soma no Alvo da rolagem
+        // `|| 0` mata o -0 que `-pontos` produz quando pontos é 0: JavaScript
+        // distingue -0 de 0, e um deepEqual (ou um `Object.is`) acusaria.
+        danoCaC: -pontos || 0,   // atacante maior: soma no dano de corpo a corpo
+    };
+}
+
+/**
  * Tem dano a rolar? Precisa de fórmula E de alguém que tenha levado o golpe.
  * Ataque que todo mundo defendeu não pede dado: a janela ia parar num
  * "💥 Rolar 1d12+4" que não tinha em quem cair.

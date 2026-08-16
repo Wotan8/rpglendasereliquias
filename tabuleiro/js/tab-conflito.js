@@ -35,7 +35,7 @@ import { addObj } from './tab-objects.js';
 import { participanteDoToken, valorVdDaFonte, fonteDoParticipante, VITAIS } from './tab-hud.js';
 import { aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { logChat } from './tab-chat.js';
-import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal,
+import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal, absorverResolve, ajusteDeTamanho,
          defesasLivres, custoDaDefesa, soODado,
          precisaRolarDano,
          podeContraAtacar as regraContraAtaque } from './tab-conflito-calc.js';
@@ -209,6 +209,10 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
             // 🏹 O maço escolhido no picker. Fica no doc porque quem resolve o
             // destino da flecha é o mesmo cliente que rolou o Acerto.
             projetil: acao.projetil || null,
+            // 🏹 O que a PEÇA faz ao acertar: a flecha envenenada envenena, a
+            // lâmina serrilhada sangra. Sai de `condicaoIds` do cadastro do
+            // item — arma e munição somam, porque as duas encostaram no alvo.
+            condicoesItem: acao.condicoesItem || [],
             // ᛟ Lei do Relógio: a Runomancia é previsível e nunca depende de
             // sorte. A runa não rola para acertar — os Graus dela SÃO o Alvo
             // gravado na peça, e só uma Defesa declarada pode contestá-los.
@@ -225,6 +229,19 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
         // ᛟ A runa entra já resolvida no acerto: sem dado, Graus = Alvo. Quem
         // não declarar Defesa é atingido — é o que separa a Runomancia de todo
         // o resto do sistema.
+        // 📏 Medido AQUI, na abertura: quem rola o dado pode ser outro cliente,
+        // e a ficha do atacante não está lá — mesmo motivo da Marca de Caça.
+        tamanho: (() => {
+            const tamDe = (pid) => valorComponente('Tamanho', fonteDoParticipante(part(pid))) || 0;
+            const tAtk = tamDe(atacante?.id);
+            const porPid = {};
+            for (const o of alvos) {
+                const pa = participanteDoToken(o);
+                if (!pa?.id) continue;
+                porPid[pa.id] = { ...ajusteDeTamanho(tAtk, tamDe(pa.id)), tamAlvo: tamDe(pa.id) };
+            }
+            return { doAtacante: tAtk, porPid };
+        })(),
         rolagem: acao.semRolagem
             ? { dado: null, alvo: Number(acao.alvoAcerto) || 0, graus: Number(acao.alvoAcerto) || 0,
                 critico: false, falha: false, abriu: false, naMesa: false, semRolagem: true }
@@ -255,7 +272,19 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
 function alvoComMarca(c) {
     const base = c?.acao?.alvoAcerto;
     if (base == null) return null;
-    return base + (Number(c?.marca?.acerto) || 0) + modAlvoDoAtacante(c);
+    return base + (Number(c?.marca?.acerto) || 0) + modAlvoDoAtacante(c) + modTamanho(c);
+}
+
+/**
+ * 📏 O Tamanho no Alvo. Com mais de um alvo na mesma rolagem — cone, onda — o
+ * ajuste é do MENOR deles: o d10 é um só, e a régua tem de ser a do alvo mais
+ * difícil, senão acertar o ogro grande daria de graça o gato ao lado dele.
+ */
+function modTamanho(c) {
+    const porPid = c?.tamanho?.porPid;
+    if (!porPid) return 0;
+    const vs = (c.alvos || []).map(a => Number(porPid[a.pid]?.acerto) || 0);
+    return vs.length ? Math.min(...vs) : 0;
 }
 
 /**
@@ -381,11 +410,17 @@ window.tbConfDefesa = async (i, valor, nome) => {
         const ener = enerDe(a.pid);
         if (ener != null && ener < 1) { toast(`⚠️ ${a.nome} não tem Energia para outra defesa nesta rodada`, 'warning'); return; }
     }
+    const ehAbsorver = /absorver/i.test(nome || '');
+    const segurou = golpePassa(c.rolagem.graus, Number(valor) || 0, c.rolagem.dado);
+    // 🪨 O Absorver não é binário como as outras Defesas: quem recebe o golpe
+    // no corpo SEMPRE leva alguma coisa. Segurou → metade. Falhou → inteiro.
+    const abs = ehAbsorver ? absorverResolve(segurou, !!c.rolagem?.critico) : null;
     const alvos = c.alvos.map((x, k) => k !== i ? x : {
         ...x, escolhido: true, defesaNome: semDefesa ? 'sem defesa' : (nome || '—'),
         defesa: Number(valor) || 0, defesaPaga: paga,
-        meia: /absorver/i.test(nome || ''),
-        passou: golpePassa(c.rolagem.graus, Number(valor) || 0, c.rolagem.dado),
+        absorveu: ehAbsorver,
+        meia: abs ? abs.meia : false,
+        passou: abs ? abs.entra : segurou,
     });
     const todos = alvos.every(x => x.escolhido);
     // Só rola dano quem tem em QUEM causar. Sem fórmula, ou com todo mundo
@@ -413,10 +448,13 @@ window.tbConfRolarDano = async (naMesa) => {
         if (!a.passou) return { ...a, bruto: 0, dano: 0 };
         const bl = blindagemDe(a.pid, c.acao.tipos);
         // 🎯 só a linha da presa leva a marca — o dano é por alvo
-        const bruto = total + (Number(c.marca?.danoPorPid?.[a.pid]) || 0);
+        // 📏 Peso entra no braço, não no tiro: só corpo a corpo. O mesmo número
+        // que torna o ogro fácil de acertar o faz machucar mais quando acerta.
+        const tam = (!c.acao.distancia && c.tamanho) ? (c.tamanho.porPid?.[a.pid]?.danoCaC || 0) : 0;
+        const bruto = Math.max(0, total + (Number(c.marca?.danoPorPid?.[a.pid]) || 0) + tam);
         // ✨ Crítico atravessa o Absorver — a metade não vale contra dado 1.
         const critico = !!c.rolagem?.critico;
-        return { ...a, bruto, blindagem: bl, criticoPassou: critico && !!a.meia,
+        return { ...a, bruto, blindagem: bl, tamanhoDano: tam, criticoPassou: critico && !!a.meia,
             dano: danoFinal(bruto, bl, a.meia, critico) };
     });
     const marcados = alvos.filter(a => Number(c.marca?.danoPorPid?.[a.pid]) > 0);
@@ -427,6 +465,17 @@ window.tbConfRolarDano = async (naMesa) => {
     logChat(`💥 Dano de ${c.acao.nome}: ${detalhe} = ${total}`
         + (bonusDano ? ` · 🎯 +${bonusDano} da Marca de Caça em ${marcados.map(a => a.nome).join(', ')} = ${total + bonusDano}` : ''));
 };
+
+/**
+ * A CONTA INTEIRA do dano, para a mesa conferir sem abrir o console.
+ * "12 − 3 blind ÷2 🪨 =" e o −N VIT vem em destaque logo depois.
+ */
+function contaDoDano(a) {
+    const partes = [String(a.bruto ?? 0)];
+    if (a.blindagem) partes.push(`− ${a.blindagem} blind`);
+    if (a.meia) partes.push('÷2 🪨');
+    return partes.join(' ') + ' =';
+}
 
 // ---------- 4) contra-ataque (§6.8) ----------
 /** Distância BORDA a BORDA entre dois tokens, na unidade do canvas. */
@@ -531,8 +580,14 @@ async function aplicar(c) {
         }
         let condAplicada = !!c.condAplicada;
         // Lista nova quando existe; senão a condição única do formato antigo.
-        const conds = c.acao.condicoes?.length ? c.acao.condicoes
-            : (c.acao.condicao?.nome ? [c.acao.condicao] : []);
+        const conds = [
+            ...(c.acao.condicoes?.length ? c.acao.condicoes
+                : (c.acao.condicao?.nome ? [c.acao.condicao] : [])),
+            // 🏹 E o que a PEÇA carrega: a flecha envenenada envenena quem ela
+            // acertou. Entra na mesma lista porque a régua é a mesma — só quem
+            // levou o golpe recebe.
+            ...(c.acao.condicoesItem || []),
+        ];
         if (!condAplicada && conds.length) {
             const passaram = alvos.filter(a => a.passou && a.pid).map(a => a.pid);
             for (const cd of conds) {
@@ -679,7 +734,9 @@ function linhaAlvo(c, a, i) {
             : '<span class="tb-muted">⏳ escolhendo a defesa…</span>';
     } else if (a.passou) {
         dir = `<b class="tb-conflito-hit">☠️ passou</b> ${a.defesaNome && a.defesaNome !== '—' ? `<span class="tb-muted">(${esc(a.defesaNome)} ${a.defesa}${a.defesaPaga ? ' · 1 ENER' : ''})</span>` : ''}`
-            + (a.dano != null ? ` <b>−${a.dano} VIT</b>${a.blindagem ? ` <span class="tb-muted">após blindagem ${a.blindagem}</span>` : ''}${a.criticoPassou ? ' <span class="tb-muted">✨ crítico atravessou o Absorver</span>' : a.meia ? ' 🪨' : ''}` : '');
+            // 🧮 A conta INTEIRA à vista, e o que entra na Vitalidade em destaque.
+            // A mesa conferia "−9 VIT" sem saber de onde saíram os 9.
+            + (a.dano != null ? ` <span class="tb-muted">${contaDoDano(a)}</span> <b class="tb-conflito-vit">−${a.dano} VIT</b>${a.criticoPassou ? ' <span class="tb-muted">✨ crítico atravessou o Absorver</span>' : a.meia ? ' <span class="tb-muted">🪨 absorvido</span>' : ''}` : '');
     } else if (c.rolagem?.falha) {
         dir = '<b class="tb-conflito-miss">💀 passou longe</b>';
     } else {

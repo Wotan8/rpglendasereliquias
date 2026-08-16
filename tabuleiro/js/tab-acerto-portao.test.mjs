@@ -74,9 +74,17 @@ assert.ok(iniC > 0, 'alvoComMarca não encontrada em tab-conflito.js');
 // `modAlvoDoAtacante`, que precisa da cena viva. Aqui ele é injetado: este
 // bloco tranca a soma da MARCA; o modificador de condição tem teste próprio
 // em shared/combate-cenas.test.mjs. O parâmetro deixa os dois observáveis.
-const comMod = (modAlvo = 0) =>
-    new Function('modAlvoDoAtacante', `${srcC.slice(iniC, fimC)}; return alvoComMarca;`)(() => modAlvo);
+// 📏 O Tamanho entra na MESMA soma, pelo mesmo motivo (o campo e a rolagem
+// têm de mostrar o mesmo número). Injetado aqui também; a régua dele tem teste
+// próprio em tab-conflito-calc.test.mjs.
+const comMod = (modAlvo = 0, modTam = 0) =>
+    new Function('modAlvoDoAtacante', 'modTamanho',
+        `${srcC.slice(iniC, fimC)}; return alvoComMarca;`)(() => modAlvo, () => modTam);
 const alvoComMarca = comMod(0);
+
+// os três somam no mesmo lugar: Marca, condição e Tamanho
+assert.equal(comMod(-2, 1)({ acao: { alvoAcerto: 9 }, marca: { acerto: 3 } }), 11,
+    '🔒 Acerto 9 + Marca 3 − Abalado 2 + Tamanho 1 = 11');
 
 assert.equal(alvoComMarca({ acao: { alvoAcerto: 9 }, marca: { acerto: 3 } }), 12,
     'Acerto 9 + Marca 3 = 12, e é ISSO que o campo mostra e a rolagem usa');

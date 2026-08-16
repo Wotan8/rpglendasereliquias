@@ -792,6 +792,22 @@ function alcanceDeTiro(tok) {
     return alcanceDeVisaoDoToken(tok, derivedDoToken(tok), true);
 }
 
+/**
+ * 💀 O que a PEÇA aplica ao acertar — arma e munição somam.
+ *
+ * A flecha envenenada envenena porque o cadastro dela diz isso, não porque
+ * alguém escreveu "flecha envenenada" em algum `if`. Arma e projétil entram
+ * juntos: as duas encostaram no alvo.
+ */
+function condicoesDoEquipamento(golpe, projetil) {
+    const ids = [...new Set([...(golpe?.condicaoIds || []), ...(projetil?.condicaoIds || [])]
+        .map(x => (typeof x === 'object' && x) ? x.id : x).filter(Boolean))];
+    return ids.map(id => {
+        const c = (T.condicoesSistema || []).find(x => x.id === id);
+        return c ? { nome: c.nome, rodadas: 0, maxAlvos: 0, deItem: true } : null;
+    }).filter(Boolean);
+}
+
 window.tbTurnoGolpe = async (i) => {
     const g = golpesCache?.linhas?.[i]; if (!g) return;
     const p = participanteDaVez(cena());
@@ -807,6 +823,7 @@ window.tbTurnoGolpe = async (i) => {
     const proj = await municaoParaOGolpe(p, g);
     if (proj === false) return;   // sem munição, ou cancelou: nada gasto
     if (proj) meta.projetil = proj;
+    meta.condicoesItem = condicoesDoEquipamento(g, proj);
     // 🏹 Arma a distância não balança arco nenhum: escolhe o alvo dentro do
     // triplo da visão (o tiro enxerga mais longe do que a mão alcança).
     if (g.distancia) {
@@ -950,6 +967,7 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
         const proj = await municaoParaOGolpe(p, golpe);
         if (proj === false) return;
         if (proj) cfg.meta.projetil = proj;
+        cfg.meta.condicoesItem = condicoesDoEquipamento(golpe, proj);
         armarMira(cfg, tok);
         sub = null;
         return;
@@ -2033,6 +2051,7 @@ window.tbTurnoConfirmarMira = async () => {
             condicao: meta.condicao || null,
             condicoes: meta.condicoes || [],
             projetil: meta.projetil || null,
+            condicoesItem: meta.condicoesItem || [],
             // ᛟ Lei do Relógio: a runa entrega sem rolar; só a Defesa contesta.
             semRolagem: !!meta.semRolagem, runaItemId: meta.runaItemId || null,
         }, atingidos);

@@ -3,6 +3,7 @@
  *   node tabuleiro/js/tab-conflito-calc.test.mjs
  */
 import assert from 'node:assert/strict';
+import { absorverResolve, ajusteDeTamanho, TAMANHO_POR_PONTO, TAMANHO_TETO } from './tab-conflito-calc.js';
 import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal,
          defesasLivres, custoDaDefesa, soODado, podeContraAtacar,
          precisaRolarDano } from './tab-conflito-calc.js';
@@ -141,5 +142,68 @@ assert.match(podeContraAtacar({ ...base, distanciaM: 4 }).motivo, /maior alcance
     assert.equal(podeContraAtacar({ ...colado, distanciaM: 30, golpes: [punho, espada] }).ok, false,
         'magia de longe não abre guarda nenhuma: ninguém alcança o conjurador');
 }
+
+/* ===================== 🪨 ABSORVER: o contrato invertido =====================
+   Toda outra Defesa é binária: segurou, o golpe não entra. O Absorver troca
+   isso — quem recebe no corpo SEMPRE leva alguma coisa, e em troca não depende
+   de sorte para não levar tudo. É a única Defesa que nunca zera e nunca
+   protege inteiro. */
+assert.deepEqual(absorverResolve(false, false), { entra: true, meia: true },
+    '🔒 defesa SEGUROU → metade, não zero');
+assert.deepEqual(absorverResolve(true, false), { entra: true, meia: false },
+    '🔒 defesa FALHOU → dano inteiro, sem a metade de consolação');
+assert.deepEqual(absorverResolve(false, true), { entra: true, meia: false },
+    '✨ crítico atravessa: nem a metade sobra');
+// a conta final continua respeitando o piso e a blindagem
+assert.equal(danoFinal(10, 2, absorverResolve(false, false).meia), 4, 'segurou: (10−2)÷2');
+assert.equal(danoFinal(10, 2, absorverResolve(true, false).meia), 8, 'falhou: 10−2 inteiro');
+
+/* ===================== 📏 TAMANHO =====================
+   O VD é o TRIPLO da Altura, então 3 pontos ≈ 1 metro. Alvo maior é mais fácil
+   de acertar; e no corpo a corpo quem é maior bate mais forte. O MESMO número
+   com sinais opostos — é a mesma diferença física lida de dois jeitos. */
+assert.equal(TAMANHO_POR_PONTO, 3, '3 pontos de Tamanho ≈ 1 metro de altura');
+
+const HUMANO = 5.25;   // 1,75 m
+const OGRO = 9;        // 3 m
+const HALFLING = 3;    // 1 m
+const DRAGAO = 18;     // 6 m
+
+let a1 = ajusteDeTamanho(HUMANO, HUMANO);
+assert.deepEqual(a1, { pontos: 0, acerto: 0, danoCaC: 0 }, 'iguais: nada muda');
+
+a1 = ajusteDeTamanho(HUMANO, OGRO);
+assert.equal(a1.acerto, 1, '🔒 alvo MAIOR é mais fácil de acertar');
+assert.equal(a1.danoCaC, -1, 'e o humano bate mais fraco nele, no corpo a corpo');
+
+a1 = ajusteDeTamanho(OGRO, HUMANO);
+assert.equal(a1.acerto, -1, '🔒 alvo MENOR é mais difícil');
+assert.equal(a1.danoCaC, 1, 'e o ogro bate mais forte — o mesmo número, invertido');
+
+a1 = ajusteDeTamanho(HUMANO, HALFLING);
+assert.equal(a1.acerto, -1, 'halfling é alvo pequeno');
+
+/* o teto existe para o dragão não ser imperdível E imbatível */
+a1 = ajusteDeTamanho(HUMANO, DRAGAO);
+assert.equal(a1.acerto, TAMANHO_TETO, `🔒 4,25 degraus caem no teto de ${TAMANHO_TETO}`);
+assert.equal(ajusteDeTamanho(DRAGAO, HUMANO).acerto, -TAMANHO_TETO, 'e o teto vale para os dois lados');
+assert.equal(ajusteDeTamanho(HUMANO, 999).acerto, TAMANHO_TETO, 'nada fura o teto');
+
+/* simetria: trocar os lados inverte o sinal, sempre */
+const inv = (n) => -n || 0;   // -0 e 0 são a mesma coisa para a mesa
+for (const [x, y] of [[HUMANO, OGRO], [HALFLING, DRAGAO], [OGRO, OGRO], [3, 7.5]]) {
+    assert.equal(ajusteDeTamanho(x, y).acerto, inv(ajusteDeTamanho(y, x).acerto),
+        `simetria entre ${x} e ${y}`);
+    assert.equal(ajusteDeTamanho(x, y).acerto, inv(ajusteDeTamanho(x, y).danoCaC),
+        'acerto e dano são o mesmo número com sinais opostos');
+}
+
+/* meio metro não move nada: a régua é grossa de propósito */
+assert.equal(ajusteDeTamanho(HUMANO, HUMANO + 1.4).acerto, 0, 'menos de meio degrau não conta');
+assert.equal(ajusteDeTamanho(HUMANO, HUMANO + 1.6).acerto, 1, 'passou da metade, arredonda para 1');
+
+/* sem Tamanho na ficha (NPC legado) não quebra nem inventa vantagem */
+assert.deepEqual(ajusteDeTamanho(null, null), { pontos: 0, acerto: 0, danoCaC: 0 });
+assert.deepEqual(ajusteDeTamanho(undefined, HUMANO).acerto, 2, 'quem não tem Tamanho conta como 0');
 
 console.log('✅ conta do conflito OK — graus, defesa, crítico, blindagem, orçamento, piso e contra-ataque');

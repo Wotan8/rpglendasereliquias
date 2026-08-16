@@ -44,7 +44,7 @@ export function municaoDaArma(arma, catalog) {
  * Conta o que está solto E o que está dentro de container: `parentItemId` não
  * exclui nada. Maço zerado não entra — não dá para atirar o que acabou.
  *
- * @returns [{ id, nome, quantidade, chanceRecuperar, dentroDe }]
+ * @returns [{ id, nome, quantidade, chanceRecuperar, dentroDe, condicaoIds }]
  */
 export function projeteisCompativeis(itens, catalog, arma) {
     const querem = municaoDaArma(arma, catalog);
@@ -62,6 +62,9 @@ export function projeteisCompativeis(itens, catalog, arma) {
         quantidade: qtdDe(i),
         chanceRecuperar: chanceDe(i, catalog),
         dentroDe: i.parentItemId || null,
+        // 💀 A ponta envenenada envenena. Sai do cadastro do projétil, com o
+        // mesmo fallback instância→modelo de todo o resto.
+        condicaoIds: campo(i, catalog, 'condicaoIds') || [],
     }));
 }
 
