@@ -126,16 +126,24 @@ export function soODado(formula) {
  * @param jaContraAtacou já respondeu neste conflito
  * @param distanciaM     distância BORDA a BORDA até o agressor
  * @param golpes         [{ nome, alcanceM, distancia }] — alcanceM já efetivo
- * @returns { ok, motivo, linhas }
+ * `curto` é o motivo em duas ou três palavras: vai NA TELA, ao lado do botão
+ * apagado. Escondê-lo no `title` fazia a mesa achar que o contra-ataque estava
+ * quebrado quando ele só estava, corretamente, indisponível.
+ * @returns { ok, motivo, curto, linhas }
  */
 export function podeContraAtacar({ pericia, energia, jaContraAtacou, distanciaM, golpes }) {
-    if (jaContraAtacou) return { ok: false, motivo: 'já contra-atacou neste golpe', linhas: [] };
-    if (!(Number(pericia) >= 1)) return { ok: false, motivo: 'não tem a perícia Contra-Ataque (nível 1+)', linhas: [] };
-    if (energia != null && Number(energia) < 1) return { ok: false, motivo: 'sem Energia (custa 1)', linhas: [] };
-    if (distanciaM == null) return { ok: false, motivo: 'não dá para medir a distância até o agressor', linhas: [] };
+    const nao = (motivo, curto) => ({ ok: false, motivo, curto, linhas: [] });
+    if (jaContraAtacou) return nao('já contra-atacou neste golpe', 'já contra-atacou');
+    if (!(Number(pericia) >= 1)) return nao('não tem a perícia Contra-Ataque (nível 1+)', 'sem a perícia');
+    if (energia != null && Number(energia) < 1) return nao('sem Energia (custa 1)', 'sem Energia');
+    if (distanciaM == null) return nao('não dá para medir a distância até o agressor', 'sem token no mapa');
     const cac = (golpes || []).filter(g => !g.distancia && (Number(g.alcanceM) || 0) >= distanciaM - 1e-6);
     if (!cac.length) {
-        return { ok: false, linhas: [], motivo: `nenhum golpe corpo a corpo alcança o agressor (${Math.round(distanciaM * 100) / 100} m)` };
+        const d = Math.round(distanciaM * 100) / 100;
+        const bracoMaior = Math.max(0, ...(golpes || []).filter(g => !g.distancia).map(g => Number(g.alcanceM) || 0));
+        return nao(
+            `nenhum golpe corpo a corpo alcança o agressor (${d} m; o maior alcance é ${bracoMaior} m)`,
+            golpes?.some(g => !g.distancia) ? `fora de alcance (${d} m)` : 'sem golpe corpo a corpo');
     }
-    return { ok: true, motivo: '', linhas: cac };
+    return { ok: true, motivo: '', curto: '', linhas: cac };
 }

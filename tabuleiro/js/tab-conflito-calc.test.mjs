@@ -91,4 +91,16 @@ assert.equal(podeContraAtacar({ ...base, golpes: [arco] }).ok, false, 'arma a di
 assert.equal(podeContraAtacar({ ...base, golpes: [] }).ok, false, 'sem golpe físico não há contra-ataque');
 assert.equal(podeContraAtacar({ ...base, distanciaM: null }).ok, false, 'sem distância medida não libera');
 
+// o motivo CURTO é o que aparece na tela ao lado do botão apagado
+assert.equal(podeContraAtacar({ ...base, pericia: 0 }).curto, 'sem a perícia');
+assert.equal(podeContraAtacar({ ...base, energia: 0 }).curto, 'sem Energia');
+assert.equal(podeContraAtacar({ ...base, jaContraAtacou: true }).curto, 'já contra-atacou');
+assert.equal(podeContraAtacar({ ...base, distanciaM: 4 }).curto, 'fora de alcance (4 m)',
+    'com arma na mão, o motivo é a distância — e diz quantos metros');
+assert.equal(podeContraAtacar({ ...base, golpes: [arco] }).curto, 'sem golpe corpo a corpo',
+    'só arma a distância: o motivo não é o alcance, é não ter com o que');
+assert.equal(podeContraAtacar(base).curto, '', 'podendo, não há motivo a mostrar');
+assert.match(podeContraAtacar({ ...base, distanciaM: 4 }).motivo, /maior alcance é 1.5 m/,
+    'o motivo longo compara a distância com o braço mais comprido');
+
 console.log('✅ conta do conflito OK — graus, defesa, crítico, blindagem, orçamento, piso e contra-ataque');

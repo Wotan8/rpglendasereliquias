@@ -647,9 +647,12 @@ function linhaAlvo(c, a, i) {
             btnContra = ' <span class="tb-muted">⏳ conferindo o contra-ataque…</span>';
         } else {
             const pode = podeContra(c, a, linhas);
+            // O motivo vai NA TELA, não só no title: no celular ninguém passa o
+            // mouse, e um botão apagado sem explicação parece bug do sistema.
             btnContra = ` <button class="tb-btn tb-btn-small" ${pode.ok ? '' : 'disabled'}
                 title="${esc(pode.ok ? 'Acerta automático, ignora a Defesa. Custa 1 Energia e uma defesa da rodada.' : 'Não pode contra-atacar: ' + pode.motivo)}"
-                onclick="tbConfContra(${i})">🔁 Contra-atacar (1 ENER)</button>`;
+                onclick="tbConfContra(${i})">🔁 Contra-atacar (1 ENER)</button>`
+                + (pode.ok ? '' : ` <span class="tb-conflito-porque" title="${esc(pode.motivo)}">${esc(pode.curto || 'indisponível')}</span>`);
         }
     }
     const orcTxt = orc && (meu || souMestre())

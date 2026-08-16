@@ -651,6 +651,16 @@ assert.equal(valorComponente('Precisão', fichaChar), 2, 'pericia com acento (o 
 assert.equal(valorComponente('Marcar Presa', fichaChar), 1, 'pericia com espaco no nome');
 assert.equal(valorComponente('Erudição Ofensiva', fichaChar), 4, 'pericia com 2 chars especiais');
 assert.equal(valorComponente('Inexistente', fichaChar), null, 'nao achou = null (Alvo manual)');
+// 🔁 As duas perícias que o CONFLITO consulta pelo nome. O hífen e o acento
+// somem na chave dos dots — se este casamento quebrar, o contra-ataque some da
+// tela sem erro nenhum e a mesa acha que é bug de alcance.
+{
+    const lutador = { dots: { sk_combate_contra_ataque: 2, sk_combate_reflexo: 3 }, derivedTotals: {} };
+    assert.equal(valorComponente('Contra-Ataque', lutador), 2, 'perícia Contra-Ataque (hífen) casa com sk_combate_contra_ataque');
+    assert.equal(valorComponente('Reflexo', lutador), 3, 'Reflexo, que dá as defesas grátis da rodada');
+    assert.equal(valorComponente('Contra-Ataque', { dots: { sk_combate_reflexo: 3 } }), null,
+        'quem não comprou a perícia devolve null — e o painel diz isso na tela');
+}
 
 // NPC real: valoresDer (siglas legadas + extras) + atributos + pericias em texto
 const fichaNpc = {

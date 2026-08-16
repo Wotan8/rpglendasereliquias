@@ -675,6 +675,8 @@ html, body {
 .tb-conflito-alvoin input { width: 64px; }
 /* orçamento de defesas da rodada (Reflexo − 1) */
 .tb-conflito-orc { color: var(--lr-text-2); font-size: var(--lr-fs-xs); white-space: nowrap; }
+/* Por que o botão está apagado — na tela, não no title (celular não tem hover) */
+.tb-conflito-porque { color: var(--lr-text-2); font-size: var(--lr-fs-xs); font-style: italic; white-space: nowrap; }
 
 /* ===== ⚔️ Painel do Turno no CELULAR =====
    Numa tela de mão o painel comia metade do mapa: título em versalete que
