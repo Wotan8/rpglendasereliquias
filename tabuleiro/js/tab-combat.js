@@ -11,6 +11,7 @@ import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTroc
 import { rolarFormula } from './tab-conflito-calc.js';
 import { tirarRetrato, avancarRitual } from '../../shared/turno-efeitos.js?v=1';
 import { logChat } from './tab-chat.js';
+import { CONDICAO_TRANSE } from '../../shared/incorporacao.js?v=1';
 
 let janelaAberta = false;
 
@@ -379,7 +380,29 @@ window.tbCombEncerrarCena = async function() {
     // 🧱 Nada manifestado por runa sobrevive à cena: o fluxo que sustentava a
     // parede acabou junto com o combate.
     await limparManifestacoes({ tudo: true });
+    // 🌀 E ninguém sai do combate preso dentro de outro corpo.
+    await desfazerIncorporacoes();
 };
+
+/**
+ * 🌀 Devolve o emprestado de toda incorporação ainda de pé.
+ *
+ * O transe é da CENA: acabou o combate, o Xamã volta ao próprio corpo mesmo
+ * que ninguém tenha tirado a condição. Sem isto, encerrar a cena deixaria o
+ * personagem com os bônus da Dádiva e o token do hóspede sob controle dele
+ * até alguém lembrar de desfazer na mão.
+ *
+ * Um write por incorporação, e elas são raras — não vale fila para isso.
+ */
+async function desfazerIncorporacoes() {
+    const c = cenaAtiva(T.combate);
+    // Só o lado que TEM a Dádiva emprestada; o hospedeiro é limpo junto por ele.
+    const presos = (c?.participantes || []).filter(p => p.incorporacao && p.incorporacao.modo !== 'hospedeiro');
+    for (const p of presos) {
+        try { await window.tbTurnoDesfazerIncorporacao?.(p.id); }
+        catch (e) { console.warn('desfazer incorporação no fim da cena', e); }
+    }
+}
 
 /**
  * 🧱 Apaga o que as runas manifestaram e já venceu.
@@ -554,7 +577,7 @@ export async function checarCondicoesRodada() {
     const { participantes, expiradas } = tirarCondicoesExpiradas(c.participantes || [], c.rodada || 1);
     if (expiradas.length) {
         await salvar(participantes);
-        for (const e of expiradas) await sincRemocaoFicha(participantes.find(x => x.id === e.pid), e.cond.nome);
+        for (const e of expiradas) await aposRemoverCondicao(participantes.find(x => x.id === e.pid), e.cond.nome);
         logChat(`⏱️ Acabou: ${expiradas.map(e => `${e.cond.icone} ${e.cond.nome} (${e.pNome})`).join(' · ')}`);
         avisoCondicoesExpiradas(expiradas);
     }
@@ -1025,6 +1048,28 @@ export async function aplicarCondicaoEmVarios(pids, nome, rodadas, porPid, nivel
 }
 
 /** Tira da ficha (char ou NPC) a condição removida do combate, pelo nome. */
+/**
+ * 🌀 Tirar "Em Transe" DESFAZ a incorporação.
+ *
+ * O Xamã e o Druida deixam um token inerte e agem pelo outro; a condição no
+ * inerte é o que diz que o transe está de pé. Quando ela sai — por remoção do
+ * mestre, por expirar na rodada, ou por o alvo se livrar dela — o emprestado
+ * tem de voltar: os bônus da Dádiva, os módulos, e o controle do token.
+ *
+ * Mora aqui, e não dentro de `sincRemocaoFicha`, porque aquilo espelha
+ * condição na ficha e mais nada. Os três pontos que removem condição passam
+ * por esta função em vez daquela.
+ */
+async function aposRemoverCondicao(p, nome) {
+    await sincRemocaoFicha(p, nome);
+    if (!p || !nome) return;
+    const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    if (norm(nome) !== norm(CONDICAO_TRANSE)) return;
+    if (!p.incorporacao) return;
+    try { await window.tbTurnoDesfazerIncorporacao?.(p.id); }
+    catch (e) { console.warn('desfazer incorporação ao sair do transe', e); }
+}
+
 async function sincRemocaoFicha(p, nome) {
     if (!p || !nome) return;
     const alvo = p.characterId ? ['char', p.characterId] : p.npcId ? ['npcs', p.npcId] : null;
@@ -1048,7 +1093,7 @@ window.tbCombCondRm = async function(pid, i) {
     p.condicoes = (p.condicoes || []).filter((_, ci) => ci !== i);
     await salvar(parts);
     if (removida) logChat(`✨ ${p.name || '?'}: −${removida}`);
-    await sincRemocaoFicha(p, removida);
+    await aposRemoverCondicao(p, removida);
 };
 
 window.tbCombRemover = async function(pid) {
@@ -1157,7 +1202,7 @@ async function resolverTesteDeSaida(teste, pid, graus) {
     } else {
         toast(`✅ ${p.name} se livrou de ${atual.nome}`);
         logChat(`✅ ${p.name || '?'} se livrou de ${atual.icone} ${atual.nome}`);
-        await sincRemocaoFicha(p, atual.nome);
+        await aposRemoverCondicao(p, atual.nome);
     }
 }
 
