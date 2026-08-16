@@ -37,6 +37,7 @@ import { aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.j
 import { logChat } from './tab-chat.js';
 import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal,
          defesasLivres, custoDaDefesa, soODado,
+         precisaRolarDano,
          podeContraAtacar as regraContraAtaque } from './tab-conflito-calc.js';
 
 const DADO_DESARMADO = '1d4';   // §6.8: contra-ataque sem arma
@@ -345,8 +346,10 @@ window.tbConfDefesa = async (i, valor, nome) => {
         passou: golpePassa(c.rolagem.graus, Number(valor) || 0, c.rolagem.dado),
     });
     const todos = alvos.every(x => x.escolhido);
-    // sem fórmula de dano não há o que rolar — vai direto para aplicar (condições)
-    const proxima = !todos ? 'defesa' : (c.acao.dano ? 'dano' : 'aplicar');
+    // Só rola dano quem tem em QUEM causar. Sem fórmula, ou com todo mundo
+    // defendendo, não há o que rolar: a janela vai direto para o fim em vez de
+    // pedir um 1d12+4 que não vai a lugar nenhum.
+    const proxima = !todos ? 'defesa' : (precisaRolarDano(c.acao.dano, alvos) ? 'dano' : 'aplicar');
     // defesa declarada consome o orçamento da rodada (a de graça e a paga)
     await salvar({ ...c, alvos, fase: proxima }, semDefesa ? null : comDefesaGasta(a.pid));
 };

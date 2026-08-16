@@ -4,7 +4,8 @@
  */
 import assert from 'node:assert/strict';
 import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal,
-         defesasLivres, custoDaDefesa, soODado, podeContraAtacar } from './tab-conflito-calc.js';
+         defesasLivres, custoDaDefesa, soODado, podeContraAtacar,
+         precisaRolarDano } from './tab-conflito-calc.js';
 
 // --- Graus ---
 assert.equal(grausDoAtaque(7, 4), 3, 'Alvo 7, dado 4 → 3 Graus');
@@ -53,6 +54,18 @@ assert.equal(danoFinal(9, 0, true, true), 9, 'sem blindagem, o crítico entra in
 assert.equal(danoFinal(3, 5, true, true), 1, 'o piso de 1 vale até no crítico');
 // chamada antiga (3 argumentos) não pode mudar de comportamento
 assert.equal(danoFinal(9, 2, true), 3.5, 'sem o 4º argumento, Absorver parte como sempre partiu');
+
+// --- Rolar dano só quando há em quem cair ---
+// O machado errou e a janela mesmo assim pedia "💥 Rolar 1d12+4". Dado que não
+// tem alvo não se rola: a janela vai direto para o fim.
+const levou = { nome: 'A', passou: true }, defendeu = { nome: 'B', passou: false };
+assert.equal(precisaRolarDano('1d12+4', [levou]), true, 'alguém levou: rola');
+assert.equal(precisaRolarDano('1d12+4', [defendeu]), false, 'todo mundo defendeu: não rola');
+assert.equal(precisaRolarDano('1d12+4', [defendeu, levou]), true, 'basta um ter levado');
+assert.equal(precisaRolarDano('', [levou]), false, 'sem fórmula não há dado, mesmo acertando');
+assert.equal(precisaRolarDano('  ', [levou]), false, 'fórmula em branco também não');
+assert.equal(precisaRolarDano('1d6', []), false, 'sem alvo nenhum não rola');
+assert.equal(precisaRolarDano('1d6', null), false, 'lista ausente não explode');
 
 // --- Orçamento de defesas da rodada (§6.2) ---
 assert.equal(defesasLivres(4), 3, 'Reflexo 4 → 3 defesas grátis');

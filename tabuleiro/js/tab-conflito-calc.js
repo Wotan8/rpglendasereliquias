@@ -92,6 +92,15 @@ export function danoFinal(bruto, blindagem, meia, critico) {
 }
 
 /**
+ * Tem dano a rolar? Precisa de fórmula E de alguém que tenha levado o golpe.
+ * Ataque que todo mundo defendeu não pede dado: a janela ia parar num
+ * "💥 Rolar 1d12+4" que não tinha em quem cair.
+ */
+export function precisaRolarDano(formulaDano, alvos) {
+    return !!String(formulaDano || '').trim() && (alvos || []).some(a => a?.passou);
+}
+
+/**
  * Defesas GRÁTIS por rodada (§6.2): Reflexo − 1, mínimo 1. Cada defesa além
  * dessas custa 1 Energia — e o contra-ataque custa 1 Energia sempre.
  */
