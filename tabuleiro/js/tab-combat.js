@@ -376,7 +376,42 @@ window.tbCombEncerrarCena = async function() {
     if (!confirm('Encerrar o combate desta cena? (participantes e iniciativas ficam; o painel de turno some)')) return;
     await salvar(partsDaCena(), { iniciado: false, retomar: null });
     logChat('🕊️ Combate encerrado pelo mestre');
+    // 🧱 Nada manifestado por runa sobrevive à cena: o fluxo que sustentava a
+    // parede acabou junto com o combate.
+    await limparManifestacoes({ tudo: true });
 };
+
+/**
+ * 🧱 Apaga o que as runas manifestaram e já venceu.
+ *
+ * `tudo: true` varre tudo (fim de cena). Sem ele, só o que passou da rodada
+ * marcada — o escudo de 1 turno some sozinho, a parede de 1 cena fica.
+ *
+ * A parede cria DOIS objetos (a laje que se vê e o bloqueio na camada `luz`),
+ * e os dois carregam a mesma marca: varrer por `manifestacao` pega o par
+ * inteiro sem precisar saber que são dois.
+ *
+ * Só o mestre executa. Dois clientes varrendo o mesmo objeto dariam dois
+ * deletes, e o segundo falharia no console sem motivo aparente.
+ */
+async function limparManifestacoes({ tudo = false } = {}) {
+    if (!T.isMaster) return;
+    const rodada = cenaAtiva(T.combate)?.rodada || 1;
+    const mortos = [];
+    for (const o of T.objects.values()) {
+        const mf = o.manifestacao;
+        if (!mf) continue;
+        if (tudo || (mf.expiraNaRodada != null && rodada >= mf.expiraNaRodada)) mortos.push(o);
+    }
+    if (!mortos.length) return;
+    // A laje e o bloqueio da mesma parede contam como UMA coisa no chat.
+    const nomes = [...new Set(mortos.map(o => o.manifestacao.runa || 'manifestação'))];
+    try {
+        const { delObj } = await import('./tab-objects.js');
+        for (const o of mortos) await delObj(o.id);
+        logChat(`🧱 ${tudo ? 'A cena acabou e o' : 'O'} que as runas manifestaram se desfez: ${nomes.join(', ')}`);
+    } catch (e) { console.warn('limpar manifestações', e); }
+}
 
 /** Facção do participante — é o que diz quem é aliado de quem para as skills. */
 window.tbCombFaccao = async function(pid, valor) {
@@ -435,7 +470,11 @@ window.tbCombTurno = async function(dir) {
     let partsNovos = c.participantes || [];
     if (dir > 0) {
         partsNovos = comRetratoDoTurno(partsNovos, parts[turno]?.id, rodada);
-        if (rodada > rodadaAntes) partsNovos = await avancarRituais(partsNovos, rodada);
+        if (rodada > rodadaAntes) {
+            partsNovos = await avancarRituais(partsNovos, rodada);
+            // 🧱 e o que foi manifestado por prazo curto vence aqui
+            limparManifestacoes().catch(e => console.warn('limpar manifestações', e));
+        }
     }
 
     // ⚔️ turno novo = ações cheias (1 Padrão + 1 Movimento, §6.2).

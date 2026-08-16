@@ -1596,9 +1596,19 @@ async function manifestarNoMapa(m, meta, p) {
     const ref = locais[0] || null;
     const px = Math.max(gs * 0.5, unidadesParaPx(arestaM, ref));
 
+    // 🕰️ O prazo entra no objeto AGORA, em rodada absoluta. Guardar "1 turno"
+    // como texto obrigaria quem limpa a interpretar prosa; guardar a rodada em
+    // que morre faz a limpeza ser uma comparação de número.
+    const rodadaAtual = cena()?.rodada || 1;
+    const rodadasDe = (txt) => /turno/i.test(txt) ? 1 : /minuto/i.test(txt) ? 10 : 0;   // 0 = a cena inteira
+    const dura = rodadasDe(dur);
     const base = {
         layerId: 'tokens', visivelPublico: true,
-        manifestacao: { runa: nome, chave, duracao: dur, material, porPid: p?.id || null },
+        manifestacao: {
+            runa: nome, chave, duracao: dur, material, porPid: p?.id || null,
+            // null = dura a cena e some quando ela encerra
+            expiraNaRodada: dura ? rodadaAtual + dura : null,
+        },
     };
 
     try {
