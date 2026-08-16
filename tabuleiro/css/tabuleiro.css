@@ -762,6 +762,8 @@ html, body {
     background: var(--lr-bg-1); border: 1px solid var(--lr-border); border-radius: var(--lr-radius-sm);
     padding: 0 var(--lr-space-2); font-size: var(--lr-fs-xs); color: var(--lr-text-2);
 }
+/* o que a CONDIÇÃO somou naquele VD (Postura → Blindado): em ouro, ao lado */
+.tb-combat-vd-bonus { color: var(--lr-gold-2); font-style: normal; font-weight: 700; }
 .tb-combat-vd b { color: var(--lr-text-1); }
 
 /* facção na janela de Combate */

@@ -4,17 +4,18 @@
  * espaço tem a forma da família do instrumento — não o arco de um golpe.
  * Enquanto isso não existia, a Rabeca da barda mirava como uma espada.
  *
- *   🥁 Percussão — CÍRCULO em volta de quem toca. Raio = 2 × Qualidade.
+ *   🥁 Percussão — CÍRCULO em volta de quem toca. Raio  = 2 × (Qualidade + 1).
  *      O tambor bate para todo lado; não há para onde apontar.
- *   🎺 Sopro     — CONE estreito, 30°. Comprimento = 4 × Qualidade.
+ *   🎺 Sopro     — CONE estreito, 30°. Comprimento = 4 × (Qualidade + 1).
  *      A trompa projeta longe e concentrado.
- *   🎻 Corda     — CONE largo, 90°. Comprimento = 3 × Qualidade.
+ *   🎻 Corda     — CONE largo, 90°. Comprimento = 3 × (Qualidade + 1).
  *      A rabeca espalha na frente, sem alcançar o que a trompa alcança.
  *
- * A QUALIDADE é o poder da peça (0–5, ver shared/equip-campos.js). Um
- * instrumento improvisado (Qualidade 0) não enche espaço nenhum — e é isso que
- * `area()` devolve, para a mesa ver que falta cadastrar a peça em vez de a
- * habilidade sair com um alcance inventado.
+ * ⚠️ O "+1" é o que faz a peça INICIAL soar. A Qualidade começa em 0 (0 —
+ * Inicial, ver shared/equip-campos.js) e não existe instrumento acima de 1 no
+ * jogo: multiplicar direto pela Qualidade dava 0 m em todo instrumento que
+ * existe. O multiplicador é o tamanho do DEGRAU, não o total — Qualidade 0
+ * paga um degrau, Qualidade 1 paga dois.
  *
  * A família vem das TAGS do item ("Instrumento" + "Sopro"/"Corda"/"Percussão"),
  * que é como o catálogo já marca os instrumentos.
@@ -54,13 +55,14 @@ export function areaDoInstrumento(tags, qualidade) {
     if (!chave) return null;
     const f = FAMILIAS[chave];
     const q = Math.max(0, Number(qualidade) || 0);
-    return { familia: chave, nome: f.nome, icone: f.icone, forma: f.forma, ang: f.ang, metros: f.mult * q, qualidade: q };
+    return { familia: chave, nome: f.nome, icone: f.icone, forma: f.forma, ang: f.ang,
+             metros: f.mult * (q + 1), qualidade: q };
 }
 
 /** Frase para a mesa ler na mira: de onde saiu aquele número. */
 export function explicaArea(a) {
     if (!a) return '';
-    const conta = `${FAMILIAS[a.familia].mult} × Qualidade ${a.qualidade}`;
+    const conta = `${FAMILIAS[a.familia].mult} × (Qualidade ${a.qualidade} + 1)`;
     return a.forma === 'circulo'
         ? `${a.icone} ${a.nome}: círculo de ${a.metros} m de raio (${conta})`
         : `${a.icone} ${a.nome}: cone de ${a.ang}° e ${a.metros} m (${conta})`;

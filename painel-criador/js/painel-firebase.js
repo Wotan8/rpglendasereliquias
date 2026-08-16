@@ -266,6 +266,18 @@ const MODULE_DEFS = {
                 key: 'modAlvoTestes', label: '🎯 Modificador no Alvo de todos os testes', type: 'number',
                 placeholder: 'Ex: -2 · vazio = a condição não mexe no Alvo'
             },
+            // 🛡️ "Blindado: +N de Blindagem". O N vem do NÍVEL: aqui se diz
+            // QUAL Valor Derivado e quanto vale CADA degrau, então Blindado
+            // nível 5 soma +5. Sem os dois campos a condição não mexe em VD.
+            {
+                key: 'modVd', label: '📊 Valor Derivado que a condição altera', type: 'text',
+                placeholder: 'Ex: Blindagem · vazio = não altera VD nenhum'
+            },
+            {
+                key: 'modVdPorNivel', label: '📊 Quanto soma nesse VD por nível', type: 'number',
+                placeholder: 'Ex: 1 → nível 5 soma +5 · negativo também vale',
+                showWhenNotNull: 'modVd'
+            },
 
             // ===== 🎲 TESTE PARA SAIR =====
             // Mesmo formato do "🎯 Pedir teste" do Tabuleiro (tab-combat.js):

@@ -249,11 +249,23 @@ function render() {
                 ${podeCtrl ? `<button class="tb-cstat-btn" onclick="tbCombVd('${p.id}','${esc(d.key)}',1)">+</button>` : ''}
             </div>`;
         };
+        // 🛡️ O que as CONDIÇÕES somam neste VD (Postura Defensiva → Blindado).
+        // Sem isto o chip da condição aparecia e a Blindagem seguia 0 na tela —
+        // a mesa via o efeito ligado e o número desligado.
+        const vdComCondicao = (d, part) => {
+            const bonus = efeitoDasCondicoes(part?.condicoes || [], T.condicoesSistema)
+                .modVd?.[String(d.nome || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()] || 0;
+            const total = (Number(d.valor) || 0) + bonus;
+            const dica = bonus ? `${esc(d.nome)}: ${d.valor} de base ${bonus > 0 ? '+' : '−'} ${Math.abs(bonus)} por condição` : esc(d.nome);
+            return `<span class="tb-combat-vd" title="${dica}">${esc(d.icone)} <span class="tb-combat-vd-nome">${esc(d.nome)}</span> `
+                + `<b>${esc(String(d.prefixo))}${total}${esc(String(d.sufixo))}</b>`
+                + (bonus ? ` <i class="tb-combat-vd-bonus">${bonus > 0 ? '+' : ''}${bonus}</i>` : '') + `</span>`;
+        };
         const vdsHtml = vdsCombate.length
             ? vdsCombate.filter(d => d.campoAtual && d.valor > 0).map(vdBarra).join('')
               + (vdsCombate.some(d => !(d.campoAtual && d.valor > 0))
                 ? `<div class="tb-combat-vds">${vdsCombate.filter(d => !(d.campoAtual && d.valor > 0)).map(d =>
-                    `<span class="tb-combat-vd" title="${esc(d.nome)}">${esc(d.icone)} <span class="tb-combat-vd-nome">${esc(d.nome)}</span> <b>${esc(String(d.prefixo))}${d.valor}${esc(String(d.sufixo))}</b></span>`).join('')}</div>`
+                    vdComCondicao(d, p)).join('')}</div>`
                 : '')
             : '';
         const stats = secreto ? `

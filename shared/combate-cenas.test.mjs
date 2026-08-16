@@ -351,4 +351,30 @@ assert.equal(porqueCondicao(ef([{ nome: 'Lento' }, { nome: 'Lento' }]), 'multDes
 assert.equal(porqueCondicao(ef(['Lento', 'Imobilizado']), 'multDesloc'), 'Lento, Imobilizado',
     'condições diferentes seguem listadas'); 
 
+// 🛡️ MODIFICADOR EM VALOR DERIVADO: o "+N de Blindagem" do Blindado. O N é o
+// NÍVEL — Blindado 5 (Postura Defensiva) soma +5.
+{
+    const reg = [
+        { nome: 'Blindado', acumulaNiveis: true, nivelMaximo: 5, modVd: 'Blindagem', modVdPorNivel: 1 },
+        { nome: 'Inabalável', modVd: 'Blindagem', modVdPorNivel: 2 },
+        { nome: 'Molhado' },
+    ];
+    const bld = (conds) => efeitoDasCondicoes(conds, reg).modVd?.blindagem || 0;
+    assert.equal(bld([{ nome: 'Blindado', nivel: 5 }]), 5, 'Blindado 5 = +5 de Blindagem');
+    assert.equal(bld([{ nome: 'Blindado', nivel: 1 }]), 1, 'nível 1 = +1');
+    assert.equal(bld([{ nome: 'Blindado' }]), 1, 'sem nível gravado vale 1');
+    assert.equal(bld([{ nome: 'Inabalável' }]), 2, 'outra condição, outro degrau');
+    assert.equal(bld([{ nome: 'Molhado' }]), 0, 'condição que não mexe em VD não mexe');
+    assert.equal(bld([{ nome: 'Blindado', nivel: 3 }, { nome: 'Inabalável' }]), 5, 'condições SOMAM no mesmo VD');
+    assert.equal(bld([]), 0);
+    // o nome do VD como está no cadastro fica guardado, para a tela exibir
+    assert.equal(efeitoDasCondicoes([{ nome: 'Blindado', nivel: 2 }], reg).modVdNome.blindagem, 'Blindagem');
+    assert.equal(porqueCondicao(efeitoDasCondicoes([{ nome: 'Blindado', nivel: 2 }], reg), 'modVd'), 'Blindado');
+    // sem os DOIS campos não há efeito — meio cadastro não vira número
+    assert.equal(efeitoDasCondicoes([{ nome: 'X', nivel: 3 }], [{ nome: 'X', modVd: 'Blindagem' }]).modVd.blindagem, undefined,
+        'sem modVdPorNivel não soma nada');
+    assert.deepEqual(efeitoDasCondicoes([{ nome: 'Y', nivel: 3 }], [{ nome: 'Y', modVdPorNivel: 2 }]).modVd, {},
+        'sem dizer QUAL VD, não soma em nenhum');
+}
+
 console.log('✅ combate-cenas: doc antigo, espelho da cena ativa, troca, patch isolado, criar e apagar, condições, turno mecânico, turno guardado, custo vital e de mecânica, efeito das condições e agrupamento OK');

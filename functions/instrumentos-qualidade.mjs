@@ -6,8 +6,9 @@
  * instrumentos estavam sem Qualidade nenhuma, então toda Sonoromancia saía
  * com 0 m de alcance.
  *
- * Decisão de mesa (16/08/2026): ainda não existe item de Qualidade maior que
- * 1 no jogo — todos entram em 1.
+ * Decisão de mesa (16/08/2026): a Qualidade INICIAL é 0, e nenhum item do
+ * jogo passa de 1. A área usa (Qualidade + 1), então a peça inicial já soa —
+ * ver shared/instrumento-area.js.
  *
  * Grava a STRING '1', não o número: o campo é um `select` no Painel do Criador
  * (shared/equip-campos.js) e compara `valores[key] === o.value`, que são
@@ -28,7 +29,7 @@ admin.initializeApp({ credential: admin.credential.cert(
     require('./rpg-lendasereliquias-firebase-adminsdk-fbsvc-1c3d60aa29.json')) });
 const db = admin.firestore();
 const APPLY = process.argv.includes('--apply');
-const QUALIDADE = '1';
+const QUALIDADE = '0';
 
 const ehInstrumento = (o) => (o.tags || []).some(t => /^instrumento$/i.test(String(t).trim()));
 const familia = (o) => ((o.tags || []).find(t => /^(sopro|corda|percuss)/i.test(String(t).trim())) || '—');

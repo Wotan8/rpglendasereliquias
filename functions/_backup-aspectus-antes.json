@@ -1,0 +1,1348 @@
+[
+  {
+    "id": "asp_fogo",
+    "antes": {
+      "nome": "Fogo",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "cor": "Vermelha",
+      "descricao": "A natureza da Essência manipulada. Consome e expande; a mais fácil de acender, a mais difícil de deter. Nv1 chama ~200 °C · Nv3 fogueira ~800 °C · Nv5 fusão de metal ~1.500 °C.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "ordem": 200,
+      "publicado": true,
+      "imagemUrl": "https://firebasestorage.googleapis.com/v0/b/rpg-lendasereliquias.firebasestorage.app/o/runic-elements%2F1783997436999_Gemini_Generated_Image_xrdts6xrdts6xrdt-Photoroom.png?alt=media&token=acd6241e-876f-4622-b7fc-2cc088b0c80a",
+      "versao": 1,
+      "updatedAt": {
+        "_seconds": 1783997443,
+        "_nanoseconds": 388000000
+      },
+      "condicaoCritica": [
+        {
+          "condicao": "Chaga",
+          "condicaoId": "e0bG9abPmxrIdsgECen6"
+        }
+      ],
+      "condicoesFisicas": [
+        {
+          "condicao": "Queimadura",
+          "condicaoId": "5kdNTUzp97ker9lIPFdc"
+        },
+        {
+          "condicao": "Inflamado",
+          "condicaoId": "QVCroKL9Sf74tdYWfzO3"
+        }
+      ],
+      "atualizadoEm": {
+        "_seconds": 1786843842,
+        "_nanoseconds": 329000000
+      },
+      "condicoesEssencia": [
+        {
+          "condicao": "Queimadura",
+          "condicaoId": "5kdNTUzp97ker9lIPFdc"
+        },
+        {
+          "condicao": "Amedrontado",
+          "condicaoId": "TbfSeoUb68rAnoyyvxea"
+        },
+        {
+          "condicao": "Exaustão",
+          "condicaoId": "wB6w7qkhhrutGavRYTVa"
+        }
+      ],
+      "sanidadePorNivelGravar": 0,
+      "sanidadePorNivelAprender": 0,
+      "sublimadorObrigatorio": false,
+      "aceitaErosor": true,
+      "bloqueadoAprendizado": false,
+      "canalDano": "Dano Ígneo",
+      "canalDanoVdId": "fWgSYvctuS2QtiiRPr2e",
+      "formaFisicaCoringa": false,
+      "danoVerdadeiro": false,
+      "periciaExigida": null
+    }
+  },
+  {
+    "id": "asp_água",
+    "antes": {
+      "nome": "Água",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "cor": "Azul-Clara",
+      "descricao": "A natureza da Essência manipulada. Adapta-se e acumula; paciente, incompressível. Nv1 copo d'água · Nv3 torrente · Nv5 maremoto localizado.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "ordem": 201,
+      "publicado": true,
+      "imagemUrl": "https://firebasestorage.googleapis.com/v0/b/rpg-lendasereliquias.firebasestorage.app/o/runic-elements%2F1783997402447_Gemini_Generated_Image_luszf0luszf0lusz-Photoroom.png?alt=media&token=b20bf366-cc90-4381-b7f7-51388ca5f2a2",
+      "versao": 1,
+      "updatedAt": {
+        "_seconds": 1783997408,
+        "_nanoseconds": 956000000
+      },
+      "condicaoCritica": [
+        {
+          "condicao": "Afogando",
+          "condicaoId": "N8oLkOsQk6wqkQLWgmTQ"
+        }
+      ],
+      "condicoesFisicas": [
+        {
+          "condicao": "Prostrado",
+          "condicaoId": "NzEcCtKyz8L1ljGe1qpa"
+        },
+        {
+          "condicao": "Entorpecido",
+          "condicaoId": "n0j1Dm09do7cPUnuNAoT"
+        }
+      ],
+      "atualizadoEm": {
+        "_seconds": 1786843842,
+        "_nanoseconds": 373000000
+      },
+      "condicoesEssencia": [
+        {
+          "condicao": "Afogando",
+          "condicaoId": "N8oLkOsQk6wqkQLWgmTQ"
+        },
+        {
+          "condicao": "Lento",
+          "condicaoId": "sKbFBceZxG9YmP90mZyV"
+        }
+      ],
+      "sanidadePorNivelGravar": 0,
+      "sanidadePorNivelAprender": 0,
+      "sublimadorObrigatorio": false,
+      "aceitaErosor": false,
+      "bloqueadoAprendizado": false,
+      "canalDano": "Dano Aquático",
+      "canalDanoVdId": "PKwLUtAwMeY4JSXkBWYt",
+      "formaFisicaCoringa": false,
+      "danoVerdadeiro": false,
+      "periciaExigida": null
+    }
+  },
+  {
+    "id": "asp_terra",
+    "antes": {
+      "nome": "Terra",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "cor": "Ocre",
+      "descricao": "A natureza da Essência manipulada. Sustenta e resiste; lenta para agir, lenta para ceder. Nv1 punhado de areia · Nv3 muro de pedra · Nv5 colapso de terreno.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "ordem": 202,
+      "publicado": true,
+      "imagemUrl": "https://firebasestorage.googleapis.com/v0/b/rpg-lendasereliquias.firebasestorage.app/o/runic-elements%2F1783998028841_Gemini_Generated_Image_eclhieeclhieeclh-Photoroom.png?alt=media&token=41b448d5-ddd1-49d1-9c28-c40557b94975",
+      "versao": 1,
+      "updatedAt": {
+        "_seconds": 1783998037,
+        "_nanoseconds": 149000000
+      },
+      "condicaoCritica": [
+        {
+          "condicao": "Fratura",
+          "condicaoId": "Wd12PwYcfUZlfcYyWQFN"
+        }
+      ],
+      "condicoesFisicas": [
+        {
+          "condicao": "Prostrado",
+          "condicaoId": "NzEcCtKyz8L1ljGe1qpa"
+        },
+        {
+          "condicao": "Imobilizado",
+          "condicaoId": "4pPbJXKNaZf0AfJyfDC2"
+        }
+      ],
+      "atualizadoEm": {
+        "_seconds": 1786843842,
+        "_nanoseconds": 411000000
+      },
+      "condicoesEssencia": [
+        {
+          "condicao": "Ancorado",
+          "condicaoId": "KdlQTnqNU0kVyP4vU3hA"
+        },
+        {
+          "condicao": "Lento",
+          "condicaoId": "sKbFBceZxG9YmP90mZyV"
+        }
+      ],
+      "sanidadePorNivelGravar": 0,
+      "sanidadePorNivelAprender": 0,
+      "sublimadorObrigatorio": false,
+      "aceitaErosor": false,
+      "bloqueadoAprendizado": false,
+      "canalDano": "Dano Telúrico",
+      "canalDanoVdId": "5ChOtGBqh7CvLAHaOwqq",
+      "formaFisicaCoringa": false,
+      "danoVerdadeiro": false,
+      "periciaExigida": null
+    }
+  },
+  {
+    "id": "asp_vento",
+    "antes": {
+      "nome": "Vento",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "descricao": "A natureza da Essência manipulada. Move e dispersa; nunca ocupa, sempre atravessa. Nv1 brisa · Nv3 ventania · Nv5 furacão compacto.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "ordem": 203,
+      "publicado": true,
+      "imagemUrl": "https://firebasestorage.googleapis.com/v0/b/rpg-lendasereliquias.firebasestorage.app/o/runic-elements%2F1783997419263_Gemini_Generated_Image_2xt6gv2xt6gv2xt6-Photoroom.png?alt=media&token=b4db18b0-d34c-4f0a-90cf-41d7febcb939",
+      "versao": 1,
+      "updatedAt": {
+        "_seconds": 1783997425,
+        "_nanoseconds": 404000000
+      },
+      "cor": "Cinza-Claro",
+      "condicaoCritica": [
+        {
+          "condicao": "Surdo",
+          "condicaoId": "bDPq8wO5xWBveDtQpDNu"
+        }
+      ],
+      "condicoesFisicas": [
+        {
+          "condicao": "Prostrado",
+          "condicaoId": "NzEcCtKyz8L1ljGe1qpa"
+        },
+        {
+          "condicao": "Desorientado",
+          "condicaoId": "twcotv9On7xrhFgnDSCG"
+        }
+      ],
+      "atualizadoEm": {
+        "_seconds": 1786843842,
+        "_nanoseconds": 455000000
+      },
+      "condicoesEssencia": [
+        {
+          "condicao": "Surdo",
+          "condicaoId": "bDPq8wO5xWBveDtQpDNu"
+        },
+        {
+          "condicao": "Alento",
+          "condicaoId": "FvRBu9pp3oGpVq5mvAUq"
+        }
+      ],
+      "sanidadePorNivelGravar": 0,
+      "sanidadePorNivelAprender": 0,
+      "sublimadorObrigatorio": false,
+      "aceitaErosor": false,
+      "bloqueadoAprendizado": false,
+      "canalDano": "Dano Eólico",
+      "canalDanoVdId": "SNkuKK3K3HD0RbxkalhH",
+      "formaFisicaCoringa": false,
+      "danoVerdadeiro": false,
+      "periciaExigida": null
+    }
+  },
+  {
+    "id": "asp_luz",
+    "antes": {
+      "nome": "Luz",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "descricao": "A natureza da Essência manipulada. Revela e alcança; viaja reta. Nv1 brilho de vela · Nv3 holofote/flash · Nv5 sol artificial localizado.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "imagemUrl": "",
+      "ordem": 204,
+      "publicado": true,
+      "cor": "Amarela"
+    }
+  },
+  {
+    "id": "asp_vida",
+    "antes": {
+      "nome": "Vida",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "cor": "Azul",
+      "descricao": "A natureza da Essência manipulada. Cresce e repara; a única que \"quer\" algo. Nv1 fechar corte · Nv3 regenerar fratura · Nv5 restaurar membro.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "imagemUrl": "",
+      "ordem": 205,
+      "publicado": true
+    }
+  },
+  {
+    "id": "asp_cristal",
+    "antes": {
+      "nome": "Cristal",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "cor": "Iridescente",
+      "descricao": "A natureza da Essência manipulada. Ressoa e amplifica; espelho de outras essências. Nv1 ressonância fraca · Nv3 amplificar ×2 · Nv5 ×5.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "imagemUrl": "",
+      "ordem": 206,
+      "publicado": true
+    }
+  },
+  {
+    "id": "asp_temporal",
+    "antes": {
+      "nome": "Temporal",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "cor": "Prateada",
+      "descricao": "A natureza da Essência manipulada. Adia e preserva; raríssima, cobra juros. Nv1 atrasar 0,5 s · Nv3 congelar alvo 3 s · Nv5 acelerar/congelar 30 s+.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "imagemUrl": "",
+      "ordem": 207,
+      "publicado": true
+    }
+  },
+  {
+    "id": "asp_espacial",
+    "antes": {
+      "nome": "Espacial",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "cor": "Índigo",
+      "descricao": "A natureza da Essência manipulada. Dobra e conecta; ignora a distância, não a estrutura. Nv1 distorção 10 cm · Nv3 portal pessoal · Nv5 portal permanente.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "imagemUrl": "",
+      "ordem": 208,
+      "publicado": true
+    }
+  },
+  {
+    "id": "asp_necrótico",
+    "antes": {
+      "nome": "Necrótico",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "cor": "Púrpura",
+      "descricao": "A natureza da Essência manipulada. Desfaz e drena; o avesso da Vida. Nv1 drenar vitalidade leve · Nv3 animar cadáver · Nv5 drenar vida em área.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "imagemUrl": "",
+      "ordem": 209,
+      "publicado": true
+    }
+  },
+  {
+    "id": "asp_natureza",
+    "antes": {
+      "nome": "Natureza",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "cor": "Verde",
+      "descricao": "A natureza da Essência manipulada. Enraíza e desperta; nela lingram os Ecos da Alma. Nv1 acelerar broto · Nv3 dominar árvore · Nv5 despertar floresta.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "imagemUrl": "",
+      "ordem": 210,
+      "publicado": true
+    }
+  },
+  {
+    "id": "asp_sangue",
+    "antes": {
+      "nome": "Sangue",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "cor": "Carmesim-Escura",
+      "descricao": "A natureza da Essência manipulada. Vincula e cobra; toda gota é um contrato. Nv1 sentir pulsação · Nv3 manipular sangue · Nv5 pacto de sangue.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "imagemUrl": "",
+      "ordem": 211,
+      "publicado": true
+    }
+  },
+  {
+    "id": "asp_abissal",
+    "antes": {
+      "nome": "Abissal",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "cor": "Negra",
+      "descricao": "A natureza da Essência manipulada. Rasga e sussurra; nenhuma runa a domestica — apenas a aponta. Nv1 sussurro do Abismo · Nv3 invocação menor · Nv5 rasgar véu.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "imagemUrl": "",
+      "ordem": 213,
+      "publicado": true
+    }
+  },
+  {
+    "id": "asp_poder",
+    "antes": {
+      "nome": "Poder",
+      "nomeLatim": "",
+      "tipoElemento": "aspectus",
+      "categoria": "",
+      "complexidade": "",
+      "maxNivel": 5,
+      "cor": "Âmbar-Incandescente",
+      "descricao": "A natureza da Essência manipulada. Força bruta arcana; não pergunta \"como\", só \"quanto\". Nv1 pulso bruto · Nv3 explosão concentrada · Nv5 devastação arcana.",
+      "limites": "Nv5: comunhão — pode ignorar 1 limitação por cena.",
+      "posicaoRegra": "Núcleo — após lógica/condução, antes do Artus",
+      "flags": [
+        "aspectus",
+        "nucleo"
+      ],
+      "niveis": [
+        {
+          "nivel": 1,
+          "custoEss": 5,
+          "custoExp": 5,
+          "sessoesEstudo": 4,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 2,
+          "custoEss": 10,
+          "custoExp": 10,
+          "sessoesEstudo": 5,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 3,
+          "custoEss": 20,
+          "custoExp": 20,
+          "sessoesEstudo": 7,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 4,
+          "custoEss": 40,
+          "custoExp": 40,
+          "sessoesEstudo": 10,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        },
+        {
+          "nivel": 5,
+          "custoEss": 80,
+          "custoExp": 80,
+          "sessoesEstudo": 14,
+          "capacidade": null,
+          "taxa": null,
+          "propriedades": ""
+        }
+      ],
+      "pontosConexao": [
+        {
+          "x": 8,
+          "y": 50,
+          "tipo": "entrada",
+          "rotulo": "in"
+        },
+        {
+          "x": 92,
+          "y": 50,
+          "tipo": "saida",
+          "rotulo": "out"
+        }
+      ],
+      "imagemUrl": "",
+      "ordem": 212,
+      "publicado": true
+    }
+  }
+]

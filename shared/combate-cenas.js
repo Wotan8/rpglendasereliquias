@@ -302,6 +302,8 @@ export function efeitoDasCondicoes(condicoes, registro) {
         naoPodeSerAlvo: false, atraiAlvo: false, faccaoForcada: null,
         porRodada: [], testes: [], niveis: [],
         modAlvo: 0,    // soma dos modificadores no Alvo de QUALQUER teste (§2)
+        modVd: {},     // VD normalizado -> quanto as condições somam nele
+        modVdNome: {}, // o mesmo VD com o nome como está no cadastro
         motivos: {},   // campo -> [nomes das condições] — para dizer POR QUE travou
     };
     const mapa = new Map();
@@ -332,6 +334,18 @@ export function efeitoDasCondicoes(condicoes, registro) {
         const mod = !isNaN(modNivel) && linhaNivel?.modAlvo !== '' && linhaNivel?.modAlvo != null
             ? modNivel : (isNaN(modGeral) ? 0 : modGeral);
         if (mod) { out.modAlvo += mod; marca('modAlvo'); }
+
+        // 🛡️ MODIFICADOR EM VALOR DERIVADO. "Blindado: +N de Blindagem" era só
+        // texto — a Amamoia ficava com o chip na tela e Blindagem 0 na ficha.
+        // O N vem do NÍVEL: `modVdPorNivel` diz quanto vale cada degrau, então
+        // Blindado nv 5 é +5. Condições diferentes somam no mesmo VD.
+        const porNivel = Number(reg.modVdPorNivel);
+        if (reg.modVd && !isNaN(porNivel) && porNivel) {
+            const chave = _normCond(reg.modVd);
+            out.modVd[chave] = (out.modVd[chave] || 0) + porNivel * c.nivel;
+            out.modVdNome[chave] = reg.modVd;
+            marca('modVd');
+        }
         if (reg.testeParaSair && reg.testeNome) {
             out.testes.push({
                 condicao: c.nome, icone: c.icone, nome: reg.testeNome,

@@ -499,6 +499,12 @@ function render() {
     const p = c?.iniciado ? participanteDaVez(c) : null;
     if (p && p.id !== vezAnterior) {   // a vez virou: nada do turno anterior sobrevive
         vezAnterior = p.id; sub = null; golpesCache = null; skillsCache = null;
+        // 🔄 O inventário muda FORA do Tabuleiro: restaurar um item ao cadastro,
+        // equipar pela ficha, o mestre mexer pelo Painel. Nada disso avisa aqui.
+        // A virada da vez é o momento barato de reler — uma query por turno, e
+        // o painel para de oferecer arma que não existe mais (ou de ignorar a
+        // Qualidade que acabou de ser corrigida).
+        limparCacheGolpes();
         if (T.mira) { T.mira = null; markDirty(); }
     }
     if (!p || !controlaVez(p) || (T.isMaster && T.mode === 'public')) {
@@ -814,10 +820,6 @@ window.tbTurnoGolpe = async (i) => {
     // mirava como espada porque nada aqui sabia que ela era um instrumento.
     const area = areaDoInstrumento(g.tags, g.qualidade);
     if (area) {
-        if (!(area.metros > 0)) {
-            toast(`⚠️ ${g.nome}: sem Qualidade cadastrada, o som não alcança ninguém`, 'warning');
-            return;
-        }
         armarMira({
             tipo: 'geometria', forma: area.forma,
             origem: area.forma === 'circulo' ? 'token' : 'token',

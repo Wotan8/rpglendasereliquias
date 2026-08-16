@@ -161,11 +161,25 @@ function blindagemDe(pid, tipos) {
         const v = dv ? valorVdDaFonte(fonte, dv) : null;
         if (v != null) vals.push(Number(v) || 0);
     }
-    if (vals.length) return Math.min(...vals);
+    if (vals.length) return Math.max(0, Math.min(...vals) + bonusDeCondicaoNoVd(pid, 'Blindagem'));
     const geral = acha('Blindagem');
     const v = geral ? valorVdDaFonte(fonte, geral) : null;
-    return Math.max(0, Number(v) || 0);
+    return Math.max(0, (Number(v) || 0) + bonusDeCondicaoNoVd(pid, 'Blindagem'));
 }
+
+/**
+ * 🛡️ Quanto as CONDIÇÕES somam num Valor Derivado deste participante.
+ * A Postura Defensiva aplica Blindado, e o número dela nasce do nível da
+ * condição (ver `modVdPorNivel` em shared/combate-cenas.js). Sem isto o chip
+ * aparecia na tela e a Blindagem continuava zero.
+ */
+function bonusDeCondicaoNoVd(pid, nomeVd) {
+    const p = part(pid);
+    if (!p) return 0;
+    const ef = efeitoDasCondicoes(p.condicoes || [], T.condicoesSistema);
+    return ef.modVd?.[normChaveCond(nomeVd)] || 0;
+}
+const normChaveCond = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 
 // ---------- abertura ----------
 /**

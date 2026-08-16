@@ -3,9 +3,12 @@
  *   node shared/instrumento-area.test.mjs
  *
  * A régua da mesa, em uma linha cada:
- *   Percussão → círculo,   raio 2 × Qualidade
- *   Sopro     → cone 30°,  comprimento 4 × Qualidade
- *   Corda     → cone 90°,  comprimento 3 × Qualidade
+ *   Percussão → círculo,   raio 2 × (Qualidade + 1)
+ *   Sopro     → cone 30°,  comprimento 4 × (Qualidade + 1)
+ *   Corda     → cone 90°,  comprimento 3 × (Qualidade + 1)
+ *
+ * O "+1" é o degrau: a Qualidade começa em 0 e não existe instrumento acima de
+ * 1 no jogo, então multiplicar direto zerava a área de tudo que existe.
  */
 import assert from 'node:assert/strict';
 import { familiaDoInstrumento, areaDoInstrumento, explicaArea, FAMILIAS } from './instrumento-area.js';
@@ -25,34 +28,39 @@ assert.equal(familiaDoInstrumento([]), null);
 assert.equal(familiaDoInstrumento(null), null, 'lixo não explode');
 
 // --- a régua ---
-const rabeca = areaDoInstrumento(['Instrumento', 'Corda'], 3);
+const rabeca = areaDoInstrumento(['Instrumento', 'Corda'], 1);
 assert.equal(rabeca.forma, 'cone');
 assert.equal(rabeca.ang, 90, 'corda espalha na frente');
-assert.equal(rabeca.metros, 9, '3 × Qualidade 3');
+assert.equal(rabeca.metros, 6, '3 × (Qualidade 1 + 1)');
 
-const trompa = areaDoInstrumento(['Instrumento', 'Sopro'], 3);
+const trompa = areaDoInstrumento(['Instrumento', 'Sopro'], 1);
 assert.equal(trompa.ang, 30, 'sopro é estreito');
-assert.equal(trompa.metros, 12, '4 × Qualidade 3 — o sopro vai mais longe que a corda');
+assert.equal(trompa.metros, 8, '4 × (Qualidade 1 + 1) — o sopro vai mais longe que a corda');
 assert.ok(trompa.metros > rabeca.metros, 'a trompa alcança mais que a rabeca de mesma Qualidade');
 
-const tambor = areaDoInstrumento(['Instrumento', 'Percussão'], 3);
+const tambor = areaDoInstrumento(['Instrumento', 'Percussão'], 1);
 assert.equal(tambor.forma, 'circulo', 'tambor não aponta para lado nenhum');
 assert.equal(tambor.ang, 0);
-assert.equal(tambor.metros, 6, '2 × Qualidade 3');
+assert.equal(tambor.metros, 4, '2 × (Qualidade 1 + 1)');
 
-// --- Qualidade manda no tamanho ---
-assert.equal(areaDoInstrumento(['Instrumento', 'Corda'], 5).metros, 15, 'Qualidade 5 na corda');
-assert.equal(areaDoInstrumento(['Instrumento', 'Sopro'], 1).metros, 4);
-assert.equal(areaDoInstrumento(['Instrumento', 'Percussão'], 0).metros, 0,
-    'peça improvisada (Qualidade 0) não enche espaço — falta cadastrar a Qualidade');
-assert.equal(areaDoInstrumento(['Instrumento', 'Corda'], undefined).metros, 0, 'Qualidade ausente conta como 0');
+// --- 🔒 A PEÇA INICIAL SOA. É todo instrumento que existe no jogo hoje. ---
+assert.equal(areaDoInstrumento(['Instrumento', 'Percussão'], 0).metros, 2, 'Q0 percussão: 2 m de raio');
+assert.equal(areaDoInstrumento(['Instrumento', 'Corda'], 0).metros, 3, 'Q0 corda: cone de 3 m');
+assert.equal(areaDoInstrumento(['Instrumento', 'Sopro'], 0).metros, 4, 'Q0 sopro: cone de 4 m');
+assert.ok(areaDoInstrumento(['Instrumento', 'Corda'], 0).metros > 0,
+    '🔒 Qualidade 0 é a peça inicial, não uma peça quebrada — tem que alcançar alguém');
+
+// --- Qualidade manda no tamanho: cada degrau soma um multiplicador ---
+assert.equal(areaDoInstrumento(['Instrumento', 'Corda'], 5).metros, 18, 'Qualidade 5 na corda');
+assert.equal(areaDoInstrumento(['Instrumento', 'Sopro'], 1).metros, 8);
+assert.equal(areaDoInstrumento(['Instrumento', 'Corda'], undefined).metros, 3, 'Qualidade ausente conta como 0');
 assert.equal(areaDoInstrumento(['Instrumento', 'Corda'], -2).qualidade, 0, 'Qualidade negativa não existe');
 assert.equal(areaDoInstrumento(['Arma'], 5), null, 'arma comum não tem área de instrumento');
 
 // --- a explicação que a mesa lê ---
-assert.match(explicaArea(rabeca), /cone de 90° e 9 m/);
-assert.match(explicaArea(rabeca), /3 × Qualidade 3/, 'mostra a conta, não só o resultado');
-assert.match(explicaArea(tambor), /círculo de 6 m de raio/);
+assert.match(explicaArea(rabeca), /cone de 90° e 6 m/);
+assert.match(explicaArea(rabeca), /3 × \(Qualidade 1 \+ 1\)/, 'mostra a conta, não só o resultado');
+assert.match(explicaArea(tambor), /círculo de 4 m de raio/);
 assert.equal(explicaArea(null), '');
 
 // as três famílias e nada mais

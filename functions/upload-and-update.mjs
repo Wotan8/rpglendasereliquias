@@ -1,4 +1,6 @@
 import { createRequire } from 'node:module';
+import fs from 'fs';
+import path from 'path';
 const require = createRequire(import.meta.url);
 const admin = require('firebase-admin');
 
@@ -42,6 +44,18 @@ async function main() {
         metadata: { contentType: 'image/png' } // default
     });
     
+    // Copy to external attachments backup directory
+    try {
+        const backupDir = 'D:\\Imagem\\US - Universo Soberano\\RPG\\Reliera\\10 🗃️ Anexos\\Itens do Gemini';
+        if (fs.existsSync(backupDir)) {
+            const backupPath = path.join(backupDir, `${docName}.png`);
+            fs.copyFileSync(localPath, backupPath);
+            console.log(`Cópia salva em: ${backupPath}`);
+        }
+    } catch (err) {
+        console.error(`Aviso: Não foi possível salvar cópia em anexos:`, err.message);
+    }
+
     // 4. Gerar a URL Pública no formato correto do projeto
     const downloadUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
     
