@@ -21,6 +21,8 @@ import {
 } from './tab-state.js';
 import { refCombate } from './tab-main.js';
 import { VITAIS, dvsVinculadosChar, dvAplicaChar, espelhosDoVitalNpc } from './tab-hud.js';
+// tab-golpes importa ESTE arquivo só dinamicamente, então não fecha ciclo.
+import { limparCacheGolpes } from './tab-golpes.js';
 import { addObj } from './tab-objects.js';
 import { screenToWorld } from './tab-render.js';
 import { pontoVisivelAgora } from './tab-fog.js';
@@ -140,6 +142,12 @@ export async function abrirFichaWin(tipo, id) {
         win.itens = [];
         s.forEach(d => win.itens.push({ id: d.id, ...d.data() }));
         win.itens.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+        // ⚠️ Existem DOIS caches do mesmo inventário: este da janela, que é ao
+        // vivo, e o `_itensPorChave` que alimenta o Painel do Turno. Só o de
+        // cima recebia as mudanças — a caçadora dropava as flechas, a janela
+        // esvaziava e o painel seguia oferecendo munição que não existia mais.
+        // O listener manda nos dois.
+        invalidarItens(tipo, id);
         render(win);
     }, e => console.warn('itens da janela de ficha', e));
 
@@ -1082,6 +1090,23 @@ const _itensPorChave = new Map();
 /** Inventário cru de quem já teve os golpes carregados (ou [] se não teve). */
 export function itensCarregados(tipo, id) {
     return _itensPorChave.get(`${tipo}:${id}`) || [];
+}
+
+/**
+ * 🗑️ O inventário mudou: a próxima consulta refaz a query.
+ *
+ * Sem isto o cache mentia. A caçadora dropou as flechas no mapa, o painel
+ * continuou oferecendo "Flecha de Penacho ×20" e o disparo tentou descontar de
+ * um doc que não existia mais — errava calado e o tiro saía de graça.
+ *
+ * Sem argumento limpa TUDO: quem mexeu no inventário nem sempre sabe de quem
+ * ele é (loot no chão, pilha fundida), e uma query a mais é barata perto de
+ * gastar munição fantasma.
+ */
+export function invalidarItens(tipo, id) {
+    if (tipo && id) _itensPorChave.delete(`${tipo}:${id}`);
+    else _itensPorChave.clear();
+    limparCacheGolpes();
 }
 
 /**

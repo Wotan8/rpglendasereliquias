@@ -181,6 +181,20 @@ const S_CUSTO = (it) => {
     return '';
 };
 
+/**
+ * A habilidade se declara FORA DE COMBATE no próprio texto?
+ *
+ * O campo "Ação:" do cadastro é a resposta oficial, mas nem toda habilidade foi
+ * preenchida — e o texto de muitas já diz, em maiúsculas, "FORA DE COMBATE"
+ * (Buscar Vestígio: "chamar um Eco leva o tempo que leva"). Sem isto elas caem
+ * como Ação Livre e aparecem no meio da rodada, oferecendo um botão que não
+ * deveria existir ali. Ler o texto não inventa regra: só obedece o que já está
+ * escrito nele.
+ */
+function textoDizForaDeCombate(txt) {
+    return /\bfora de combate\b/i.test(String(txt || '').normalize('NFD').replace(/[̀-ͯ]/g, ''));
+}
+
 /** "Ação Padrão"/"Ação Livre"/... (rótulo do cadastro) → custo de ação (§6.2). */
 function acaoDoRotulo(rotulo) {
     const r = String(rotulo || '').toLowerCase();
@@ -374,7 +388,12 @@ async function carregarSkills(chave, p, tentativas = 0) {
             veiculos: veiculosDaSkill(it, r.modulo?.schema, pd),
             retorno: cfgRetorno(r.modulo),
             mira: r.mira,
-            acao: it.custoAcao || pd?.custoAcao || pd?.mira?.custoAcao || acaoDoRotulo(it.acao || pd?.valores?.acao),   // §6.2
+            // §6.2. O texto que se declara "FORA DE COMBATE" manda em tudo:
+            // ele é a intenção escrita pelo autor da habilidade, e o campo
+            // "Ação:" nem sempre foi preenchido.
+            acao: textoDizForaDeCombate(r.efeito || S_EFEITO(pd?.valores || {}))
+                ? 'fora'
+                : (it.custoAcao || pd?.custoAcao || pd?.mira?.custoAcao || acaoDoRotulo(it.acao || pd?.valores?.acao)),
             diagnostico: r.diagnostico,
         };
     });

@@ -147,4 +147,22 @@ assert.deepEqual(custosDaSkill({
     mechPorId: () => null, custoDaMecanica: leitorMec,
 }), [], 'habilidade sem custo cadastrado continua sem custo — a Régua não vira preço');
 
+// 🎵 MOEDA DO MÓDULO COM ALTERNATIVA: o degrau vale para cada moeda listada.
+// A barda ficava com todas as canções travadas em "não tem Harmonia" mesmo
+// tendo Energia — agora o cadastro consegue DIZER que uma paga pela outra.
+{
+    const umaMoeda = custosDaSkill({ modulo: { titulo: 'Custo 2 — Desenvolvimento', retornoRecurso: 'Harmonia' } });
+    assert.equal(umaMoeda.length, 1, 'uma moeda: uma forma de pagar, como sempre foi');
+    assert.deepEqual(umaMoeda[0].partes, [{ alvo: 'Harmonia', qtd: 2 }]);
+
+    const duas = custosDaSkill({ modulo: { titulo: 'Custo 2 — Desenvolvimento', custoRecurso: 'Harmonia ou Energia' } });
+    assert.equal(duas.length, 2, 'duas moedas: duas formas, e quem usa escolhe');
+    assert.deepEqual(duas[0].partes, [{ alvo: 'Harmonia', qtd: 2 }]);
+    assert.deepEqual(duas[1].partes, [{ alvo: 'Energia', qtd: 2 }], 'o degrau vale para as DUAS moedas');
+    assert.equal(duas[1].rotulo, '2 Energia');
+
+    // sem degrau no título não há preço, mesmo com moeda declarada
+    assert.deepEqual(custosDaSkill({ modulo: { titulo: 'Canções', custoRecurso: 'Harmonia ou Energia' } }), []);
+}
+
 console.log('✅ custo das skills OK — mecânica, texto com "ou"/"e", degrau do Bardo e o que não é moeda');

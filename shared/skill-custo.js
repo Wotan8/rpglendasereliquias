@@ -147,11 +147,18 @@ export function custosDaSkill({ modulo, predef, item, mechPorId, custoDaMecanica
         if (formas.length) return formas.map(x => ({ ...x, label: f.label || '' }));
     }
 
-    // (3) degrau no título do módulo, pago na moeda do módulo (Bardo)
+    // (3) degrau no título do módulo, pago na moeda do módulo (Bardo).
+    // A moeda aceita ALTERNATIVA como qualquer outro custo: `custoRecurso` com
+    // "Harmonia ou Energia" num módulo "Custo 2" vira duas formas de pagar, e
+    // quem usa escolhe a que tem. Com uma moeda só, sai uma forma — igual a
+    // antes. Quem decide se a classe pode trocar de moeda é o CADASTRO; o
+    // motor só passou a saber ler a decisão.
     const degrau = degrauDoTitulo(modulo?.titulo);
     const moeda = recursoDoModulo(modulo);
     if (degrau && moeda) {
-        return [comRotulo({ label: modulo.titulo || '', partes: [{ alvo: moeda, qtd: degrau }] })];
+        const formas = custoDoTexto(
+            moeda.split(/\bou\b/i).map(m => `${degrau} ${m.trim()}`).filter(x => x.trim()).join(' ou '));
+        if (formas.length) return formas.map(x => ({ ...x, label: modulo.titulo || '' }));
     }
 
     // (4) sem custo cadastrado

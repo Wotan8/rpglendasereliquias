@@ -321,7 +321,15 @@ async function resolverProjetil(c, acertou) {
         const g = gastarUm(pj);
         if (g.acabou) await _del(_doc(_db, 'items', pj.id));
         else await _upd(_doc(_db, 'items', pj.id), { quantidade: g.restante });
-    } catch (e) { console.warn('gastar projétil', e); }
+    } catch (e) {
+        // Falhar aqui é o tiro saindo DE GRAÇA — o maço sumiu do inventário
+        // entre a escolha e o disparo. Isso não pode passar calado.
+        console.warn('gastar projétil', e);
+        toast(`⚠️ ${esc(pj.nome || 'A munição')} não estava mais no inventário — o disparo não gastou nada`, 'warning');
+        logChat(`⚠️ ${pj.nome || 'Munição'} não foi descontada: o maço já não existia`);
+    }
+    // O maço mudou de tamanho (ou acabou): a próxima escolha refaz a query.
+    try { (await import('./tab-ficha-win.js?v=13')).invalidarItens(); } catch (e) {}
 
     const d = destinoDoProjetil({ acertou, chanceRecuperar: pj.chanceRecuperar });
     if (!d.caiu) {
