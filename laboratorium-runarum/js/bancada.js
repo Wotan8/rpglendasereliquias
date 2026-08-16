@@ -26,8 +26,10 @@
      Tatuagem   agulhas max(1,⌈CT÷20⌉) · tinta ⌈CT÷10⌉ · Infusor no circuito
    ===================================================================== */
 
-import { getFirestore, collection, getDocs, query, where, doc, updateDoc }
+import { getFirestore, collection, getDocs, query, where, doc, updateDoc, setDoc, addDoc }
     from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { blocoDeCombate } from '../../shared/runa-em-jogo.js?v=1';
+import { instanciarDoModelo } from '../../shared/equip-campos.js?v=6';
 
 const LabBancada = (() => {
 
@@ -269,79 +271,226 @@ const LabBancada = (() => {
        no formato exato que a ficha lê: mapa chave-do-schema → valor.
        Schema do Cartucho: 1 Nome · 2 Ramo · 3 CT · 4 Alvo · 5 Usos (contador) ·
        6 Efeito · 7 Condições · 8 Gatilho/acesso · 9 Ficha técnica (link). */
-    const COND_ASPECTUS = {
-        fogo: 'Queimadura', terra: 'Imobilizado', natureza: 'Imobilizado',
-        vento: 'Desorientado', espacial: 'Desorientado', agua: 'Afogando',
-        necrotico: 'Definhado', luz: 'Ofuscado/Cego', abissal: 'Corrompido',
-        cristal: 'Opaco', temporal: 'Atordoado', poder: 'Sobrecarregado',
-        sangue: 'Hemorragia',
-    };
+    /* ᛟ O mapa fixo de "cada Aspectus aplica tal condição" MORREU aqui.
+       Cada Aspectus tem repertório próprio no registro (condicoesFisicas /
+       condicoesEssencia / condicaoCritica), e quem escolhe é o Impressor
+       gravado no circuito. Quem monta isso é shared/runa-em-jogo.js. */
 
-    function calcularUsos(runa) {
+    /** O dot da ficha que casa com um fragmento de nome de perícia. */
+    function achaDot(frag) {
         const dots = { ...(window.LabFB.charData?.dots || {}), ...(window.LabFB.charData?.effectiveDots || {}) };
-        const achaDot = frag => {
-            let best = 0;
-            Object.keys(dots).forEach(k => { if (norm(k).replace(/[^a-z0-9]/g, '').includes(frag)) best = Math.max(best, Number(dots[k] || 0)); });
-            return best;
-        };
-        /* melhor tinta selecionada na Bancada define a qualidade */
-        const qualTinta = Math.max(0, ...state.instancias
-            .filter(i => /tinta/i.test(norm(i.cat?.nome)) && (Number(state.sel[i.id]) || 0) > 0)
-            .map(i => Number(i.cat.qualidadeMaterial || 0)));
-        const desconto = Math.ceil((runa.ct || 0) / 20);
-        if (state.ramo === 'tatuagem') return 999;   // permanente no portador
-        if (state.ramo === 'talha') return Math.max(10, 10 * (achaDot('talharunica') + qualTinta - desconto));
-        return Math.max(1, achaDot('escriptarunica') + qualTinta - desconto);
+        let best = 0;
+        Object.keys(dots).forEach(k => {
+            if (norm(k).replace(/[^a-z0-9]/g, '').includes(frag)) best = Math.max(best, Number(dots[k] || 0));
+        });
+        return best;
     }
 
+    /** Melhor tinta selecionada na Bancada — é ela que define a qualidade. */
+    const qualidadeTintaSelecionada = () => Math.max(0, ...state.instancias
+        .filter(i => /tinta/i.test(norm(i.cat?.nome)) && (Number(state.sel[i.id]) || 0) > 0)
+        .map(i => Number(i.cat.qualidadeMaterial || 0)));
+
+    /** O Domínio do ofício (Peculiaridade de 12 EXP). Sem ele, rascunho. */
+    const temDominioDoRamo = () => {
+        const pecs = (window.LabFB.charData?.peculiaridades || window.LabFB.charData?.pecs || []);
+        const alvo = { escripta: 'dominiodeescripta', talha: 'dominiodetalha', tatuagem: 'dominiodetatuagem' }[state.ramo];
+        return (Array.isArray(pecs) ? pecs : Object.values(pecs || {}))
+            .some(p => norm(typeof p === 'string' ? p : (p?.nome || '')).replace(/[^a-z0-9]/g, '').includes(alvo));
+    };
+
+    /**
+     * ᛟ O circuito auditado virando runa jogável. Toda a régua mora no módulo
+     * puro; aqui só se junta o que a ficha e a Bancada sabem.
+     */
+    function blocoDaRuna(runa) {
+        const fb = window.LabFB;
+        const periciaDoRamo = { escripta: 'escriptarunica', talha: 'talharunica', tatuagem: 'tatuagemrunica' }[state.ramo];
+        return blocoDeCombate({
+            nodes: runa.canvas?.nodes || [],
+            elementsById: fb.elementsById,
+            ct: runa.ct || 0,
+            ramo: state.ramo,
+            runomancia: Number(fb.ctx?.runomancia || 0),
+            tetoOficio: fb.ctx?.tetoRunomancia ?? null,
+            pericia: achaDot(periciaDoRamo),
+            qualidadeTinta: qualidadeTintaSelecionada(),
+            temDominio: temDominioDoRamo(),
+            condicoesEscolhidas: runa.condicoesEscolhidas || [],
+            manifestacao: runa.manifestacao || null,
+        });
+    }
+
+    /* =====================================================================
+       ᛟ EMITIR — o projeto vira uma coisa que existe no mundo
+       ---------------------------------------------------------------------
+       Escripta e Talha gravam SOBRE UMA PEÇA: o papel continua sendo papel, o
+       osso continua sendo osso, e agora queimam gente. Por isso a emissão
+       copia o cadastro do item-base (instanciarDoModelo) e acrescenta o bloco
+       `runa` por cima — não existe "item runa", existe o item que virou runa.
+
+       O MODELO vai para o catálogo e a INSTÂNCIA para a ficha. Quando os usos
+       acabam, some a instância e o modelo fica: é o que deixa refazer a peça,
+       inspecionar no Laboratorium e o Mestre distribuir cópias como loot.
+
+       Tatuagem não tem peça: vira Peculiaridade, e o Mestre aplica na carne.
+       ===================================================================== */
+
+    /** Peças do inventário que servem de superfície para o ramo atual. */
+    function basesPossiveis() {
+        const bom = state.ramo === 'talha'
+            ? /pedra|osso|metal|madeira|placa|tabua|lasca|cristal/
+            : /papel|pergaminho|tecido|folha|vitela|couro/;
+        const candidatas = state.instancias.filter(i => bom.test(norm(i.nome || i.cat?.nome || '')));
+        // Nada com cara de superfície: deixa escolher qualquer coisa acessível.
+        return candidatas.length ? candidatas : state.instancias;
+    }
+
+    /** Pergunta em que peça a runa vai ser gravada. null = desistiu. */
+    function escolherBase() {
+        const opts = basesPossiveis();
+        if (!opts.length) {
+            alert('Nenhuma peça no inventário para gravar.\n\nA runa precisa de uma superfície: papel e pergaminho na Escripta, pedra, osso ou metal na Talha.');
+            return null;
+        }
+        if (opts.length === 1) return opts[0];
+        const lista = opts.map((i, k) => (k + 1) + '. ' + (i.nome || i.cat?.nome)).join('\n');
+        const r = prompt('Em que peça a runa vai ser gravada?\n\n' + lista + '\n\nDigite o número:', '1');
+        if (r === null) return null;
+        return opts[parseInt(r, 10) - 1] || null;
+    }
+
+    /** Resumo legível do bloco — serve ao confirm e à descrição da peça. */
+    function resumoDoBloco(b) {
+        const l = [];
+        if (b.nucleo.artus) l.push('Núcleo: ' + b.nucleo.artus + ' Nv' + b.nucleo.nvArtus + ' + ' + b.nucleo.aspectus + ' Nv' + b.nucleo.nvAspectus);
+        if (b.nucleo.emissor) l.push('Emissor: ' + b.nucleo.emissor + ' Nv' + b.nucleo.nvEmissor);
+        if (b.dano) l.push('Dano ' + b.dano + (b.danoVerdadeiro ? ' VERDADEIRO (ignora Blindagem e sai da VIT máxima)' : ' · ' + b.canal));
+        if (b.alvo) l.push('Alvo da Runa ' + b.alvo + ' — só erra se o alvo declarar Defesa');
+        for (const c of b.condicoesAplicadas) {
+            l.push('Aplica ' + c.condicao + ' ' + c.nivel + (c.portao === 'critico' ? ' (só em crítico)' : ' (' + c.chance + '%)'));
+        }
+        if (b.mira) l.push('Mira: ' + b.mira.tipo + (b.mira.alcanceM != null ? ' · ' + b.mira.alcanceM + ' m' : '') + (b.mira.raioM ? ' · raio ' + b.mira.raioM + ' m' : ''));
+        l.push(b.ativacao.rotulo);
+        l.push(b.permanente ? 'Permanente no portador' : b.usos + ' uso(s)' + (b.rascunho ? ' — RASCUNHO, sem o Domínio do ofício' : ''));
+        if (b.sanidadeGravar) l.push('⚠️ custa ' + b.sanidadeGravar + ' de Sanidade para gravar');
+        return l.join('\n');
+    }
+
+    async function emitirRuna(runa, toast) {
+        const fb = window.LabFB;
+        if (!fb?.charId) { toast?.('❌ Abra o Laboratorium pela ficha para emitir runas.'); return; }
+        const ramoNome = { escripta: 'Escripta', talha: 'Talha', tatuagem: 'Tatuagem' }[state.ramo];
+        const b = blocoDaRuna(runa);
+
+        if (b.problemas.length) {
+            const seguir = confirm('⚠️ Este circuito não fecha como runa de combate:\n\n· ' + b.problemas.join('\n· ')
+                + '\n\nEmitir assim mesmo? A peça existe, mas o Tabuleiro não vai saber resolvê-la sozinho.');
+            if (!seguir) return;
+        }
+        if (b.periciaExigida && !achaDot(norm(b.periciaExigida).replace(/[^a-z0-9]/g, ''))) {
+            alert('🚫 ' + b.nucleo.aspectus + ' exige a perícia ' + b.periciaExigida + ' para ser gravado.');
+            return;
+        }
+
+        const db = fb.db || getFirestore();
+        const agora = new Date().toISOString();
+        const base = state.ramo === 'tatuagem' ? null : escolherBase();
+        if (state.ramo !== 'tatuagem' && !base) return;
+
+        const cabeca = state.ramo === 'tatuagem'
+            ? 'Tatuar "' + runa.nome + '" como Peculiaridade?'
+            : 'Gravar "' + runa.nome + '" em ' + (base.nome || base.cat?.nome) + '?';
+        if (!confirm(cabeca + '\n(' + ramoNome + ')\n\n' + resumoDoBloco(b))) return;
+
+        try {
+            if (state.ramo === 'tatuagem') {
+                await addDoc(collection(db, 'system', 'data', 'peculiarities'), {
+                    nome: 'ᛟ ' + runa.nome,
+                    descricao: 'Runa tatuada (' + ramoNome + ').\n\n' + resumoDoBloco(b),
+                    tags: ['Runa', 'Tatuagem'],
+                    ehVantagem: true, publicado: true, versao: 1,
+                    mecanicaIds: [], derivedValueIds: [],
+                    runa: { ...b, nome: runa.nome, ramo: state.ramo, ct: runa.ct, origemGrimorio: runa.id },
+                    fonte: 'Runomancia', fonteRef: fb.charId,
+                    criadoEm: agora, atualizadoEm: agora,
+                });
+                toast?.('🪡 "' + runa.nome + '" cadastrada como Peculiaridade — o Mestre aplica em quem a carne for.');
+            } else {
+                /* 1) o MODELO no catálogo: é ele que sobrevive aos usos */
+                const modeloBase = base.cat || {};
+                const modeloId = 'runa_' + fb.charId + '_' + runa.id;
+                const modelo = {
+                    ...modeloBase,
+                    nome: runa.nome + ' (' + (modeloBase.nome || base.nome) + ')',
+                    descricao: ramoNome + ' sobre ' + (modeloBase.nome || base.nome) + '.\n\n' + resumoDoBloco(b),
+                    tags: [...new Set([...(modeloBase.tags || []), 'Runa', ramoNome])],
+                    runa: { ...b, nome: runa.nome, ramo: state.ramo, ct: runa.ct, origemGrimorio: runa.id },
+                    publicado: true, atualizadoEm: agora,
+                };
+                delete modelo.id;
+                await setDoc(doc(db, 'system', 'data', 'equipment', modeloId), modelo, { merge: true });
+
+                /* 2) a INSTÂNCIA na ficha, cópia integral do modelo */
+                const itemId = 'item-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+                await setDoc(doc(db, 'items', itemId), {
+                    ...instanciarDoModelo({ ...modelo, id: modeloId }),
+                    id: itemId, characterId: fb.charId, ownerType: 'char',
+                    ownerUid: window.currentUser?.uid || null, ownerId: window.currentUser?.uid || null,
+                    quantidade: 1, equipado: false, slotAnatomico: null, estadoEquip: null, parentItemId: null,
+                    criadoPor: 'runomancia',
+                    usosRestantes: b.permanente ? null : b.usos,
+                    lastModified: agora,
+                });
+                toast?.('ᛟ "' + runa.nome + '" gravada em ' + (modeloBase.nome || base.nome) + ' — ' + b.usos + ' uso(s). Recarregue a ficha.');
+            }
+
+            /* 3) o Cartucho continua sendo o grimório: registra o que ele sabe */
+            await registrarNoCartucho(runa, b, ramoNome, db, fb);
+        } catch (e) {
+            console.error('bancada/emitirRuna', e);
+            toast?.('❌ Falha ao emitir — veja o console.');
+        }
+    }
+
+    /** O Cartucho Rúnico é o grimório: o que o mago sabe escrever, feito ou não. */
+    async function registrarNoCartucho(runa, b, ramoNome, db, fb) {
+        const condicoes = b.condicoesAplicadas
+            .map(c => c.condicao + ' ' + c.nivel + (c.portao === 'critico' ? ' (crítico)' : ' (' + c.chance + '%)'))
+            .join(' · ');
+        const item = {
+            '1': runa.nome, '2': ramoNome, '3': runa.ct || 0, '4': b.alvo || 0,
+            '5': b.permanente ? '∞' : b.usos, '6': resumoDoBloco(b), '7': condicoes,
+            '8': b.ativacao.rotulo, '9': '',
+            _origemGrimorio: runa.id,
+        };
+        const atuais = (fb.charData?.classModuleData?.cartucho_runico) || [];
+        const novos = [...atuais.filter(i => i._origemGrimorio !== runa.id), item];
+        await updateDoc(doc(db, 'char', fb.charId), {
+            'classModuleData.cartucho_runico': novos,
+            lastUpdate: new Date().toISOString(),
+        });
+        fb.charData = fb.charData || {};
+        fb.charData.classModuleData = { ...(fb.charData.classModuleData || {}), cartucho_runico: novos };
+    }
+
+    /** Só anota no grimório da ficha, sem emitir peça nenhuma. */
     async function enviarParaFicha(runa, toast) {
         const fb = window.LabFB;
         if (!fb?.charId) { toast?.('❌ Abra o Laboratorium pela ficha para enviar runas.'); return; }
         const ramoNome = { escripta: 'Escripta', talha: 'Talha', tatuagem: 'Tatuagem' }[state.ramo];
-        if (!confirm(`Criar "${runa.nome}" no Cartucho Rúnico da ficha?\nRamo: ${ramoNome} (mude na Bancada se for outro)`)) return;
-
-        /* efeito legível a partir da composição salva */
-        const nucleo = (runa.composicao || []).filter(c => /artus|aspectus/i.test(c.tipo || ''));
-        const sigilos = (runa.composicao || []).filter(c => !/artus|aspectus/i.test(c.tipo || ''));
-        const efeito = [
-            nucleo.length ? 'Núcleo: ' + nucleo.map(c => `${c.nome} Nv${c.nivel}`).join(' + ') : 'Runa Auxiliar (sem núcleo)',
-            sigilos.length ? 'Sigilus: ' + sigilos.map(c => c.nome).join(', ') : '',
-            `Gravação ${runa.gravacao?.horas || '?'} h · ver ficha técnica (PDF)`,
-        ].filter(Boolean).join('\n');
-
-        const condicoes = [...new Set(nucleo
-            .map(c => COND_ASPECTUS[norm(c.nome)]).filter(Boolean))].join(' · ');
-
-        const els = (runa.canvas?.nodes || []).map(n => norm(fb.elementsById[n.elementId]?.nome || ''));
-        const gatilho = els.some(n => /reconhecedor/.test(n)) ? 'Travada: Reconhecedor (só cadastrados)' :
-            els.some(n => /selector/.test(n)) ? 'Selector: só quem foi selecionado' :
-            els.some(n => /gatilho|sensor/.test(n)) ? 'Dispara sozinha (Gatilho/Sensor)' :
-            els.some(n => /toque/.test(n)) ? 'Toque simples — qualquer um ativa' : '';
-
-        const item = {
-            '1': runa.nome, '2': ramoNome, '3': runa.ct || 0, '4': runa.alvo || 0,
-            '5': calcularUsos(runa), '6': efeito, '7': condicoes, '8': gatilho, '9': '',
-            _origemGrimorio: runa.id,
-        };
+        if (!confirm('Anotar "' + runa.nome + '" no Cartucho Rúnico da ficha?\n\nSó registra o projeto — para criar a peça, use "Gravar".')) return;
         try {
-            const db = fb.db || getFirestore();
-            const atuais = (fb.charData?.classModuleData?.cartucho_runico) || [];
-            const novos = [...atuais.filter(i => i._origemGrimorio !== runa.id), item];
-            await updateDoc(doc(db, 'char', fb.charId), {
-                'classModuleData.cartucho_runico': novos,
-                lastUpdate: new Date().toISOString(),
-            });
-            fb.charData = fb.charData || {};
-            fb.charData.classModuleData = { ...(fb.charData.classModuleData || {}), cartucho_runico: novos };
-            toast?.(`🜃 "${runa.nome}" no Cartucho Rúnico (${ramoNome}, ${item['5']} uso${item['5'] > 1 ? 's' : ''}). Recarregue a ficha.`);
+            await registrarNoCartucho(runa, blocoDaRuna(runa), ramoNome, fb.db || getFirestore(), fb);
+            toast?.('🜃 "' + runa.nome + '" anotada no Cartucho (' + ramoNome + '). Recarregue a ficha.');
         } catch (e) {
             console.error('bancada/enviarParaFicha', e);
-            toast?.('❌ Falha ao enviar — veja o console.');
+            toast?.('❌ Falha ao anotar — veja o console.');
         }
     }
 
     return {
-        enviarParaFicha,
+        enviarParaFicha, emitirRuna, blocoDaRuna,
         boot() {
             /* injeta a seção logo abaixo da auditoria */
             const audit = document.getElementById('labAudit');

@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v257';
+const VERSION = 'v258';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -186,6 +186,7 @@ const PRECACHE_URLS = [
   '/shared/combate-cenas.js',
   '/shared/restaurar-item.js',
   '/shared/runa-em-jogo.js',
+  '/shared/equip-campos.js',
   '/shared/skill-custo.js',
   '/shared/skill-runtime.js',
   '/shared/medida-formula.js',

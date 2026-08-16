@@ -261,7 +261,8 @@
                 <div class="lab-grim-comp">${(r.composicao || []).map(c => `<span class="lab-chip">${esc(c.nome)} Nv${c.nivel} <small>${c.custo}</small></span>`).join('')}</div>
                 <div class="lab-grim-acoes">
                     <button data-acao="abrir">🛠️ Abrir na mesa</button>
-                    <button data-acao="ficha" title="Criar o item no Cartucho Rúnico da ficha">🜃 → Ficha</button>
+                    <button data-acao="gravar" title="Gravar a runa numa peça do inventário (ou tatuar) — cria o item de verdade">ᛟ Gravar</button>
+                    <button data-acao="ficha" title="Só anotar o projeto no Cartucho Rúnico da ficha">🜃 → Cartucho</button>
                     <button data-acao="pdf" title="Imprimir / salvar em PDF">📄</button>
                     <button data-acao="excluir" class="perigo">🗑️</button>
                 </div>
@@ -278,6 +279,8 @@
                     $('#labRunaNome').value = r.nome;
                     LabCanvas.loadState(r.canvas);
                     switchTab('montagem');
+                } else if (b.dataset.acao === 'gravar') {
+                    await window.LabBancada?.emitirRuna?.(r, toast);
                 } else if (b.dataset.acao === 'ficha') {
                     window.LabBancada?.enviarParaFicha?.(r, toast);
                 } else if (b.dataset.acao === 'pdf') {
