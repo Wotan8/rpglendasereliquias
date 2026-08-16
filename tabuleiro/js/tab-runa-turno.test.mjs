@@ -83,4 +83,28 @@ assert.deepEqual(gastarUso({ runa: { usos: 2 } }), { permanente: false, acabou: 
 assert.equal(gastarUso({ runa: { permanente: true } }).permanente, true, 'tatuagem não conta usos');
 assert.equal(gastarUso({ usosRestantes: 0 }).acabou, true, 'zerada continua zerada, nunca negativa');
 
+/* ===== elo 6: o Manifestador CONSTRÓI ===== */
+assert.match(turno, /cfg\.meta\.manifestacao = s\._runa\.bloco\.manifestacao/,
+    'a escolha do projeto tem de viajar até a mira');
+assert.match(turno, /if \(meta\.manifestacao\) await manifestarNoMapa/,
+    '🔒 confirmar a mira tem de pôr a coisa no mapa — era aqui que a escolha morria');
+assert.match(turno, /async function manifestarNoMapa/);
+
+// parede bloqueia; plataforma não. É a única diferença mecânica entre as duas.
+assert.match(turno, /if \(chave === 'parede'\) \{\s*await addObj\(\{[\s\S]{0,120}layerId: 'luz'/,
+    "🔒 o bloqueio TEM de ir na camada 'luz': coletarParedes() filtra por layerId, e desenho "
+    + 'em qualquer outra camada é pintura, não parede. Plataforma não ganha esse segundo objeto — '
+    + 'é chão onde não havia, dá para enxergar por cima.');
+assert.doesNotMatch(turno, /bloqueiaVisao|bloqueiaPassagem/,
+    'essas flags não existem no motor: quem decide bloqueio é a CAMADA');
+assert.match(turno, /tipo: 'desenho', forma: 'ret'/,
+    'parede e plataforma viram desenho — é o que o motor de visão já lê como obstáculo');
+assert.match(turno, /tipo: 'loot'/, 'objeto e forma orgânica viram loot, que o mapa já anuncia');
+assert.match(turno, /aplicarCondicaoEmVarios\(alvos, 'Blindado'/,
+    'escudo não vai ao chão: veste quem foi mirado');
+assert.match(turno, /unidadesParaPx\(arestaM, ref\)/,
+    '🔒 o tamanho sai da escala do MAPA, não de um número fixo — senão a parede erra em mapa de escala diferente');
+assert.match(turno, /Math\.cbrt\(Number\(cfgM\.volumeM3\)/, 'a aresta é a raiz cúbica do volume do nível');
+assert.match(turno, /if \(!locais\.length\)/, 'sem ponto no mapa não há o que construir');
+
 console.log('✅ runa no turno OK — entra como habilidade, entrega sem dado, e gasta o uso');

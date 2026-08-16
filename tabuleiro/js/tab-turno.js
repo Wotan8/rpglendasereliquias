@@ -13,7 +13,8 @@
 // Alcances contam a partir da BORDA do token (tab-mira-calc).
 // =============================================
 import { setDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, markDirty, gridSize, upcEm, unidadeEm, valorComponente, selecionar, deslocamentosDoToken, alcanceDeVisaoDoToken, registrarFlutuante, trazerParaFrente, efeitoCondDoToken } from './tab-state.js';
+import { T, esc, toast, markDirty, gridSize, upcEm, unidadeEm, unidadesParaPx, valorComponente, selecionar, deslocamentosDoToken, alcanceDeVisaoDoToken, registrarFlutuante, trazerParaFrente, efeitoCondDoToken } from './tab-state.js';
+import { addObj } from './tab-objects.js';
 import { refCombate } from './tab-main.js';
 import { derivedDoToken } from './tab-render.js';
 import { abrirConflito } from './tab-conflito.js';
@@ -830,6 +831,10 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
         if (s._runa) {
             cfg.meta.runaItemId = s._runa.itemId;
             cfg.meta.semRolagem = true;
+            // 🧱 O que o Manifestador constrói, e com que matéria. Sem isto o
+            // Tabuleiro miraria o chão e não poria nada nele.
+            cfg.meta.manifestacao = s._runa.bloco.manifestacao || null;
+            cfg.meta.manifestaCom = s._runa.bloco.mira || null;
             cfg.meta.golpe = {
                 nome: s.nome, dano: s._runa.bloco.dano || '',
                 acerto: s._runa.bloco.alvo || 0,
@@ -1429,6 +1434,93 @@ function escolherCondicaoExclusiva(nomeSkill, condicoes) {
 }
 
 /**
+ * 🧱 O Manifestador põe no mapa o que o projeto escolheu.
+ *
+ * As cinco manifestações não viram a mesma coisa: Parede e Plataforma são
+ * GEOMETRIA (desenho na camada de tokens, e a parede entra na conta de
+ * bloqueio de luz e passagem porque `desenho` já é o que o motor de visão
+ * lê); Objeto e Forma orgânica viram LOOT, que o mapa já sabe criar e
+ * anunciar; Escudo não vai ao chão — vai no corpo de quem foi mirado, como
+ * Blindado.
+ *
+ * A duração é a do nível do Manifestador, e fica gravada no objeto: quem
+ * limpa é o fim da cena, não este código.
+ */
+async function manifestarNoMapa(m, meta, p) {
+    const chave = String(meta.manifestacao || '').toLowerCase();
+    const cfgM = meta.manifestaCom || {};
+    const gs = gridSize() || 50;
+    const locais = (m.locais || []).length ? m.locais : (m.cursor ? [m.cursor] : []);
+    if (!locais.length) { toast('⚠️ A manifestação precisa de um ponto no mapa', 'warning'); return; }
+    const nome = meta.nome || 'Manifestação';
+    const material = cfgM.material || 'essência';
+    const dur = cfgM.duracao || '1 turno sem fluxo';
+    // O volume vira tamanho no mapa: 0,1 m³ é um escudo, 2 m³ é uma parede de
+    // verdade. A raiz cúbica é a aresta, e a aresta em metros vira quadrados.
+    // A raiz cúbica do volume é a aresta em metros; `unidadesParaPx` converte
+    // pela escala do MAPA sob o ponto — a mesma régua da fita métrica, senão a
+    // parede sairia com tamanho errado em mapa de escala diferente.
+    const arestaM = Math.max(0.5, Math.cbrt(Number(cfgM.volumeM3) || 0.1));
+    const ref = locais[0] || null;
+    const px = Math.max(gs * 0.5, unidadesParaPx(arestaM, ref));
+
+    const base = {
+        layerId: 'tokens', visivelPublico: true,
+        manifestacao: { runa: nome, chave, duracao: dur, material, porPid: p?.id || null },
+    };
+
+    try {
+        if (chave === 'escudo') {
+            // Não ocupa chão: veste quem foi mirado.
+            const pids = (m.alvos || []).map(id => participanteDoToken(T.objects.get(id))?.id).filter(Boolean);
+            const alvos = pids.length ? pids : (p?.id ? [p.id] : []);
+            if (alvos.length) {
+                await aplicarCondicaoEmVarios(alvos, 'Blindado', 0, p?.id, 1);
+                logChat(`🛡️ ${nome}: escudo de ${material} em ${alvos.length} alvo(s) — dura ${dur}`);
+            }
+            return;
+        }
+
+        for (const loc of locais) {
+            if (chave === 'parede' || chave === 'plataforma') {
+                const meia = px / 2;
+                const cantos = [{ x: loc.x - meia, y: loc.y - meia }, { x: loc.x + meia, y: loc.y + meia }];
+                // A LAJE que se vê, na camada dos tokens.
+                await addObj({
+                    ...base, tipo: 'desenho', forma: 'ret', pontos: cantos,
+                    cor: chave === 'parede' ? '#8b7355' : '#5b8ba8',
+                    nome: `${nome} (${material})`,
+                    vit: Math.max(1, Math.round((Number(cfgM.volumeM3) || 0.1) * 10)),
+                });
+                // ⚠️ E, só para a PAREDE, o segmento que BLOQUEIA — que tem de
+                // ir na camada `luz`. Quem lê obstáculo é coletarParedes(), e
+                // ela filtra por `layerId !== 'luz'`: desenho em qualquer outra
+                // camada é pintura, não parede. Plataforma é chão onde não
+                // havia — dá para pisar e dá para enxergar por cima.
+                if (chave === 'parede') {
+                    await addObj({
+                        ...base, layerId: 'luz', tipo: 'desenho', forma: 'ret', pontos: cantos,
+                        nome: `${nome} — bloqueio`,
+                    });
+                }
+            } else {
+                // objeto e forma orgânica: o mapa já sabe criar e anunciar loot
+                await addObj({
+                    ...base, tipo: 'loot', x: loc.x, y: loc.y,
+                    nome: `${nome} (${material})`, quantidade: 1,
+                    item: { nome: `${nome} (${material})`, quantidade: 1, tipo: 'Objeto',
+                            descricao: `Manifestado por runa. Existe por ${dur}.` },
+                });
+            }
+        }
+        logChat(`🧱 ${nome}: ${locais.length} ${chave} de ${material} — dura ${dur}`);
+    } catch (e) {
+        console.error('manifestar no mapa', e);
+        toast('❌ Não consegui manifestar no mapa — veja o console', 'danger');
+    }
+}
+
+/**
  * ᛟ A peça perdeu um uso. Zerou, a INSTÂNCIA some da ficha — e o modelo fica
  * no catálogo, que é de onde sai a próxima cópia. Tatuagem não conta usos.
  */
@@ -1738,6 +1830,7 @@ window.tbTurnoConfirmarMira = async () => {
     T.mira = null;
     markDirty();
     await gastar(custo);
+    if (meta.manifestacao) await manifestarNoMapa(m, meta, p);
     if (meta.runaItemId) await gastarUsoDaRuna(meta.runaItemId);
     await pagarCustos(p);   // 💰 debita o recurso (mecânica ou texto do cadastro)
     if (custo === 'livre') render();
