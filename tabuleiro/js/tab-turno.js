@@ -25,6 +25,7 @@ import {
 } from '../../shared/combate-cenas.js';
 import { custosDaSkill, rotuloDosCustos, moduloDeclaraCusto, custoDeclaradoZero } from '../../shared/skill-custo.js?v=1';
 import { indexarPredefs, interpretarSkill, afetaDaCondicao, rotuloDaCondicao } from '../../shared/skill-runtime.js?v=3';
+import { miraDaRuna, gastarUso } from '../../shared/runa-em-jogo.js?v=1';
 import { resolverMedida, ehFormula } from '../../shared/medida-formula.js?v=1';
 import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR,
          porqueLocalInvalido, localSob } from './tab-mira-calc.js';
@@ -260,6 +261,56 @@ function cfgRetorno(mod) {
     };
 }
 
+/**
+ * ᛟ As runas que este participante pode ativar agora.
+ *
+ * Duas fontes, e o cânone trata as duas igual: peça gravada no inventário
+ * (Escripta e Talha) e tatuagem que virou Peculiaridade. Tatuagem PASSIVA não
+ * entra — ela já está valendo o tempo todo, não é ação de turno.
+ *
+ * Nada aqui é ação nova: cada runa vira uma entrada com o mesmo formato das
+ * habilidades de classe, e segue pelos mesmos trilhos.
+ */
+async function runasDe(p) {
+    const tipo = p?.npcId ? 'npc' : 'char';
+    const id = p?.npcId || p?.characterId;
+    if (!id) return [];
+    let itens = [];
+    try {
+        const m = await import('./tab-ficha-win.js?v=13');
+        itens = m.itensCarregados(tipo, id) || [];
+    } catch (e) { console.warn('itens para runas', e); return []; }
+
+    const out = [];
+    for (const it of itens) {
+        const b = it?.runa;
+        if (!b || !b.mira) continue;
+        // Peça com os usos zerados não é opção: ela devia ter sumido.
+        const restam = it.usosRestantes;
+        if (!b.permanente && Number.isFinite(Number(restam)) && Number(restam) <= 0) continue;
+        // Runa que dispara sozinha (Gatilho/Sensor) não é ação de quem carrega.
+        if (b.ativacao?.modo === 'automatica') continue;
+
+        const mira = miraDaRuna(b);
+        const usosTxt = b.permanente ? 'permanente' : `${restam ?? b.usos} uso(s)`;
+        out.push({
+            nome: `ᛟ ${b.nome || it.nome || 'Runa'}`,
+            efeito: [b.dano ? `dano ${b.dano}` : '', b.canal && b.canal !== 'Dano' ? b.canal : '',
+                     ...(b.condicoesAplicadas || []).map(c => `${c.condicao} ${c.nivel}`)].filter(Boolean).join(' · '),
+            custo: usosTxt,
+            custos: [],            // a carga é da peça, não da ficha
+            veiculos: [],
+            retorno: null,
+            mira,
+            // Parte XIV: qualquer um ativa com 1 Ação Padrão.
+            acao: 'padrao',
+            diagnostico: { ok: true, faltas: [] },
+            _runa: { itemId: it.id, bloco: b },
+        });
+    }
+    return out;
+}
+
 async function carregarSkills(chave, p, tentativas = 0) {
     // marcador de "carregando": impede o render seguinte de disparar outra
     skillsCache = { chave, lista: skillsCache?.chave === chave ? (skillsCache.lista || []) : [], parcial: false, tentativas };
@@ -326,6 +377,11 @@ async function carregarSkills(chave, p, tentativas = 0) {
             diagnostico: r.diagnostico,
         };
     });
+    // ᛟ As runas entram na MESMA lista, no mesmo formato. É o que faz a runa
+    // ser jogável sem nenhum motor novo: ela atravessa tbTurnoSkill, a mira e a
+    // janela de conflito pelos trilhos que as habilidades de classe já usam.
+    lista.push(...await runasDe(p));
+
     // Registro que não chegou não pode virar cache definitivo: com ele fora
     // TODA skill fica sem custo e sem mira, e o painel manteria esse estado
     // torto até a vez virar. Marca como parcial para o próximo render tentar
@@ -769,6 +825,19 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
             }
         }
         const cfg = miraDoCadastro(s.mira, s, custo, p);
+        // ᛟ A peça que vai gastar um uso, e o Alvo gravado nela. A janela de
+        // conflito lê `semRolagem` para não rolar dado nenhum (Lei do Relógio).
+        if (s._runa) {
+            cfg.meta.runaItemId = s._runa.itemId;
+            cfg.meta.semRolagem = true;
+            cfg.meta.golpe = {
+                nome: s.nome, dano: s._runa.bloco.dano || '',
+                acerto: s._runa.bloco.alvo || 0,
+                acertoNome: 'Alvo da Runa', acertoIcone: 'ᛟ',
+                tipos: s._runa.bloco.canal && s._runa.bloco.canal !== 'Dano' ? [s._runa.bloco.canal] : [],
+                distancia: true, desarmado: false,
+            };
+        }
         // 🎲 Quantidade que sai do DADO: habilidade com `alvosPorGraus` rola a
         // conjuração ANTES de mirar, e os Graus dizem quantos alvos/locais
         // cabem. Falhou, não há o que mirar — a ação já foi gasta.
@@ -1359,6 +1428,32 @@ function escolherCondicaoExclusiva(nomeSkill, condicoes) {
     });
 }
 
+/**
+ * ᛟ A peça perdeu um uso. Zerou, a INSTÂNCIA some da ficha — e o modelo fica
+ * no catálogo, que é de onde sai a próxima cópia. Tatuagem não conta usos.
+ */
+async function gastarUsoDaRuna(itemId) {
+    try {
+        const m = await import('./tab-ficha-win.js?v=13');
+        const p = participanteDaVez(cena());
+        const itens = m.itensCarregados(p?.npcId ? 'npc' : 'char', p?.npcId || p?.characterId) || [];
+        const item = itens.find(i => i.id === itemId);
+        if (!item) return;
+        const r = gastarUso(item);
+        if (r.permanente) return;
+        const { db: _db, doc: _doc, updateDoc: _upd, deleteDoc: _del } =
+            await import('../../painel-mestre/js/firebase-config.js');
+        if (r.acabou) {
+            await _del(_doc(_db, 'items', itemId));
+            logChat(`ᛟ ${item.nome || 'A runa'} gastou o último uso e se apagou — o cadastro dela fica no catálogo.`);
+        } else {
+            await _upd(_doc(_db, 'items', itemId), { usosRestantes: r.restante });
+            logChat(`ᛟ ${item.nome || 'Runa'}: ${r.restante} uso(s) restante(s)`);
+        }
+        limparCacheGolpes();
+    } catch (e) { console.warn('gastar uso da runa', e); }
+}
+
 /** As condições que a ação aplica: a lista nova, ou a única do formato antigo. */
 function condicoesDaAcao(acao) {
     if (acao?.condicoes?.length) return acao.condicoes;
@@ -1643,6 +1738,7 @@ window.tbTurnoConfirmarMira = async () => {
     T.mira = null;
     markDirty();
     await gastar(custo);
+    if (meta.runaItemId) await gastarUsoDaRuna(meta.runaItemId);
     await pagarCustos(p);   // 💰 debita o recurso (mecânica ou texto do cadastro)
     if (custo === 'livre') render();
     // 🤝 Aplica direto, SEM janela de conflito, quando não há o que rolar:
@@ -1694,6 +1790,8 @@ window.tbTurnoConfirmarMira = async () => {
             condicao: meta.condicao || null,
             condicoes: meta.condicoes || [],
             projetil: meta.projetil || null,
+            // ᛟ Lei do Relógio: a runa entrega sem rolar; só a Defesa contesta.
+            semRolagem: !!meta.semRolagem, runaItemId: meta.runaItemId || null,
         }, atingidos);
         return;
     }

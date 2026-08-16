@@ -177,7 +177,7 @@ function blindagemDe(pid, tipos) {
 export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
     carregarSys().catch(e => console.warn('registro do sistema p/ conflito', e));
     const conf = {
-        id: 'cf' + uid(), t: Date.now(), fase: 'acerto',
+        id: 'cf' + uid(), t: Date.now(), fase: acao.semRolagem ? 'defesa' : 'acerto',
         atacante: { pid: atacante?.id || null, nome: atacante?.name || '?', tokenId: tokAtacante?.id || null },
         acao: {
             nome: acao.nome || 'Ação', icone: acao.icone || '⚔️', dano: acao.dano || '',
@@ -194,6 +194,10 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
             // 🏹 O maço escolhido no picker. Fica no doc porque quem resolve o
             // destino da flecha é o mesmo cliente que rolou o Acerto.
             projetil: acao.projetil || null,
+            // ᛟ Lei do Relógio: a Runomancia é previsível e nunca depende de
+            // sorte. A runa não rola para acertar — os Graus dela SÃO o Alvo
+            // gravado na peça, e só uma Defesa declarada pode contestá-los.
+            semRolagem: !!acao.semRolagem, runaItemId: acao.runaItemId || null,
         },
         // 🎯 Marca de Caça: medida AQUI, na abertura, e guardada no doc — quem
         // rola o dado pode ser outro cliente, e a ficha do caçador não está lá.
@@ -203,7 +207,14 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
                 cacadorPid: atacante?.id || null,
                 marcaDeCaca: valorComponente('Marca de Caça', fonteDoParticipante(atacante)),
             }),
-        rolagem: null, contra: [], condAplicada: false,
+        // ᛟ A runa entra já resolvida no acerto: sem dado, Graus = Alvo. Quem
+        // não declarar Defesa é atingido — é o que separa a Runomancia de todo
+        // o resto do sistema.
+        rolagem: acao.semRolagem
+            ? { dado: null, alvo: Number(acao.alvoAcerto) || 0, graus: Number(acao.alvoAcerto) || 0,
+                critico: false, falha: false, abriu: false, naMesa: false, semRolagem: true }
+            : null,
+        contra: [], condAplicada: false,
         alvos: alvos.map(o => {
             const p = participanteDoToken(o);
             return {
@@ -540,7 +551,12 @@ function render() {
         ${souMestre() ? '<span class="tb-turno-hint">🕵️ mesa inteira</span>' : ''}
         ${souAtacante && c.fase !== 'fim' ? `<button class="tb-mini-btn" style="margin-left:auto" title="Cancelar o conflito" onclick="tbConfCancelar()">✖</button>` : ''}</div>`;
 
-    const rolagem = r ? `<div class="tb-conflito-rolagem ${r.critico ? 'crit' : r.falha ? 'falha' : ''}">
+    // ᛟ Runa não tem dado para mostrar: o cabeçalho diz por que, senão a
+    // janela apareceria com "d10 null" e pareceria bug.
+    const rolagem = r?.semRolagem ? `<div class="tb-conflito-rolagem">
+        ᛟ <b>Alvo da Runa ${r.alvo}</b> — o mecanismo entrega como foi projetado.
+        <span class="tb-turno-hint">Sem rolagem: só uma Defesa declarada pode barrar.</span>
+        </div>` : r ? `<div class="tb-conflito-rolagem ${r.critico ? 'crit' : r.falha ? 'falha' : ''}">
         🎲 d10 <b>${r.dado}</b>${r.naMesa ? ' <i>(mesa)</i>' : ''} vs Alvo ${r.alvo} → <b>${r.graus > 0 ? '+' : ''}${r.graus} Graus</b>
         ${r.critico ? ' ✨ crítico (passa por qualquer Defesa, dado cheio no dano)' : ''}
         ${r.falha ? ' 💀 falha crítica (erro automático)' : ''}

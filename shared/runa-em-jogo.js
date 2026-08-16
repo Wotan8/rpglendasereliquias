@@ -224,3 +224,56 @@ export function blocoDeCombate({ nodes, elementsById, ...opts } = {}) {
         jogavel: problemas.length === 0 && !!artus && !!aspectus && !!emissor,
     };
 }
+
+/* ===================== a runa vira ação do turno ===================== */
+
+/**
+ * O bloco vira a mira que o Painel do Turno consome — o MESMO formato das
+ * habilidades de classe (ver miraDeCadastro em skill-runtime.js). É o que
+ * permite a runa entrar em combate sem nenhum motor novo do lado do Tabuleiro.
+ *
+ * `afeta` sai do Emissor, não de um campo: Dispersor e Foco varrem o que
+ * estiver na área ('todos'), Projetor e Vinculador escolhem alvo, e o
+ * Manifestador não fere ninguém — constrói.
+ */
+export function miraDaRuna(bloco) {
+    const m = bloco?.mira;
+    if (!m) return null;
+    const constroi = m.tipo === 'locais';
+    return {
+        tipo: m.tipo,
+        forma: m.forma || 'circulo',
+        origem: m.tipo === 'geometria' ? 'token' : 'livre',
+        alcanceM: m.alcanceM ?? 0,
+        raioM: m.raioM ?? 0,
+        comprimentoM: m.comprimentoM ?? 0,
+        larguraM: m.larguraM ?? Math.max(1, (Number(m.comprimentoM) || 0) / 3),
+        angGraus: Number(m.angGraus) || 60,
+        maxAlvos: Number(m.maxAlvos) || 1,
+        afeta: constroi ? 'todos' : 'inimigos',
+        condicoes: bloco.condicoesAplicadas || [],
+        condicoesExclusivas: false,
+        condicaoNome: bloco.condicoesAplicadas?.[0]?.condicao || null,
+        condicaoRodadas: bloco.condicoesAplicadas?.[0]?.rodadas || 0,
+        condicaoMaxAlvos: 0,
+        condicaoPortao: bloco.condicoesAplicadas?.[0]?.portao || null,
+        // 🕰️ Lei do Relógio: a runa não rola para acertar. Quem lê isto é a
+        // janela de conflito, que pula a fase de acerto e vai direto à Defesa.
+        semRolagem: true,
+        alvoFixo: bloco.alvo || 0,
+        _origem: 'runa',
+    };
+}
+
+/**
+ * O que sobra de uma runa depois de um uso. Não grava nada — devolve a
+ * decisão. `acabou` significa que a INSTÂNCIA some da ficha; o modelo fica no
+ * catálogo, e é dele que sai a próxima cópia.
+ */
+export function gastarUso(item) {
+    if (item?.runa?.permanente) return { permanente: true, acabou: false, restante: null };
+    const antes = Number(item?.usosRestantes);
+    const atual = Number.isFinite(antes) ? antes : Number(item?.runa?.usos) || 0;
+    const restante = Math.max(0, atual - 1);
+    return { permanente: false, acabou: restante === 0, restante };
+}
