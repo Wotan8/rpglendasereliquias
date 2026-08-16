@@ -103,4 +103,30 @@ assert.equal(podeContraAtacar(base).curto, '', 'podendo, não há motivo a mostr
 assert.match(podeContraAtacar({ ...base, distanciaM: 4 }).motivo, /maior alcance é 1.5 m/,
     'o motivo longo compara a distância com o braço mais comprido');
 
+// 🪄 MAGIA DE PERTO ABRE A GUARDA (regra de mesa, decidida em 16/08/2026)
+// O que o agressor usou não entra na conta: quem conjurou coladinho e errou
+// feio se expôs igual a quem errou uma espada. Quem decide é a distância até
+// ele e o que o DEFENSOR tem para revidar — arma OU parte do corpo.
+{
+    // a régua não recebe nem sabe o tipo do ataque: os mesmos argumentos valem
+    // para espada, arco ou magia do agressor. É isso que este bloco tranca.
+    const punho = { nome: 'Punho', alcanceM: 1, distancia: false, desarmado: true };
+    const colado = { pericia: 2, energia: 5, jaContraAtacou: false, distanciaM: 0 };
+
+    assert.equal(podeContraAtacar({ ...colado, golpes: [punho] }).ok, true,
+        'conjurador colado, defensor desarmado: a parte do corpo revida');
+    assert.equal(podeContraAtacar({ ...colado, golpes: [espada] }).ok, true,
+        'colado com arma na mão: revida');
+    assert.equal(podeContraAtacar({ ...colado, distanciaM: 1.5, golpes: [punho] }).ok, false,
+        'conjurou a uma célula: o punho (1 m) não alcança, sem contra-ataque');
+    assert.equal(podeContraAtacar({ ...colado, distanciaM: 1.5, golpes: [punho, espada] }).ok, true,
+        'a uma célula, quem tem espada alcança');
+    assert.deepEqual(podeContraAtacar({ ...colado, distanciaM: 1.5, golpes: [punho, espada] }).linhas.map(g => g.nome),
+        ['Espada'], 'e só a espada entra na escolha — o punho não chega lá');
+    assert.equal(podeContraAtacar({ ...colado, golpes: [arco] }).ok, false,
+        'só arco na mão: não há golpe corpo a corpo para revidar');
+    assert.equal(podeContraAtacar({ ...colado, distanciaM: 30, golpes: [punho, espada] }).ok, false,
+        'magia de longe não abre guarda nenhuma: ninguém alcança o conjurador');
+}
+
 console.log('✅ conta do conflito OK — graus, defesa, crítico, blindagem, orçamento, piso e contra-ataque');

@@ -121,6 +121,13 @@ export function soODado(formula) {
  * existe contra-atacar quem atirou de longe, nem quem está fora do alcance do
  * seu braço — por isso a conta é "algum golpe físico meu alcança o agressor?".
  *
+ * ⚠️ O QUE O AGRESSOR USOU NÃO ENTRA NA CONTA. Magia lançada de perto abre a
+ * guarda igual a uma espada: quem errou feio se expôs, e o conjurador que
+ * escolheu conjurar coladinho aceitou esse risco. Quem decide é só a distância
+ * até ele e o que o defensor tem para revidar — arma OU parte do corpo, que
+ * entram na lista `golpes` do mesmo jeito (parte do corpo alcança 1 m no
+ * mínimo, ver alcanceGolpe).
+ *
  * @param pericia        nível da perícia Contra-Ataque
  * @param energia        Energia atual (null = desconhecida, não bloqueia)
  * @param jaContraAtacou já respondeu neste conflito
