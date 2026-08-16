@@ -321,7 +321,41 @@ window.tbCombIniciarCena = async function() {
     const vez = participanteDaVez({ ...c, turnoAtual: 0 });
     toast('⚔️ Combate iniciado!');
     logChat(`⚔️ Combate iniciado — Rodada 1, vez de ${vez?.name || '?'}`);
+    await aplicarRunasPassivas(parts);
 };
+
+/**
+ * 🪡 Tatuagem PASSIVA: runa sem lógica de gatilho está sempre ligada, então
+ * ela não é ação de turno — o que ela dá, dá desde o primeiro instante da
+ * cena. Roda na abertura porque é aqui que a lista de participantes está
+ * fechada, e só o cliente que iniciou executa (senão duas abas aplicariam
+ * duas vezes).
+ */
+async function aplicarRunasPassivas(parts) {
+    let sys = null;
+    try {
+        const m = await import('./tab-ficha-win.js?v=13');
+        sys = await m.registroSistema();
+    } catch (e) { console.warn('registro p/ runas passivas', e); return; }
+    const pecs = sys?.pecsById || {};
+
+    for (const p of parts) {
+        const ch = p.characterId ? T.chars.find(x => x.id === p.characterId) : null;
+        const np = p.npcId ? T.npcs.find(x => x.id === p.npcId) : null;
+        const lista = (ch?.peculiaridadesIndividuais || np?.peculiaridades || np?.peculiaridadeIds || []);
+        for (const ref of lista) {
+            const id = (typeof ref === 'object' && ref) ? ref.id : ref;
+            const r = pecs[id]?.runa;
+            if (!r?.passiva || !(r.condicoesPermanentes || []).length) continue;
+            for (const cd of r.condicoesPermanentes) {
+                await aplicarCondicaoEmVarios([p.id], cd.condicao, 0, null, cd.nivel || 1)
+                    .catch(e => console.warn('runa passiva', e));
+            }
+            logChat(`🪡 ${p.name || '?'}: a runa tatuada "${r.nome || '?'}" está ligada — `
+                + r.condicoesPermanentes.map(c => `${c.condicao} ${c.nivel || 1}`).join(' · '));
+        }
+    }
+}
 
 window.tbCombEncerrarCena = async function() {
     if (!confirm('Encerrar o combate desta cena? (participantes e iniciativas ficam; o painel de turno some)')) return;

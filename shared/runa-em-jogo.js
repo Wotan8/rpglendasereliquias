@@ -44,6 +44,17 @@ function nivelData(el, nv) {
     return ns.find(x => Number(x.nivel) === Number(nv)) || ns[ns.length - 1] || null;
 }
 
+/**
+ * Condições que uma runa PASSIVA nunca pode aplicar no próprio portador: o
+ * cânone só admite Regime Contínuo para efeito estático e NÃO-ADVERSO (§2.7).
+ * Uma tatuagem que queima o dono o tempo todo não é runa, é ferida.
+ */
+const ADVERSAS = new Set(['queimadura', 'hemorragia', 'definhado', 'afogando', 'erosao',
+    'chaga', 'fratura', 'corrompido', 'delirio', 'amedrontado', 'atordoado', 'cego', 'surdo',
+    'imobilizado', 'prostrado', 'lento', 'estagnado', 'abalado', 'exaustao', 'drenado',
+    'entorpecido', 'desorientado', 'ofuscado', 'exposto', 'envelhecido', 'congelamento',
+    'inflamado', 'eletrocutado', 'sobrecarregado', 'agarrado', 'ancorado', 'opaco']);
+
 /* ===================== ativação ===================== */
 
 /**
@@ -176,6 +187,17 @@ export function blocoDeCombate({ nodes, elementsById, ...opts } = {}) {
         rodadas: 5,
     }));
 
+    // 🕳️ A perda de Vitalidade MÁXIMA viaja como condição, não como escrita
+    // direta no campo da ficha: assim ela fica à vista no token, acumula
+    // sozinha e o Mestre consegue desfazer um engano de mesa. `nivel` é
+    // quanto de VIT máxima sai — o mesmo número do dano verdadeiro.
+    if (erosor && asp?.aceitaErosor) {
+        condicoesAplicadas.push({
+            condicao: 'Erosão', nivel: nvErosor, chance: null,
+            portao: 'automatico', rodadas: 0, permanente: true,
+        });
+    }
+
     /* ---- mira ---- */
     const ativacao = ativacaoDoCircuito(nos);
     let mira = null;
@@ -199,8 +221,20 @@ export function blocoDeCombate({ nodes, elementsById, ...opts } = {}) {
     const sanidadeGravar = Number(asp?.sanidadePorNivelGravar || 0) * nvAsp;
     const periciaExigida = asp?.periciaExigida || null;
 
+    // 🪡 PASSIVA: runa sem lógica de gatilho nenhuma está sempre ligada. Numa
+    // tatuagem isso quer dizer que ela não é ação de turno — o que ela aplica,
+    // aplica no portador, o tempo todo, desde que entra na cena.
+    const passiva = ativacao.modo === 'manual' && !nos.some(n => ehCat(n.el, 'logico'));
+
     return {
         alvo,
+        passiva,
+        // O que uma passiva entrega ao portador só faz sentido se não for
+        // adversa: o cânone só admite Regime Contínuo para efeito estático e
+        // não-adverso (§2.7). Condição de dano contínuo não entra.
+        condicoesPermanentes: passiva
+            ? condicoesAplicadas.filter(c => !ADVERSAS.has(norm(c.condicao)))
+            : [],
         // 🕰️ Lei do Relógio: só há rolagem quando alguém declara Defesa.
         rolaAcerto: false,
         dano, canal, tipoAtaque, danoVerdadeiro,

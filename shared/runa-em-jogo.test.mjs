@@ -28,6 +28,10 @@ const EL = {
         sanidadePorNivelGravar: 2, periciaExigida: 'Abismancia',
         condicoesFisicas: [{ condicao: 'Prostrado' }], condicoesEssencia: [{ condicao: 'Amedrontado' }],
         condicaoCritica: [{ condicao: 'Delírio' }] },
+    asp_vida: { nome: 'Vida', tipoElemento: 'aspectus', canalDano: 'Dano Espiritual', aceitaErosor: true, danoVerdadeiro: true,
+        condicoesFisicas: [{ condicao: 'Sobrecarregado' }],
+        condicoesEssencia: [{ condicao: 'Fortalecido' }, { condicao: 'Vigorado' }],
+        condicaoCritica: [{ condicao: 'Chaga' }] },
     asp_poder: { nome: 'Poder', tipoElemento: 'aspectus', canalDano: 'Dano Áureo', bloqueadoAprendizado: true,
         condicoesFisicas: [], condicoesEssencia: [], condicaoCritica: [] },
     sig_projetor: { nome: 'Projetor', tipoElemento: 'sigilus', categoria: 'emissor', flags: ['emissor'], niveis: [
@@ -153,5 +157,39 @@ assert.deepEqual(usosDaRuna({ ramo: 'tatuagem', ct: 40, pericia: 3 }),
 assert.equal(usosDaRuna({ ramo: 'talha', ct: 20, pericia: 5, temDominio: false }).usos, 1,
     '🔒 sem o Domínio do ofício é rascunho: 1 uso, por melhor que seja a perícia');
 assert.equal(usosDaRuna({ ramo: 'talha', ct: 20, pericia: 5, temDominio: false }).rascunho, true);
+
+/* ===== 13) Erosor aplica EROSÃO junto, e ela é permanente ===== */
+const eroC = bloco([no('artus_criar', 3), no('asp_fogo', 3), no('sig_projetor', 1), no('sig_erosor', 2)]);
+const erosao = eroC.condicoesAplicadas.find(c => c.condicao === 'Erosão');
+assert.ok(erosao, '🔒 a perda de VIT máxima viaja como condição, não como escrita direta na ficha');
+assert.equal(erosao.nivel, 2, 'o nível da Erosão é o quanto de VIT máxima sai — o mesmo do dano');
+assert.equal(erosao.portao, 'automatico', 'não é chance: se o golpe entrou, a carne foi');
+assert.equal(erosao.permanente, true);
+// Erosor em natureza que recusa não aplica Erosão nenhuma
+assert.equal(bloco([no('artus_criar', 2), no('asp_terra', 2), no('sig_projetor', 1), no('sig_erosor', 2)])
+    .condicoesAplicadas.some(c => c.condicao === 'Erosão'), false,
+    'Terra não aceita Erosor: nem o dano nem a Erosão saem');
+assert.equal(lanca.condicoesAplicadas.some(c => c.condicao === 'Erosão'), false, 'runa comum não erode ninguém');
+
+/* ===== 14) tatuagem PASSIVA: sem lógica, aplica sozinha e só o que não é adverso ===== */
+const passivaBoa = bloco([no('artus_criar', 2), no('asp_fogo', 2), no('sig_projetor', 1), no('sig_sublimador', 1),
+                          no('sig_impressor', 1)], { ramo: 'tatuagem', condicoesEscolhidas: ['Exaustão'] });
+assert.equal(passivaBoa.passiva, true, 'sem nenhum Sigilus lógico a runa está sempre ligada');
+assert.deepEqual(passivaBoa.condicoesPermanentes, [],
+    '🔒 Exaustão é adversa: o cânone só admite Regime Contínuo para efeito NÃO-ADVERSO (§2.7)');
+
+const passivaVida = bloco([no('artus_criar', 2), no('asp_vida', 2), no('sig_projetor', 1), no('sig_sublimador', 1),
+                           no('sig_impressor', 1)], { ramo: 'tatuagem', condicoesEscolhidas: ['Fortalecido'] });
+assert.equal(passivaVida.passiva, true);
+assert.deepEqual(passivaVida.condicoesPermanentes.map(c => c.condicao), ['Fortalecido'],
+    'benção estática pode ficar ligada para sempre');
+
+// com QUALQUER lógica no circuito deixa de ser passiva: vira ação de turno
+const comToque = bloco([no('artus_criar', 2), no('asp_vida', 2), no('sig_projetor', 1), no('sig_toque', 1)],
+    { ramo: 'tatuagem' });
+assert.equal(comToque.passiva, false, 'Toque é gatilho: a runa passa a ser acionada');
+assert.deepEqual(comToque.condicoesPermanentes, []);
+assert.equal(bloco([no('artus_criar', 2), no('asp_vida', 2), no('sig_projetor', 1), no('sig_gatilho', 1)],
+    { ramo: 'tatuagem' }).passiva, false, 'Gatilho idem');
 
 console.log('✅ runa em jogo OK — Lei do Relógio, o maior dos Aspectus, e as recusas que a bancada tem de fazer');
