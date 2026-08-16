@@ -950,6 +950,15 @@ export async function aplicarCondicaoEmVarios(pids, nome, rodadas, porPid, nivel
         // está de guarda parte para cima.
         ...(extra || {}),
     };
+    // 🛡️ POSTURA é uma só: "até trocar de postura" está no texto das duas
+    // (Defensiva e Ofensiva). Entrar numa larga a outra — senão dava para
+    // acumular a Blindagem da Defensiva com o dano da Ofensiva.
+    if (cond.saiComAcaoPadrao) {
+        parts = parts.map(p => !pids.includes(p.id) ? p : {
+            ...p,
+            condicoes: (p.condicoes || []).filter(cd => !(cd && typeof cd === 'object' && cd.saiComAcaoPadrao)),
+        });
+    }
     // 🎯 Condição EXCLUSIVA: uma presa por caçador. Marcar outra solta a
     // anterior, senão o Caçador acumularia presas de graça.
     if (tpl?.exclusivaPorAplicador && porPid) {

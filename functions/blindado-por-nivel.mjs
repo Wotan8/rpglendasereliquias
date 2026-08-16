@@ -8,9 +8,9 @@
  * Valor Derivado e `modVdPorNivel` diz quanto vale cada degrau, então
  * Blindado nível 5 soma +5 (ver shared/combate-cenas.js).
  *
- * Para o nível existir, a condição precisa acumular níveis. O texto dela dizia
- * "Empilha até 3", mas a Postura Defensiva aplica Blindado 5 — o teto sobe
- * para 5 para a postura caber no próprio sistema de níveis.
+ * Para o nível existir, a condição precisa acumular níveis. O teto é 3, como o
+ * texto da condição sempre disse ("Empilha até 3") — e a Postura Defensiva dá
+ * Blindado 3, o máximo que a condição comporta.
  *
  *   node functions/blindado-por-nivel.mjs            (dry-run)
  *   node functions/blindado-por-nivel.mjs --apply
@@ -28,14 +28,14 @@ const alvo = snap.docs.find(d => /^blindado$/i.test(d.data().nome || ''));
 if (!alvo) { console.error('🔴 condição "Blindado" não encontrada'); process.exit(1); }
 const c = alvo.data();
 
-const patch = { modVd: 'Blindagem', modVdPorNivel: 1, acumulaNiveis: true, nivelMaximo: 5 };
+const patch = { modVd: 'Blindagem', modVdPorNivel: 1, acumulaNiveis: true, nivelMaximo: 3 };
 console.log('='.repeat(60));
 console.log('Blindado' + (APPLY ? ' — GRAVANDO' : ' — DRY-RUN'));
 console.log('='.repeat(60));
 for (const [k, v] of Object.entries(patch)) {
     console.log(`  ${k.padEnd(16)} ${JSON.stringify(c[k])} → ${JSON.stringify(v)}`);
 }
-console.log('\n  efeito: Blindado nv 1 = +1 · nv 3 = +3 · nv 5 = +5 de Blindagem');
+console.log('\n  efeito: Blindado nv 1 = +1 · nv 2 = +2 · nv 3 = +3 de Blindagem (teto 3)');
 
 // A Postura Defensiva precisa dizer o NÍVEL, senão aplica 1.
 const mods = await db.collection('system/data/classModules').get();
@@ -47,8 +47,8 @@ for (const d of mods.docs) {
     for (const pd of itens) {
         if (!/postura defensiva/i.test(pd.nome || '')) continue;
         pd.condicoesAplicadas = (pd.condicoesAplicadas || []).map(cd =>
-            /blindado/i.test(cd.condicao || '') ? { ...cd, nivel: 5 } : cd);
-        console.log(`  [${m.titulo}] Postura Defensiva → aplica Blindado nível 5`);
+            /blindado/i.test(cd.condicao || '') ? { ...cd, nivel: 3 } : cd);
+        console.log(`  [${m.titulo}] Postura Defensiva → aplica Blindado nível 3`);
         mexeu = true;
     }
     if (mexeu) posturas.push({ ref: d.ref, itens });

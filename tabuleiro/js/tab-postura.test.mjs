@@ -13,6 +13,24 @@
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { miraDeCadastro } from '../../shared/skill-runtime.js';
+
+/* ═══ 0. O gatilho atravessa o cadastro ═══
+   Dados REAIS de system/data/classModules. Se a marca não chegar até aqui, a
+   postura vira permanente em silêncio — o chip fica na tela para sempre. */
+{
+    const predefReal = {
+        nome: 'Postura Defensiva', formaArea: 'proprio', tamanhoArea: null, alvosMax: 1, alcance: 0,
+        condicoesAplicadas: [{ condicao: 'Blindado', portao: null, chance: null,
+            alvos: 1, rodadas: 5, saiComAcaoPadrao: true, nivel: 3 }],
+    };
+    const mira = miraDeCadastro(predefReal);
+    assert.ok(mira, 'a Postura produz mira — sem mira ela nem aplicaria a condição');
+    assert.equal(mira.afeta, 'aliados', '"próprio" vira alvo aliado: é o ramo que aplica direto, sem conflito');
+    assert.equal(mira.condicoes[0].nome, 'Blindado');
+    assert.equal(mira.condicoes[0].nivel, 3, 'nível 3 = +3 de Blindagem (teto da condição)');
+    assert.equal(mira.condicoes[0].saiComAcaoPadrao, true, '🔒 a marca do gatilho sobrevive à leitura da mira');
+}
 
 const src = readFileSync(new URL('./tab-turno.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const ini = src.indexOf('function semPosturaDeQuemAgiu(pid) {');
