@@ -526,7 +526,6 @@ function render() {
     const skills = skillsDe(p);
     const temLivre = skills.some(s => s.acao === 'livre');
     const temCompleta = skills.some(s => s.acao === 'completa');
-    const temFora = skills.some(s => s.acao === 'fora');
     const semAcoes = !acoes.padrao && !acoes.movimento;
 
     abrirPainel();
@@ -569,7 +568,11 @@ function render() {
             ${semAcoes ? '' : btn('movimento', ROTULO_ACAO.movimento, acoes.movimento, 'Mover pelo deslocamento da ficha')}
             ${temLivre ? btn('livre', ROTULO_ACAO.livre, true, 'Incidental — não consome ação') : ''}
             ${temCompleta && !semAcoes ? btn('completa', ROTULO_ACAO.completa, acoes.padrao && acoes.movimento, 'Habilidades que consomem o turno inteiro') : ''}
-            ${temFora ? btn('fora', ROTULO_ACAO.fora, true, 'Rituais do cadastro: não gastam ação do turno e não têm alvo no mapa — a mesa resolve') : ''}
+            <!-- 🕯️ Ritual "Fora de combate" NÃO tem botão aqui, de propósito. O
+                 painel do turno só é desenhado com o combate INICIADO e na sua
+                 vez — então um botão "fora de combate" só apareceria dentro do
+                 combate, que é o contrário do que o cadastro diz. Quem resolve
+                 rito de oito horas é a mesa. -->
             ${podeGuardar ? `<button class="tb-btn tb-turno-btn" onclick="tbTurnoGuardar()" title="Guarda as DUAS ações: você pode interromper e agir a qualquer momento até o fim DESTA rodada — depois perde">🛡️ Guardar<span class="tb-so-largo"> Turno</span></button>` : ''}
             <button class="tb-btn tb-turno-btn ${semAcoes && !conflitoPendente() ? 'tb-btn-primary' : ''}"
                 ${conflitoPendente() ? 'disabled' : ''}
@@ -880,6 +883,10 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
     // 🕯️ Ritual fora de combate: não gasta ação do turno e não tem alvo no
     // mapa. Cobra o recurso, registra no chat e devolve a cena para a mesa —
     // pedir uma mira para um rito de oito horas nunca fez sentido.
+    // 🕯️ Sem botão no painel, este ramo é rede de segurança: se um ritual
+    // chegar aqui por outro caminho (atalho, cadastro novo, chamada externa),
+    // ele NÃO pode gastar a ação do turno nem pedir mira. Era exatamente isso
+    // que acontecia antes de `acaoDoRotulo` conhecer "Fora de combate".
     if (custo === 'fora') {
         sub = null;
         await pagarCustos(p);

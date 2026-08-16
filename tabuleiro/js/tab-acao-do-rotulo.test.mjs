@@ -44,4 +44,15 @@ const gastar = src.slice(src.indexOf('async function gastar('), src.indexOf('\n}
 assert.match(gastar, /custo === 'livre' \|\| custo === 'fora'/,
     'ritual e ação livre não consomem ação do turno');
 
+/* ===== o ritual NÃO tem botão no painel do turno =====
+   O painel só é desenhado com o combate iniciado e na sua vez. Um botão
+   "fora de combate" ali só apareceria DENTRO do combate — o contrário do que
+   o cadastro declara. A classificação continua valendo: é ela que impede o
+   rito de oito horas de gastar a ação da rodada e de pedir mira. */
+assert.doesNotMatch(src, /btn\('fora'/,
+    '🔒 ritual fora de combate não pode ter botão no painel do turno');
+assert.doesNotMatch(src, /temFora/, 'e nem a variável que o ligava');
+assert.match(src, /if \(custo === 'fora'\) \{/,
+    'o despacho fica como rede: ritual que chegue por outro caminho não gasta ação nem mira');
+
 console.log('✅ rótulo de Ação OK — "Fora de combate" vira ritual, não Ação Padrão');
