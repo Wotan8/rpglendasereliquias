@@ -181,7 +181,12 @@
             gravacao: { horas: Math.round(a.gravacao.horas * 100) / 100, material: a.gravacao.material },
             composicao: a.breakdown.map(b => ({ nome: b.nome, tipo: b.tipo, nivel: b.nivel, custo: b.custo })),
             canvas: cState,
+            // 🎯 As escolhas do projeto: sem elas o Impressor volta a cair no
+            // fallback toda vez que a runa for reaberta.
+            ...(window.LabBancada?.escolhas?.() || {}),
         };
+        runa.condicoesEscolhidas = runa.condicoes || [];
+        delete runa.condicoes;
         const r = window.LabFB.runomancia;
         const idx = r.grimorio.findIndex(x => x.id === runa.id);
         if (idx >= 0) { runa.criadaEm = r.grimorio[idx].criadaEm; runa.atualizadaEm = new Date().toISOString(); r.grimorio[idx] = runa; }
@@ -279,6 +284,7 @@
                     currentRuna = id;
                     $('#labRunaNome').value = r.nome;
                     LabCanvas.loadState(r.canvas);
+                    window.LabBancada?.restaurarEscolhas?.(r);
                     switchTab('montagem');
                 } else if (b.dataset.acao === 'gravar') {
                     await window.LabBancada?.emitirRuna?.(r, toast);

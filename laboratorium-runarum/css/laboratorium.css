@@ -424,6 +424,27 @@ body {
 
 /* ===== 🧰 BANCADA — materiais e carga da gravação ===== */
 .lab-banc-titulo { margin: 14px 0 6px; font-size: .85rem; letter-spacing: .04em; }
+
+/* ---------- 🎯 PROJETO: escolhas do Impressor e do Manifestador ---------- */
+.lab-banc-projeto {
+    margin-top: 10px; padding: 10px 12px;
+    background: var(--pedra); border: 1px solid var(--borda); border-radius: var(--radius);
+    display: flex; flex-direction: column; gap: 10px;
+}
+.lab-banc-projeto h5 { margin: 0; font-size: .72rem; opacity: .8; }
+.lab-banc-esc { display: flex; flex-direction: column; gap: 4px; }
+.lab-banc-esc-cab { font-size: .78rem; font-weight: 700; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.lab-banc-esc-cab small { font-weight: 400; opacity: .7; font-size: .68rem; }
+.lab-banc-cond {
+    display: flex; align-items: baseline; gap: 7px; font-size: .76rem;
+    padding: 4px 7px; border-radius: 7px; cursor: pointer; border: 1px solid transparent;
+}
+.lab-banc-cond:hover { background: var(--bancada); border-color: var(--borda); }
+.lab-banc-cond small { margin-left: auto; opacity: .65; font-size: .68rem; text-align: right; }
+.lab-banc-cond.crit { color: var(--lume); }
+.lab-banc-cond.cheio { opacity: .4; cursor: not-allowed; }
+.lab-banc-cond input { accent-color: var(--lume); }
+.lab-banc-fallback { display: block; opacity: .6; font-size: .68rem; line-height: 1.5; padding: 2px 7px; }
 #labBancada { display: flex; flex-direction: column; gap: 10px; font-size: .78rem; }
 .lab-banc-vazio { color: var(--tinta-fraca, #888); font-size: .75rem; padding: 6px 2px; }
 .lab-banc-ramo { display: flex; gap: 6px; }

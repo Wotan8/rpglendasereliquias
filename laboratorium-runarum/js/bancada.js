@@ -44,6 +44,9 @@ const LabBancada = (() => {
         sel: {},             // instId -> qtd selecionada (ferramentas: 1 = em uso)
         lunis: 0,
         ultimaAudit: null,
+        // 🎯 O que o PROJETO decide, e que nenhum outro campo sabe: qual marca
+        // o Impressor imprime, e o que o Manifestador manifesta.
+        escolhas: { condicoes: [], manifestacao: null },
     };
 
     // ---------- carga do inventário ----------
@@ -78,6 +81,95 @@ const LabBancada = (() => {
         /* pré-seleção: primeira ferramenta de cada tipo */
         state.carregado = true;
         render();
+    }
+
+    /* =====================================================================
+       🎯 O PROJETO — as escolhas que só o desenho do circuito destrava
+       ---------------------------------------------------------------------
+       O Impressor e o Manifestador existem no cadastro e no motor desde a
+       etapa 3, mas não havia onde escolher: `condicoesEscolhidas` e
+       `manifestacao` eram lidos e nunca escritos, então todo Impressor caía no
+       fallback (a primeira condição do repertório) e o Manifestador não
+       manifestava nada em particular. Esta seção é o lugar da escolha.
+       ===================================================================== */
+
+    /** Os nós do circuito com o elemento do catálogo junto. */
+    function nosDoCircuito() {
+        const nodes = window.LabCanvas?.getState?.()?.nodes || [];
+        const els = window.LabFB?.elementsById || {};
+        return nodes.map(n => ({ ...n, el: els[n.elementId] })).filter(n => n.el);
+    }
+    const temFlag = (el, f) => Array.isArray(el?.flags) && el.flags.map(norm).includes(f);
+    const maiorPor = (nos, teste) => nos.filter(n => teste(n.el))
+        .sort((a, b) => Number(b.nivel) - Number(a.nivel))[0] || null;
+
+    /** O que o circuito destrava agora: Aspectus, Impressor, Sublimador, Manifestador. */
+    function projetoAtual() {
+        const nos = nosDoCircuito();
+        const asp = maiorPor(nos, el => norm(el.tipoElemento) === 'aspectus');
+        const imp = maiorPor(nos, el => temFlag(el, 'impressor'));
+        const sub = maiorPor(nos, el => temFlag(el, 'sublimador'));
+        const man = maiorPor(nos, el => /manifestador/.test(norm(el.nome)));
+        const coringa = !!asp?.el?.formaFisicaCoringa;
+        const essencia = !!sub || (!!asp?.el?.sublimadorObrigatorio && coringa);
+        return {
+            asp: asp?.el || null, nvAsp: Number(asp?.nivel) || 0,
+            imp: imp?.el || null, nvImp: Number(imp?.nivel) || 0,
+            man: man?.el || null, nvMan: Number(man?.nivel) || 0,
+            essencia,
+            // O repertório que vale AGORA: com Sublimador é o de essência.
+            repertorio: essencia ? (asp?.el?.condicoesEssencia || []) : (asp?.el?.condicoesFisicas || []),
+            criticas: asp?.el?.condicaoCritica || [],
+        };
+    }
+
+    /** O painel de escolhas. Vazio quando o circuito não destrava nenhuma. */
+    function htmlProjeto() {
+        const j = projetoAtual();
+        if (!j.imp && !j.man) return '';
+        let html = '<div class="lab-banc-projeto"><h5>🎯 Projeto</h5>';
+
+        if (j.imp) {
+            const disp = [...j.repertorio.map(c => ({ ...c, critica: false })),
+                          ...(j.nvImp >= 3 ? j.criticas.map(c => ({ ...c, critica: true })) : [])];
+            const chance = j.nvAsp * (j.essencia ? 20 : 10);
+            const marcadas = state.escolhas.condicoes;
+            html += `<div class="lab-banc-esc">
+                <div class="lab-banc-esc-cab">🔶 ${esc(j.imp.nome)} Nv${j.nvImp}
+                    <small>escolhe até ${j.nvImp} · ${j.essencia ? 'repertório de essência' : 'repertório físico'} de ${esc(j.asp?.nome || '?')}</small></div>`;
+            if (!disp.length) {
+                html += `<small>${j.asp ? esc(j.asp.nome) + ' não tem repertório ' + (j.essencia ? 'de essência' : 'físico') + ' — grave um Sublimador ou troque a natureza.' : 'Sem Aspectus no circuito: não há natureza para moldar.'}</small>`;
+            } else {
+                html += disp.map(c => {
+                    const on = marcadas.includes(c.condicao);
+                    const cheio = !on && marcadas.length >= j.nvImp;
+                    return `<label class="lab-banc-cond ${c.critica ? 'crit' : ''} ${cheio ? 'cheio' : ''}">
+                        <input type="checkbox" data-cond="${esc(c.condicao)}" ${on ? 'checked' : ''} ${cheio ? 'disabled' : ''}>
+                        ${esc(c.condicao)} ${j.nvAsp || 1}
+                        <small>${c.critica ? 'só em acerto crítico' : chance + '%'}</small></label>`;
+                }).join('');
+                if (!marcadas.length) html += `<small class="lab-banc-fallback">Nada marcado: vale a primeira do repertório (${esc(disp[0].condicao)}), como o cânone promete.</small>`;
+                if (j.nvImp < 3 && j.criticas.length) html += `<small class="lab-banc-fallback">A marca de crítico (${j.criticas.map(c => esc(c.condicao)).join(', ')}) só é alcançada por um Impressor Nv3.</small>`;
+            }
+            html += '</div>';
+        }
+
+        if (j.man) {
+            const opcoes = j.man.manifestacoes || [];
+            html += `<div class="lab-banc-esc">
+                <div class="lab-banc-esc-cab">🧱 ${esc(j.man.nome)} Nv${j.nvMan}
+                    <small>${esc(j.man.niveis?.[j.nvMan - 1]?.mira?.volumeM3 ?? '?')} m³ de ${esc(j.man.niveis?.[j.nvMan - 1]?.mira?.material ?? '?')}</small></div>`;
+            html += opcoes.map(o => {
+                const bloqueado = j.nvMan < Number(o.nivelMin || 1);
+                const on = state.escolhas.manifestacao === o.chave;
+                return `<label class="lab-banc-cond ${bloqueado ? 'cheio' : ''}">
+                    <input type="radio" name="labManif" data-manif="${esc(o.chave)}" ${on ? 'checked' : ''} ${bloqueado ? 'disabled' : ''}>
+                    ${esc(o.nome)} <small>${bloqueado ? `exige Nv${o.nivelMin}` : esc(o.desc || '')}</small></label>`;
+            }).join('') || '<small>Este Manifestador ainda não tem manifestações cadastradas.</small>';
+            if (!state.escolhas.manifestacao) html += '<small class="lab-banc-fallback">Sem escolha, a runa manifesta massa bruta — o Mestre decide na mesa o que ela vira.</small>';
+            html += '</div>';
+        }
+        return html + '</div>';
     }
 
     // ---------- requisitos por ramo ----------
@@ -217,6 +309,7 @@ const LabBancada = (() => {
                 })() : ''}
                 ${carga.essIn > carga.teto && carga.teto ? `<div class="lab-banc-req falta">⚠️ ${carga.essIn - carga.teto} Ess acima do teto de absorção — carregue em série (§2.4)</div>` : ''}
             </div>` : ''}
+            ${htmlProjeto()}
             <button id="labBancConsumir" ${ct && mats.every(m => m.ok) ? '' : 'disabled'}
                 title="Desconta consumíveis, soma desgaste nas ferramentas e debita os Lunis">🔥 Consumir materiais da gravação</button>`;
 
@@ -229,6 +322,18 @@ const LabBancada = (() => {
             state.lunis = Math.max(0, Math.min(state.lunsDisponiveis, Number(ev.target.value) || 0)); render();
         });
         host.querySelectorAll('[data-ramo]').forEach(b => b.addEventListener('click', () => { state.ramo = b.dataset.ramo; render(); }));
+        host.querySelectorAll('[data-cond]').forEach(el => el.addEventListener('change', ev => {
+            const nome = ev.target.dataset.cond;
+            const lista = state.escolhas.condicoes;
+            const i = lista.indexOf(nome);
+            if (ev.target.checked) { if (i < 0) lista.push(nome); }
+            else if (i >= 0) lista.splice(i, 1);
+            render();
+        }));
+        host.querySelectorAll('[data-manif]').forEach(el => el.addEventListener('change', ev => {
+            state.escolhas.manifestacao = ev.target.dataset.manif;
+            render();
+        }));
         host.querySelector('#labBancConsumir')?.addEventListener('click', consumir);
     }
 
@@ -316,8 +421,10 @@ const LabBancada = (() => {
             pericia: achaDot(periciaDoRamo),
             qualidadeTinta: qualidadeTintaSelecionada(),
             temDominio: temDominioDoRamo(),
-            condicoesEscolhidas: runa.condicoesEscolhidas || [],
-            manifestacao: runa.manifestacao || null,
+            // Runa vinda do Grimório traz a própria escolha; a que está sendo
+            // montada agora usa a da bancada.
+            condicoesEscolhidas: runa.condicoesEscolhidas || state.escolhas.condicoes,
+            manifestacao: runa.manifestacao || state.escolhas.manifestacao,
         });
     }
 
@@ -497,6 +604,17 @@ const LabBancada = (() => {
 
     return {
         enviarParaFicha, emitirRuna, blocoDaRuna,
+        /** O que o projeto escolheu — o Grimório guarda junto com o desenho. */
+        escolhas: () => ({ condicoes: [...state.escolhas.condicoes], manifestacao: state.escolhas.manifestacao }),
+        /** Abrir uma runa do Grimório na mesa restaura as escolhas dela. */
+        restaurarEscolhas(r) {
+            state.escolhas = {
+                condicoes: Array.isArray(r?.condicoesEscolhidas) ? [...r.condicoesEscolhidas] : [],
+                manifestacao: r?.manifestacao || null,
+            };
+            if (r?.ramo) state.ramo = r.ramo;
+            render();
+        },
         boot() {
             /* injeta a seção logo abaixo da auditoria */
             const audit = document.getElementById('labAudit');
