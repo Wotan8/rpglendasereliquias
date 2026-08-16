@@ -112,13 +112,18 @@ export function absorverResolve(passou, critico) {
 /* ===================== 📏 TAMANHO ===================== */
 
 /**
- * O VD Tamanho é o TRIPLO da Altura, então três pontos ≈ um metro de altura.
- * É essa a unidade da regra: um metro de diferença vale um ponto.
+ * O VD Tamanho é o TRIPLO da Altura, então dois pontos ≈ 66 cm de altura.
  * Humano de 1,75 m ≈ 5,25 · ogro de 3 m ≈ 9 · dragão de 6 m ≈ 18.
+ *
+ * Na prática: humano contra ogro dá 2 · humano contra dragão dá 6.
  */
-export const TAMANHO_POR_PONTO = 3;
-/** Teto para os dois lados: sem ele, um dragão seria imperdível e imbatível. */
-export const TAMANHO_TETO = 3;
+export const TAMANHO_POR_PONTO = 2;
+/**
+ * Teto para os dois lados. Alto de propósito: acertar um dragão TEM de ser
+ * fácil, e a patada dele tem de ser mortal — o teto existe só para o
+ * colossal absurdo (acima de ~8 m de diferença) não virar aritmética infinita.
+ */
+export const TAMANHO_TETO = 10;
 
 /**
  * 📏 O que a diferença de tamanho faz na troca de golpes.

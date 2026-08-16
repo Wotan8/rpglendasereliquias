@@ -162,7 +162,7 @@ assert.equal(danoFinal(10, 2, absorverResolve(true, false).meia), 8, 'falhou: 10
    O VD é o TRIPLO da Altura, então 3 pontos ≈ 1 metro. Alvo maior é mais fácil
    de acertar; e no corpo a corpo quem é maior bate mais forte. O MESMO número
    com sinais opostos — é a mesma diferença física lida de dois jeitos. */
-assert.equal(TAMANHO_POR_PONTO, 3, '3 pontos de Tamanho ≈ 1 metro de altura');
+assert.equal(TAMANHO_POR_PONTO, 2, '2 pontos de Tamanho ≈ 66 cm de altura');
 
 const HUMANO = 5.25;   // 1,75 m
 const OGRO = 9;        // 3 m
@@ -173,21 +173,24 @@ let a1 = ajusteDeTamanho(HUMANO, HUMANO);
 assert.deepEqual(a1, { pontos: 0, acerto: 0, danoCaC: 0 }, 'iguais: nada muda');
 
 a1 = ajusteDeTamanho(HUMANO, OGRO);
-assert.equal(a1.acerto, 1, '🔒 alvo MAIOR é mais fácil de acertar');
-assert.equal(a1.danoCaC, -1, 'e o humano bate mais fraco nele, no corpo a corpo');
+assert.equal(a1.acerto, 2, '🔒 alvo MAIOR é mais fácil de acertar');
+assert.equal(a1.danoCaC, -2, 'e o humano bate mais fraco nele, no corpo a corpo');
 
 a1 = ajusteDeTamanho(OGRO, HUMANO);
-assert.equal(a1.acerto, -1, '🔒 alvo MENOR é mais difícil');
-assert.equal(a1.danoCaC, 1, 'e o ogro bate mais forte — o mesmo número, invertido');
+assert.equal(a1.acerto, -2, '🔒 alvo MENOR é mais difícil');
+assert.equal(a1.danoCaC, 2, 'e o ogro bate mais forte — o mesmo número, invertido');
 
 a1 = ajusteDeTamanho(HUMANO, HALFLING);
 assert.equal(a1.acerto, -1, 'halfling é alvo pequeno');
 
-/* o teto existe para o dragão não ser imperdível E imbatível */
+/* 🐲 O DRAGÃO. Acertar tem de ser fácil, e a patada tem de ser mortal —
+   por isso ele fica LONGE do teto: +6 nos dois lados da conta. */
 a1 = ajusteDeTamanho(HUMANO, DRAGAO);
-assert.equal(a1.acerto, TAMANHO_TETO, `🔒 4,25 degraus caem no teto de ${TAMANHO_TETO}`);
-assert.equal(ajusteDeTamanho(DRAGAO, HUMANO).acerto, -TAMANHO_TETO, 'e o teto vale para os dois lados');
+assert.equal(a1.acerto, 6, '🔒 um dragão de 6 m é +6 no Alvo: quase impossível errar');
+assert.equal(ajusteDeTamanho(DRAGAO, HUMANO).danoCaC, 6, '🔒 e a patada dele leva +6 de dano');
+assert.ok(a1.acerto < TAMANHO_TETO, 'e nem ele encosta no teto — o teto é para o absurdo colossal');
 assert.equal(ajusteDeTamanho(HUMANO, 999).acerto, TAMANHO_TETO, 'nada fura o teto');
+assert.equal(ajusteDeTamanho(999, HUMANO).acerto, -TAMANHO_TETO, 'e ele vale para os dois lados');
 
 /* simetria: trocar os lados inverte o sinal, sempre */
 const inv = (n) => -n || 0;   // -0 e 0 são a mesma coisa para a mesa
@@ -198,12 +201,12 @@ for (const [x, y] of [[HUMANO, OGRO], [HALFLING, DRAGAO], [OGRO, OGRO], [3, 7.5]
         'acerto e dano são o mesmo número com sinais opostos');
 }
 
-/* meio metro não move nada: a régua é grossa de propósito */
-assert.equal(ajusteDeTamanho(HUMANO, HUMANO + 1.4).acerto, 0, 'menos de meio degrau não conta');
-assert.equal(ajusteDeTamanho(HUMANO, HUMANO + 1.6).acerto, 1, 'passou da metade, arredonda para 1');
+/* um palmo não move nada: a régua ainda é grossa, só menos que antes */
+assert.equal(ajusteDeTamanho(HUMANO, HUMANO + 0.9).acerto, 0, 'menos de meio degrau não conta');
+assert.equal(ajusteDeTamanho(HUMANO, HUMANO + 1.1).acerto, 1, 'passou da metade, arredonda para 1');
 
 /* sem Tamanho na ficha (NPC legado) não quebra nem inventa vantagem */
 assert.deepEqual(ajusteDeTamanho(null, null), { pontos: 0, acerto: 0, danoCaC: 0 });
-assert.deepEqual(ajusteDeTamanho(undefined, HUMANO).acerto, 2, 'quem não tem Tamanho conta como 0');
+assert.equal(ajusteDeTamanho(undefined, HUMANO).acerto, 3, 'quem não tem Tamanho conta como 0');
 
 console.log('✅ conta do conflito OK — graus, defesa, crítico, blindagem, orçamento, piso e contra-ataque');
