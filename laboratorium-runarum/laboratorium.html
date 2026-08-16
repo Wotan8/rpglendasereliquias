@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0E1117">
     <title>ᛟ Laboratorium Runarum — Lendas & Relíquias</title>
-    <link rel="stylesheet" href="css/laboratorium.css?v=3">
+    <link rel="stylesheet" href="css/laboratorium.css?v=4">
     <link rel="stylesheet" href="css/lab-print.css">
     <link rel="stylesheet" href="../shared/tokens.css?v=11">
     <script src="../shared/theme.js"></script>
@@ -38,6 +38,7 @@
         <nav class="lab-tabs">
             <button class="lab-tab ativo" data-tab="montagem">🛠️ Montagem</button>
             <button class="lab-tab" data-tab="grimorio">📖 Grimório</button>
+            <button class="lab-tab" data-tab="runoteca">🔎 Runoteca</button>
             <button class="lab-tab" data-tab="compendio">📜 Compêndio</button>
         </nav>
 
@@ -81,6 +82,11 @@
             <div id="labGrimorio" class="lab-grimorio"></div>
         </main>
 
+        <!-- ===== RUNOTECA — toda runa cadastrada, de qualquer mão ===== -->
+        <main class="lab-pane" data-pane="runoteca" style="display:none">
+            <div id="labRunoteca" class="lab-runoteca"></div>
+        </main>
+
         <!-- ===== COMPÊNDIO ===== -->
         <main class="lab-pane" data-pane="compendio" style="display:none">
             <div id="labCompendio" class="lab-compendio"></div>
@@ -106,6 +112,7 @@
     <script src="js/rune-export.js"></script>
     <script src="js/lab-app.js"></script>
     <script type="module" src="js/bancada.js?v=3"></script>
+    <script type="module" src="js/runoteca.js?v=1"></script>
     <script type="module" src="js/lab-firebase.js"></script>
 </body>
 </html>

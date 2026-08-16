@@ -307,6 +307,44 @@ body {
 .lab-grim-acoes button:hover { border-color: var(--lume); }
 .lab-grim-acoes button.perigo:hover { border-color: var(--erro); color: var(--erro); }
 
+/* ---------- RUNOTECA — toda runa cadastrada ---------- */
+.lab-runoteca { display: flex; flex-direction: column; gap: 10px; }
+.lab-rt-busca {
+    background: var(--pedra); border: 1px solid var(--borda); color: var(--ink);
+    border-radius: 10px; padding: 9px 13px; font-size: .82rem; width: 100%; font-family: inherit;
+}
+.lab-rt-busca:focus { outline: none; border-color: var(--lume); }
+.lab-rt-card {
+    background: var(--bancada); border: 1px solid var(--borda); border-radius: var(--radius);
+    overflow: hidden;
+}
+.lab-rt-card.aberto { border-color: var(--lume); }
+.lab-rt-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 11px 13px; cursor: pointer; font-family: var(--font); font-weight: 800;
+}
+.lab-rt-head:hover { background: var(--pedra); }
+.lab-rt-peca { color: var(--muted); font-size: .72rem; font-weight: 400; }
+.lab-rt-ct {
+    margin-left: auto; color: var(--lume); font-size: .72rem;
+    border: 1px solid var(--lume); border-radius: 999px; padding: 2px 9px; white-space: nowrap;
+}
+.lab-rt-ficha { padding: 0 13px 13px; display: flex; flex-direction: column; gap: 3px; }
+.lab-rt-linha {
+    display: flex; justify-content: space-between; gap: 14px; font-size: .76rem;
+    padding: 4px 0; border-bottom: 1px solid var(--borda);
+}
+.lab-rt-linha span { color: var(--muted); flex: 0 0 auto; }
+.lab-rt-linha b { text-align: right; }
+.lab-rt-alerta { color: var(--erro); font-size: .74rem; margin-top: 8px; line-height: 1.5; }
+.lab-rt-acoes { display: flex; gap: 6px; margin-top: 10px; align-items: center; }
+.lab-rt-acoes button {
+    background: var(--pedra); border: 1px solid var(--borda); color: var(--ink);
+    border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: .74rem;
+}
+.lab-rt-acoes button:hover { border-color: var(--lume); }
+.lab-rt-semdesenho { color: var(--muted); font-size: .72rem; }
+
 /* ---------- COMPÊNDIO ---------- */
 .lab-compendio { max-width: 900px; margin: 0 auto; }
 .lab-comp-sec {

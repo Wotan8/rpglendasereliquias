@@ -26,6 +26,7 @@
         elementsById = window.LabFB.elementsById || {};
         canvasEl = $('#labCanvas');
         window.LabBancada?.boot?.();   // 🧰 Bancada: inventário do personagem
+        window.LabRunoteca?.boot?.();  // 🔎 Runoteca: toda runa já gravada, de qualquer mão
 
         const ctx = window.LabFB.ctx;
         $('#labCharInfo').innerHTML = ctx.nome
@@ -352,6 +353,9 @@
         document.querySelectorAll('.lab-tab').forEach(t => t.classList.toggle('ativo', t.dataset.tab === tab));
         document.querySelectorAll('.lab-pane').forEach(p => p.style.display = p.dataset.pane === tab ? '' : 'none');
     }
+    // A Runoteca precisa devolver o circuito à mesa: é a única troca de aba
+    // que vem de fora deste módulo.
+    window.labSwitchTab = switchTab;
     function toast(msg) {
         const t = document.createElement('div');
         t.className = 'lab-toast'; t.innerHTML = msg;

@@ -411,7 +411,10 @@ const LabBancada = (() => {
                     tags: ['Runa', 'Tatuagem'],
                     ehVantagem: true, publicado: true, versao: 1,
                     mecanicaIds: [], derivedValueIds: [],
-                    runa: { ...b, nome: runa.nome, ramo: state.ramo, ct: runa.ct, origemGrimorio: runa.id },
+                    runa: { ...b, nome: runa.nome, ramo: state.ramo, ct: runa.ct, origemGrimorio: runa.id,
+                        // 🛠️ O DESENHO vai junto: e o que deixa a Runoteca refazer a
+                        // auditoria depois, em vez de guardar a foto de um dia so.
+                        canvas: runa.canvas || null },
                     fonte: 'Runomancia', fonteRef: fb.charId,
                     criadoEm: agora, atualizadoEm: agora,
                 });
@@ -425,7 +428,10 @@ const LabBancada = (() => {
                     nome: runa.nome + ' (' + (modeloBase.nome || base.nome) + ')',
                     descricao: ramoNome + ' sobre ' + (modeloBase.nome || base.nome) + '.\n\n' + resumoDoBloco(b),
                     tags: [...new Set([...(modeloBase.tags || []), 'Runa', ramoNome])],
-                    runa: { ...b, nome: runa.nome, ramo: state.ramo, ct: runa.ct, origemGrimorio: runa.id },
+                    runa: { ...b, nome: runa.nome, ramo: state.ramo, ct: runa.ct, origemGrimorio: runa.id,
+                        // 🛠️ O DESENHO vai junto: e o que deixa a Runoteca refazer a
+                        // auditoria depois, em vez de guardar a foto de um dia so.
+                        canvas: runa.canvas || null },
                     publicado: true, atualizadoEm: agora,
                 };
                 delete modelo.id;

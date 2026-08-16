@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v259';
+const VERSION = 'v260';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -91,6 +91,7 @@ const PRECACHE_URLS = [
   '/laboratorium-runarum/js/lab-app.js',
   '/laboratorium-runarum/js/lab-firebase.js',
   '/laboratorium-runarum/js/rune-engine.js',
+  '/laboratorium-runarum/js/runoteca.js',
   '/laboratorium-runarum/js/rune-export.js',
   '/laboratorium-runarum/laboratorium.html',
   '/menu/css/menu.css',
