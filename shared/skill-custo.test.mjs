@@ -14,6 +14,7 @@
 import assert from 'node:assert/strict';
 import {
     custosDaSkill, custoDoTexto, degrauDoTitulo, recursoDoRotulo, recursoDoModulo, rotuloDosCustos,
+    bolsaFecha, reparticaoValida, partesDaReparticao,
 } from './skill-custo.js';
 
 /* ===== texto livre ===== */
@@ -155,11 +156,37 @@ assert.deepEqual(custosDaSkill({
     assert.equal(umaMoeda.length, 1, 'uma moeda: uma forma de pagar, como sempre foi');
     assert.deepEqual(umaMoeda[0].partes, [{ alvo: 'Harmonia', qtd: 2 }]);
 
-    const duas = custosDaSkill({ modulo: { titulo: 'Custo 2 — Desenvolvimento', custoRecurso: 'Harmonia ou Energia' } });
-    assert.equal(duas.length, 2, 'duas moedas: duas formas, e quem usa escolhe');
-    assert.deepEqual(duas[0].partes, [{ alvo: 'Harmonia', qtd: 2 }]);
-    assert.deepEqual(duas[1].partes, [{ alvo: 'Energia', qtd: 2 }], 'o degrau vale para as DUAS moedas');
-    assert.equal(duas[1].rotulo, '2 Energia');
+    // 🎵 Duas moedas viram uma BOLSA: a cancao custa 3, nao "3 Harmonia".
+    const bolsa = custosDaSkill({ modulo: { titulo: 'Custo 3 — Clímax', custoRecurso: 'Harmonia ou Energia' } });
+    assert.equal(bolsa.length, 1, 'a bolsa é UMA forma de pagar, repartida na hora');
+    assert.equal(bolsa[0].pool, true);
+    assert.equal(bolsa[0].total, 3);
+    assert.deepEqual(bolsa[0].moedas, ['Harmonia', 'Energia']);
+    assert.equal(bolsa[0].rotulo, '3 · Harmonia e/ou Energia');
+    assert.deepEqual(bolsa[0].partes, [{ alvo: 'Harmonia', qtd: 3 }],
+        'partes trazem a repartição padrão — quem só lê forma simples não quebra');
+
+    // a bolsa fecha somando as moedas, não uma de cada vez
+    const tem = (h, e) => (m) => (m === 'Harmonia' ? h : m === 'Energia' ? e : null);
+    assert.equal(bolsaFecha(bolsa[0], tem(0, 5)).ok, true, 'sem Harmonia mas com Energia: paga');
+    assert.equal(bolsaFecha(bolsa[0], tem(2, 1)).ok, true, '2 + 1 = 3: paga misturado');
+    assert.equal(bolsaFecha(bolsa[0], tem(1, 1)).ok, false, '1 + 1 = 2: não fecha');
+    assert.equal(bolsaFecha(bolsa[0], tem(1, 1)).disponivel, 2, 'e diz quanto tem no total');
+    assert.equal(bolsaFecha(bolsa[0], () => null).ok, true, 'moeda desconhecida não bloqueia');
+
+    // a repartição tem que dar o total exato e caber no que existe
+    const vale = (split, h, e) => reparticaoValida(bolsa[0], split, tem(h, e));
+    assert.equal(vale({ Harmonia: 2, Energia: 1 }, 5, 5).ok, true, '2+1 fecha os 3');
+    assert.equal(vale({ Harmonia: 0, Energia: 3 }, 0, 5).ok, true, 'tudo de uma moeda é repartição válida');
+    assert.equal(vale({ Harmonia: 1, Energia: 1 }, 5, 5).ok, false, 'faltou 1');
+    assert.equal(vale({ Harmonia: 3, Energia: 1 }, 5, 5).ok, false, 'sobrou 1 — ninguém paga a mais');
+    assert.equal(vale({ Harmonia: 3, Energia: 0 }, 1, 5).ok, false, 'pediu 3 de Harmonia e só tem 1');
+    assert.match(vale({ Harmonia: 3, Energia: 0 }, 1, 5).porque, /só tem 1 de Harmonia/);
+    assert.equal(vale({ Harmonia: -1, Energia: 4 }, 5, 5).ok, false, 'negativo não é repartição');
+    assert.deepEqual(partesDaReparticao(bolsa[0], { Harmonia: 2, Energia: 1 }),
+        [{ alvo: 'Harmonia', qtd: 2 }, { alvo: 'Energia', qtd: 1 }]);
+    assert.deepEqual(partesDaReparticao(bolsa[0], { Harmonia: 0, Energia: 3 }),
+        [{ alvo: 'Energia', qtd: 3 }], 'moeda com 0 não vira débito');
 
     // sem degrau no título não há preço, mesmo com moeda declarada
     assert.deepEqual(custosDaSkill({ modulo: { titulo: 'Canções', custoRecurso: 'Harmonia ou Energia' } }), []);

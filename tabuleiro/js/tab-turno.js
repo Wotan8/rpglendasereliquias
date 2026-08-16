@@ -24,7 +24,8 @@ import {
     efeitoDasCondicoes, porqueCondicao,
     guardadoValido, indiceNaOrdem, recursoInsuficiente, RECURSO_NOME, custoDaMecanica,
 } from '../../shared/combate-cenas.js';
-import { custosDaSkill, rotuloDosCustos, moduloDeclaraCusto, custoDeclaradoZero } from '../../shared/skill-custo.js?v=1';
+import { areaDoInstrumento, explicaArea } from '../../shared/instrumento-area.js?v=1';
+import { bolsaFecha, reparticaoValida, partesDaReparticao, custosDaSkill, rotuloDosCustos, moduloDeclaraCusto, custoDeclaradoZero } from '../../shared/skill-custo.js?v=1';
 import { indexarPredefs, interpretarSkill, afetaDaCondicao, rotuloDaCondicao } from '../../shared/skill-runtime.js?v=3';
 import { miraDaRuna, gastarUso } from '../../shared/runa-em-jogo.js?v=1';
 import { resolverMedida, ehFormula } from '../../shared/medida-formula.js?v=1';
@@ -130,6 +131,14 @@ function temDoRecurso(p, alvo) {
  * falta a forma inteira — pagar metade de um ritual não é pagar.
  */
 function faltaPara(p, forma) {
+    // 🎵 BOLSA (Bardo): o custo é um total repartível entre as moedas. Não
+    // adianta olhar moeda por moeda — quem tem 2 de Harmonia e 1 de Energia
+    // paga uma canção de 3. O que falta é a SOMA não fechar.
+    if (forma?.pool) {
+        const b = bolsaFecha(forma, (m) => temDoRecurso(p, m)?.tem ?? null);
+        if (b.ok) return null;
+        return { nome: (forma.moedas || []).join(' + '), tem: b.disponivel, qtd: b.total };
+    }
     for (const parte of forma?.partes || []) {
         const r = temDoRecurso(p, parte.alvo);
         if (!r || r.tem == null) continue;   // desconhecido não bloqueia
@@ -419,10 +428,31 @@ async function salvarCena(patch) {
 async function gastar(custo) {
     if (custo === 'livre' || custo === 'fora') return;   // incidental / ritual — não consome
     const novas = gastarAcao(cena().acoesTurno, custo);
+    // 🛡️ Postura larga a guarda: quem estava defendendo e parte para cima
+    // perde a postura e o bônus dela. É o preço de trocar defesa por ataque.
+    const parts = (custo === 'padrao' || custo === 'completa')
+        ? semPosturaDeQuemAgiu(participanteDaVez(cena())?.id) : null;
     // otimista: o snapshot confirma; o painel não pisca esperando a rede
-    T.combate = { ...comCenaAtivaPatch(T.combate, { acoesTurno: novas }) };
+    T.combate = { ...comCenaAtivaPatch(T.combate, parts ? { acoesTurno: novas, participantes: parts } : { acoesTurno: novas }) };
     render();
-    await salvarCena({ acoesTurno: novas });
+    await salvarCena(parts ? { acoesTurno: novas, participantes: parts } : { acoesTurno: novas });
+}
+
+/**
+ * Participantes com a POSTURA de `pid` desfeita — as condições que o cadastro
+ * marcou com `saiComAcaoPadrao`. Devolve null quando não havia nenhuma, para
+ * não escrever `participantes` à toa em todo golpe do combate.
+ */
+function semPosturaDeQuemAgiu(pid) {
+    if (!pid) return null;
+    const parts = cena()?.participantes || [];
+    const p = parts.find(x => x.id === pid);
+    const caem = (p?.condicoes || []).filter(cd => cd && typeof cd === 'object' && cd.saiComAcaoPadrao);
+    if (!caem.length) return null;
+    logChat(`🛡️ ${p.name || '?'} largou a guarda ao agir: ${caem.map(c => `${c.icone || '☠️'} ${c.nome}`).join(', ')}`);
+    toast(`🛡️ Postura desfeita: ${caem.map(c => c.nome).join(', ')}`, 'warning');
+    return parts.map(x => x.id !== pid ? { ...x }
+        : { ...x, condicoes: (x.condicoes || []).filter(cd => !(cd && typeof cd === 'object' && cd.saiComAcaoPadrao)) });
 }
 
 /**
@@ -779,6 +809,26 @@ window.tbTurnoGolpe = async (i) => {
         sub = null;
         return;
     }
+    // 🎼 INSTRUMENTO não dá bordoada: ele SOA. A forma e o tamanho saem da
+    // família e da Qualidade da peça (shared/instrumento-area.js) — a Rabeca
+    // mirava como espada porque nada aqui sabia que ela era um instrumento.
+    const area = areaDoInstrumento(g.tags, g.qualidade);
+    if (area) {
+        if (!(area.metros > 0)) {
+            toast(`⚠️ ${g.nome}: sem Qualidade cadastrada, o som não alcança ninguém`, 'warning');
+            return;
+        }
+        armarMira({
+            tipo: 'geometria', forma: area.forma,
+            origem: area.forma === 'circulo' ? 'token' : 'token',
+            raioM: area.metros, comprimentoM: area.metros,
+            larguraM: Math.max(1, area.metros / 3),
+            angGraus: area.ang || 60, alcanceM: 0, maxAlvos: 99, afeta: 'inimigos',
+            meta: { ...meta, detalhe: explicaArea(area) },
+        }, tok);
+        sub = null;
+        return;
+    }
     const tamanho = valorComponente('Tamanho', fonteDoParticipante(p)) || 0;
     const alcanceM = alcanceGolpe(g.alcanceM, tamanho);
     armarMira({
@@ -804,10 +854,18 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
         formaPaga = pagaveis[0].k;
     }
     if (s.custos?.length) {
-        const f = faltaPara(p, s.custos[formaPaga]);
+        const forma = s.custos[formaPaga];
+        const f = faltaPara(p, forma);
         if (f) { toast(`⚠️ Não tem ${f.nome} o suficiente (${f.tem}/${f.qtd})`, 'warning'); return; }
-        // uma forma pode ser composta ("1 Energia + 2 Sanidade"): paga inteira
-        _custosAPagar = s.custos[formaPaga].partes;   // debitado na confirmação da mira
+        if (forma.pool) {
+            // 🎵 Bolsa: quem toca reparte os pontos entre as moedas antes de mirar
+            const partes = await repartirBolsa(s, forma);
+            if (!partes) return;                       // cancelou: nada foi gasto
+            _custosAPagar = partes;
+        } else {
+            // uma forma pode ser composta ("1 Energia + 2 Sanidade"): paga inteira
+            _custosAPagar = forma.partes;              // debitado na confirmação da mira
+        }
         _retornoCfg = s.retorno;
     } else {
         // Sem custo cadastrado: o campo livre da ficha ainda avisa, mas não há
@@ -1029,6 +1087,59 @@ async function escolherGolpeDaAcao(p, s, cfg) {
 let _custosAPagar = [];
 // Config de retorno da skill em uso — anda junto com o custo até o débito.
 let _retornoCfg = null;
+
+/**
+ * 🎵 REPARTIR A BOLSA (Bardo): a canção custa N, e quem toca decide de onde
+ * sai cada ponto. Abre com tudo na primeira moeda que der conta e deixa
+ * ajustar; o ✅ só libera quando a soma fecha o total exato.
+ * @returns Promise<partes[]|null> — null = cancelou
+ */
+function repartirBolsa(s, forma) {
+    const p = participanteDaVez(cena());
+    const temDe = (m) => temDoRecurso(p, m)?.tem ?? null;
+    const moedas = forma.moedas || [];
+    // sugestão: enche na ordem das moedas com o que cada uma aguenta
+    const sug = {}; let resta = forma.total;
+    for (const m of moedas) {
+        const tem = temDe(m);
+        const usa = tem == null ? resta : Math.min(resta, Math.max(0, tem));
+        sug[m] = usa; resta -= usa;
+    }
+    if (resta > 0 && moedas.length) sug[moedas[0]] += resta;   // desconhecido: cai na primeira
+
+    return new Promise(resolve => {
+        window.__tbBolsaOk = () => {
+            const split = {};
+            for (const m of moedas) split[m] = parseFloat(document.getElementById('bolsa_' + normChaveMoeda(m))?.value) || 0;
+            const v = reparticaoValida(forma, split, temDe);
+            if (!v.ok) { toast(`⚠️ ${v.porque}`, 'warning'); return; }
+            delete window.__tbBolsaOk; delete window.__tbBolsaCancel;
+            window.tbFecharModal();
+            resolve(partesDaReparticao(forma, split));
+        };
+        window.__tbBolsaCancel = () => {
+            delete window.__tbBolsaOk; delete window.__tbBolsaCancel;
+            window.tbFecharModal(); resolve(null);
+        };
+        window._tbAbrirModal(`💰 “${esc(s.nome)}” custa ${forma.total}`, `
+            <div class="tb-muted" style="font-size:.8rem;margin-bottom:10px">
+                Reparta como quiser entre as moedas — a soma tem que dar <b>${forma.total}</b>.
+            </div>
+            <div class="tb-form-grid">
+                ${moedas.map(m => {
+                    const tem = temDe(m);
+                    return `<label>${esc(m)} ${tem != null ? `<span class="tb-muted">(tem ${tem})</span>` : ''}
+                        <input type="number" id="bolsa_${normChaveMoeda(m)}" value="${sug[m] || 0}" min="0"
+                               ${tem != null ? `max="${tem}"` : ''} step="any"></label>`;
+                }).join('')}
+            </div>
+            <div class="tb-modal-actions">
+                <button class="tb-btn tb-btn-success" onclick="__tbBolsaOk()">✅ Pagar</button>
+                <button class="tb-btn" onclick="__tbBolsaCancel()">✖ Cancelar</button>
+            </div>`);
+    });
+}
+const normChaveMoeda = (m) => String(m || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]/g, '');
 
 /** Skill com mais de uma forma de pagar: quem usa escolhe qual recurso gasta. */
 function escolherComoPagar(s, custoAcao, i, pagaveis) {
@@ -1883,7 +1994,8 @@ window.tbTurnoConfirmarMira = async () => {
                 pids = pids.slice(0, cd.maxAlvos);
                 toast(`☠️ ${cd.nome} limitada a ${cd.maxAlvos} alvo(s) pelo cadastro — valem os primeiros`, 'warning');
             }
-            aplicarCondicaoEmVarios(pids, cd.nome, cd.rodadas || 0, p?.id, cd.nivel || 1)
+            aplicarCondicaoEmVarios(pids, cd.nome, cd.rodadas || 0, p?.id, cd.nivel || 1,
+                cd.saiComAcaoPadrao ? { saiComAcaoPadrao: true } : null)
                 .catch(e => console.warn('condição da skill', e));
         }
         // "aliado(s)" só quando forem mesmo aliados — A Presa marca inimigo.

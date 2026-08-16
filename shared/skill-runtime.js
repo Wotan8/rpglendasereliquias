@@ -103,7 +103,10 @@ export function miraDeCadastro(pd) {
         .map(c => ({ nome: c.condicao, rodadas: Number(c.rodadas) || 0, maxAlvos: Number(c.alvos) || 0,
             // "fica Abalado 2" — o nível é do cadastro; sem ele tudo entrava em 1.
             nivel: Math.max(1, Number(c.nivel) || 1),
-            faccao: c.faccao || '', rotulo: c.rotulo || '' }));
+            faccao: c.faccao || '', rotulo: c.rotulo || '',
+            // 🛡️ Postura: a condição cai quando quem a tem usa uma Ação Padrão.
+            // Marca da APLICAÇÃO, não da condição — Blindado de armadura fica.
+            saiComAcaoPadrao: !!c.saiComAcaoPadrao }));
     const cond = (pd.condicoesAplicadas || [])[0] || null;
     const base = {
         afeta, condicoes,

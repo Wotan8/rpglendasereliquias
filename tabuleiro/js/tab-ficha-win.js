@@ -1171,6 +1171,9 @@ export async function linhasDeAtaque(tipo, id) {
         // reconhece o foco/instrumento equipado ("instrumento-sopro" na Rabeca).
         const tpl = i ? tplDoItem(i) : null;
         l.tags = [...new Set([...(i?.tags || []), ...(tpl?.tags || [])])];
+        // 🎼 A Qualidade da peça dá o TAMANHO da área de um instrumento
+        // (shared/instrumento-area.js). A instância manda; o modelo é o padrão.
+        l.qualidade = Number(i?.qualidade ?? tpl?.qualidade) || 0;
         // 🏹 Besta e afins: o alcance delas não passa pelo braço (ver
         // shared/alcance-disparo.js).
         l.ignoraLimiteForDisparo = !!(i?.ignoraLimiteForDisparo ?? tpl?.ignoraLimiteForDisparo);

@@ -922,7 +922,7 @@ async function sincAdicaoFicha(p, cond, tpl) {
  * uma vez (1 write no doc + espelho nas fichas). O nome resolve contra o
  * registro do sistema (ícone/descrição); sem registro vira personalizada.
  */
-export async function aplicarCondicaoEmVarios(pids, nome, rodadas, porPid, nivel = 1) {
+export async function aplicarCondicaoEmVarios(pids, nome, rodadas, porPid, nivel = 1, extra = null) {
     if (!pids?.length || !nome) return;
     const tpl = (await carregarCondicoesSistema()).find(c => (c.nome || '').toLowerCase() === nome.toLowerCase()) || null;
     const rodada = cenaAtiva(T.combate).rodada || 1;
@@ -933,6 +933,10 @@ export async function aplicarCondicaoEmVarios(pids, nome, rodadas, porPid, nivel
         // Quem aplicou: só a Presa do Caçador usa hoje, mas guardar sempre não
         // custa nada e é o que permite "a marca é de quem marcou".
         porPid: porPid || null,
+        // 🛡️ Marcas que o CADASTRO pendura na aplicação (não na condição em si):
+        // `saiComAcaoPadrao` é a Postura Defensiva — a guarda cai quando quem
+        // está de guarda parte para cima.
+        ...(extra || {}),
     };
     // 🎯 Condição EXCLUSIVA: uma presa por caçador. Marcar outra solta a
     // anterior, senão o Caçador acumularia presas de graça.

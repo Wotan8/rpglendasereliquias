@@ -49,7 +49,7 @@ assert.equal(grito.mira.tipo, 'geometria');
 assert.equal(grito.mira.raioM, 3);
 assert.equal(grito.mira.afeta, 'inimigos');
 assert.deepEqual(grito.mira.condicoes,
-    [{ nome: 'Atordoado', rodadas: 1, maxAlvos: 2, nivel: 1, faccao: '', rotulo: '' }],
+    [{ nome: 'Atordoado', rodadas: 1, maxAlvos: 2, nivel: 1, faccao: '', rotulo: '', saiComAcaoPadrao: false }],
     'cadastro sem nível nem facção continua saindo com os padrões (nível 1, sem facção)');
 assert.equal(grito.custos[0].partes[0].alvo, 'Harmonia', 'o custo vem do degrau do título');
 assert.equal(grito.custos[0].partes[0].qtd, 1);

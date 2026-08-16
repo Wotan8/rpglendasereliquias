@@ -87,6 +87,53 @@ export function custoDoTexto(texto, padrao = '') {
     return alternativas;
 }
 
+/**
+ * A bolsa fecha com o que a pessoa tem? Pura, para o painel e o teste usarem
+ * a mesma conta.
+ * @param forma  a forma de custo (pool ou simples)
+ * @param temDe  (moeda) => quanto o personagem tem, ou null se desconhecido
+ * @returns { ok, total, disponivel } — `disponivel` null = não dá para saber
+ */
+export function bolsaFecha(forma, temDe) {
+    if (!forma?.pool) return { ok: true, total: 0, disponivel: null };
+    let soma = 0, sabido = false;
+    for (const m of forma.moedas || []) {
+        const v = temDe(m);
+        if (v == null) continue;          // moeda desconhecida não bloqueia
+        sabido = true;
+        soma += Math.max(0, Number(v) || 0);
+    }
+    if (!sabido) return { ok: true, total: forma.total, disponivel: null };
+    return { ok: soma >= forma.total, total: forma.total, disponivel: soma };
+}
+
+/**
+ * A repartição é válida? Tem que somar o total EXATO e não pedir de nenhuma
+ * moeda mais do que existe. Nem a mais nem a menos: pagar 2 de um custo 3 não
+ * é pagar, e pagar 4 é o jogador se cobrando à toa.
+ * @param split  { moeda: qtd }
+ */
+export function reparticaoValida(forma, split, temDe) {
+    if (!forma?.pool) return { ok: false, porque: 'esta forma não é uma bolsa' };
+    let soma = 0;
+    for (const m of forma.moedas || []) {
+        const q = Number(split?.[m]) || 0;
+        if (q < 0) return { ok: false, porque: `${m} não pode ser negativo` };
+        const tem = temDe(m);
+        if (tem != null && q > tem) return { ok: false, porque: `só tem ${tem} de ${m}` };
+        soma += q;
+    }
+    if (soma !== forma.total) return { ok: false, porque: `a soma tem que dar ${forma.total} (deu ${soma})` };
+    return { ok: true, porque: '' };
+}
+
+/** A bolsa repartida vira partes normais, prontas para debitar. */
+export function partesDaReparticao(forma, split) {
+    return (forma?.moedas || [])
+        .map(m => ({ alvo: m, qtd: Number(split?.[m]) || 0 }))
+        .filter(x => x.qtd > 0);
+}
+
 /** Preenche `rotulo` a partir das partes: "3 Energia + 10 Sanidade". */
 function comRotulo(forma) {
     return {
@@ -148,17 +195,28 @@ export function custosDaSkill({ modulo, predef, item, mechPorId, custoDaMecanica
     }
 
     // (3) degrau no título do módulo, pago na moeda do módulo (Bardo).
-    // A moeda aceita ALTERNATIVA como qualquer outro custo: `custoRecurso` com
-    // "Harmonia ou Energia" num módulo "Custo 2" vira duas formas de pagar, e
-    // quem usa escolhe a que tem. Com uma moeda só, sai uma forma — igual a
-    // antes. Quem decide se a classe pode trocar de moeda é o CADASTRO; o
-    // motor só passou a saber ler a decisão.
+    //
+    // 🎵 Com MAIS DE UMA moeda o custo vira uma BOLSA: o degrau é um total, e
+    // quem paga reparte como quiser entre as moedas — 3 de Harmonia, ou 2 de
+    // Harmonia + 1 de Energia, ou 3 de Energia. É como o Bardo sempre pagou:
+    // a canção custa 3, não "3 Harmonia" nem "3 Energia".
+    //
+    // `partes` continua preenchido com a repartição PADRÃO (tudo na primeira
+    // moeda), para quem só sabe ler forma simples não quebrar.
     const degrau = degrauDoTitulo(modulo?.titulo);
     const moeda = recursoDoModulo(modulo);
     if (degrau && moeda) {
-        const formas = custoDoTexto(
-            moeda.split(/\bou\b/i).map(m => `${degrau} ${m.trim()}`).filter(x => x.trim()).join(' ou '));
-        if (formas.length) return formas.map(x => ({ ...x, label: modulo.titulo || '' }));
+        const moedas = moeda.split(/\bou\b/i).map(m => m.trim()).filter(m => m && ehMoeda(m));
+        if (moedas.length > 1) {
+            return [{
+                label: modulo.titulo || '', pool: true, total: degrau, moedas,
+                partes: [{ alvo: moedas[0], qtd: degrau }],
+                rotulo: `${degrau} · ${moedas.join(' e/ou ')}`,
+            }];
+        }
+        if (moedas.length === 1) {
+            return [comRotulo({ label: modulo.titulo || '', partes: [{ alvo: moedas[0], qtd: degrau }] })];
+        }
     }
 
     // (4) sem custo cadastrado
