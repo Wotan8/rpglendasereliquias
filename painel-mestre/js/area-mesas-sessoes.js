@@ -110,7 +110,7 @@ export function logCamposHtml(log, chars) {
             <div class="form-group"><label class="form-label">Data Real</label><input type="date" class="form-input" id="sl_dateReal" value="${escapeHtml(log.dateReal || '')}"></div>
         </div>
         <div class="form-group"><label class="form-label">Data no Jogo</label><input type="text" class="form-input" id="sl_gameDate" value="${escapeHtml(log.gameDate || '')}" placeholder="Ex: 15 de Aura, Ano 10 EBA"></div>
-        ${ta('summary', 'Resumo Geral *', 'O que aconteceu nesta sessão...', 4)}
+        ${ta('summary', 'Resumo Geral *', 'O que aconteceu nesta sessão...', 8)}
         ${ta('playerSummaries', 'Resumo por Jogador', 'Jogador 1: fez X. Jogador 2: fez Y.', 3)}
         ${notasPickerHtml(log, chars)}
         <div class="form-group"><label class="form-label">Personagens Participantes &amp; EXP</label>${linhas || '<div style="color:var(--muted)">Nenhum personagem na mesa</div>'}</div>
@@ -206,6 +206,18 @@ window.saveSessionLog = async function() {
     } catch (e) { showAlert('❌ Erro: ' + e.message, 'danger'); }
 };
 
+/* ===== LEITURA DO LOG =====
+   O que o mestre digitou no <textarea> tem parágrafo: linha em branco separa
+   bloco, quebra simples é quebra dentro do parágrafo. Aqui isso vira <p>/<br>
+   de verdade — antes o texto era jogado num <div> e virava um amontoado só. */
+const prosa = (t) => (t || '').split(/\n{2,}/).map(b => b.trim()).filter(Boolean)
+    .map(b => `<p>${escapeHtml(b).replace(/\n/g, '<br>')}</p>`).join('');
+
+const blocoLog = (rotulo, html, extra) => html
+    ? `<section class="log-sec"><span class="log-rotulo">${rotulo}</span>
+        <div class="log-prosa${extra ? ' ' + extra : ''}">${html}</div></section>`
+    : '';
+
 /** Notas referenciadas pelo log, com o conteudo lido da ficha na hora. */
 async function notasVinculadasHtml(log) {
     const refs = log.notasVinculadas || [];
@@ -215,15 +227,14 @@ async function notasVinculadasHtml(log) {
         const c = chars.find(x => x.id === ref.charId);
         const n = (c?.notes || []).find(x => x.id === ref.noteId);
         const corpo = n ? (n.conteudo || '<i>Nota vazia</i>')
-            : '<i style="color:var(--muted)">Nota apagada da ficha — sobrou só o título.</i>';
-        const titulo = escapeHtml(n?.titulo || ref.titulo || 'Sem título');
-        const dono = escapeHtml(ref.charName || '');
-        return '<details style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px">'
-            + '<summary style="cursor:pointer;color:var(--light);font-weight:600">📄 ' + titulo
-            + '<span style="color:var(--muted);font-weight:400;font-size:.78rem"> — ' + dono + '</span></summary>'
-            + '<div style="color:var(--ink);line-height:1.6;margin-top:8px">' + corpo + '</div></details>';
+            : '<i>Nota apagada da ficha — sobrou só o título.</i>';
+        return `<details class="log-nota">
+            <summary>📄 ${escapeHtml(n?.titulo || ref.titulo || 'Sem título')}
+                <span class="log-nota-dono">— ${escapeHtml(ref.charName || '')}</span></summary>
+            <div class="log-prosa log-nota-corpo">${corpo}</div>
+        </details>`;
     }).join('');
-    return '<div class="form-group"><label class="form-label">🔗 Notas dos personagens</label>' + itens + '</div>';
+    return `<section class="log-sec"><span class="log-rotulo">🔗 Notas dos personagens</span>${itens}</section>`;
 }
 
 // ===== VIEW SESSION LOG =====
@@ -232,25 +243,29 @@ window.viewSessionLog = async function(logId) {
     if (!log) return;
     // Notas vinculadas: o texto sai da ficha AGORA, nao de uma copia velha.
     const notasHtml = await notasVinculadasHtml(log);
+    const participantes = (log.participants || []).map(p => {
+        const neg = p.expType === 'sub';
+        return `<span class="log-part-item">${escapeHtml(p.characterName || '?')}
+            <span class="log-exp${neg ? ' log-exp--neg' : ''}">${neg ? '−' : '+'}${p.expAmount || 0} EXP</span></span>`;
+    }).join('');
+    // Campos curtos vão para a grade; os longos ficam em coluna única, na
+    // largura de leitura, para o olho não perder a linha.
+    const curtos = [
+        ['NPCs', log.npcs], ['Locais', log.locations], ['Combates', log.combats],
+        ['Loot', log.loot], ['Ganchos', log.hooks], ['Momentos', log.moments],
+    ].map(([rot, txt]) => blocoLog(rot, prosa(txt))).filter(Boolean).join('');
+
     const m = document.createElement('div'); m.className = 'modal active';
-    const sections = [
-        log.summary ? `<div class="form-group"><label class="form-label">Resumo Geral</label><div style="color:var(--ink);line-height:1.6">${escapeHtml(log.summary)}</div></div>` : '',
-        log.playerSummaries ? `<div class="form-group"><label class="form-label">Resumo por Jogador</label><div style="color:var(--ink);line-height:1.6;white-space:pre-wrap">${escapeHtml(log.playerSummaries)}</div></div>` : '',
-        notasHtml,
-        (log.participants||[]).length ? `<div class="form-group"><label class="form-label">Participantes</label>${log.participants.map(p => `<div style="padding:6px;border-bottom:1px solid var(--line)">${escapeHtml(p.characterName)} — ${p.expType==='add'?'+':'-'}${p.expAmount} EXP</div>`).join('')}</div>` : '',
-        log.npcs ? `<div class="form-group"><label class="form-label">NPCs</label><div style="color:var(--ink);white-space:pre-wrap">${escapeHtml(log.npcs)}</div></div>` : '',
-        log.locations ? `<div class="form-group"><label class="form-label">Locais</label><div style="color:var(--ink);white-space:pre-wrap">${escapeHtml(log.locations)}</div></div>` : '',
-        log.combats ? `<div class="form-group"><label class="form-label">Combates</label><div style="color:var(--ink);white-space:pre-wrap">${escapeHtml(log.combats)}</div></div>` : '',
-        log.loot ? `<div class="form-group"><label class="form-label">Loot</label><div style="color:var(--ink);white-space:pre-wrap">${escapeHtml(log.loot)}</div></div>` : '',
-        log.hooks ? `<div class="form-group"><label class="form-label">Ganchos</label><div style="color:var(--ink);white-space:pre-wrap">${escapeHtml(log.hooks)}</div></div>` : '',
-        log.moments ? `<div class="form-group"><label class="form-label">Momentos</label><div style="color:var(--ink);white-space:pre-wrap">${escapeHtml(log.moments)}</div></div>` : '',
-        log.dmNotes ? `<div class="form-group"><label class="form-label">Notas do Mestre</label><div style="color:var(--lr-blood-2);white-space:pre-wrap">${escapeHtml(log.dmNotes)}</div></div>` : '',
-    ].filter(Boolean).join('');
     m.innerHTML = `<div class="modal-content" style="max-width:800px"><div class="modal-header"><span class="modal-title">📝 Sessão #${log.sessionNumber || '?'} — ${log.dateReal || ''}</span>
         <button class="btn btn-secondary btn-small" style="margin-left:auto;padding:4px 10px" onclick="this.closest('.modal').remove();editSessionLog('${log.id}')">✏️ Editar</button>
         <button class="modal-close" onclick="this.closest('.modal').remove()">✕</button></div><div class="modal-body" style="max-height:75vh;overflow-y:auto">
-        ${log.gameDate ? `<div style="font-size:.88rem;color:var(--primary);margin-bottom:14px">🎮 Data no jogo: ${escapeHtml(log.gameDate)}</div>` : ''}
-        ${sections}
+        ${log.gameDate ? `<div style="font-size:var(--lr-fs-sm);color:var(--lr-arcane);margin-bottom:var(--lr-space-5)">🎮 Data no jogo: ${escapeHtml(log.gameDate)}</div>` : ''}
+        ${blocoLog('Resumo Geral', prosa(log.summary))}
+        ${blocoLog('Resumo por Jogador', prosa(log.playerSummaries))}
+        ${notasHtml}
+        ${participantes ? `<section class="log-sec"><span class="log-rotulo">Participantes</span><div class="log-part">${participantes}</div></section>` : ''}
+        ${curtos ? `<div class="log-grid">${curtos}</div>` : ''}
+        ${blocoLog('Notas do Mestre', prosa(log.dmNotes), 'log-prosa--privado')}
     </div></div>`;
     document.body.appendChild(m);
     m.addEventListener('click', e => { if (e.target === m) m.remove(); });

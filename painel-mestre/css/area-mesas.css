@@ -543,3 +543,79 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ===== LOG DE SESSÃO — LEITURA =====
+   O mestre digita em <textarea>: os parágrafos dele são quebras de linha de
+   verdade. O modal quebra o texto em <p> antes de exibir (prosa(), em
+   area-mesas-sessoes.js) — sem isso a sessão inteira virava um bloco só. */
+.log-sec { margin-bottom: var(--lr-space-5); }
+.log-sec:last-child { margin-bottom: 0; }
+
+.log-rotulo {
+    display: block;
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-xs);
+    letter-spacing: var(--lr-track-title);
+    text-transform: uppercase;
+    color: var(--lr-text-2);
+    padding-bottom: var(--lr-space-2);
+    margin-bottom: var(--lr-space-3);
+    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
+}
+
+.log-prosa {
+    font-size: var(--lr-fs-md);
+    line-height: var(--lr-lh-body);
+    color: var(--lr-text-1);
+    max-width: 68ch;
+    overflow-wrap: break-word;
+}
+.log-prosa p { margin: 0 0 .9em; }
+.log-prosa > *:last-child { margin-bottom: 0; }
+.log-prosa--privado { color: var(--lr-blood-2); }
+
+/* Campos curtos lado a lado: o olho varre em vez de rolar seis vezes. */
+.log-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--lr-space-5);
+    margin-bottom: var(--lr-space-5);
+}
+.log-grid .log-sec { margin-bottom: 0; }
+
+.log-part { display: flex; flex-wrap: wrap; gap: var(--lr-space-2); }
+.log-part-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-2);
+    background: var(--lr-surface-2);
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-1);
+}
+.log-exp { font-weight: 700; color: var(--lr-gold-2); }
+.log-exp--neg { color: var(--lr-blood-2); }
+
+.log-nota {
+    border: var(--lr-border-w) solid var(--lr-border-soft);
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    margin-bottom: var(--lr-space-2);
+    background: var(--lr-surface-2);
+}
+.log-nota[open] { background: var(--lr-surface); }
+.log-nota summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--lr-text-1);
+    font-size: var(--lr-fs-sm);
+}
+.log-nota summary::marker { color: var(--lr-text-2); }
+.log-nota-dono { color: var(--lr-text-2); font-weight: 400; }
+.log-nota-corpo {
+    margin-top: var(--lr-space-3);
+    padding-top: var(--lr-space-3);
+    border-top: var(--lr-border-w) solid var(--lr-border-soft);
+}

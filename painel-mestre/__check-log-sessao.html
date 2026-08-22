@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Check — leitura do log de sessão</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/modais.css">
+<link rel="stylesheet" href="css/area-mesas.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/lendas-reliquias.css">
+<style>body{padding:24px;background:var(--lr-bg-0)}</style>
+</head>
+<body>
+<button onclick="document.documentElement.classList.toggle('dark')">alternar tema</button>
+<div id="alvo"></div>
+<script type="module">
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const prosa = (t) => (t || '').split(/\n{2,}/).map(b => b.trim()).filter(Boolean)
+    .map(b => `<p>${escapeHtml(b).replace(/\n/g, '<br>')}</p>`).join('');
+const blocoLog = (rotulo, html, extra) => html
+    ? `<section class="log-sec"><span class="log-rotulo">${rotulo}</span>
+        <div class="log-prosa${extra ? ' ' + extra : ''}">${html}</div></section>` : '';
+const log = {
+  sessionNumber: 47, dateReal: '2026-08-02', gameDate: '42/02/212 (madrugada)',
+  summary: `Dois Fios. A sessão retomou exatamente onde a 46 parou, com o grupo dividido.
+
+FIO 2 — A mata. Praematum e a NPC Vexia enfrentaram Fontrix Olho-de-Corvo e Albrix Muro-de-Ferro perto da saída da passagem secreta. Praematum se cobriu atrás de uma árvore e trabalhou com facas de arremesso.
+Albrix avistou Praematum e mandou que fossem embora, sem explicar por quê.
+
+FIO 1 — O subsolo. Sona, Nura, Don e os NPCs Arkrau e Raknar saquearam o corpo do vigia morto na 46. A porta de enigma havia se fechado de novo; ao reabri-la o alarme tocou.`,
+  playerSummaries: 'Praematum: perdeu a faca boa.\nSona: negociou com os guardas.',
+  participants: [{characterName:'Praematum',expAmount:12,expType:'add'},{characterName:'Sona',expAmount:12,expType:'add'},{characterName:'Nura',expAmount:3,expType:'sub'}],
+  npcs: 'Vexia, Arkrau, Raknar', locations: 'Mata de Velmora\nSubsolo da torre',
+  combats: 'Albrix e Fontrix na mata.', loot: 'Runa Cálida, aljava, 2 adagas',
+  hooks: 'A porta de pedra do subsolo se abrindo.', moments: 'Vexia chamando Albrix de "lento demais".',
+  dmNotes: 'Albrix não podia revelar o contrato.',
+};
+const participantes = log.participants.map(p => {
+  const neg = p.expType === 'sub';
+  return `<span class="log-part-item">${escapeHtml(p.characterName)}
+    <span class="log-exp${neg ? ' log-exp--neg' : ''}">${neg ? '−' : '+'}${p.expAmount} EXP</span></span>`;
+}).join('');
+const curtos = [['NPCs',log.npcs],['Locais',log.locations],['Combates',log.combats],['Loot',log.loot],['Ganchos',log.hooks],['Momentos',log.moments]]
+  .map(([r,t]) => blocoLog(r, prosa(t))).filter(Boolean).join('');
+document.getElementById('alvo').innerHTML = `<div class="modal active" style="position:static"><div class="modal-content" style="max-width:800px"><div class="modal-header"><span class="modal-title">📝 Sessão #${log.sessionNumber} — ${log.dateReal}</span>
+  <button class="btn btn-secondary btn-small" style="margin-left:auto;padding:4px 10px">✏️ Editar</button>
+  <button class="modal-close">✕</button></div><div class="modal-body" style="max-height:75vh;overflow-y:auto">
+  <div style="font-size:var(--lr-fs-sm);color:var(--lr-arcane);margin-bottom:var(--lr-space-5)">🎮 Data no jogo: ${escapeHtml(log.gameDate)}</div>
+  ${blocoLog('Resumo Geral', prosa(log.summary))}
+  ${blocoLog('Resumo por Jogador', prosa(log.playerSummaries))}
+  <section class="log-sec"><span class="log-rotulo">🔗 Notas dos personagens</span>
+    <details class="log-nota" open><summary>📄 Diário de Sona <span class="log-nota-dono">— Sona</span></summary>
+      <div class="log-prosa log-nota-corpo"><p>Anotei o nome do guarda.</p><p>Ele hesitou antes de responder.</p></div></details>
+  </section>
+  <section class="log-sec"><span class="log-rotulo">Participantes</span><div class="log-part">${participantes}</div></section>
+  <div class="log-grid">${curtos}</div>
+  ${blocoLog('Notas do Mestre', prosa(log.dmNotes), 'log-prosa--privado')}
+</div></div></div>`;
+</script>
+</body>
+</html>
