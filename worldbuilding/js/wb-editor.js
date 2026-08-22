@@ -59,7 +59,10 @@ export const Editor = (() => {
        lista TODOS os livros, e é onde o livro sem estante aparece. */
     const ESTANTE_TODAS = '__todas';
     const salvarEstantes = () => setDoc(doc(db, 'worldbuilding-settings', 'estantes'), { lista: estantes });
-    const livrosDaEstante = (id) => ordenados(id === ESTANTE_TODAS ? books : books.filter(b => b.estanteId === id));
+    /* Um livro pode estar em várias estantes. `estanteId` (uma só) é o
+       formato legado — quando `estanteIds` existe, é ele que manda. */
+    const estantesDoLivro = (b) => b.estanteIds || (b.estanteId ? [b.estanteId] : []);
+    const livrosDaEstante = (id) => ordenados(id === ESTANTE_TODAS ? books : books.filter(b => estantesDoLivro(b).includes(id)));
     const ordenados = (arr) => arr.slice()
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
 
@@ -163,8 +166,8 @@ export const Editor = (() => {
                 <label>Nome da estante <input id="esNome" class="form-input" value="${esc(e.nome || '')}" placeholder="Ex: Regras do sistema"></label>
                 <label>Ícone <input id="esIcone" class="form-input" value="${esc(e.icone || '')}" maxlength="4" placeholder="🗂️" style="width:90px"></label>
                 <div class="wbt-muted" style="font-size:.8rem">
-                    O livro entra na estante pelas configurações dele (⚙️ no livro).
-                    Livro sem estante aparece só em “Todos os livros”.
+                    O livro entra na estante pelas configurações dele (⚙️ no livro), e pode
+                    estar em várias ao mesmo tempo. Livro sem estante aparece só em “Todos os livros”.
                 </div>
                 <div class="wbt-actions">
                     ${est ? '<button class="btn btn-danger" id="esDel">🗑️ Excluir estante</button>' : ''}
@@ -181,7 +184,7 @@ export const Editor = (() => {
         const del = $('#esDel');
         if (del) del.onclick = async () => {
             const n = livrosDaEstante(e.id).length;
-            if (!confirm(`Excluir a estante "${e.nome}"?${n ? `\nOs ${n} livros NÃO serão apagados — voltam para "Todos os livros".` : ''}`)) return;
+            if (!confirm(`Excluir a estante "${e.nome}"?${n ? `\nOs ${n} livros NÃO serão apagados — continuam nas outras estantes em que estejam, e em "Todos os livros".` : ''}`)) return;
             estantes = estantes.filter(x => x.id !== e.id);
             await salvarEstantes();
             ToolModal.close(); renderLibrary();
@@ -263,10 +266,15 @@ export const Editor = (() => {
                 <label>Versão <input id="bkVersao" class="form-input" value="${esc(b.versao || '')}" placeholder="Ex: 2.1">
                     <span class="wbt-muted" style="font-size:.8rem">Aparece como selo em toda tela que lista o livro, antes de abrir.
                     Texto livre — mude a cada revisão. Vazio = sem selo.</span></label>
-                <label>🗂️ Estante <select id="bkEstante" class="form-select">
-                    <option value="">— sem estante (só em “Todos os livros”) —</option>
-                    ${estantes.map(e => `<option value="${esc(e.id)}" ${e.id === b.estanteId ? 'selected' : ''}>${esc(e.icone || '🗂️')} ${esc(e.nome || '')}</option>`).join('')}
-                </select></label>
+                <div class="wbt-muted" style="margin:.6rem 0 .2rem;font-weight:700">🗂️ Estantes</div>
+                ${estantes.length
+                    ? estantes.map(e => `<label class="wbt-check"><input type="checkbox" id="bkEst_${esc(e.id)}" ${estantesDoLivro(b).includes(e.id) ? 'checked' : ''}>
+                        ${esc(e.icone || '🗂️')} ${esc(e.nome || '')}</label>`).join('')
+                    : '<div class="wbt-muted" style="font-size:.8rem">Nenhuma estante criada ainda — crie uma pelo botão 🗂️ da Biblioteca.</div>'}
+                <div class="wbt-muted" style="font-size:.8rem;margin-top:.2rem">
+                    Pode marcar quantas quiser — o mesmo livro aparece em todas.
+                    Sem nenhuma marcada, ele fica só em “Todos os livros”.
+                </div>
                 <label>Sinopse / descrição <textarea id="bkDesc" class="form-textarea" placeholder="Do que trata este livro?">${esc(b.description || '')}</textarea></label>
                 <label>Capa do livro ${CampoImagem.html({ id: 'bkCover', classe: 'form-input', valor: b.cover || '', pasta: 'worldbuilding-images/capas' })}</label>
                 <div class="wbt-muted" style="margin:.6rem 0 .2rem;font-weight:700">📖 Publicações</div>
@@ -284,7 +292,8 @@ export const Editor = (() => {
         $('#bkSave').onclick = async () => {
             b.title = $('#bkTitle').value.trim() || 'Livro sem título';
             b.versao = $('#bkVersao').value.trim();
-            b.estanteId = $('#bkEstante').value || null;
+            b.estanteIds = estantes.filter(e => document.getElementById('bkEst_' + e.id)?.checked).map(e => e.id);
+            b.estanteId = null;   // legado, ver estantesDoLivro()
             b.description = $('#bkDesc').value.trim();
             b.cover = $('#bkCover').value.trim();
             b.pub = Object.fromEntries(PUBLICACOES.map(([k]) => [k, $('#bkPub_' + k).checked]));

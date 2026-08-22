@@ -42,13 +42,13 @@
 /* Réplica estática do que renderLibrary() monta em wb-editor.js — mesmas
    classes, para conferir a grade de estantes sem Firebase. */
 const LIVROS = [
-    { id: 'b1', title: 'Régua de Balanceamento', versao: '', estanteId: 'e1', caps: 12, palavras: 14397,
+    { id: 'b1', title: 'Régua de Balanceamento', versao: '', estanteIds: ['e1'], caps: 12, palavras: 14397,
       desc: 'Especificação técnica interna. As fórmulas, taxas e invariantes usadas para balancear qualquer coisa do sistema.' },
-    { id: 'b2', title: 'Compêndio de Fluxomancia', versao: '', estanteId: 'e2', caps: 2, palavras: 2319,
+    { id: 'b2', title: 'Compêndio de Fluxomancia', versao: '', estanteIds: ['e2'], caps: 2, palavras: 2319,
       desc: 'A doutrina da Essência: o que ela é e em quantas formas se manifesta.' },
-    { id: 'b3', title: 'Lendas & Relíquias — Livro de Regras do Jogador', versao: '1.8', estanteId: 'e1', caps: 10, palavras: 19331,
+    { id: 'b3', title: 'Lendas & Relíquias — Livro de Regras do Jogador', versao: '1.8', estanteIds: ['e1', 'e2'], caps: 10, palavras: 19331,
       desc: 'Tudo que o jogador precisa: as regras do sistema atualizadas para a versão viva do jogo.' },
-    { id: 'b4', title: 'Crônicas de Vaugh', versao: '', estanteId: null, caps: 4, palavras: 6120,
+    { id: 'b4', title: 'Crônicas de Vaugh', versao: '', estanteIds: [], caps: 4, palavras: 6120,
       desc: 'Contos da vila de fundição — sem estante, só aparece em Todos os livros.' },
 ];
 const ESTANTES = [
@@ -161,7 +161,7 @@ const editorHTML = (lendo) => `
   </aside>
 </div>`;
 
-const daEstante = (id) => LIVROS.filter(b => b.estanteId === id);
+const daEstante = (id) => LIVROS.filter(b => b.estanteIds.includes(id));
 
 document.getElementById('contentBody').innerHTML = `
 <div class="wb-library">
