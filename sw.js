@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v276';
+const VERSION = 'v277';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 

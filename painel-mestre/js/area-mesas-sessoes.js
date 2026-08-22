@@ -45,6 +45,7 @@ function renderSessionLogs() {
             <div class="sessao-resumo">${escapeHtml((log.summary || '').substring(0, 200))}${(log.summary || '').length > 200 ? '...' : ''}</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
                 ${(log.participants || []).map(p => `<span style="background:rgba(139,92,246,.15);color:var(--primary);padding:2px 8px;border-radius:6px;font-size:.75rem;font-weight:700">${escapeHtml(p.characterName || '?')}</span>`).join('')}
+                ${(log.notasVinculadas || []).length ? `<span style="background:rgba(255,255,255,.06);color:var(--muted);padding:2px 8px;border-radius:6px;font-size:.75rem">🔗 ${log.notasVinculadas.length} nota(s)</span>` : ''}
             </div>
         </div>`).join('');
 }
@@ -65,6 +66,29 @@ const nomeChar = (c) => c.fields?.charName || c.fields?.nome || c.nome || 'Sem n
 
 export function proximoNumeroSessao() {
     return S.mesaSessionLogs.length ? Math.max(...S.mesaSessionLogs.map(l => l.sessionNumber || 0)) + 1 : 1;
+}
+
+/**
+ * Notas dos personagens da mesa. O log guarda só a REFERÊNCIA (char + nota):
+ * o jogador escreve na ficha, o mestre marca a caixa, e o texto continua vivo
+ * na ficha — editar a nota depois muda o que o log mostra.
+ */
+function notasPickerHtml(log, chars) {
+    const sel = new Set((log.notasVinculadas || []).map(n => n.charId + '/' + n.noteId));
+    const blocos = chars.map(c => {
+        const notas = (c.notes || []).filter(n => n && n.id);
+        if (!notas.length) return '';
+        return `<div style="margin-bottom:8px">
+            <div style="font-size:.78rem;font-weight:700;color:var(--primary);margin-bottom:4px">${escapeHtml(nomeChar(c))}</div>
+            ${notas.map(n => `<label style="display:flex;align-items:center;gap:8px;padding:4px 6px;cursor:pointer;font-size:.85rem">
+                <input type="checkbox" class="sl-nota" data-char="${c.id}" data-note="${escapeHtml(n.id)}" data-charname="${escapeHtml(nomeChar(c))}" data-titulo="${escapeHtml(n.titulo || 'Sem título')}" ${sel.has(c.id + '/' + n.id) ? 'checked' : ''} style="width:16px;height:16px">
+                <span style="color:var(--ink,var(--light))">📄 ${escapeHtml(n.titulo || 'Sem título')}</span>
+                <span style="flex:1;color:var(--muted);font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml((n.conteudo || '').replace(/<[^>]*>/g, ' ').trim().substring(0, 70))}</span>
+            </label>`).join('')}
+        </div>`;
+    }).join('');
+    return `<div class="form-group"><label class="form-label">🔗 Notas dos personagens <span style="font-weight:400;color:var(--muted);font-size:.75rem">— vincula, não copia: o texto segue vivo na ficha</span></label>
+        ${blocos || '<div style="font-size:.8rem;color:var(--muted)">Nenhum personagem da mesa escreveu nota ainda.</div>'}</div>`;
 }
 
 /** @param log valores iniciais (log existente, ou prefill vindo da sessão). */
@@ -88,6 +112,7 @@ export function logCamposHtml(log, chars) {
         <div class="form-group"><label class="form-label">Data no Jogo</label><input type="text" class="form-input" id="sl_gameDate" value="${escapeHtml(log.gameDate || '')}" placeholder="Ex: 15 de Aura, Ano 10 EBA"></div>
         ${ta('summary', 'Resumo Geral *', 'O que aconteceu nesta sessão...', 4)}
         ${ta('playerSummaries', 'Resumo por Jogador', 'Jogador 1: fez X. Jogador 2: fez Y.', 3)}
+        ${notasPickerHtml(log, chars)}
         <div class="form-group"><label class="form-label">Personagens Participantes &amp; EXP</label>${linhas || '<div style="color:var(--muted)">Nenhum personagem na mesa</div>'}</div>
         ${ta('npcs', 'NPCs Importantes', 'NPCs envolvidos...', 2)}
         ${ta('locations', 'Locais Visitados', 'Locais...', 2)}
@@ -118,6 +143,9 @@ export function coletarLogCampos() {
         sessionNumber: parseInt(document.getElementById('sl_num')?.value) || 1,
         dateReal: document.getElementById('sl_dateReal')?.value || '',
         gameDate: val('gameDate'), summary, playerSummaries: val('playerSummaries'), participants,
+        notasVinculadas: [...document.querySelectorAll('.sl-nota:checked')].map(cb => ({
+            charId: cb.dataset.char, charName: cb.dataset.charname, noteId: cb.dataset.note, titulo: cb.dataset.titulo,
+        })),
         npcs: val('npcs'), locations: val('locations'), combats: val('combats'), loot: val('loot'),
         hooks: val('hooks'), moments: val('moments'), dmNotes: val('dmNotes'),
     };
@@ -178,14 +206,37 @@ window.saveSessionLog = async function() {
     } catch (e) { showAlert('❌ Erro: ' + e.message, 'danger'); }
 };
 
+/** Notas referenciadas pelo log, com o conteudo lido da ficha na hora. */
+async function notasVinculadasHtml(log) {
+    const refs = log.notasVinculadas || [];
+    if (!refs.length) return '';
+    const chars = await carregarCharsMesa();
+    const itens = refs.map(ref => {
+        const c = chars.find(x => x.id === ref.charId);
+        const n = (c?.notes || []).find(x => x.id === ref.noteId);
+        const corpo = n ? (n.conteudo || '<i>Nota vazia</i>')
+            : '<i style="color:var(--muted)">Nota apagada da ficha — sobrou só o título.</i>';
+        const titulo = escapeHtml(n?.titulo || ref.titulo || 'Sem título');
+        const dono = escapeHtml(ref.charName || '');
+        return '<details style="border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px">'
+            + '<summary style="cursor:pointer;color:var(--light);font-weight:600">📄 ' + titulo
+            + '<span style="color:var(--muted);font-weight:400;font-size:.78rem"> — ' + dono + '</span></summary>'
+            + '<div style="color:var(--ink);line-height:1.6;margin-top:8px">' + corpo + '</div></details>';
+    }).join('');
+    return '<div class="form-group"><label class="form-label">🔗 Notas dos personagens</label>' + itens + '</div>';
+}
+
 // ===== VIEW SESSION LOG =====
-window.viewSessionLog = function(logId) {
+window.viewSessionLog = async function(logId) {
     const log = S.mesaSessionLogs.find(l => l.id === logId);
     if (!log) return;
+    // Notas vinculadas: o texto sai da ficha AGORA, nao de uma copia velha.
+    const notasHtml = await notasVinculadasHtml(log);
     const m = document.createElement('div'); m.className = 'modal active';
     const sections = [
         log.summary ? `<div class="form-group"><label class="form-label">Resumo Geral</label><div style="color:var(--ink);line-height:1.6">${escapeHtml(log.summary)}</div></div>` : '',
         log.playerSummaries ? `<div class="form-group"><label class="form-label">Resumo por Jogador</label><div style="color:var(--ink);line-height:1.6;white-space:pre-wrap">${escapeHtml(log.playerSummaries)}</div></div>` : '',
+        notasHtml,
         (log.participants||[]).length ? `<div class="form-group"><label class="form-label">Participantes</label>${log.participants.map(p => `<div style="padding:6px;border-bottom:1px solid var(--line)">${escapeHtml(p.characterName)} — ${p.expType==='add'?'+':'-'}${p.expAmount} EXP</div>`).join('')}</div>` : '',
         log.npcs ? `<div class="form-group"><label class="form-label">NPCs</label><div style="color:var(--ink);white-space:pre-wrap">${escapeHtml(log.npcs)}</div></div>` : '',
         log.locations ? `<div class="form-group"><label class="form-label">Locais</label><div style="color:var(--ink);white-space:pre-wrap">${escapeHtml(log.locations)}</div></div>` : '',
