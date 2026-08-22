@@ -16,19 +16,21 @@
    Coleções:
      worldbuilding-books      → livros (agrupam capítulos)
      worldbuilding-articles   → capítulos/contos/textos
+     worldbuilding-settings/estantes → lista de estantes (um doc só)
    ═══════════════════════════════════════════════════════════ */
 
-import { db, collection, getDocs, doc, setDoc, deleteDoc } from './firebase-config.js';
+import { db, collection, getDocs, doc, getDoc, setDoc, deleteDoc } from './firebase-config.js';
 import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND, poolOf } from './wb-utils.js';
 import { dossieHTML } from './wb-dossie.js';
 import { TOOLBAR_HTML, bindRich } from './wb-rich.js';
 import { PUBLICACOES, pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
 
 export const Editor = (() => {
-    let books = [], artigos = [], atual = null;
+    let books = [], artigos = [], estantes = [], atual = null;
     let rich = null;   // mesa de diagramação (wb-rich.js) do editor aberto
     let mentionRange = null, mentionIdx = 0, saveTimer = null, refType = 'all';
     let view = 'library';   // 'library' | 'editor'
+    let modo = 'escrita';   // 'escrita' | 'leitura' — vale para toda a sessão
 
     const $ = (s) => document.querySelector(s);
     const now = () => Date.now();
@@ -41,14 +43,25 @@ export const Editor = (() => {
 
     async function loadAll() {
         try {
-            const [bSnap, aSnap] = await Promise.all([
+            const [bSnap, aSnap, eSnap] = await Promise.all([
                 getDocs(collection(db, 'worldbuilding-books')),
                 getDocs(collection(db, 'worldbuilding-articles')),
+                getDoc(doc(db, 'worldbuilding-settings', 'estantes')),
             ]);
             books = bSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             artigos = aSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch (e) { console.warn('[editor] load', e); books = books || []; artigos = artigos || []; }
+            estantes = eSnap.exists() ? (eSnap.data().lista || []) : [];
+        } catch (e) { console.warn('[editor] load', e); books = books || []; artigos = artigos || []; estantes = estantes || []; }
     }
+
+    /* ── Estantes ──────────────────────────────────────────────
+       Todas num doc só (como o mural). A estante padrão é virtual:
+       lista TODOS os livros, e é onde o livro sem estante aparece. */
+    const ESTANTE_TODAS = '__todas';
+    const salvarEstantes = () => setDoc(doc(db, 'worldbuilding-settings', 'estantes'), { lista: estantes });
+    const livrosDaEstante = (id) => ordenados(id === ESTANTE_TODAS ? books : books.filter(b => b.estanteId === id));
+    const ordenados = (arr) => arr.slice()
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
 
     /* Capítulos de um livro, na ordem definida. */
     const chaptersOf = (bookId) =>
@@ -86,10 +99,7 @@ export const Editor = (() => {
         document.body.classList.remove('wbt-focus');
 
         const totalPalavras = artigos.reduce((s, a) => s + wordCount(a.contentHTML), 0);
-        const bookCards = books
-            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
-            .map(bookCard).join('');
-        const looseCards = loose().map(a => articleRow(a)).join('');
+        const avulsos = loose();
 
         contentBody().innerHTML = `
         <div class="wb-library">
@@ -100,22 +110,82 @@ export const Editor = (() => {
                     <span><b>${totalPalavras.toLocaleString('pt-BR')}</b> palavras</span>
                 </div>
                 <span style="flex:1"></span>
+                <button class="btn btn-secondary btn-sm" id="newEstante">🗂️ Nova estante</button>
                 <button class="btn btn-secondary btn-sm" id="newLoose">📄 Novo texto avulso</button>
                 <button class="btn btn-success btn-sm" id="newBook">📗 Novo livro</button>
             </div>
 
-            <h3 class="wb-lib-section">📚 Livros</h3>
-            <div class="wb-shelf">
-                ${bookCards || '<p class="wbt-muted">Nenhum livro ainda. Crie um livro para agrupar capítulos e contos.</p>'}
-            </div>
-
-            <h3 class="wb-lib-section">📄 Textos avulsos</h3>
-            <div class="wb-loose-list">
-                ${looseCards || '<p class="wbt-muted">Nenhum texto avulso. Bons textos avulsos podem virar capítulos depois.</p>'}
+            <h3 class="wb-lib-section">📚 Biblioteca</h3>
+            <div class="wb-estantes">
+                ${estanteHTML({ id: ESTANTE_TODAS, nome: 'Todos os livros', icone: '📚' },
+                    livrosDaEstante(ESTANTE_TODAS).length,
+                    livrosDaEstante(ESTANTE_TODAS).map(bookCard).join('')
+                        || '<p class="wbt-muted">Nenhum livro ainda. Crie um livro para agrupar capítulos e contos.</p>')}
+                ${estantes.map(e => estanteHTML(e, livrosDaEstante(e.id).length,
+                    livrosDaEstante(e.id).map(bookCard).join('')
+                        || '<p class="wbt-muted">Estante vazia. Escolha esta estante no ⚙️ do livro.</p>')).join('')}
+                ${estanteHTML({ id: '__avulsos', nome: 'Textos avulsos', icone: '📄' }, avulsos.length,
+                    `<div class="wb-loose-list">${avulsos.map(a => articleRow(a)).join('')
+                        || '<p class="wbt-muted">Nenhum texto avulso. Bons textos avulsos podem virar capítulos depois.</p>'}</div>`)}
             </div>
         </div>`;
 
         bindLibrary();
+    }
+
+    /* Bloco compacto de estante: fechada ocupa um tijolinho na grade,
+       aberta toma a largura toda e mostra os livros. Puro <details>.
+       O ⚙️ fica FORA do <summary> — dentro dele, todo clique abria a
+       estante junto. Ele flutua no canto do cabeçalho (CSS). */
+    function estanteHTML(e, n, corpo) {
+        const fixa = e.id === ESTANTE_TODAS || e.id === '__avulsos';
+        return `
+        <div class="wb-estante" data-estante="${esc(e.id)}">
+            <details class="wb-estante__det">
+                <summary class="wb-estante__head">
+                    <span class="wb-estante__caret">▸</span>
+                    <span class="wb-estante__icon">${esc(e.icone || '🗂️')}</span>
+                    <span class="wb-estante__name">${esc(e.nome || 'Estante sem nome')}</span>
+                    <span class="wb-badge wb-badge--soft">${n}</span>
+                </summary>
+                <div class="wb-estante__body">${corpo}</div>
+            </details>
+            ${fixa ? '' : `<button class="btn btn-secondary btn-sm wb-estante__cog" data-editestante="${esc(e.id)}" title="Renomear ou excluir a estante">⚙️</button>`}
+        </div>`;
+    }
+
+    /* ══════════════ ESTANTE (modal) ══════════════ */
+    function openEstanteModal(est = null) {
+        const e = est || { id: uid('est'), nome: '', icone: '🗂️' };
+        ToolModal.open(`
+            <h2>${est ? '⚙️ Editar estante' : '🗂️ Nova estante'}</h2>
+            <div class="wbt-form">
+                <label>Nome da estante <input id="esNome" class="form-input" value="${esc(e.nome || '')}" placeholder="Ex: Regras do sistema"></label>
+                <label>Ícone <input id="esIcone" class="form-input" value="${esc(e.icone || '')}" maxlength="4" placeholder="🗂️" style="width:90px"></label>
+                <div class="wbt-muted" style="font-size:.8rem">
+                    O livro entra na estante pelas configurações dele (⚙️ no livro).
+                    Livro sem estante aparece só em “Todos os livros”.
+                </div>
+                <div class="wbt-actions">
+                    ${est ? '<button class="btn btn-danger" id="esDel">🗑️ Excluir estante</button>' : ''}
+                    <button class="btn btn-success" id="esSave">💾 Salvar estante</button>
+                </div>
+            </div>`);
+        $('#esSave').onclick = async () => {
+            e.nome = $('#esNome').value.trim() || 'Estante sem nome';
+            e.icone = $('#esIcone').value.trim() || '🗂️';
+            if (!estantes.find(x => x.id === e.id)) estantes.push(e);
+            await salvarEstantes();
+            ToolModal.close(); renderLibrary();
+        };
+        const del = $('#esDel');
+        if (del) del.onclick = async () => {
+            const n = livrosDaEstante(e.id).length;
+            if (!confirm(`Excluir a estante "${e.nome}"?${n ? `\nOs ${n} livros NÃO serão apagados — voltam para "Todos os livros".` : ''}`)) return;
+            estantes = estantes.filter(x => x.id !== e.id);
+            await salvarEstantes();
+            ToolModal.close(); renderLibrary();
+        };
     }
 
     function bookCard(b) {
@@ -161,6 +231,9 @@ export const Editor = (() => {
     function bindLibrary() {
         $('#newBook').onclick = () => openBookModal(null);
         $('#newLoose').onclick = () => openArticle(null, null);
+        $('#newEstante').onclick = () => openEstanteModal(null);
+        contentBody().querySelectorAll('[data-editestante]').forEach(b =>
+            b.onclick = () => openEstanteModal(estantes.find(x => x.id === b.dataset.editestante)));
         // preventDefault: dentro do <summary>, qualquer clique abre/fecha o livro.
         contentBody().querySelectorAll('[data-editbook]').forEach(b =>
             b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openBookModal(books.find(x => x.id === b.dataset.editbook)); });
@@ -190,6 +263,10 @@ export const Editor = (() => {
                 <label>Versão <input id="bkVersao" class="form-input" value="${esc(b.versao || '')}" placeholder="Ex: 2.1">
                     <span class="wbt-muted" style="font-size:.8rem">Aparece como selo em toda tela que lista o livro, antes de abrir.
                     Texto livre — mude a cada revisão. Vazio = sem selo.</span></label>
+                <label>🗂️ Estante <select id="bkEstante" class="form-select">
+                    <option value="">— sem estante (só em “Todos os livros”) —</option>
+                    ${estantes.map(e => `<option value="${esc(e.id)}" ${e.id === b.estanteId ? 'selected' : ''}>${esc(e.icone || '🗂️')} ${esc(e.nome || '')}</option>`).join('')}
+                </select></label>
                 <label>Sinopse / descrição <textarea id="bkDesc" class="form-textarea" placeholder="Do que trata este livro?">${esc(b.description || '')}</textarea></label>
                 <label>Capa do livro ${CampoImagem.html({ id: 'bkCover', classe: 'form-input', valor: b.cover || '', pasta: 'worldbuilding-images/capas' })}</label>
                 <div class="wbt-muted" style="margin:.6rem 0 .2rem;font-weight:700">📖 Publicações</div>
@@ -207,6 +284,7 @@ export const Editor = (() => {
         $('#bkSave').onclick = async () => {
             b.title = $('#bkTitle').value.trim() || 'Livro sem título';
             b.versao = $('#bkVersao').value.trim();
+            b.estanteId = $('#bkEstante').value || null;
             b.description = $('#bkDesc').value.trim();
             b.cover = $('#bkCover').value.trim();
             b.pub = Object.fromEntries(PUBLICACOES.map(([k]) => [k, $('#bkPub_' + k).checked]));
@@ -253,22 +331,47 @@ export const Editor = (() => {
         renderEditor();
     }
 
+    /* Capítulo anterior/seguinte, pelo sumário do livro. Texto avulso não
+       tem ordem de leitura, então não ganha a navegação. */
+    function navCapsHTML() {
+        if (!atual.bookId) return '';
+        const irmaos = chaptersOf(atual.bookId);
+        const i = irmaos.findIndex(x => x.id === atual.id);
+        const ant = i > 0 ? irmaos[i - 1] : null;
+        const prox = i > -1 && i < irmaos.length - 1 ? irmaos[i + 1] : null;
+        if (!ant && !prox) return '';
+        const botao = (cap, dir, cls) => cap
+            ? `<button type="button" class="wb-capnav__btn ${cls}" data-gocap="${cap.id}">
+                   <span class="wb-capnav__dir">${dir}</span>
+                   <span class="wb-capnav__nome">${esc(cap.title || 'Sem título')}</span>
+               </button>`
+            : '<span class="wb-capnav__vazio"></span>';
+        return `<nav class="wb-capnav">
+            ${botao(ant, '← Capítulo anterior', '')}
+            ${botao(prox, 'Próximo capítulo →', 'wb-capnav__btn--next')}
+        </nav>`;
+    }
+
     function renderEditor() {
         view = 'editor';
         const a = atual;
+        const lendo = modo === 'leitura';
         setTitle('✒️ Escritório do Cronista');
         contentBody().innerHTML = `
-        <div class="wbt-editor-layout" id="editorLayout">
+        <div class="wbt-editor-layout${lendo ? ' is-reading' : ''}" id="editorLayout">
             <div class="wbt-editor-main" id="editorMain">
                 <div class="wbt-toolbar wbt-etoolbar">
                     <button class="btn btn-secondary btn-sm" id="backLib">← Biblioteca</button>
                     <span style="flex:1"></span>
+                    <button class="btn btn-secondary btn-sm" id="toggleModo"
+                            title="${lendo ? 'Voltar a editar o texto' : 'Ler sem as ferramentas de edição'}">${lendo ? '✒️ Modo escrita' : '📖 Modo leitura'}</button>
                     <button class="btn btn-secondary btn-sm" id="toggleRefs" title="Painel de consulta">Consulta ⇄</button>
                     <button class="btn btn-secondary btn-sm" id="focusMode" title="Modo foco">Foco ⛶</button>
                     <button class="btn btn-success btn-sm" id="saveArticle">💾 Salvar</button>
                 </div>
-                <input id="articleTitle" class="wbt-article-title" placeholder="Título do conto, capítulo ou cena…" value="${esc(a.title || '')}">
-                <input id="articleSyn" class="wb-article-syn" placeholder="Sinopse curta (opcional)…" value="${esc(a.synopsis || '')}">
+                ${navCapsHTML()}
+                <input id="articleTitle" class="wbt-article-title" placeholder="Título do conto, capítulo ou cena…" value="${esc(a.title || '')}" ${lendo ? 'readonly' : ''}>
+                <input id="articleSyn" class="wb-article-syn" placeholder="Sinopse curta (opcional)…" value="${esc(a.synopsis || '')}" ${lendo ? 'readonly' : ''}>
 
                 <div class="wb-editor-props">
                     <label>📗 Livro
@@ -290,9 +393,10 @@ export const Editor = (() => {
                 <!-- Colada no texto e grudada no topo quando a página rola. -->
                 <div class="wbt-toolbar wb-richbar" id="richToolbar">${TOOLBAR_HTML}</div>
 
-                <div id="richEditor" class="wbt-rich texto-mundo" contenteditable="true"
+                <div id="richEditor" class="wbt-rich texto-mundo" contenteditable="${lendo ? 'false' : 'true'}"
                      data-placeholder="Escreva aqui. Digite @ para vincular NPCs, Tribos, Locais ou eventos…">${a.contentHTML || ''}</div>
                 <p class="wbt-muted" id="editorStatus"></p>
+                ${navCapsHTML()}
                 <div id="mentionBox" class="wbt-mentionbox" hidden></div>
             </div>
             <aside class="wbt-refs" id="refsPanel">
@@ -442,6 +546,18 @@ export const Editor = (() => {
         $('#backLib').onclick = async () => { clearTimeout(saveTimer); await save(); renderLibrary(); };
         rich = bindRich($('#richEditor'), $('#richToolbar'), autosaveHint);
         $('#saveArticle').onclick = save;
+        // Salva antes de trocar de modo/capítulo: o texto vivo mora no DOM.
+        $('#toggleModo').onclick = async () => {
+            clearTimeout(saveTimer); await save();
+            modo = modo === 'escrita' ? 'leitura' : 'escrita';
+            renderEditor();
+        };
+        contentBody().querySelectorAll('[data-gocap]').forEach(b =>
+            b.onclick = async () => {
+                clearTimeout(saveTimer); await save();
+                openArticle(artigos.find(x => x.id === b.dataset.gocap), null);
+                contentBody().scrollTop = 0; window.scrollTo(0, 0);
+            });
         $('#toggleRefs').onclick = () => $('#editorLayout').classList.toggle('refs-closed');
         $('#focusMode').onclick = () => document.body.classList.toggle('wbt-focus');
         $('#refsSearch').oninput = renderRefs;

@@ -479,7 +479,41 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 .wb-lib-stats { display: flex; gap: var(--lr-space-4); color: var(--lr-text-2); font-size: .85rem; }
 .wb-lib-stats b { color: var(--lr-gold); }
 .wb-lib-section { margin: var(--lr-space-4) 0 var(--lr-space-2); font-family: var(--lr-font-title); color: var(--lr-text-1); font-size: 1.05rem; border-bottom: 1px solid var(--lr-border); padding-bottom: var(--lr-space-1); }
-.wb-shelf { display: grid; gap: var(--lr-space-3); }
+/* Estantes: fechadas são tijolinhos numa grade; abertas tomam a linha
+   inteira e mostram os livros. Só <details> — sem JS de expansão. */
+.wb-estantes {
+    display: grid; align-items: start; gap: var(--lr-space-2);
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+.wb-estante {
+    position: relative;
+    border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-lg);
+    background: var(--lr-surface); overflow: hidden;
+}
+.wb-estante:has(> details[open]) { grid-column: 1 / -1; background: var(--lr-bg-1); }
+.wb-estante__head {
+    display: flex; align-items: center; gap: var(--lr-space-2); list-style: none; cursor: pointer;
+    padding: var(--lr-space-2) var(--lr-space-3); transition: background var(--lr-t-base) var(--lr-ease);
+}
+.wb-estante__head::-webkit-details-marker { display: none; }
+.wb-estante__head:hover { background: var(--lr-surface-2); }
+.wb-estante__caret { color: var(--lr-gold); transition: transform var(--lr-t-base) var(--lr-ease); }
+.wb-estante > details[open] .wb-estante__caret { transform: rotate(90deg); }
+.wb-estante__icon { flex: 0 0 auto; }
+.wb-estante__name {
+    flex: 1; min-width: 0; font-family: var(--lr-font-title); font-size: var(--lr-fs-sm);
+    font-weight: 700; color: var(--lr-text-1);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Fora do <summary> (senão editar abriria a estante), flutuando no canto
+   do cabeçalho. O cabeçalho abre espaço para ele. */
+.wb-estante:has(> .wb-estante__cog) .wb-estante__head { padding-right: var(--lr-space-7); }
+.wb-estante__cog { position: absolute; top: var(--lr-space-2); right: var(--lr-space-2); opacity: var(--lr-op-muted); }
+.wb-estante:hover .wb-estante__cog, .wb-estante__cog:focus-visible { opacity: 1; }
+.wb-estante__body {
+    display: grid; gap: var(--lr-space-3);
+    border-top: var(--lr-border-w) solid var(--lr-border); padding: var(--lr-space-3);
+}
 
 .wb-book { border: 1px solid var(--lr-border); border-radius: var(--lr-radius-lg); background: var(--lr-bg-1); overflow: hidden; }
 .wb-book__head { display: flex; gap: var(--lr-space-3); padding: var(--lr-space-3); align-items: flex-start; cursor: pointer; list-style: none; }
@@ -541,6 +575,55 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 .wb-editor-props label { display: flex; align-items: center; gap: var(--lr-space-1); font-size: .82rem; color: var(--lr-text-2); }
 .wb-editor-props select, .wb-editor-props input[type=number] { margin-left: var(--lr-space-1); }
 .wb-editor-props .wbt-check { gap: var(--lr-space-1); }
+
+/* ── Navegação de capítulos (topo e pé do texto) ────────────
+   Sempre em par: o que veio antes à esquerda, o que vem depois à
+   direita, cada um com o nome do capítulo. */
+.wb-capnav { display: flex; gap: var(--lr-space-2); max-width: 72ch; margin: var(--lr-space-3) 0; }
+.wb-capnav__vazio { flex: 1 1 0; }
+.wb-capnav__btn {
+    flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left;
+    padding: var(--lr-space-2) var(--lr-space-3); cursor: pointer;
+    background: var(--lr-surface); color: var(--lr-text-1);
+    border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius);
+    font-family: var(--lr-font-body);
+    transition: background var(--lr-t-base) var(--lr-ease), border-color var(--lr-t-base) var(--lr-ease);
+}
+.wb-capnav__btn:hover { background: var(--lr-surface-2); border-color: var(--lr-gold); }
+.wb-capnav__btn--next { text-align: right; align-items: flex-end; }
+.wb-capnav__dir { font-size: var(--lr-fs-xs); color: var(--lr-text-2); letter-spacing: var(--lr-track-title); }
+.wb-capnav__nome {
+    max-width: 100%; font-family: var(--lr-font-subtitle); font-size: var(--lr-fs-md); font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Tela estreita: lado a lado sobra meia dúzia de letras para o nome do
+   capítulo. Empilhados, cada um usa a linha inteira. */
+@media (max-width: 480px) {
+    .wb-capnav { flex-direction: column; }
+    .wb-capnav__btn--next { text-align: left; align-items: flex-start; }
+    .wb-capnav__vazio { display: none; }
+}
+
+/* ── Modo leitura ───────────────────────────────────────────
+   Mesma tela, sem ferramenta nenhuma: some a barra de formatação
+   (que ficava grudada por cima do texto), as propriedades e o painel
+   de consulta. O texto ganha a página inteira. */
+.wbt-editor-layout.is-reading { grid-template-columns: 1fr; }
+.wbt-editor-layout.is-reading .wb-richbar,
+.wbt-editor-layout.is-reading .wb-editor-props,
+.wbt-editor-layout.is-reading .wbt-refs,
+.wbt-editor-layout.is-reading #editorStatus { display: none; }
+.wbt-editor-layout.is-reading .wbt-rich {
+    border-top: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    min-height: 0;
+}
+/* A coluna inteira se estreita na medida do texto (72ch do .wbt-rich) e
+   centraliza — assim título, sinopse e navegação nascem alinhados com o
+   texto sem ninguém repetir a medida. */
+.wbt-editor-layout.is-reading .wbt-editor-main { width: fit-content; max-width: 100%; margin-inline: auto; }
+.wbt-editor-layout.is-reading .wb-capnav { max-width: none; }
+.wbt-editor-layout.is-reading .wb-article-syn { border-bottom-style: solid; }
 
 /* ═══════════════════════════════════════════════════════════════════
    📱 MOBILE (≤860px) — sidebar vira "drawer", botões menores e layout

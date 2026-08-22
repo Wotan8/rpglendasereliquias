@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check — Biblioteca do Cronista</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+
+<link rel="stylesheet" href="worldbuilding/css/worldbuilding.css">
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css">
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/lendas-reliquias.css">
+<script src="shared/theme.js"></script>
+<style>
+  .chk-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+      display: flex; gap: var(--lr-space-2); align-items: center; flex-wrap: wrap;
+      padding: var(--lr-space-2) var(--lr-space-3); background: var(--lr-bg-1);
+      border-bottom: var(--lr-border-w) solid var(--lr-border);
+      font: 600 var(--lr-fs-sm)/1 var(--lr-font-body); color: var(--lr-text-1); }
+  .chk-bar button { padding: var(--lr-space-1) var(--lr-space-3);
+      border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius);
+      background: var(--lr-surface); color: var(--lr-text-1); font: inherit; }
+  .content-header { padding-top: 46px !important; }
+</style>
+</head>
+<body>
+
+<div class="chk-bar">
+    <strong>Check — Biblioteca do Cronista</strong>
+    <button onclick="document.documentElement.classList.toggle('dark')">🌙 Tema</button>
+</div>
+
+<main class="main-content">
+    <div class="content-header"><h1 class="content-title">📚 Escritório do Cronista</h1></div>
+    <div class="content-body" id="contentBody"></div>
+</main>
+
+<script type="module">
+/* Réplica estática do que renderLibrary() monta em wb-editor.js — mesmas
+   classes, para conferir a grade de estantes sem Firebase. */
+const LIVROS = [
+    { id: 'b1', title: 'Régua de Balanceamento', versao: '', estanteId: 'e1', caps: 12, palavras: 14397,
+      desc: 'Especificação técnica interna. As fórmulas, taxas e invariantes usadas para balancear qualquer coisa do sistema.' },
+    { id: 'b2', title: 'Compêndio de Fluxomancia', versao: '', estanteId: 'e2', caps: 2, palavras: 2319,
+      desc: 'A doutrina da Essência: o que ela é e em quantas formas se manifesta.' },
+    { id: 'b3', title: 'Lendas & Relíquias — Livro de Regras do Jogador', versao: '1.8', estanteId: 'e1', caps: 10, palavras: 19331,
+      desc: 'Tudo que o jogador precisa: as regras do sistema atualizadas para a versão viva do jogo.' },
+    { id: 'b4', title: 'Crônicas de Vaugh', versao: '', estanteId: null, caps: 4, palavras: 6120,
+      desc: 'Contos da vila de fundição — sem estante, só aparece em Todos os livros.' },
+];
+const ESTANTES = [
+    { id: 'e1', nome: 'Regras do sistema', icone: '📐' },
+    { id: 'e2', nome: 'Compêndios de magia', icone: '🔮' },
+    { id: 'e3', nome: 'Bestiário', icone: '🐉' },
+];
+const AVULSOS = [
+    { title: 'A Noite da Bigorna Fria', syn: 'Brida descobre quem comprou a dívida.', palavras: 1840 },
+    { title: 'Nota sobre o Consórcio', syn: '', palavras: 320 },
+];
+const esc = (s = '') => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const bookCard = (b) => `
+<details class="wb-book" data-book="${b.id}">
+    <summary class="wb-book__head">
+        <span class="wb-book__caret">▸</span>
+        <div class="wb-book__cover">📖</div>
+        <div class="wb-book__meta">
+            <div class="wb-book__title">${esc(b.title)}</div>
+            <div class="wb-book__badges">${b.versao ? `<span class="wb-badge wb-badge--ver">🔖 ${esc(b.versao)}</span> ` : ''}<span class="wb-badge wb-badge--pub">Mestre</span> <span class="wb-badge wb-badge--soft">${b.caps} cap.</span> <span class="wb-badge wb-badge--soft">${b.palavras.toLocaleString('pt-BR')} palavras</span></div>
+            <p class="wb-book__desc">${esc(b.desc)}</p>
+        </div>
+        <div class="wb-book__actions">
+            <button class="btn btn-secondary btn-sm" title="Editar livro">⚙️</button>
+            <button class="btn btn-secondary btn-sm" title="Novo capítulo">＋ cap.</button>
+        </div>
+    </summary>
+    <div class="wb-book__chapters"><p class="wbt-muted" style="margin:.4rem .2rem">Sem capítulos ainda.</p></div>
+</details>`;
+
+const articleRow = (a) => `
+<div class="wb-chapter">
+    <span class="wb-chapter__num">—</span>
+    <div class="wb-chapter__body">
+        <div class="wb-chapter__title">${esc(a.title)}</div>
+        ${a.syn ? `<div class="wb-chapter__syn">${esc(a.syn)}</div>` : ''}
+        <div class="wb-chapter__meta"><span class="wb-badge wb-badge--draft">✏️ Rascunho</span> <span class="wb-badge wb-badge--priv">🔒 Privado</span> <span class="wbt-muted">${a.palavras} palavras</span></div>
+    </div>
+    <button class="btn btn-secondary btn-sm" title="Excluir">🗑️</button>
+</div>`;
+
+const estanteHTML = (e, n, corpo, fixa) => `
+<div class="wb-estante" data-estante="${esc(e.id)}">
+    <details class="wb-estante__det">
+        <summary class="wb-estante__head">
+            <span class="wb-estante__caret">▸</span>
+            <span class="wb-estante__icon">${esc(e.icone)}</span>
+            <span class="wb-estante__name">${esc(e.nome)}</span>
+            <span class="wb-badge wb-badge--soft">${n}</span>
+        </summary>
+        <div class="wb-estante__body">${corpo}</div>
+    </details>
+    ${fixa ? '' : `<button class="btn btn-secondary btn-sm wb-estante__cog" data-editestante="${esc(e.id)}" title="Renomear ou excluir a estante">⚙️</button>`}
+</div>`;
+
+const capnavHTML = () => `
+<nav class="wb-capnav">
+    <button type="button" class="wb-capnav__btn" data-gocap="c1">
+        <span class="wb-capnav__dir">← Capítulo anterior</span>
+        <span class="wb-capnav__nome">A Bigorna Fria</span>
+    </button>
+    <button type="button" class="wb-capnav__btn wb-capnav__btn--next" data-gocap="c3">
+        <span class="wb-capnav__dir">Próximo capítulo →</span>
+        <span class="wb-capnav__nome">O Preço do Consórcio, e o que sobrou dele</span>
+    </button>
+</nav>`;
+
+const editorHTML = (lendo) => `
+<div class="wbt-editor-layout${lendo ? ' is-reading' : ''}" id="editorLayout">
+  <div class="wbt-editor-main" id="editorMain">
+    <div class="wbt-toolbar wbt-etoolbar">
+      <button class="btn btn-secondary btn-sm">← Biblioteca</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-secondary btn-sm" id="toggleModo">${lendo ? '✒️ Modo escrita' : '📖 Modo leitura'}</button>
+      <button class="btn btn-secondary btn-sm">Consulta ⇄</button>
+      <button class="btn btn-secondary btn-sm">Foco ⛶</button>
+      <button class="btn btn-success btn-sm">💾 Salvar</button>
+    </div>
+    ${capnavHTML()}
+    <input class="wbt-article-title" value="Capítulo 2 — A Noite da Bigorna Fria" ${lendo ? 'readonly' : ''}>
+    <input class="wb-article-syn" value="Brida descobre quem comprou a dívida." ${lendo ? 'readonly' : ''}>
+    <div class="wb-editor-props">
+      <label>📗 Livro <select class="form-select"><option>📗 Crônicas de Vaugh</option></select></label>
+      <label>🔢 Ordem <input type="number" class="form-input" value="2" style="width:80px"></label>
+      <label>📊 Status <select class="form-select"><option>✏️ Rascunho</option></select></label>
+      <label class="wbt-check"><input type="checkbox" checked> 🌐 Público</label>
+    </div>
+    <div class="wbt-toolbar wb-richbar" id="richToolbar">
+      <button class="btn btn-secondary btn-sm"><b>B</b></button>
+      <button class="btn btn-secondary btn-sm"><i>I</i></button>
+      <button class="btn btn-secondary btn-sm"><u>U</u></button>
+      <span class="wb-rich-sep"></span>
+      <select class="wb-rich-sel"><option>Parágrafo</option></select>
+    </div>
+    <div class="wbt-rich texto-mundo" contenteditable="${lendo ? 'false' : 'true'}">
+      <h2>Lacunas abertas</h2>
+      <p>A forja apagou às três da manhã e Brida ficou olhando o carvão morrer.
+      Não era o frio que a mantinha ali — era o recibo dobrado no bolso do avental,
+      com o selo do Consórcio impresso torto, como quem teve pressa de mentir.</p>
+      <p>Ela já tinha lido aquilo quatro vezes. Leu de novo.</p>
+    </div>
+    <p class="wbt-muted" id="editorStatus">✓ Salvo às 21:14</p>
+    ${capnavHTML()}
+  </div>
+  <aside class="wbt-refs" id="refsPanel">
+    <input class="form-input" placeholder="Buscar no ecossistema…">
+    <div class="wbt-chips"><button class="wbt-chip is-active">Tudo</button><button class="wbt-chip">👥 NPCs</button></div>
+    <div class="wbt-refs__list"><p class="wbt-muted">…</p></div>
+  </aside>
+</div>`;
+
+const daEstante = (id) => LIVROS.filter(b => b.estanteId === id);
+
+document.getElementById('contentBody').innerHTML = `
+<div class="wb-library">
+    <div class="wb-lib-toolbar">
+        <div class="wb-lib-stats">
+            <span><b>${LIVROS.length}</b> livros</span>
+            <span><b>71</b> textos</span>
+            <span><b>65.299</b> palavras</span>
+        </div>
+        <span style="flex:1"></span>
+        <button class="btn btn-secondary btn-sm">🗂️ Nova estante</button>
+        <button class="btn btn-secondary btn-sm">📄 Novo texto avulso</button>
+        <button class="btn btn-success btn-sm">📗 Novo livro</button>
+    </div>
+
+    <h3 class="wb-lib-section">📚 Biblioteca</h3>
+    <div class="wb-estantes">
+        ${estanteHTML({ id: '__todas', nome: 'Todos os livros', icone: '📚' }, LIVROS.length, LIVROS.map(bookCard).join(''), true)}
+        ${ESTANTES.map(e => estanteHTML(e, daEstante(e.id).length,
+            daEstante(e.id).map(bookCard).join('') || '<p class="wbt-muted">Estante vazia. Escolha esta estante no ⚙️ do livro.</p>')).join('')}
+        ${estanteHTML({ id: '__avulsos', nome: 'Textos avulsos', icone: '📄' }, AVULSOS.length,
+            `<div class="wb-loose-list">${AVULSOS.map(articleRow).join('')}</div>`, true)}
+    </div>
+
+    <h3 class="wb-lib-section">✒️ Capítulo aberto</h3>
+    <div id="editorMock"></div>
+</div>`;
+
+let lendo = false;
+const pintarEditor = () => {
+    document.getElementById('editorMock').innerHTML = editorHTML(lendo);
+    document.getElementById('toggleModo').onclick = () => { lendo = !lendo; pintarEditor(); };
+};
+pintarEditor();
+</script>
+</body>
+</html>
