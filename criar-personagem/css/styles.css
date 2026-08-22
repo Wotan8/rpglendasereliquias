@@ -209,8 +209,10 @@ html.dark .field select {
 }
 
 .btn-primary:hover {
-    background: #3b5de7;
-    border-color: #3b5de7;
+    /* era #3b5de7 (azul) cravado na mão: o botão primário é OURO, e no hover
+       ele escurece no tema claro / clareia no escuro via --lr-gold-2. */
+    background: var(--lr-gold-2);
+    border-color: var(--lr-gold-2);
 }
 
 .btn-success {
@@ -230,13 +232,17 @@ html.dark .field select {
     border-color: var(--danger);
 }
 
-html.dark .btn {
+/* No escuro o botão NEUTRO vira ferro fosco. As variantes semânticas ficam de
+   fora do :not(): sem isso, `html.dark .btn` (0,2,1) vencia `.btn-primary`
+   (0,1,0) e a ação primária perdia o ouro — virava mais um botão cinza no tema
+   que a mesa usa. Era por isso que os botões da criação cravavam cor inline. */
+html.dark .btn:not(.btn-primary):not(.btn-success):not(.btn-danger) {
     background: var(--lr-surface);
     color: var(--lr-text-1);
     border-color: var(--lr-border);
 }
 
-html.dark .btn:hover {
+html.dark .btn:not(.btn-primary):not(.btn-success):not(.btn-danger):hover {
     background: var(--lr-surface-2);
 }
 
@@ -298,10 +304,12 @@ html.dark .btn:hover {
     background: var(--ink);
 }
 
+/* Nível base (grátis): anel dourado VAZADO. Ouro cheio é reservado para o que
+   o jogador comprou com EXP — se os dois forem sólidos, viram a mesma coisa. */
 .dot.bonus.filled {
-    background: var(--accent);
+    background: var(--lr-gold-soft);
     border-color: var(--accent);
-    box-shadow: 0 0 4px var(--accent-glow);
+    box-shadow: none;
 }
 
 .dot:hover {
@@ -314,13 +322,13 @@ html.dark .dot {
 }
 
 html.dark .dot.filled {
-    background: var(--accent);
+    background: var(--lr-text-1);
 }
 
 html.dark .dot.bonus.filled {
-    background: var(--lr-gold);
+    background: var(--lr-gold-soft);
     border-color: var(--lr-gold);
-    box-shadow: 0 0 4px rgba(212, 175, 55, 0.5);
+    box-shadow: none;
 }
 
 /* ===== DETAIL MODAL ===== */

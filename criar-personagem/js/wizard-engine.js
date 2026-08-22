@@ -32,13 +32,15 @@ window.wizardState = {
         attr_for: 0, attr_des: 0, attr_vig: 0,
         attr_pre: 0, attr_man: 0, attr_aut: 0
     },
+    atributosExp: {},          // key → níveis comprados com EXP, acima dos pontos
 
     // Fase 4
     grupoPericiaPrimario: null,
     grupoPericia2: null,
     grupoPericia3: null,
     grupoPericiaFraco: null,
-    pericias: {}, // dotKey → nível distribuído
+    pericias: {},    // dotKey → nível distribuído com os pontos iniciais
+    periciasExp: {}, // dotKey → níveis comprados com EXP, acima dos pontos
 
     // Fase 5
     virtudeSelecionada: null,  // id da virtude
@@ -73,6 +75,33 @@ window.wizardState = {
     fasesCompletas: new Set(),
     expSources: {}  // key → { amount, label }
 };
+
+/* ===== NÍVEL EFETIVO =====
+   O personagem tem duas fontes de nível na criação: os pontos iniciais das
+   pools e os níveis comprados com EXP. Quem manda na ficha, no limitador e no
+   custo é sempre a SOMA das duas — por isso ninguém deve ler wizardState.
+   atributos/pericias direto para saber "em que nível está". */
+
+function nivelAtributo(attrKey) {
+    return REGRAS_CRIACAO.atributos.base_inicial
+        + (wizardState.atributos[attrKey] || 0)
+        + (wizardState.atributosExp[attrKey] || 0);
+}
+
+function nivelPericia(dotKey) {
+    return (wizardState.pericias[dotKey] || 0) + (wizardState.periciasExp[dotKey] || 0);
+}
+
+/** Todas as perícias com nível > 0, vindas de ponto inicial ou de EXP. */
+function periciasComNivel() {
+    const keys = new Set([
+        ...Object.keys(wizardState.pericias || {}),
+        ...Object.keys(wizardState.periciasExp || {})
+    ]);
+    return [...keys]
+        .map(k => [k, nivelPericia(k)])
+        .filter(([, nv]) => nv > 0);
+}
 
 /* ===== FASE MANAGEMENT ===== */
 
@@ -206,6 +235,9 @@ function deserializeWizardState(json) {
         }
 
         Object.assign(wizardState, s);
+        // Criação salva antes da compra com EXP não tem estes mapas
+        if (!wizardState.atributosExp) wizardState.atributosExp = {};
+        if (!wizardState.periciasExp) wizardState.periciasExp = {};
     } catch (e) {
         console.error('Erro ao restaurar wizard state:', e);
     }

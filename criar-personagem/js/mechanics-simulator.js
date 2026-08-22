@@ -13,11 +13,15 @@ export function simulateDerivedValues() {
     const initialConstants = {};
     const baseStats = { ...state.atributos };
     
-    // Add base_inicial to attributes to get absolute values (normally 1)
+    // Nível efetivo = base + pontos iniciais + níveis comprados com EXP na criação.
+    // O comprado com EXP pesa nos derivados igual ao que veio da pool de pontos.
     const baseInicial = window.REGRAS_CRIACAO?.atributos?.base_inicial || 1;
     ['attr_int', 'attr_rac', 'attr_prs', 'attr_for', 'attr_des', 'attr_vig', 'attr_pre', 'attr_man', 'attr_aut'].forEach(attr => {
-        baseStats[attr] = (baseStats[attr] || 0) + baseInicial;
+        baseStats[attr] = (baseStats[attr] || 0) + (state.atributosExp?.[attr] || 0) + baseInicial;
     });
+
+    /** Nível da perícia somando ponto inicial e nível comprado com EXP. */
+    const nivelPericia = (dotKey) => (state.pericias?.[dotKey] || 0) + (state.periciasExp?.[dotKey] || 0);
 
     // 1. Iniciar com os Valores Iniciais definidos pela Raça, Classe e Tribo
     const raca = window._systemData?.races?.find(r => r.nome === state.racaSelecionada);
@@ -99,7 +103,7 @@ export function simulateDerivedValues() {
             const nome = ref.slice('Perícia: '.length);
             for (const skills of Object.values(window.SKILLS || {})) {
                 const found = skills.find(s => s.name === nome);
-                if (found) return state.pericias?.[`sk_${found.key}`] || 0;
+                if (found) return nivelPericia(`sk_${found.key}`);
             }
             return 0;
         }
@@ -118,14 +122,14 @@ export function simulateDerivedValues() {
 
         // Perícias — buscar no wizardState (sk_<key>)
         if (ref.startsWith('sk_')) {
-            return state.pericias?.[ref] || 0;
+            return nivelPericia(ref);
         }
         // Perícia por nome legível
         if (window.SKILLS) {
             for (const [cat, skills] of Object.entries(window.SKILLS)) {
                 const found = skills.find(s => s.name === ref);
                 if (found) {
-                    return state.pericias?.[`sk_${found.key}`] || 0;
+                    return nivelPericia(`sk_${found.key}`);
                 }
             }
         }

@@ -1,0 +1,108 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>__check: compra com EXP (atributos, perícias e exclusivas)</title>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles_wizard.css">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/lendas-reliquias.css">
+<link rel="stylesheet" href="../shared/texto-mundo.css">
+<style>
+    body { padding: 16px; font-family: system-ui, sans-serif; }
+    #out { font: 12px monospace; white-space: pre-wrap; background: #111; color: #9f9; padding: 8px; border-radius: 6px; margin-bottom: 12px; }
+    #barra { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .phase-container { display: block !important; }
+</style>
+
+<div id="out">carregando…</div>
+<div id="barra">
+    <label>Classe: <select id="selClasse" onchange="trocarClasse()"></select></label>
+    <span>EXP restante: <b id="expValue">0</b> · total: <b id="expTotalValue">0</b></span>
+</div>
+
+<!-- mesma casca da criacao.html: .wrap (max 900) > .sheet (padding 24, overflow hidden) -->
+<div class="wrap"><div class="sheet">
+    <div class="phase-container" id="phase5"></div>
+    <div class="phase-container" id="phase6"></div>
+</div></div>
+
+<script src="js/data.js"></script>
+<script src="js/wizard-engine.js"></script>
+<script src="js/exp-tracker.js"></script>
+<script src="js/memory-manager.js"></script>
+<script src="../ficha-v1.7_1/js/mechanics-engine.js"></script>
+<script src="js/system-data-loader.js"></script>
+<script src="js/app.js"></script>
+<script src="js/attributes-module.js"></script>
+<script src="js/skills-module.js"></script>
+<script>
+    // O harness não tem Firebase nem localStorage do wizard.
+    function saveWizardToStorage() {}
+    function hasWizardSave() { return false; }
+
+    const log = [];
+    fetch('__check-data.json', { cache: 'no-store' }).then(r => r.json()).then(data => {
+        Object.assign(window._systemData, data, { loaded: true });
+        buildSkillsFromFirebase();
+        window.RACES = buildRacesFromFirebase();
+        buildClassDataFromFirebase();
+        buildTribesFromFirebase();
+        buildDerivedValuesFromFirebase();
+
+        Object.assign(wizardState, {
+            grupoPrimario: 'Fisico', grupoFraco: 'Social',
+            grupoPericiaPrimario: 'combate', grupoPericia2: 'mental',
+            grupoPericiaFraco: 'social', grupoPericia3: 'fisico',
+            classeSelecionada: 'Bardo'
+        });
+        ExpTracker.addSource('exp_inicial', 100, 'EXP Inicial');
+
+        document.getElementById('selClasse').innerHTML =
+            Object.keys(window.CLASS_SKILLS).sort().map(n => `<option>${escHtml(n)}</option>`).join('');
+        document.getElementById('selClasse').value = 'Bardo';
+
+        desenhar();
+        checar(data);
+    }).catch(e => { document.getElementById('out').textContent = 'ERRO: ' + e.message; });
+
+    function desenhar() {
+        initPhase3(document.getElementById('phase5'));
+        initPhase4(document.getElementById('phase6'));
+    }
+    // O wizard chama forceRerender(getPhaseIndex(3|4)); aqui os containers são fixos.
+    function forceRerender() { desenhar(); }
+    function trocarClasse() {
+        wizardState.classeSelecionada = document.getElementById('selClasse').value;
+        desenhar();
+    }
+
+    function checar(data) {
+        const ex = data.skills.filter(s => s.categoria === 'exclusivo' && s.publicado !== false);
+        log.push(`perícias: ${data.skills.length} (exclusivas ${ex.length})`);
+
+        // 1. Toda exclusiva da classe aparece no bloco, e nenhuma comum entra ali.
+        const linhas = [...document.querySelectorAll('#skillExclusivasGrid .skill-name')].map(e => e.textContent.trim());
+        const esperadas = window.CLASS_SKILLS['Bardo'];
+        log.push(`Bardo — esperadas ${esperadas.length}, na tela ${linhas.length}: ${linhas.join(', ')}`);
+        if (linhas.length !== esperadas.length) log.push('FALHA: bloco de exclusivas não bate com pericClasse');
+
+        // 2. Exclusiva não tem bolinha clicável de ponto inicial.
+        const clicaveis = [...document.querySelectorAll('#skillExclusivasGrid .dot')].filter(d => !d.disabled);
+        log.push(clicaveis.length === 0 ? 'ok: exclusiva não aceita ponto inicial'
+                                        : `FALHA: ${clicaveis.length} bolinha(s) de ponto inicial em exclusiva`);
+
+        // 3. Custo por nível vem do cadastro (Canto = 2, Erudição Rúnica = 5).
+        const canto = window.SKILLS.exclusivo.find(s => s.name === 'Canto');
+        log.push(`Canto custa ${canto?.custoExp}/nível (cadastro: ${data.skills.find(s => s.nome === 'Canto')?.custoEvolucao})`);
+
+        // 4. Comprar de verdade e conferir o desconto no pool.
+        const antes = ExpTracker.getTotal();
+        comprarPericiaExp(canto.key);
+        log.push(`comprou Canto Nv1: pool ${antes} → ${ExpTracker.getTotal()} (esperado −${canto.custoExp})`);
+
+        // 5. Atributo: cada linha tem o controle de compra.
+        const controles = document.querySelectorAll('#attrDistGrid .exp-buy').length;
+        log.push(`${controles} controles de compra em 9 atributos`);
+
+        document.getElementById('out').textContent = log.join('\n');
+    }
+</script>

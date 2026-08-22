@@ -85,8 +85,10 @@ function resetWizardState() {
         attr_for: 0, attr_des: 0, attr_vig: 0,
         attr_pre: 0, attr_man: 0, attr_aut: 0
     };
+    wizardState.atributosExp = {};
     wizardState.grupoPericiaPrimario = null;
     wizardState.pericias = {};
+    wizardState.periciasExp = {};
     wizardState.virtudeSelecionada = null;
     wizardState.vicioSelecionado = null;
     wizardState.npcs = [];
@@ -357,6 +359,86 @@ function escHtml(str) {
     const d = document.createElement('div');
     d.textContent = str;
     return d.innerHTML.replace(/"/g, '&quot;'); // innerHTML não escapa aspas; atributos dependem disso
+}
+
+/* ===== COMPRA DE NÍVEL COM EXP (atributos e perícias) =====
+   Os pontos iniciais das pools e o EXP são duas moedas diferentes. As pools
+   pagam até o teto de criação; o EXP passa por cima desse teto e vai até o 5,
+   pelo mesmo preço da ficha (degrau N custa N × custo). Tudo aqui é só UI —
+   o custo em si mora no ExpTracker. */
+
+/** Estado do botão de compra: quanto custa o próximo nível e o que trava. */
+function avaliarCompraExp({ nivel, comprados, custoPorNivel, teto, motivoTeto }) {
+    const proximo = nivel + 1;
+    const custoProx = proximo * custoPorNivel;
+    const disponivel = ExpTracker.getTotal();
+    let bloqueio = null;
+
+    if (proximo > teto) {
+        bloqueio = { curto: 'MÁX', motivo: motivoTeto };
+    } else if (custoProx > disponivel) {
+        bloqueio = {
+            curto: `${custoProx}`,
+            motivo: `EXP insuficiente: o Nv.${proximo} custa ${custoProx} EXP e você tem ${disponivel}.`
+        };
+    }
+    return { nivel, comprados, custoProx, bloqueio };
+}
+
+/** Controle [−] custo [+] ao lado das bolinhas. */
+function criarBotoesCompraExp(fnComprar, fnVender, chave, est) {
+    const podeComprar = !est.bloqueio;
+    const rotulo = est.bloqueio ? est.bloqueio.curto : String(est.custoProx);
+    const titulo = est.bloqueio
+        ? est.bloqueio.motivo
+        : `Comprar o Nv.${est.nivel + 1} com EXP — custa ${est.custoProx} EXP.`;
+
+    return `
+        <div class="exp-buy" title="${escHtml(titulo)}">
+            <button class="exp-buy-btn" onclick="${fnVender}('${chave}')" ${est.comprados > 0 ? '' : 'disabled'}
+                title="Devolver o último nível comprado com EXP (o EXP volta para o pool)">−</button>
+            <span class="exp-buy-cost ${podeComprar ? '' : 'off'}">${escHtml(rotulo)}</span>
+            <button class="exp-buy-btn" onclick="${fnComprar}('${chave}')" ${podeComprar ? '' : 'disabled'}
+                title="${escHtml(titulo)}">+</button>
+        </div>`;
+}
+
+/** Caixa de instruções da compra com EXP, mostrada nas fases de Atributos e Perícias. */
+function criarGuiaCompraExp(tipo) {
+    const teto = REGRAS_CRIACAO.compra_exp.teto_nivel;
+    const custo = tipo === 'atributo'
+        ? `${REGRAS_CRIACAO.compra_exp.custo_atributo_por_nivel} EXP`
+        : 'o custo cadastrado da perícia (2, 4 ou 5 EXP)';
+
+    // Só atributo ganha o nível 1 de graça; a legenda segue a ordem em que as
+    // bolinhas aparecem na linha, da esquerda para a direita.
+    const nivelBase = tipo === 'atributo'
+        ? `<li><span class="dot-legenda base"></span> <strong>Anel dourado</strong> — o nível 1 que todo atributo ganha de graça: não saiu de ponto nem de EXP.</li>`
+        : '';
+    const limitador = tipo === 'pericia'
+        ? `<li>Uma perícia nunca passa do <strong>atributo que a limita</strong> — suba o atributo primeiro.</li>`
+        : '';
+
+    return `
+        <div class="guia-box">
+            <div class="guia-title">💡 Duas moedas diferentes</div>
+            <ul class="guia-list">
+                ${nivelBase}
+                <li><span class="dot-legenda"></span> <strong>Bolinha sólida</strong> — paga com os <strong>pontos iniciais</strong> da pool acima. Não custa EXP.</li>
+                <li><span class="dot-legenda exp"></span> <strong>Bolinha dourada cheia</strong> — comprada com <strong>EXP</strong> pelo botão <strong>+</strong>. Vale antes, durante e depois de distribuir os pontos.</li>
+                <li>O degrau <strong>N</strong> custa <strong>N ×</strong> ${custo}. Ir do 2 para o 3 é mais caro que do 1 para o 2.</li>
+                <li>O EXP passa por cima do teto de pontos da criação, mas <strong>nunca do nível ${teto}</strong>.</li>
+                ${limitador}
+                <li>Errou? O <strong>−</strong> devolve o EXP inteiro. Nada aqui é definitivo antes de finalizar.</li>
+            </ul>
+        </div>`;
+}
+
+/** Depois de mexer em atributo ou perícia: derruba o que virou ilegal e recobra o EXP. */
+function revalidarCompras() {
+    clampComprasAtributos();
+    clampComprasPericias();
+    ExpTracker.sincronizarCompras();
 }
 
 function createNarratorBox(text) {

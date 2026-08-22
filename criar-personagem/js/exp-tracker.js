@@ -9,6 +9,37 @@
    sabor, não de otimização. */
 const TETO_GANHO_DESVANTAGENS = 30;
 
+/** Perícia (e sua categoria) a partir do dotKey `sk_<key>` usado no wizard. */
+function findSkillByDotKey(dotKey) {
+    const key = String(dotKey).replace(/^sk_/, '');
+    for (const [cat, lista] of Object.entries(window.SKILLS || {})) {
+        const found = (lista || []).find(s => s.key === key);
+        if (found) return { skill: found, cat };
+    }
+    return null;
+}
+
+/**
+ * Chave desta perícia no formato da ficha v1.7.
+ * Exclusiva de classe entra na ficha injetada pela CLASSE, com a chave
+ * `sk_classe_<nome>` e SEM tirar acento — é assim que ficha-v1.7_1/js/core.js
+ * monta em onClassChange, e é o que está gravado nos personagens existentes.
+ * Gravar `sk_exclusivo_*` para elas deixaria o nível órfão: a ficha só renderiza
+ * linha `sk_exclusivo_*` para exclusiva marcada como `todoPersonagem`.
+ */
+function chaveDaFicha({ skill, cat }) {
+    if (cat === 'exclusivo' && !skill.todoPersonagem) {
+        return 'sk_classe_' + skill.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    }
+    return `sk_${cat}_${skill.key}`;
+}
+
+/** Custo de EXP por nível desta perícia (campo "Custo de Evolução" do cadastro). */
+function custoNivelPericia(dotKey) {
+    return findSkillByDotKey(dotKey)?.skill.custoExp
+        || REGRAS_CRIACAO.compra_exp.custo_pericia_padrao;
+}
+
 const ExpTracker = {
     _listeners: [],
 
@@ -85,16 +116,12 @@ const ExpTracker = {
      */
     calcAttrExpTotal() {
         if (typeof REGRAS_CRIACAO === 'undefined' || typeof GRUPOS_ATRIBUTOS === 'undefined' || typeof ATRIBUTOS === 'undefined') return 0;
-        const ws = wizardState;
-        const base = REGRAS_CRIACAO.atributos.base_inicial;
+        const custo = REGRAS_CRIACAO.compra_exp.custo_atributo_por_nivel;
         let total = 0;
 
         for (const grupo of GRUPOS_ATRIBUTOS) {
             for (const attr of ATRIBUTOS[grupo]) {
-                const nivelFinal = (ws.atributos[attr.key] || 0) + base;
-                for (let nv = 1; nv <= nivelFinal; nv++) {
-                    total += nv * 5;
-                }
+                total += this.custoFaixa(0, nivelAtributo(attr.key), custo);
             }
         }
         return total;
@@ -107,27 +134,58 @@ const ExpTracker = {
      */
     calcSkillExpTotal() {
         if (!window.SKILLS) return 0;
-        const ws = wizardState;
         let total = 0;
-
-        for (const [dotKey, nivel] of Object.entries(ws.pericias)) {
-            if (nivel <= 0) continue;
-
-            const skKey = dotKey.replace('sk_', '');
-            let custoExp = 4;
-            for (const cat of Object.values(window.SKILLS)) {
-                const found = cat.find(s => s.key === skKey);
-                if (found) {
-                    custoExp = found.custoExp || 4;
-                    break;
-                }
-            }
-
-            for (let nv = 1; nv <= nivel; nv++) {
-                total += nv * custoExp;
-            }
+        for (const [dotKey, nivel] of periciasComNivel()) {
+            total += this.custoFaixa(0, nivel, custoNivelPericia(dotKey));
         }
         return total;
+    },
+
+    /* ===== COMPRA COM EXP =====
+       Níveis comprados com EXP ficam sempre no topo: custam a soma dos degraus
+       acima do que os pontos iniciais já pagaram. O custo é recalculado do
+       estado a cada mudança, então desfazer uma compra devolve o EXP sozinho —
+       não existe "saldo gasto" guardado em lugar nenhum. */
+
+    /** Soma dos degraus de `de`+1 até `ate`, cada degrau N custando N × custoPorNivel. */
+    custoFaixa(de, ate, custoPorNivel) {
+        let total = 0;
+        for (let nv = de + 1; nv <= ate; nv++) total += nv * custoPorNivel;
+        return total;
+    },
+
+    custoComprasAtributos() {
+        const base = REGRAS_CRIACAO.atributos.base_inicial;
+        const custo = REGRAS_CRIACAO.compra_exp.custo_atributo_por_nivel;
+        let total = 0;
+        for (const [key, comprados] of Object.entries(wizardState.atributosExp || {})) {
+            if (!comprados) continue;
+            const dePontos = base + (wizardState.atributos[key] || 0);
+            total += this.custoFaixa(dePontos, dePontos + comprados, custo);
+        }
+        return total;
+    },
+
+    custoComprasPericias() {
+        let total = 0;
+        for (const [dotKey, comprados] of Object.entries(wizardState.periciasExp || {})) {
+            if (!comprados) continue;
+            const dePontos = wizardState.pericias[dotKey] || 0;
+            total += this.custoFaixa(dePontos, dePontos + comprados, custoNivelPericia(dotKey));
+        }
+        return total;
+    },
+
+    /** Reflete as compras com EXP no pool. Chamar após mexer em atributosExp/periciasExp. */
+    sincronizarCompras() {
+        const atributos = this.custoComprasAtributos();
+        const pericias = this.custoComprasPericias();
+
+        if (atributos > 0) this.addSource('compra_atributos', -atributos, 'Atributos comprados com EXP');
+        else this.removeSource('compra_atributos');
+
+        if (pericias > 0) this.addSource('compra_pericias', -pericias, 'Perícias compradas com EXP');
+        else this.removeSource('compra_pericias');
     },
 
     calcExpTotal() {

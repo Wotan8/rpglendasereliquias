@@ -1,6 +1,7 @@
 /* ===== PHASE 4 — As Habilidades (Perícias) ===== */
 
 function initPhase4(container) {
+    revalidarCompras(); // derruba o que o limitador não sustenta mais e recobra o EXP
     let html = createNarratorBox(NARRADOR_TEXTOS.habilidades);
 
     const regras = REGRAS_CRIACAO.pericias;
@@ -10,7 +11,7 @@ function initPhase4(container) {
         <div class="section" id="skillStep1">
             <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
                 <span>Passo 1 — A Maior (${regras.primario} pontos)</span>
-                <button class="btn btn-primary" style="font-size: 0.75rem; padding: 4px 8px; background: #6E5413; border: none; border-radius: 4px; color: #fff; cursor: pointer;" onclick="window.randomizeSkills()">🎲 Aleatorizar Perícias</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="window.randomizeSkills()">🎲 Aleatorizar Perícias</button>
             </div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
                 Qual grupo de perícias define você? Esse grupo recebe <strong>${regras.primario} pontos</strong>.
@@ -47,10 +48,27 @@ function initPhase4(container) {
         <div class="section">
             <div class="section-title">Passo 4 — Distribuir Perícias</div>
             <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
-                Máximo padrão <strong>${regras.limite_max_por_pericia}</strong> por perícia na criação (Peculiaridades podem alterar esse teto).
-                Perícias de classe são marcadas com ⭐.
+                Máximo padrão <strong>${regras.limite_max_por_pericia}</strong> por perícia com os pontos iniciais
+                (Peculiaridades podem alterar esse teto). A sigla ao lado do nome é o
+                <strong>atributo limitador</strong>: a perícia nunca passa do nível dele.
             </p>
-            <div id="skillDistGrid" class="attr-dist-grid" style="grid-template-columns: repeat(2, 1fr);"></div>
+            ${criarGuiaCompraExp('pericia')}
+            <div id="skillDistGrid" class="attr-dist-grid"></div>
+        </div>
+    `;
+
+    // Step 5: Exclusivas da classe (só com EXP)
+    html += `
+        <div class="section" id="skillExclusivasSection">
+            <div class="section-title">Passo 5 — Perícias Exclusivas da Classe</div>
+            <p style="font-size:.85rem;color:var(--muted);margin:0 0 12px;">
+                São as perícias que só a sua classe conhece — o que separa um Bardo de qualquer
+                pessoa que sabe cantar. <strong>Os pontos iniciais não entram aqui</strong>: os quatro
+                grupos acima pagam apenas perícias comuns. Exclusiva só sobe <strong>gastando EXP</strong>,
+                pelo botão <strong>+</strong>, e vale o mesmo teto de nível ${REGRAS_CRIACAO.compra_exp.teto_nivel}
+                e o mesmo atributo limitador das demais.
+            </p>
+            <div id="skillExclusivasGrid"></div>
         </div>
     `;
 
@@ -119,10 +137,7 @@ function selectSkillStep(step, group) {
     // Auto-assign the remaining group as "terceiro" (3 points)
     _autoAssignThirdGroup();
 
-    renderSkillStepSelectors();
-    renderSkillDistribution();
-    ExpTracker.updateDisplay();
-    saveWizardToStorage();
+    aposMudarPericias();
 }
 
 function _autoAssignThirdGroup() {
@@ -143,9 +158,7 @@ function autoAssignSkillPriority() {
     wizardState.grupoPericiaFraco = shuffled[2];
     wizardState.grupoPericia3 = shuffled[3];
 
-    renderSkillStepSelectors();
-    renderSkillDistribution();
-    saveWizardToStorage();
+    aposMudarPericias();
 }
 
 function getSkillGroupPool(group) {
@@ -156,52 +169,117 @@ function getSkillGroupPool(group) {
     return 0;
 }
 
+const _ATTR_KEY_MAP = {
+    'FOR': 'attr_for', 'DES': 'attr_des', 'VIG': 'attr_vig',
+    'INT': 'attr_int', 'RAC': 'attr_rac', 'PRS': 'attr_prs',
+    'PRE': 'attr_pre', 'MAN': 'attr_man', 'AUT': 'attr_aut'
+};
+
+function _resolveAttrKey(nome) {
+    const upper = String(nome).trim().toUpperCase();
+    if (_ATTR_KEY_MAP[upper]) return _ATTR_KEY_MAP[upper];
+    if (upper.startsWith('ATTR_')) return upper.toLowerCase();
+    for (const group of Object.values(ATRIBUTOS)) {
+        for (const attr of group) {
+            if (attr.id.toUpperCase() === upper || attr.nome.toUpperCase() === upper || attr.key.toUpperCase() === upper) {
+                return attr.key;
+            }
+        }
+    }
+    return null;
+}
+
+/**
+ * Nível do atributo que limita esta perícia. Perícia com mais de um atributo
+ * base é limitada pelo MENOR deles — é a mesma regra da ficha (SKILL_LIMITERS
+ * mode 'min'); lendo só o primeiro, a criação deixava passar nível que a ficha
+ * depois recusava.
+ */
 function getSkillParentAttributeLevel(sk) {
     const attrSource = sk.atributoBase || sk.attr;
     if (!attrSource) return Infinity;
 
-    // Use the first attribute if it's an array, or the string itself
-    const primaryAttr = Array.isArray(attrSource) ? attrSource[0] : String(attrSource).split('/')[0];
-    const upperAttr = String(primaryAttr).trim().toUpperCase();
+    const nomes = Array.isArray(attrSource) ? attrSource : String(attrSource).split('/');
+    const niveis = nomes.map(_resolveAttrKey).filter(Boolean).map(nivelAtributo);
+    return niveis.length ? Math.min(...niveis) : Infinity;
+}
 
-    const ATTR_KEY_MAP = {
-        'FOR': 'attr_for', 'DES': 'attr_des', 'VIG': 'attr_vig',
-        'INT': 'attr_int', 'RAC': 'attr_rac', 'PRS': 'attr_prs',
-        'PRE': 'attr_pre', 'MAN': 'attr_man', 'AUT': 'attr_aut'
-    };
-
-    let attrKey = null;
-
-    if (ATTR_KEY_MAP[upperAttr]) {
-        attrKey = ATTR_KEY_MAP[upperAttr];
-    } else if (upperAttr.startsWith('ATTR_')) {
-        attrKey = primaryAttr.toLowerCase();
-    } else {
-        for (const group of Object.values(ATRIBUTOS)) {
-            for (const attr of group) {
-                if (attr.id.toUpperCase() === upperAttr || attr.nome.toUpperCase() === upperAttr || attr.key.toUpperCase() === upperAttr) {
-                    attrKey = attr.key;
-                    break;
-                }
-            }
-            if (attrKey) break;
+/** Teto de PONTOS INICIAIS desta perícia: teto de criação e atributo limitador. */
+function getSkillMaxPontos(sk) {
+    const parentLevel = getSkillParentAttributeLevel(sk);
+    let defaultMax = REGRAS_CRIACAO.pericias.limite_max_por_pericia;
+    let wasModified = false;
+    if (window.getDynamicCreationLimit) {
+        const dynamicGroup = window.getDynamicCreationLimit('Perícias (qualquer)', defaultMax, wizardState);
+        const dynamicSpecific = window.getDynamicCreationLimit(sk.name, dynamicGroup, wizardState);
+        if (dynamicSpecific > defaultMax) {
+            defaultMax = dynamicSpecific;
+            wasModified = true;
         }
     }
+    return { max: wasModified ? defaultMax : Math.min(defaultMax, parentLevel), parentLevel, tetoCriacao: defaultMax };
+}
 
-    if (attrKey) {
-        const baseLevel = REGRAS_CRIACAO.atributos.base_inicial || 1;
-        const addedLevel = wizardState.atributos[attrKey] || 0;
-        return baseLevel + addedLevel;
+/** Teto de nível comprando com EXP: o 5 do sistema, ou o atributo limitador, o que vier antes. */
+function getSkillTetoExp(sk) {
+    return Math.min(REGRAS_CRIACAO.compra_exp.teto_nivel, getSkillParentAttributeLevel(sk));
+}
+
+function estadoCompraPericia(sk) {
+    const dotKey = 'sk_' + sk.key;
+    const teto = getSkillTetoExp(sk);
+    const parentLevel = getSkillParentAttributeLevel(sk);
+    const motivoTeto = parentLevel < REGRAS_CRIACAO.compra_exp.teto_nivel
+        ? `Travada em ${parentLevel} pelo atributo limitador (${sk.attrLabel}). Suba o atributo primeiro.`
+        : `Nível ${REGRAS_CRIACAO.compra_exp.teto_nivel} é o teto do sistema — nem com EXP passa disso.`;
+
+    return avaliarCompraExp({
+        nivel: nivelPericia(dotKey),
+        comprados: wizardState.periciasExp[dotKey] || 0,
+        custoPorNivel: sk.custoExp,
+        teto,
+        motivoTeto
+    });
+}
+
+/** Uma linha de perícia. `grupo` null = exclusiva (sem pontos iniciais, só EXP). */
+function renderSkillRow(sk, grupo) {
+    const dotKey = 'sk_' + sk.key;
+    const pontos = wizardState.pericias[dotKey] || 0;
+    const total = nivelPericia(dotKey);
+    const maxPontos = grupo ? getSkillMaxPontos(sk).max : 0;
+    const est = estadoCompraPericia(sk);
+
+    const tooltip = `${sk.name} (${sk.attrLabel}) — ${sk.custoExp} EXP por nível.\n${sk.descricao || ''}`;
+
+    let dots = '';
+    for (let d = 1; d <= 5; d++) {
+        const classes = ['dot'];
+        if (d <= pontos) classes.push('filled');
+        else if (d <= total) classes.push('filled', 'exp');
+
+        const soExp = d > maxPontos;
+        const titulo = !grupo
+            ? 'Exclusiva: não recebe ponto inicial, só EXP pelo botão +.'
+            : (soExp ? `Acima do que os pontos iniciais alcançam (${maxPontos}) — daqui pra cima só com EXP no +.`
+                     : `Nível ${d} com os pontos iniciais do grupo`);
+
+        dots += `<button class="${classes.join(' ')}" data-skill="${dotKey}" data-dot="${d}"
+            title="${escHtml(titulo)}" ${soExp ? 'disabled' : `onclick="clickSkillDot('${dotKey}', ${d}, '${grupo}')"`}></button>`;
     }
 
-    return Infinity;
+    return `
+        <div class="attr-dist-row skill-row" title="${escHtml(tooltip)}">
+            <span class="attr-dist-name skill-name">${escHtml(sk.name)}</span>
+            <span class="skill-attr" title="Atributo limitador">${escHtml(sk.attrLabel)}</span>
+            <div class="attr-dist-dots dots5">${dots}</div>
+            ${criarBotoesCompraExp('comprarPericiaExp', 'venderPericiaExp', sk.key, est)}
+        </div>`;
 }
 
 function renderSkillDistribution() {
     const container = document.getElementById('skillDistGrid');
     if (!container) return;
-
-    const classSkills = wizardState.classeSelecionada ? (window.CLASS_SKILLS[wizardState.classeSelecionada] || []) : [];
 
     let html = '';
     for (const grp of _skillGroups) {
@@ -214,41 +292,102 @@ function renderSkillDistribution() {
                 <div class="attr-dist-title">${_skillGroupLabels[grp]}</div>
                 <div class="attr-dist-counter" id="skillCounter_${grp}">Restante: ${remaining}/${pool}</div>
         `;
-
-        for (const sk of skills) {
-            const dotKey = 'sk_' + sk.key;
-            const val = wizardState.pericias[dotKey] || 0;
-            const isClassSkill = classSkills.includes(sk.name);
-            const parentLevel = getSkillParentAttributeLevel(sk);
-            let defaultMax = REGRAS_CRIACAO.pericias.limite_max_por_pericia;
-            let wasModified = false;
-            if (window.getDynamicCreationLimit) {
-                const dynamicGroup = window.getDynamicCreationLimit('Perícias (qualquer)', defaultMax, wizardState);
-                const dynamicSpecific = window.getDynamicCreationLimit(sk.name, dynamicGroup, wizardState);
-                if (dynamicSpecific > defaultMax) {
-                    defaultMax = dynamicSpecific;
-                    wasModified = true;
-                }
-            }
-            const maxAllowed = wasModified ? defaultMax : Math.min(defaultMax, parentLevel);
-
-            html += `
-                <div class="attr-dist-row" title="${escHtml(sk.descricao || '')}">
-                    <span class="attr-dist-name" style="min-width:80px;">
-                        ${isClassSkill ? '⭐ ' : ''}${escHtml(sk.name)}
-                    </span>
-                    <div class="attr-dist-dots dots5">
-            `;
-            for (let d = 1; d <= 5; d++) {
-                const filled = d <= val ? 'filled' : '';
-                const disabled = d > maxAllowed ? 'disabled' : '';
-                html += `<button class="dot ${filled}" data-skill="${dotKey}" data-dot="${d}" onclick="${disabled ? '' : `clickSkillDot('${dotKey}', ${d}, '${grp}')`}" ${disabled}></button>`;
-            }
-            html += `</div></div>`;
-        }
+        for (const sk of skills) html += renderSkillRow(sk, grp);
         html += `</div>`;
     }
     container.innerHTML = html;
+
+    renderSkillExclusivas();
+}
+
+/**
+ * Exclusivas visíveis a este personagem: as da classe escolhida (pericClasse) mais
+ * as marcadas como `todoPersonagem` no cadastro. Mesma conta que a ficha faz.
+ */
+function getExclusivasDisponiveis() {
+    const exclusivas = window.SKILLS?.exclusivo || [];
+    const daClasse = wizardState.classeSelecionada
+        ? (window.CLASS_SKILLS[wizardState.classeSelecionada] || [])
+        : [];
+    return exclusivas.filter(sk => sk.todoPersonagem || daClasse.includes(sk.name));
+}
+
+function renderSkillExclusivas() {
+    const container = document.getElementById('skillExclusivasGrid');
+    if (!container) return;
+
+    const skills = getExclusivasDisponiveis();
+    if (!skills.length) {
+        container.innerHTML = `
+            <div class="guia-box">
+                ${wizardState.classeSelecionada
+                    ? `A classe <strong>${escHtml(wizardState.classeSelecionada)}</strong> não tem perícias exclusivas cadastradas.`
+                    : 'Escolha uma classe na Etapa 2 para ver as perícias exclusivas dela aqui.'}
+            </div>`;
+        return;
+    }
+
+    const gasto = ExpTracker.custoComprasPericias();
+    let html = `
+        <div class="attr-dist-block">
+            <div class="attr-dist-title">🌟 ${escHtml(wizardState.classeSelecionada || 'Exclusivas')}</div>
+            <div class="attr-dist-counter">${skills.length} exclusiva(s) · ${gasto} EXP gastos em perícias · ${ExpTracker.getTotal()} EXP no pool</div>`;
+
+    for (const sk of skills) {
+        html += renderSkillRow(sk, null);
+        if (sk.descricao) {
+            html += `<div class="skill-desc" title="${escHtml(sk.descricao)}">${escHtml(sk.descricao)}</div>`;
+        }
+    }
+    container.innerHTML = html + `</div>`;
+}
+
+/* ===== COMPRA DE PERÍCIA COM EXP ===== */
+
+function _skillPorKey(key) {
+    for (const lista of Object.values(window.SKILLS || {})) {
+        const found = (lista || []).find(s => s.key === key);
+        if (found) return found;
+    }
+    return null;
+}
+
+function comprarPericiaExp(key) {
+    const sk = _skillPorKey(key);
+    if (!sk) return;
+
+    const est = estadoCompraPericia(sk);
+    if (est.bloqueio) { showWizardToast(est.bloqueio.motivo, 'error'); return; }
+
+    const dotKey = 'sk_' + key;
+    wizardState.periciasExp[dotKey] = (wizardState.periciasExp[dotKey] || 0) + 1;
+    aposMudarPericias();
+}
+
+function venderPericiaExp(key) {
+    const dotKey = 'sk_' + key;
+    if (!wizardState.periciasExp[dotKey]) return;
+    wizardState.periciasExp[dotKey]--;
+    aposMudarPericias();
+}
+
+/** Derruba nível comprado que o teto 5 ou o atributo limitador não sustentam mais. */
+function clampComprasPericias() {
+    for (const [dotKey, comprados] of Object.entries(wizardState.periciasExp || {})) {
+        if (!comprados) continue;
+        const sk = _skillPorKey(dotKey.replace(/^sk_/, ''));
+        if (!sk) continue;
+        const sobra = getSkillTetoExp(sk) - (wizardState.pericias[dotKey] || 0);
+        if (comprados > sobra) wizardState.periciasExp[dotKey] = Math.max(0, sobra);
+    }
+}
+
+// A revalidação roda aqui, e não só no render: o EXP do pool não pode depender
+// de a fase estar montada na tela.
+function aposMudarPericias() {
+    revalidarCompras();
+    forceRerender(getPhaseIndex(4));
+    saveWizardToStorage();
 }
 
 function clickSkillDot(dotKey, dotLevel, group) {
@@ -258,22 +397,11 @@ function clickSkillDot(dotKey, dotLevel, group) {
     }
 
     const current = wizardState.pericias[dotKey] || 0;
-    let max = REGRAS_CRIACAO.pericias.limite_max_por_pericia;
     const skills = window.SKILLS?.[group] || [];
     const sk = skills.find(s => 'sk_' + s.key === dotKey);
-    const parentLevel = sk ? getSkillParentAttributeLevel(sk) : Infinity;
-    
-    let wasModified = false;
-    if (sk && window.getDynamicCreationLimit) {
-        const dynamicGroup = window.getDynamicCreationLimit('Perícias (qualquer)', max, wizardState);
-        const dynamicSpecific = window.getDynamicCreationLimit(sk.name, dynamicGroup, wizardState);
-        if (dynamicSpecific > max) {
-            max = dynamicSpecific;
-            wasModified = true;
-        }
-    }
-    
-    const maxAllowed = wasModified ? max : Math.min(max, parentLevel);
+    if (!sk) return;
+
+    const { max: maxAllowed, parentLevel, tetoCriacao } = getSkillMaxPontos(sk);
 
     // Toggle off if same
     if (dotLevel === current) {
@@ -281,9 +409,9 @@ function clickSkillDot(dotKey, dotLevel, group) {
     } else {
         if (dotLevel > maxAllowed) {
             if (dotLevel > parentLevel) {
-                showWizardToast(`Máximo ${parentLevel} por causa do atributo limitador.`, 'error');
+                showWizardToast(`${sk.name} trava em ${parentLevel}: é o nível do atributo limitador (${sk.attrLabel}). Suba o atributo primeiro.`, 'error');
             } else {
-                showWizardToast(`Máximo ${max} por perícia na criação.`, 'error');
+                showWizardToast(`Máximo ${tetoCriacao} por perícia com os pontos iniciais — acima disso, só comprando com EXP no botão +.`, 'error');
             }
             return;
         }
@@ -291,22 +419,18 @@ function clickSkillDot(dotKey, dotLevel, group) {
         const delta = dotLevel - current;
         const remaining = getSkillGroupRemaining(group);
         if (delta > remaining) {
-            showWizardToast(`Pontos insuficientes! Restam ${remaining} no grupo.`, 'error');
+            showWizardToast(`Pontos insuficientes! Restam ${remaining} no grupo. Você ainda pode subir esta perícia com EXP no botão +.`, 'error');
             return;
         }
 
+        // Ponto inicial ocupa o degrau que o EXP já tinha pago — devolve o EXP.
+        if (wizardState.periciasExp[dotKey] > 0) {
+            wizardState.periciasExp[dotKey] = Math.max(0, wizardState.periciasExp[dotKey] - delta);
+        }
         wizardState.pericias[dotKey] = dotLevel;
     }
 
-    // Update dots UI
-    document.querySelectorAll(`[data-skill="${dotKey}"]`).forEach(dot => {
-        const d = parseInt(dot.dataset.dot);
-        dot.classList.toggle('filled', d <= (wizardState.pericias[dotKey] || 0));
-    });
-
-    updateSkillCounters();
-    ExpTracker.updateDisplay();
-    saveWizardToStorage();
+    aposMudarPericias();
 }
 
 function getSkillGroupRemaining(group) {
@@ -318,17 +442,6 @@ function getSkillGroupRemaining(group) {
         spent += (wizardState.pericias[dotKey] || 0);
     }
     return pool - spent;
-}
-
-function updateSkillCounters() {
-    for (const grp of _skillGroups) {
-        const el = document.getElementById(`skillCounter_${grp}`);
-        if (!el) continue;
-        const pool = getSkillGroupPool(grp);
-        const remaining = getSkillGroupRemaining(grp);
-        el.textContent = `Restante: ${remaining}/${pool}`;
-        el.style.color = remaining === 0 ? 'var(--success)' : 'var(--accent)';
-    }
 }
 
 window.randomizeSkills = function() {
@@ -355,27 +468,12 @@ window.randomizeSkills = function() {
             const currentLevel = wizardState.pericias[dotKey] || 0;
             const targetLevel = currentLevel + 1;
             
-            const parentLevel = getSkillParentAttributeLevel(sk);
-            let defaultMax = REGRAS_CRIACAO.pericias.limite_max_por_pericia;
-            let wasModified = false;
-            if (window.getDynamicCreationLimit) {
-                const dynamicGroup = window.getDynamicCreationLimit('Perícias (qualquer)', defaultMax, wizardState);
-                const dynamicSpecific = window.getDynamicCreationLimit(sk.name, dynamicGroup, wizardState);
-                if (dynamicSpecific > defaultMax) {
-                    defaultMax = dynamicSpecific;
-                    wasModified = true;
-                }
-            }
-            const maxAllowed = wasModified ? defaultMax : Math.min(defaultMax, parentLevel);
-            
-            if (targetLevel > maxAllowed) continue;
+            if (targetLevel > getSkillMaxPontos(sk).max) continue;
             
             wizardState.pericias[dotKey] = targetLevel;
             attempts = 0;
         }
     }
-    
-    renderSkillStepSelectors();
-    renderSkillDistribution();
-    saveWizardToStorage();
+
+    aposMudarPericias();
 };

@@ -1,0 +1,128 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__check: alinhamento de todas as etapas da criação</title>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles_wizard.css">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/lendas-reliquias.css">
+<link rel="stylesheet" href="../shared/texto-mundo.css">
+<style>
+    #out { font: 12px/1.5 monospace; white-space: pre-wrap; background: #101418; color: #9f9;
+           padding: 10px; border-radius: 6px; margin: 8px; }
+    /* O wizard só mostra uma etapa por vez; aqui todas ficam visíveis de uma vez. */
+    .phase-container { display: block !important; }
+    .fase-sep { font: 900 11px/1 monospace; letter-spacing: .1em; text-transform: uppercase;
+                color: var(--muted); border-top: 1px dashed var(--soft); padding: 14px 0 6px; }
+</style>
+
+<div id="out">carregando…</div>
+
+<!-- Mesma casca da criacao.html: .wrap (max 900px) > .sheet (padding 24, overflow hidden) -->
+<div class="wrap"><div class="sheet" id="sheet"></div></div>
+
+<script>
+    // Cada carga puxa os scripts com ?t=<agora>: o service worker do site e o
+    // cache do navegador guardavam a versão antiga e o harness media CSS/JS velhos.
+    const T = Date.now();
+    document.querySelectorAll('link[rel=stylesheet]').forEach(l => {
+        if (!/^https?:/.test(l.getAttribute('href'))) l.href = l.getAttribute('href').split('?')[0] + '?t=' + T;
+    });
+    const ARQUIVOS = [
+        'js/data.js', '../shared/theme.js', '../shared/livro-vinculado.js',
+        '../shared/campo-imagem.js', '../shared/imagem-zoom.js',
+        'js/wizard-engine.js', 'js/exp-tracker.js', 'js/memory-manager.js', 'js/storage.js',
+        '../ficha-v1.7_1/js/mechanics-engine.js', 'js/system-data-loader.js', 'js/app.js',
+        'js/race-module.js', 'js/tribe-module.js', 'js/peculiarities-module.js',
+        'js/attributes-module.js', 'js/skills-module.js', 'js/soul-module.js',
+        'js/npcs-module.js', 'js/equipment-module.js', 'js/finale-module.js'
+    ];
+    const carregar = src => new Promise((ok, erro) => {
+        const s = document.createElement('script');
+        s.src = src + '?t=' + T; s.onload = ok; s.onerror = () => erro(new Error('falhou: ' + src));
+        document.head.appendChild(s);
+    });
+    window._prontoParaVarrer = (async () => {
+        for (const a of ARQUIVOS) await carregar(a);           // ordem importa
+        const m = await import('./js/mechanics-simulator.js?t=' + T);
+        window.simulateDerivedValues = m.simulateDerivedValues;
+        window.getDynamicCreationLimit = m.getDynamicCreationLimit;
+    })();
+</script>
+
+<script>
+    // Sem Firebase e sem localStorage do wizard neste harness.
+    function saveWizardToStorage() {}
+    function hasWizardSave() { return false; }
+    function clearWizardStorage() {}
+
+    const erros = [];
+    window.addEventListener('error', e => erros.push(`${e.message} @ ${(e.filename||'').split('/').pop()}:${e.lineno}`));
+
+    Promise.all([window._prontoParaVarrer, fetch('__check-data.json', { cache: 'no-store' }).then(r => r.json())])
+        .then(async ([, data]) => {
+            Object.assign(window._systemData, data, { loaded: true });
+            buildSkillsFromFirebase();
+            window.RACES = buildRacesFromFirebase();
+            buildClassDataFromFirebase();
+            buildTribesFromFirebase();
+            buildIndividualPeculiarities();
+            buildDerivedValuesFromFirebase();
+            buildVitalStatsFromFirebase?.();
+
+            // Personagem plausível: tudo escolhido, pontos gastos, EXP sobrando.
+            Object.assign(wizardState, {
+                nomePersonagem: 'Vidente de Pedra', nomeCompleto: 'Vidente de Pedra', idade: '34',
+                racaSelecionada: Object.keys(window.RACES)[0],
+                classeSelecionada: 'Bardo',
+                triboSelecionada: Object.keys(window.TRIBES)[0],
+                grupoPrimario: 'Mental', grupoFraco: 'Social',
+                grupoPericiaPrimario: 'combate', grupoPericia2: 'mental',
+                grupoPericiaFraco: 'social', grupoPericia3: 'fisico',
+                virtudeSelecionada: VIRTUDES[0].id, vicioSelecionado: VICIOS[0].id
+            });
+            ExpTracker.addSource('exp_inicial', 100, 'EXP Inicial');
+            wizardState.atributos.attr_int = 2;
+            wizardState.atributos.attr_rac = 2;
+            comprarAtributoExp('attr_for');
+            clickSkillDot('sk_atletismo', 1, 'fisico');
+            comprarPericiaExp('canto');
+
+            montar();
+            relatar();
+        })
+        .catch(e => { document.getElementById('out').textContent = 'ERRO: ' + e.message + '\n' + e.stack; });
+
+    // O wizard chama forceRerender(indice); aqui cada etapa tem contêiner fixo.
+    function forceRerender(i) { const c = document.getElementById('phase' + i); if (c) { c.dataset.rendered=''; c.innerHTML=''; renderPhase(i); } }
+
+    function montar() {
+        const sheet = document.getElementById('sheet');
+        sheet.innerHTML = FASES_WIZARD.map((f, i) =>
+            `<div class="fase-sep">${i} · ${f.titulo}</div><div class="phase-container" id="phase${i}"></div>`).join('');
+        FASES_WIZARD.forEach((f, i) => { try { renderPhase(i); } catch (e) { erros.push(`fase ${i} (${f.titulo}): ${e.message}`); } });
+    }
+
+    function relatar() {
+        const sheet = document.getElementById('sheet');
+        const limite = Math.round(sheet.getBoundingClientRect().right);
+        const linhas = [`largura útil do .sheet: ${Math.round(sheet.getBoundingClientRect().width) - 48}px · viewport ${innerWidth}px`];
+
+        for (let i = 0; i < FASES_WIZARD.length; i++) {
+            const c = document.getElementById('phase' + i);
+            if (!c) continue;
+            const fora = [...c.querySelectorAll('*')].filter(e => {
+                const r = e.getBoundingClientRect();
+                return r.width > 0 && Math.round(r.right) > limite + 1;
+            });
+            const nomes = [...new Set(fora.map(e => (e.className.toString().split(' ')[0] || e.tagName.toLowerCase())))];
+            linhas.push(`${String(i).padStart(2)} ${FASES_WIZARD[i].titulo.padEnd(24)} ${fora.length === 0 ? 'ok' : 'ESTOURA (' + fora.length + '): ' + nomes.slice(0, 5).join(', ')}`);
+        }
+
+        const pagRola = document.documentElement.scrollWidth > document.documentElement.clientWidth;
+        linhas.push(`rolagem horizontal da página: ${pagRola ? 'SIM — quebra a regra' : 'não'}`);
+        linhas.push(erros.length ? 'ERROS JS: ' + erros.join(' | ') : 'sem erro de JS');
+        document.getElementById('out').textContent = linhas.join('\n');
+    }
+    window.relatar = relatar;
+</script>

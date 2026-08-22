@@ -38,6 +38,15 @@ const REGRAS_CRIACAO = {
         fraco: 2,
         limite_max_por_pericia: 3 // Máximo 3 por perícia na criação
     },
+    // Compra com EXP durante a criação — mesma régua da ficha (exp-upgrade.js):
+    // o degrau N custa N × custo, e o teto é 5 como em qualquer evolução depois.
+    // Os pontos iniciais têm teto próprio (limite_max_*); o EXP passa por cima
+    // dele, mas nunca do teto 5 nem do atributo limitador da perícia.
+    compra_exp: {
+        teto_nivel: 5,
+        custo_atributo_por_nivel: 5,
+        custo_pericia_padrao: 4
+    },
     peculiaridades_individuais: {
         max_positivas_gratis: 2,
         max_negativas_gratis: 2,

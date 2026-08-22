@@ -34,8 +34,10 @@ function initPhase2(container) {
     html += createMemoryBox('origens_adicional', 'Qual o sabor de casa. Quando você sente saudade, qual cheiro ou sabor te leva de volta para casa? O tempero da cozinha? O couro curtido? A fumaça das forjas?', true);
 
     container.innerHTML = html;
-
-    if (wizardState.triboSelecionada) showTribeDetail(wizardState.triboSelecionada);
+    // O card já sai marcado pela classe .selected no laço acima, e o detalhe vive
+    // em openTribeModal. A chamada a showTribeDetail() que existia aqui era resto
+    // de refatoração: a função não existe mais e o ReferenceError abortava o
+    // renderPhase, quebrando a etapa de quem voltava com a tribo já escolhida.
 }
 
 function selectTribe(tribeName) {

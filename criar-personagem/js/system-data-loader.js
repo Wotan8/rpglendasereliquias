@@ -353,7 +353,8 @@ function buildTribesFromFirebase() {
 function buildSkillsFromFirebase() {
     window.SKILLS = { mental: [], fisico: [], social: [], combate: [], exclusivo: [] };
 
-    const sorted = [...window._systemData.skills].sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
+    const sorted = [...window._systemData.skills]
+        .sort((a, b) => (a.ordem || 99) - (b.ordem || 99) || (a.nome || '').localeCompare(b.nome || ''));
     for (const sk of sorted) {
         if (sk.publicado === false) continue;
         const cat = sk.categoria || 'mental';
@@ -363,22 +364,34 @@ function buildSkillsFromFirebase() {
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/[^a-z0-9]/g, '_');
 
+        // atributoBase é a única fonte do limitador no cadastro — `atributo` e
+        // `atributoLabel` nunca existiram, então o rótulo saía sempre vazio.
+        const attrs = Array.isArray(sk.atributoBase)
+            ? sk.atributoBase
+            : (typeof sk.atributoBase === 'string' && sk.atributoBase ? sk.atributoBase.split('/') : []);
+
         window.SKILLS[cat].push({
             name: sk.nome,
             key: key,
-            attr: sk.atributo || '',
-            attrLabel: sk.atributoLabel || sk.atributo || '',
+            attr: attrs[0] || '',
+            attrLabel: attrs.join('/') || '—',
             atributoBase: sk.atributoBase,
-            custoExp: sk.custoExp || 4,
+            // O campo do cadastro é `custoEvolucao` (é assim que a ficha lê).
+            // Lendo só `custoExp` toda perícia custava 4, ignorando as de 2 e 5.
+            custoExp: sk.custoEvolucao || sk.custoExp || REGRAS_CRIACAO.compra_exp.custo_pericia_padrao,
             mecanicaIds: sk.mecanicaIds || [],
-            descricao: sk.descricao || ''
+            descricao: sk.descricao || '',
+            // Exclusiva sem o flag pertence a uma classe, não a todo personagem —
+            // mesma leitura da ficha, para as duas telas mostrarem a mesma lista.
+            todoPersonagem: cat === 'exclusivo' ? sk.todoPersonagem === true : sk.todoPersonagem !== false
         });
     }
     console.log('✅ Perícias carregadas:', {
         mental: window.SKILLS.mental.length,
         fisico: window.SKILLS.fisico.length,
         social: window.SKILLS.social.length,
-        combate: window.SKILLS.combate.length
+        combate: window.SKILLS.combate.length,
+        exclusivo: window.SKILLS.exclusivo.length
     });
 }
 

@@ -146,7 +146,9 @@ function initPhase8(container) {
                                     </div>
                                 </div>
                                 <div style="font-size:0.75rem; color:var(--muted); margin-top:4px; opacity:0.8;">
-                                    Valor Calculado Automático
+                                    ${(typeof dvFormulaLines === 'function' ? dvFormulaLines(dv) : [])
+                                        .map(f => `<div>ƒ ${escHtml(f)}</div>`).join('')
+                                        || 'Valor Calculado Automático'}
                                 </div>
                             </div>
                         `;
@@ -185,6 +187,7 @@ function initPhase8(container) {
                                             wizardState.derivedModifiers['${dv.id}'] = mod;
                                             saveWizardToStorage();
                                         "
+                                       onchange="redesenharAjustesVespera()"
                                        style="width:100%;">
                                 <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:var(--muted); margin-top:2px;">
                                     <span>Min: ${fmtVal(minVal)}</span>
@@ -262,6 +265,15 @@ function initPhase8(container) {
     container.innerHTML = html;
 }
 
+/* Soltar um slider muda a base de quem depende dele (Altura → Peso → Carga),
+   exatamente como a ficha recalcula em cascata. Redesenha a fase inteira e
+   devolve a rolagem para onde estava — o `oninput` só cuida do próprio campo. */
+function redesenharAjustesVespera() {
+    const y = window.scrollY;
+    forceRerender(getPhaseIndex(8)); // 'vespera'
+    window.scrollTo(0, y);
+}
+
 function handleCharImgUpload(url) {
     wizardState.imagemPersonagem = (url || '').trim();
     const wrap = document.getElementById('charImgPreviewWrap');
@@ -317,24 +329,20 @@ function initResumo(container) {
         <div class="summary-grid">`;
     for (const grupo of GRUPOS_ATRIBUTOS) {
         for (const attr of ATRIBUTOS[grupo]) {
-            const val = (ws.atributos[attr.key] || 0) + REGRAS_CRIACAO.atributos.base_inicial;
-            html += `<div class="summary-item"><div class="summary-item-label">${attr.id}</div><div class="summary-item-value">${val}</div></div>`;
+            html += `<div class="summary-item"><div class="summary-item-label">${attr.id}</div><div class="summary-item-value">${nivelAtributo(attr.key)}</div></div>`;
         }
     }
     html += `</div></div>`;
 
     // Skills (only non-zero)
-    const nonZeroSkills = Object.entries(ws.pericias).filter(([k, v]) => v > 0);
+    const nonZeroSkills = periciasComNivel();
     if (nonZeroSkills.length) {
         html += `<div class="summary-section"><div class="summary-title">📚 Perícias</div><div class="summary-grid">`;
         for (const [dotKey, val] of nonZeroSkills) {
-            const skKey = dotKey.replace('sk_', '');
-            let skName = skKey;
-            for (const cat of Object.values(window.SKILLS || {})) {
-                const found = cat.find(s => s.key === skKey);
-                if (found) { skName = found.name; break; }
-            }
-            html += `<div class="summary-item"><div class="summary-item-label">${escHtml(skName)}</div><div class="summary-item-value">${val}</div></div>`;
+            const achada = findSkillByDotKey(dotKey);
+            const skName = achada?.skill.name || dotKey.replace('sk_', '');
+            const estrela = achada?.cat === 'exclusivo' ? '🌟 ' : '';
+            html += `<div class="summary-item"><div class="summary-item-label">${estrela}${escHtml(skName)}</div><div class="summary-item-value">${val}</div></div>`;
         }
         html += `</div></div>`;
     }
@@ -451,7 +459,7 @@ async function createCharacter() {
     }
 
     const ws = wizardState;
-    const base = REGRAS_CRIACAO.atributos.base_inicial;
+    // (o nível efetivo de cada atributo vem de nivelAtributo, base já incluída)
 
     // Build dots object (format compatible with ficha v1.7)
     const dots = {};
@@ -459,25 +467,14 @@ async function createCharacter() {
     // Attributes
     for (const grupo of GRUPOS_ATRIBUTOS) {
         for (const attr of ATRIBUTOS[grupo]) {
-            dots[attr.key] = (ws.atributos[attr.key] || 0) + base;
+            dots[attr.key] = nivelAtributo(attr.key);
         }
     }
 
-    // Skills — convert wizard keys (sk_<key>) to ficha v1.7 format (sk_<category>_<key>)
-    for (const [wizKey, val] of Object.entries(ws.pericias)) {
-        if (val > 0) {
-            const rawKey = wizKey.replace('sk_', '');
-            // Find which category this skill belongs to
-            let sheetKey = wizKey; // fallback: keep as-is
-            for (const [cat, skills] of Object.entries(window.SKILLS || {})) {
-                const found = skills.find(s => s.key === rawKey);
-                if (found) {
-                    sheetKey = `sk_${cat}_${rawKey}`;
-                    break;
-                }
-            }
-            dots[sheetKey] = val;
-        }
+    // Skills — converte a chave do wizard (sk_<key>) para o formato da ficha v1.7
+    for (const [wizKey, val] of periciasComNivel()) {
+        const achada = findSkillByDotKey(wizKey);
+        dots[achada ? chaveDaFicha(achada) : wizKey] = val;
     }
 
     // Peculiarity dots

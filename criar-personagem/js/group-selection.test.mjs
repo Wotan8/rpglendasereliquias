@@ -12,6 +12,7 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const ctx = vm.createContext({
     document: { getElementById: () => null, querySelectorAll: () => [] },
     ExpTracker: { updateDisplay() {} },
+    revalidarCompras() {},   // vive em app.js, fora do escopo deste teste
     forceRerender() {},
     getPhaseIndex: () => 3,
     saveWizardToStorage() {},
@@ -23,12 +24,15 @@ const ctx = vm.createContext({
     ATRIBUTOS: { Mental: [], Fisico: [], Social: [] },
     REGRAS_CRIACAO: {
         atributos: { primario: 7, intermediario: 5, fraco: 3, base_inicial: 1, limite_max_por_atributo: 4, custo_quinta_bolinha: 2 },
-        pericias: { primario: 6, segundo: 4, terceiro: 3, fraco: 2, limite_max_por_pericia: 3 }
+        pericias: { primario: 6, segundo: 4, terceiro: 3, fraco: 2, limite_max_por_pericia: 3 },
+        compra_exp: { teto_nivel: 5, custo_atributo_por_nivel: 5, custo_pericia_padrao: 4 }
     },
     wizardState: {
         grupoPrimario: null, grupoFraco: null,
         atributos: { attr_for: 0 },
+        atributosExp: {},
         pericias: { sk_x: 0 },
+        periciasExp: {},
         grupoPericiaPrimario: null, grupoPericia2: null, grupoPericiaFraco: null, grupoPericia3: null
     }
 });
