@@ -11,6 +11,23 @@ import { initPrefsDaMesa } from './area-mesas-prefs.js';
 
 export async function onTabActivated() { await loadMesas(); }
 
+// A mesa aberta fica lembrada no navegador: F5 nao pode expulsar o mestre no
+// meio da sessao. Guarda so o ID -- a senha nunca sai do Firestore. Sai daqui
+// ao voltar para "Mesas", ao sair do painel (auth.js) ou se a mesa sumir.
+const MESA_LEMBRADA = 'pm-mesa-lembrada';
+const lembrarMesa = (id) => { try { id ? localStorage.setItem(MESA_LEMBRADA, id) : localStorage.removeItem(MESA_LEMBRADA); } catch (e) { /* navegador sem storage */ } };
+
+async function abrirMesaLembrada() {
+    if (S.currentMesaId) return;
+    let id = null; try { id = localStorage.getItem(MESA_LEMBRADA); } catch (e) { /* idem */ }
+    if (!id) return;
+    const mesa = S.allMesas.find(m => m.id === id);
+    if (!mesa) { lembrarMesa(null); return; }   // mesa apagada: some com a lembranca
+    S.setCurrentMesaId(mesa.id);
+    S.setCurrentMesaData(mesa);
+    await openMesa();
+}
+
 // ===== MESA SUB-TAB SWITCHING =====
 window.switchMesaSubTab = function(subTabName) {
     const container = document.getElementById('mesa-content');
@@ -57,6 +74,7 @@ async function loadMesas() {
         }));
         S.setAllMesas(mesas);
         renderMesaList();
+        await abrirMesaLembrada();
     } catch (e) { console.error('❌ Erro mesas:', e); showAlert('❌ Erro ao carregar mesas', 'danger'); }
 }
 window.loadMesas = loadMesas;
@@ -115,6 +133,7 @@ window.authenticateMesa = function() {
     if (!mesa || pwd !== mesa.senha) { showAlert('❌ Nome ou senha incorretos', 'danger'); return; }
     S.setCurrentMesaId(mesa.id);
     S.setCurrentMesaData(mesa);
+    lembrarMesa(document.getElementById('mesaKeepLogged')?.checked ? mesa.id : null);
     document.getElementById('mesaNameInput').value = '';
     document.getElementById('mesaPasswordInput').value = '';
     openMesa();
@@ -139,6 +158,7 @@ window.openTabuleiro = function() {
 };
 
 window.closeMesa = function() {
+    lembrarMesa(null);
     if (window._stopMesaLogs) window._stopMesaLogs();
     S.setCurrentMesaId(null);
     S.setCurrentMesaData(null);

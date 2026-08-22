@@ -94,6 +94,9 @@
                         <p style="color:var(--muted);font-size:.88rem;margin-bottom:20px">Digite o nome e a senha da mesa para entrar</p>
                         <input type="text" class="form-input" id="mesaNameInput" placeholder="Nome da mesa..." style="text-align:center;max-width:300px" onkeydown="if(event.key==='Enter')authenticateMesa()">
                         <input type="password" class="form-input" id="mesaPasswordInput" placeholder="Senha da mesa..." style="text-align:center;max-width:300px;margin-top:8px" onkeydown="if(event.key==='Enter')authenticateMesa()">
+                        <label style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;font-size:.85rem;color:var(--muted);cursor:pointer">
+                            <input type="checkbox" id="mesaKeepLogged" checked style="width:16px;height:16px"> Manter conectado nesta mesa
+                        </label>
                         <button class="btn btn-primary" onclick="authenticateMesa()" style="margin-top:12px"><svg class="lr-ico"><use href="#i-cadeado-aberto"/></svg> Entrar</button>
                     </div>
                 </div>
