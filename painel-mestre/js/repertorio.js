@@ -5,6 +5,13 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 
 // ===== POPULATE SELECT =====
+
+/* Peso e Tamanho do item SEMPRE saem com unidade. Tamanho é em metros e
+   fracionado — 0,1 é 10 cm —, então nada de arredondar para inteiro; as casas
+   mortas caem para "1 m" não virar "1,00 m". */
+const _pesoKg = (v) => `${(parseFloat(v) || 0).toFixed(2)} kg`;
+const _tamanhoM = (v) => `${Math.round((parseFloat(v) || 0) * 100) / 100} m`;
+
 export async function populateCharacterSelect() {
     const sel = document.getElementById('selectInventarioPersonagem');
     if (!sel) return;
@@ -148,7 +155,7 @@ function renderItemCard(item, eqCont) {
         ${img}
         <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;flex-wrap:wrap"><div style="font-size:1.1rem;font-weight:600;color:var(--light)">${item.equipado?'⚔️ ':''}${escapeHtml(item.nome||item.name||'Sem nome')}</div>${badges}</div>
-            <div style="font-size:.85rem;color:var(--muted);margin-top:5px">${item.tipo||'-'} | Peso: ${parseFloat(item.peso||item.totalWeight||0).toFixed(2)} | Tam: ${item.tamanho||0} | Qtd: ${item.quantity||1}</div>
+            <div style="font-size:.85rem;color:var(--muted);margin-top:5px">${item.tipo||'-'} | Peso: ${_pesoKg(item.peso||item.totalWeight)} | Tam: ${_tamanhoM(item.tamanho)} | Qtd: ${item.quantity||1}</div>
             ${(item.descricao||item.description)?`<div style="font-size:.8rem;color:#64748b;margin-top:5px;font-style:italic">${escapeHtml(((item.descricao||item.description)||'').substring(0,100))}${((item.descricao||item.description)||'').length>100?'...':''}</div>`:''}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap" onclick="event.stopPropagation()">
@@ -178,7 +185,7 @@ function renderPersonagemContainerViewer() {
                 ${img2}
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:700;color:var(--light)">${escapeHtml(i.nome||i.name||'Sem nome')} <span style="background:rgba(16,185,129,.2);color:var(--lr-nature);padding:2px 8px;border-radius:6px;font-size:.75rem">${i.tipo||'-'}</span></div>
-                    <div style="font-size:.82rem;color:var(--muted);margin-top:4px">Peso: ${parseFloat(i.totalWeight||i.peso||0).toFixed(2)} | Tam: ${i.tamanho||0} | Qtd: ${i.quantity||1}</div>
+                    <div style="font-size:.82rem;color:var(--muted);margin-top:4px">Peso: ${_pesoKg(i.totalWeight||i.peso)} | Tam: ${_tamanhoM(i.tamanho)} | Qtd: ${i.quantity||1}</div>
                 </div>
                 <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
                     <button class="btn btn-warning btn-small" onclick="removeItemFromPersonagemContainer('${i.id}')">📤</button>
@@ -288,8 +295,8 @@ function openItemFormModal(title, item) {
         </div>
         <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-textarea" id="itemDescriptionMestre" rows="3">${escapeHtml(item?.description||item?.descricao||'')}</textarea></div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
-            <div class="form-group"><label class="form-label">Peso</label><input type="number" class="form-input" id="itemPesoMestre" value="${item?.peso||1}" min="0" step="0.1"></div>
-            <div class="form-group"><label class="form-label">Tamanho</label><input type="number" class="form-input" id="itemTamanhoMestre" value="${item?.tamanho||1}" min="0"></div>
+            <div class="form-group"><label class="form-label">Peso (kg)</label><input type="number" class="form-input" id="itemPesoMestre" value="${item?.peso||1}" min="0" step="0.01" placeholder="kg"></div>
+            <div class="form-group"><label class="form-label">Tamanho (m)</label><input type="number" class="form-input" id="itemTamanhoMestre" value="${item?.tamanho||1}" min="0" step="0.01" placeholder="m"></div>
             <div class="form-group"><label class="form-label">Pressão Base</label><input type="number" class="form-input" id="itemPressaoBaseMestre" value="${item?.pressaoBase||''}" min="0" step="0.1" placeholder="= Peso"></div>
             <div class="form-group"><label class="form-label">Quantidade</label><input type="number" class="form-input" id="itemQuantidadeMestre" value="${item?.quantity||1}" min="1"></div>
         </div>
@@ -330,7 +337,8 @@ window.saveItemMestre = async function() {
         tipo,
         descricao: document.getElementById('itemDescriptionMestre')?.value?.trim() || '',
         description: document.getElementById('itemDescriptionMestre')?.value?.trim() || '',
-        peso, tamanho: parseInt(document.getElementById('itemTamanhoMestre')?.value) || 1,
+        // Metros, fracionado: 0,1 = 10 cm.
+        peso, tamanho: parseFloat(document.getElementById('itemTamanhoMestre')?.value) || 1,
         pressaoBase: pressaoBaseVal !== '' ? parseFloat(pressaoBaseVal) : null,
         ehContainer,
         multiplicadorPressao: ehContainer ? (parseFloat(document.getElementById('itemMultPressaoMestre')?.value) || 1) : 1,

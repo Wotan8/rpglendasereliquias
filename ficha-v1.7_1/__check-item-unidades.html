@@ -1,0 +1,74 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__check: peso em kg e tamanho em m, sem arredondar</title>
+<link rel="stylesheet" href="css/styles_v2.css">
+<link rel="stylesheet" href="css/inventory.css">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/lendas-reliquias.css">
+<style>
+    body { padding: 16px; }
+    #out { font: 12px/1.5 monospace; white-space: pre-wrap; background: #101418; color: #9f9;
+           padding: 10px; border-radius: 6px; }
+</style>
+
+<div id="out">carregando…</div>
+
+<script>
+    const T = Date.now();
+    document.querySelectorAll('link[rel=stylesheet]').forEach(l => {
+        l.href = l.getAttribute('href').split('?')[0] + '?t=' + T;
+    });
+    /* O inventário da ficha é script clássico e enorme; aqui interessam só os
+       dois formatadores e o formulário. O resto do arquivo é carregado igual
+       para garantir que estamos medindo o código de verdade. */
+    window.state = { dots: {}, items: [] };
+    window.isMestre = false; window.isCreator = false;
+    function scheduleAutosave() {}
+</script>
+<script>
+    document.write('<scr' + 'ipt src="js/inventory.js?t=' + T + '"><\/scr' + 'ipt>');
+</script>
+<script>
+    const linhas = [];
+
+    // 1. Os formatadores, com os tamanhos que a mesa usa de verdade.
+    const casos = [
+        ['adaga',        0.3],
+        ['10 cm',        0.1],
+        ['espada 1,20m', 1.2],
+        ['inteiro',      1],
+        ['float sujo',   0.1 + 0.2],
+    ];
+    linhas.push('TAMANHO (m)');
+    for (const [nome, v] of casos) linhas.push(`  ${nome.padEnd(14)} ${v} → ${_tamanhoM(v)}`);
+    linhas.push('PESO (kg)');
+    for (const v of [0.5, 1, 2.25, undefined]) linhas.push(`  ${String(v).padEnd(14)} → ${_pesoKg(v)}`);
+
+    if (_tamanhoM(0.1) !== '0.1 m') linhas.push('⚠️ 0,1 m foi arredondado');
+    if (_tamanhoM(0.3) !== '0.3 m') linhas.push('⚠️ 0,3 m foi arredondado');
+    if (!_pesoKg(0.5).endsWith(' kg')) linhas.push('⚠️ peso sem unidade');
+
+    // 2. O formulário aceita fração e anuncia a unidade.
+    document.body.insertAdjacentHTML('beforeend', '<div id="formHost" style="display:none"></div>');
+    try {
+        const host = document.getElementById('formHost');
+        host.innerHTML = typeof _invFormHTML === 'function' ? _invFormHTML() : '';
+    } catch (e) { /* o form vive dentro do modal; testado pelo DOM abaixo */ }
+
+    linhas.push('');
+    linhas.push('FORMULÁRIO (varre o fonte carregado)');
+    fetch('js/inventory.js?t=' + T).then(r => r.text()).then(src => {
+        for (const campo of ['invFormTamanho', 'invFormPeso']) {
+            const linha = src.split('\n').find(l => l.includes(`id="${campo}"`) && l.includes('<input'));
+            const temStep = linha && /step="/.test(linha);
+            const temPlaceholder = linha && /placeholder="(kg|m)"/.test(linha);
+            linhas.push(`  ${campo.padEnd(16)} step=${temStep ? 'sim' : 'NÃO ⚠️'} · placeholder=${temPlaceholder ? 'sim' : 'NÃO ⚠️'}`);
+        }
+        const parseInts = src.split('\n')
+            .map((l, n) => [n + 1, l])
+            .filter(([, l]) => /parseInt\s*\(\s*(document\.getElementById\('invForm(Tamanho|Peso)|item\.(tamanho|peso))/.test(l));
+        linhas.push(`  parseInt em peso/tamanho: ${parseInts.length ? '⚠️ ' + parseInts.map(([n]) => n).join(', ') : 'nenhum'}`);
+        document.getElementById('out').textContent = linhas.join('\n');
+    });
+</script>

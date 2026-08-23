@@ -80,7 +80,7 @@ function renderListaMostrar() {
         }));
     } else if (aba === 'equip') {
         cards = (equipCatalogo||[]).filter(i => (i.nome||'').toLowerCase().includes(busca)).map(i => card({
-            img: i.imagem || i.imagemUrl, nome: i.nome || 'Item', sub: `${i.tipo || 'Equipamento'}${i.peso ? ' · ' + i.peso + 'kg' : ''}`,
+            img: i.imagem || i.imagemUrl, nome: i.nome || 'Item', sub: `${i.tipo || 'Equipamento'}${i.peso ? ' · ' + i.peso + ' kg' : ''}`,
             acoes: [
                 { ic: '🖼️', tip: 'Mostrar na mesa', fn: `tbColocarMostrar('equip','${i.id}')` },
                 { ic: '🧰', tip: 'Dropar como loot no mapa', fn: `tbDroparLoot('equip','${i.id}')` },
@@ -767,7 +767,7 @@ async function aplicarOpcoes(objId, op) {
             const src = o.refTipo === 'equip' ? (equipCatalogo||[]).find(x => x.id === o.refId) : (caixaItens||[]).find(x => x.id === o.refId);
             const i = src || {};
             if (op.exTipo && i.tipo) extras.push('Tipo: ' + i.tipo);
-            if (op.exPeso && i.peso != null) extras.push('Peso: ' + i.peso + 'kg');
+            if (op.exPeso && i.peso != null) extras.push('Peso: ' + i.peso + ' kg');
             if (op.exDesc && (i.descricao || i.desc)) extras.push(String(i.descricao || i.desc).slice(0, 80));
         }
     }

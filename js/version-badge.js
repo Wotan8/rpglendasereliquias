@@ -79,7 +79,7 @@ export function montarRotulo({ ativo, servidor, pagina }) {
         `Service Worker ativo nesta aba: ${ativo || '(nenhum — sem cache)'}`,
         `Publicado no servidor: ${servidor || '(não lido)'}`,
         pagina ? `Versão da página: ${pagina}` : null,
-        desatualizado ? '\n⚠️ Esta aba roda a versão antiga. Recarregue para atualizar.' : null,
+        desatualizado ? '\n⚠️ Esta aba roda a versão antiga. Clique aqui para atualizar e recarregar.' : null,
     ].filter(Boolean).join('\n');
 
     return { texto: partes.join('  ·  '), desatualizado, titulo };
@@ -105,7 +105,8 @@ function estilizar() {
   border-color:rgba(148,163,184,.35);opacity:.8;pointer-events:none}
 #${ID}:not(.lr-stale):hover{opacity:1}
 #${ID}.lr-stale{color:#fdba74;background:rgba(120,53,15,.78);
-  border-color:rgba(251,146,60,.55);opacity:.95;pointer-events:auto;cursor:help}
+  border-color:rgba(251,146,60,.55);opacity:.95;pointer-events:auto;cursor:pointer}
+#${ID}.lr-stale:hover{filter:brightness(1.15)}
 @media (prefers-color-scheme: light){
   #${ID}:not(.lr-stale){color:#475569;background:rgba(248,250,252,.8);
     border-color:rgba(100,116,139,.4)}
@@ -170,6 +171,22 @@ function desviarDeObstaculos(el, tentativas = 4) {
     }
 }
 
+/**
+ * Clique na badge alaranjada = aplicar o deploy nesta aba.
+ * update() busca o sw.js novo e só resolve depois do install (que já faz
+ * skipWaiting); o postMessage cobre o caso do worker ter ficado em "waiting".
+ * Depois recarrega — aí a página vem do cache novo.
+ */
+async function atualizarAgora(el) {
+    el.textContent = 'atualizando…';
+    try {
+        const reg = await navigator.serviceWorker?.getRegistration();
+        await reg?.update();
+        reg?.waiting?.postMessage({ type: 'SKIP_WAITING' });
+    } catch { /* sem SW ou update falhou: o reload ainda ajuda */ }
+    location.reload();
+}
+
 function render({ texto, desatualizado, titulo }) {
     estilizar();
     let el = document.getElementById(ID);
@@ -181,6 +198,7 @@ function render({ texto, desatualizado, titulo }) {
     el.textContent = texto;
     el.title = titulo;
     el.classList.toggle('lr-stale', desatualizado);
+    el.onclick = desatualizado ? () => atualizarAgora(el) : null;
 
     // Depois do layout: a HUD da página pode nem existir ainda no primeiro frame.
     // O segundo passe pega HUD que só aparece depois (coordenadas do Tabuleiro

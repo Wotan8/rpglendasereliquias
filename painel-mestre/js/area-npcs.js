@@ -7,7 +7,7 @@ import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassM
 import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.9';
 import './npc-inventario.js?v=9'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 import { npcNaMesa, mesasDoNpc, espelhoMesaId } from '../../shared/npc-mesas.js';
-import { melhorDisparo, METROS_POR_FOR } from '../../shared/alcance-disparo.js';
+import { melhorDisparo, bracoDeArremesso, METROS_POR_FOR } from '../../shared/alcance-disparo.js';
 import { linhasDeDisparoNpc } from './npc-inventario.js?v=9';
 
 let currentEditingNpc = null;
@@ -1595,15 +1595,27 @@ function renderDvGrid() {
         if (!linhas.length) return '';
 
         const forca = Number(F.npc.atributos?.FOR) || 0;
-        const d = melhorDisparo(linhas, forca);
+        // 🤾 O braço que lança (ver shared/alcance-disparo.js): peça de
+        // arremesso não tem alcance próprio, quem alcança é quem joga.
+        const nivelDaPericia = nome => {
+            const s = (F.sys.skills || []).find(x => (x.nome || '') === nome);
+            if (!s) return 0;
+            return Number(F.npc.periciasEstruturadas?.find(p => p.refId === s.id)?.nivel) || 0;
+        };
+        const braco = bracoDeArremesso(forca, nivelDaPericia('Atletismo'), nivelDaPericia('Arremessar'));
+        const d = melhorDisparo(linhas, forca, braco);
         const cap = Math.max(...linhas.map(l => l.alcanceM));
+        const arremesso = linhas.find(l => l.nome === d.arma && Number(l.alcanceFator) > 0);
         const valor = d.metros ? `${d.metros} m` : '—';
         const dica = !d.metros
             ? `${linhas[0].nome}: alcance não cadastrado no Painel do Criador`
-            : d.limitadoPorFor
-                ? `${d.arma} alcança ${cap} m, mas FOR ${forca} sustenta ${forca * METROS_POR_FOR} m `
-                  + `(${METROS_POR_FOR} m por ponto de FOR). Vale o menor dos dois.`
-                : `${d.arma} — o alcance da arma, que a FOR sustenta inteiro.`;
+            : arremesso
+                ? `${d.arma} arremessada: (FOR + Atletismo + Arremessar) × ${arremesso.alcanceFator} `
+                  + `= ${braco} × ${arremesso.alcanceFator}. Quem alcança é o braço, não a peça.`
+                : d.limitadoPorFor
+                    ? `${d.arma} alcança ${cap} m, mas FOR ${forca} sustenta ${forca * METROS_POR_FOR} m `
+                      + `(${METROS_POR_FOR} m por ponto de FOR). Vale o menor dos dois.`
+                    : `${d.arma} — o alcance da arma, que a FOR sustenta inteiro.`;
 
         return `<div class="npcv2-dv-cell npcv2-dv-calc${d.limitadoPorFor ? ' is-limitado' : ''}">
                 <div class="npcv2-dv-label"

@@ -74,12 +74,13 @@ Object.assign(globalThis, { DERIVED_VALUES: window.DERIVED_VALUES, REGRAS_CRIACA
 
 const { simulateDerivedValues } = await import('./mechanics-simulator.js');
 
-const rodar = (pecs = []) => {
+const rodar = (pecs = [], derivedModifiers = {}) => {
   window.wizardState = {
     racaSelecionada: 'Humano',
     atributos: { attr_for: 1, attr_des: 1, attr_vig: 1 }, // +1 base = 2 cada
     pericias: {},
     peculiaridadesIndividuais: pecs,
+    derivedModifiers,
   };
   return simulateDerivedValues();
 };
@@ -110,4 +111,15 @@ assert.ok(perto(nv3.dvAltura, 2.21), `Nv3: Altura 1,70 ×1,3 = 2,21, veio ${nv3.
 assert.ok(perto(nv3.dvTamanho, 6.63), `Nv3: Tamanho, veio ${nv3.dvTamanho}`);
 assert.ok(nv3.dvCarga > nv1.dvCarga, 'Nv3: Carga acima do Nv1');
 
-console.log('✅ cascata de Altura ok — base', base.dvAltura, '| Nv1', nv1.dvAltura, '| Nv3', nv3.dvAltura);
+/* --- Constante de Criação (slider da Véspera) arrasta a cascata, igual à ficha:
+       lá state.derived[Altura] já vem somado com o modificador quando o Peso lê. --- */
+const comMod = rodar([], { dvAltura: 0.3 });
+// O próprio VD continua sem a constante — o slider é quem a soma na exibição.
+assert.ok(perto(comMod.dvAltura, 1.7), `Altura crua sem a constante, veio ${comMod.dvAltura}`);
+// REGRESSÃO: antes, subir a Altura na Véspera não mexia no Peso do wizard,
+// mas mexia na ficha — o personagem engordava sozinho ao abrir a ficha.
+assert.ok(perto(comMod.dvPeso, 22 * 2.0 * 2.0), `Peso = (18+FOR+VIG)×(1,7+0,3)², veio ${comMod.dvPeso}`);
+assert.ok(perto(comMod.dvTamanho, 6.0), `Tamanho = (Altura+0,3)×3, veio ${comMod.dvTamanho}`);
+
+console.log('✅ cascata de Altura ok — base', base.dvAltura, '| Nv1', nv1.dvAltura, '| Nv3', nv3.dvAltura,
+  '| Peso c/ constante +0,3', comMod.dvPeso);

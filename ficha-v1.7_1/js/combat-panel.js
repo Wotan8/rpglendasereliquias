@@ -37,8 +37,11 @@
             window._inventoryState.items || [], window._inventoryState.catalog || []);
         if (!linhas.length) return null;
 
-        const forca = typeof getEffectiveDotValue === 'function' ? getEffectiveDotValue('attr_for') : 0;
-        const d = _alc.melhorDisparo(linhas, forca);
+        const dot = k => (typeof getEffectiveDotValue === 'function' ? getEffectiveDotValue(k) : 0);
+        const forca = dot('attr_for');
+        // 🤾 O braço que lança: peça de arremesso não tem alcance próprio.
+        const braco = _alc.bracoDeArremesso(forca, dot('sk_fisico_atletismo'), dot('sk_fisico_arremessar'));
+        const d = _alc.melhorDisparo(linhas, forca, braco);
         if (!d.metros) {
             // Tem arco na mão mas o alcance dele não está cadastrado: dizer
             // isso é mais útil que esconder o chip.
@@ -46,13 +49,17 @@
                      dica: `${linhas[0].nome}: alcance não cadastrado no Painel do Criador` };
         }
         const cap = Math.max(...linhas.map(l => l.alcanceM));
+        const arremesso = linhas.find(l => l.nome === d.arma && Number(l.alcanceFator) > 0);
         return {
             valor: `${d.metros} m`,
             nome: 'Alcance do Disparo',
-            dica: d.limitadoPorFor
-                ? `${d.arma} alcança ${cap} m, mas a sua FOR sustenta ${forca * _alc.METROS_POR_FOR} m `
-                  + `(${_alc.METROS_POR_FOR} m por ponto de FOR). Vale o menor dos dois.`
-                : `${d.arma} — o alcance da arma, que a sua FOR sustenta inteiro.`,
+            dica: arremesso
+                ? `${d.arma} arremessada: (FOR + Atletismo + Arremessar) × ${arremesso.alcanceFator} `
+                  + `= ${braco} × ${arremesso.alcanceFator}. Quem alcança é o braço, não a peça.`
+                : d.limitadoPorFor
+                    ? `${d.arma} alcança ${cap} m, mas a sua FOR sustenta ${forca * _alc.METROS_POR_FOR} m `
+                      + `(${_alc.METROS_POR_FOR} m por ponto de FOR). Vale o menor dos dois.`
+                    : `${d.arma} — o alcance da arma, que a sua FOR sustenta inteiro.`,
             limitado: d.limitadoPorFor,
         };
     }

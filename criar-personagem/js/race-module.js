@@ -213,7 +213,24 @@ function openClassModal(className, event) {
         html += `</div></div>`;
     }
 
-    // Perícias de Classe
+    // 🎯 No que a Classe se apoia — atributos e perícias por importância
+    const focos = classeFocos(className);
+    const listaFoco = itens => itens.map((it, i) =>
+        `<span class="detail-tag"><strong>${i + 1}.</strong> ${escHtml(it.nome)}</span>`).join('');
+    if (focos.atributos.length || focos.pericias.length) {
+        html += `<div class="detail-section"><div class="detail-section-title">🎯 No que a Classe se Apoia</div>`;
+        if (focos.atributos.length) {
+            html += `<div class="detail-role-item"><strong>💪 Atributos:</strong></div>
+                     <div class="detail-tag-list">${listaFoco(focos.atributos.slice(0, 4))}</div>`;
+        }
+        if (focos.pericias.length) {
+            html += `<div class="detail-role-item" style="margin-top:8px;"><strong>📚 Perícias:</strong></div>
+                     <div class="detail-tag-list">${listaFoco(focos.pericias.slice(0, 8))}</div>`;
+        }
+        html += `</div>`;
+    }
+
+    // Perícias de Classe — a lista completa, sem ranking
     if (window.CLASS_SKILLS[className]?.length) {
         html += `<div class="detail-section"><div class="detail-section-title">📚 Perícias de Classe</div><div class="detail-tag-list">`;
         for (const sk of window.CLASS_SKILLS[className]) {
@@ -326,6 +343,99 @@ function renderPecCollapse(pec) {
     </details>`;
 }
 
+/* ===== SHARED: no que a Classe se apoia, por ordem de importância =====
+   Não existe campo "atributos principais" no cadastro: o que a classe usa está
+   espalhado nos testes de classe, nas perícias de classe e nas mecânicas das
+   peculiaridades dela. Contamos as citações, com peso por fonte, e ordenamos.
+   Quem aparece em teste de classe pesa mais que quem só consta da lista. */
+const _FOCO_PESOS = { teste: 4, pericClasse: 2, mecanica: 2, pool: 1 };
+
+function _focoAtributo(ref) {
+    const t = String(ref || '').trim();
+    if (!t) return null;
+    return Object.values(ATRIBUTOS).flat()
+        .find(a => a.id === t || a.nome === t || a.key === t) || null;
+}
+
+function _focoPericia(ref) {
+    let t = String(ref || '').trim();
+    if (t.startsWith('Perícia: ')) t = t.slice('Perícia: '.length);
+    if (!t) return null;
+    for (const lista of Object.values(window.SKILLS || {})) {
+        const sk = lista.find(s => s.name === t || s.key === t);
+        if (sk) return sk;
+    }
+    return null;
+}
+
+/* Tudo que uma mecânica cita da ficha: alvos das contas, refs das equações e o
+   pool de uma "distribuir" (esse pesa menos — é opção, não garantia). */
+function _focoRefsDaMecanica(mech) {
+    const cfg = mech?.config || {};
+    const refs = [];
+    const calculos = Array.isArray(cfg.calculos) ? cfg.calculos : (cfg.alvo ? [cfg] : []);
+    for (const c of calculos) {
+        for (const alvo of (Array.isArray(c.alvo) ? c.alvo : [c.alvo])) if (alvo) refs.push([alvo, 'mecanica']);
+        for (const t of (c.equacao || [])) if (t.tipo === 'ficha' && t.ref) refs.push([t.ref, 'mecanica']);
+    }
+    for (const alvo of (cfg.poolPersonalizado || [])) refs.push([alvo, 'pool']);
+    return refs;
+}
+
+/** { atributos: [{nome, peso}], pericias: [{nome, peso}] } — já ordenados. */
+function classeFocos(className) {
+    const cls = (window._systemData?.classes || []).find(c => c.nome === className);
+    if (!cls) return { atributos: [], pericias: [] };
+
+    const citacoes = [];
+
+    // Perícias de Classe: a perícia e o atributo que a governa.
+    for (const nome of (window.CLASS_SKILLS?.[className] || [])) {
+        citacoes.push([nome, 'pericClasse']);
+        const sk = _focoPericia(nome);
+        if (sk?.attrLabel || sk?.attr) citacoes.push([sk.attrLabel || sk.attr, 'pericClasse']);
+    }
+
+    // Testes de Classe: a assinatura da classe — fórmula manual ou mecânica.
+    for (const t of (cls.testesDeClasse || [])) {
+        for (const p of (t.parts || [])) for (const alt of String(p).replace(/^@/, '').split('|')) citacoes.push([alt, 'teste']);
+        const mech = t.mecanicaId && (window._systemData.mechanics || []).find(m => m.id === t.mecanicaId);
+        if (mech) for (const [ref] of _focoRefsDaMecanica(mech)) citacoes.push([ref, 'teste']);
+    }
+
+    // Mecânicas da classe e das peculiaridades/bônus iniciais dela.
+    const mechIds = [...(cls.mecanicaIds || [])];
+    for (const entry of [...(cls.peculiaridadeIds || []), ...(cls.bonusIniciais || [])]) {
+        const pecId = typeof entry === 'object' && entry !== null ? entry.id : entry;
+        const pec = (window._systemData.peculiarities || []).find(p => p.id === pecId);
+        if (pec) mechIds.push(...(pec.mecanicaIds || []));
+    }
+    for (const id of new Set(mechIds)) {
+        const mech = (window._systemData.mechanics || []).find(m => m.id === id);
+        if (mech) citacoes.push(..._focoRefsDaMecanica(mech));
+    }
+
+    const attrs = new Map(), skills = new Map();
+    const somar = (mapa, chave, peso) => mapa.set(chave, (mapa.get(chave) || 0) + peso);
+    for (const [ref, fonte] of citacoes) {
+        const peso = _FOCO_PESOS[fonte] || 1;
+        const attr = _focoAtributo(ref);
+        if (attr) { somar(attrs, attr.nome, peso); continue; }
+        const sk = _focoPericia(ref);
+        if (!sk) continue;
+        somar(skills, sk.name, peso);
+        // A perícia puxa o atributo dela junto: é ele que se rola no teste.
+        const nomeAttr = _focoAtributo(sk.attrLabel || sk.attr)?.nome;
+        if (nomeAttr) somar(attrs, nomeAttr, peso);
+    }
+
+    const ordenar = m => [...m.entries()]
+        .map(([nome, peso]) => ({ nome, peso }))
+        .sort((a, b) => b.peso - a.peso || a.nome.localeCompare(b.nome, 'pt-BR'));
+
+    return { atributos: ordenar(attrs), pericias: ordenar(skills) };
+}
+
 /* Entradas de derivedValueIds vêm como ID puro (classes) ou como objeto
    { id, valorInicial } (raças, onde o valor inicial é o traço racial). */
 function resolveDerivedValueEntries(entries) {
@@ -336,13 +446,13 @@ function resolveDerivedValueEntries(entries) {
     }).filter(Boolean);
 }
 
-function renderDerivedValue(dv, valorInicial) {
+/* As fórmulas de um Valor Derivado, uma por linha. Uma mecânica pode ter várias
+   contas, que generatePreviewText junta com "; ". Separamos e tiramos o sufixo
+   " em <nome>" de cada uma — o alvo já é o título do bloco, repetir só polui.
+   Usado no modal de detalhes e nos Ajustes de Personagem da Véspera. */
+function dvFormulaLines(dv) {
     const nome = String(dv.nome || dv.key || dv.id || '').trim();
-
-    // Uma mecânica pode ter várias contas, que generatePreviewText junta com
-    // "; ". Separamos para exibir uma por linha e tirar o sufixo " em <nome>"
-    // de cada uma — o alvo já é o título do bloco, repetir só polui.
-    const formulas = (dv.mecanicaIds || [])
+    return (dv.mecanicaIds || [])
         .map(id => (window._systemData.mechanics || []).find(m => m.id === id))
         .filter(Boolean)
         .flatMap(m => {
@@ -356,6 +466,11 @@ function renderDerivedValue(dv, valorInicial) {
             });
         })
         .filter(Boolean);
+}
+
+function renderDerivedValue(dv, valorInicial) {
+    const nome = String(dv.nome || dv.key || dv.id || '').trim();
+    const formulas = dvFormulaLines(dv);
 
     const desc = String(dv.descricao || '').trim();
     const temDesc = desc && desc !== nome;

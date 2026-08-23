@@ -64,6 +64,15 @@ function isNpcComplete(npc) {
            npc.vinculo && npc.vinculo.trim();
 }
 
+/* Destrava um NPC já criado para correção. O EXP volta a ser recontado —
+   enquanto estiver em edição ele não conta, como qualquer NPC incompleto. */
+function editNpc(index) {
+    wizardState.npcs[index].confirmado = false;
+    renderNpcList();
+    updateNpcExp();
+    saveWizardToStorage();
+}
+
 function confirmNpc(index) {
     const npc = wizardState.npcs[index];
     if (!isNpcComplete(npc)) {
@@ -121,15 +130,17 @@ function renderNpcList() {
                         ${confirmed ? 'readonly' : ''}
                         oninput="wizardState.npcs[${idx}].vinculo = this.value; onNpcFieldChange(${idx}); saveWizardToStorage();">${escHtml(npc.vinculo)}</textarea>
                 </div>
-                ${!confirmed ? `
-                    <div style="text-align:right;margin-top:4px;">
-                        <button class="btn ${complete ? 'btn-success' : ''}" 
+                <div style="text-align:right;margin-top:4px;">
+                    ${confirmed ? `
+                        <button class="btn" onclick="editNpc(${idx})">✏️ Editar NPC</button>
+                    ` : `
+                        <button class="btn btn-confirm-npc ${complete ? 'btn-success' : ''}"
                                 ${!complete ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}
                                 onclick="confirmNpc(${idx})">
                             ✅ Criar NPC
                         </button>
-                    </div>
-                ` : ''}
+                    `}
+                </div>
             </div>
         `;
     });
@@ -143,7 +154,7 @@ function onNpcFieldChange(idx) {
     const complete = isNpcComplete(npc);
     const cards = document.querySelectorAll('#npcList .npc-card');
     if (cards[idx]) {
-        const btn = cards[idx].querySelector('.btn:not(.npc-card-remove)');
+        const btn = cards[idx].querySelector('.btn-confirm-npc');
         if (btn) {
             btn.disabled = !complete;
             btn.style.opacity = complete ? '' : '0.5';

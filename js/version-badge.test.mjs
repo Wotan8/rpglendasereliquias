@@ -48,7 +48,7 @@ import { extrairVersao, montarRotulo } from './version-badge.js';
     const r = montarRotulo({ ativo: 'v103', servidor: 'v104', pagina: '1.7.1' });
     assert.equal(r.texto, 'v103 → v104 ↻  ·  pág 1.7.1');
     assert.equal(r.desatualizado, true);
-    assert.match(r.titulo, /Recarregue/, 'o title diz o que fazer');
+    assert.match(r.titulo, /Clique aqui para atualizar/, 'o title diz o que fazer');
 }
 
 // --- sem Service Worker controlando (dev / primeira visita) --------------

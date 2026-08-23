@@ -32,7 +32,7 @@ import { resolverMedida, ehFormula } from '../../shared/medida-formula.js?v=1';
 import { shapeDaMira, alvoAoAlcance, fracaoCoberta, COBERTURA_MINIMA_CONJURADOR,
          porqueLocalInvalido, localSob } from './tab-mira-calc.js';
 import { retornoDoTurno } from '../../shared/retorno-recurso.js';
-import { melhorDisparo } from '../../shared/alcance-disparo.js';
+import { melhorDisparo, bracoDeArremesso } from '../../shared/alcance-disparo.js';
 import { golpesDe, golpesCacheados, escolherGolpe, metaDoGolpe, alcanceDoGolpe, limparCacheGolpes, formasDeConjurar, projeteisPara, escolherProjetil } from './tab-golpes.js';
 import { gastarUm } from '../../shared/projeteis.js';
 import { templateAtingeCirculo } from './tab-templates.js';
@@ -1281,8 +1281,14 @@ async function pagarCusto(p, custo) {
  * com o alcance dela não cadastrado — dá 0, e a mira não abre.
  */
 function alcanceDoDisparoDe(p) {
-    const forca = valorComponente('FOR', fonteDoParticipante(p));
-    return melhorDisparo(golpesCacheados(p) || [], forca);
+    const fonte = fonteDoParticipante(p);
+    const forca = valorComponente('FOR', fonte);
+    // 🤾 Peça de arremesso não tem alcance próprio: chega até onde o braço
+    // joga (FOR + Atletismo + Arremessar × N). valorComponente devolve null
+    // quando não acha, e null vira 0 dentro de bracoDeArremesso.
+    const braco = bracoDeArremesso(forca,
+        valorComponente('Atletismo', fonte), valorComponente('Arremessar', fonte));
+    return melhorDisparo(golpesCacheados(p) || [], forca, braco);
 }
 
 /**

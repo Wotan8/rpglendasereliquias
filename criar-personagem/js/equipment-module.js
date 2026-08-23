@@ -1,5 +1,12 @@
 /* ===== PHASE 7 — O Equipamento ===== */
 
+
+/* Peso e Tamanho do item SEMPRE saem com unidade. Tamanho é em metros e
+   fracionado — 0,1 é 10 cm —, então nada de arredondar para inteiro; as casas
+   mortas caem para "1 m" não virar "1,00 m". */
+const _pesoKg = (v) => `${(parseFloat(v) || 0).toFixed(2)} kg`;
+const _tamanhoM = (v) => `${Math.round((parseFloat(v) || 0) * 100) / 100} m`;
+
 function initPhase7(container) {
     let html = createNarratorBox(NARRADOR_TEXTOS.equipamento);
 
@@ -235,7 +242,7 @@ function initPhase7(container) {
                 </div>
                 <div class="field">
                     <label>Tamanho</label>
-                    <input type="number" id="customItemTamanho" value="${wizardState.customItem?.tamanho ?? 1}" min="0" oninput="updateCustomItem()">
+                    <input type="number" id="customItemTamanho" value="${wizardState.customItem?.tamanho ?? 1}" min="0" step="0.01" placeholder="m" oninput="updateCustomItem()">
                 </div>
                 <div class="field" id="customItemQtdField" style="display:${['Container','Arma'].includes(wizardState.customItem?.tipo) ? 'none' : 'block'}">
                     <label>Quantidade</label>
@@ -368,7 +375,8 @@ window.updateCustomItem = function() {
     const formaEquipar = document.getElementById('customItemFormaEquipar')?.value || null;
     const categoriaArma = document.getElementById('customItemCategoriaArma')?.value || 'uma_mao';
     const peso = parseFloat(document.getElementById('customItemPeso')?.value) || 0;
-    const tamanho = parseInt(document.getElementById('customItemTamanho')?.value) || 0;
+    // Tamanho é em METROS e fracionado: 0,1 = 10 cm. parseInt engolia a fração.
+    const tamanho = parseFloat(document.getElementById('customItemTamanho')?.value) || 0;
     const quantidade = parseInt(document.getElementById('customItemQtd')?.value) || 1;
     const pesoMax = parseFloat(document.getElementById('customItemPesoMax')?.value) || 0;
     const mult = parseFloat(document.getElementById('customItemMult')?.value) || 1;
@@ -440,8 +448,8 @@ window.renderEquipmentItemDetails = function(eq) {
     
     // Stats grid
     const stats = [];
-    if (eq.peso) stats.push(`Peso: ${eq.peso}`);
-    if (eq.tamanho) stats.push(`Tam: ${eq.tamanho}`);
+    if (eq.peso) stats.push(`Peso: ${_pesoKg(eq.peso)}`);
+    if (eq.tamanho) stats.push(`Tam: ${_tamanhoM(eq.tamanho)}`);
     if (eq.categoriaArma) stats.push(`Arma: ${escHtml(eq.categoriaArma.replace('_', ' '))}`);
     if (eq.danoFisico) stats.push(`Dano Fís: ${escHtml(eq.danoFisico)}`);
     if (eq.danoMagico) stats.push(`Dano Mág: ${escHtml(eq.danoMagico)}`);

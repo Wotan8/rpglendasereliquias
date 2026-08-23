@@ -249,6 +249,11 @@ export function simulateDerivedValues() {
             if (calc.tipoLimite === 'bloqueio') lim.bloqueio = true;
             else if (calc.tipoLimite === 'minimo') lim.min = lim.min === undefined ? val : Math.max(lim.min, val);
             else if (calc.tipoLimite === 'maximo') lim.max = lim.max === undefined ? val : Math.min(lim.max, val);
+            else if (calc.tipoLimite === 'clamp') {
+                const min = parseFloat(calc.valorMinimo) || 0;
+                lim.max = lim.max === undefined ? val : Math.min(lim.max, val);
+                lim.min = lim.min === undefined ? min : Math.max(lim.min, min);
+            }
         };
 
         // Helper: aplicar uma mecânica completa
@@ -398,9 +403,16 @@ export function simulateDerivedValues() {
             }
         };
 
+        /* O snapshot que as refs leem carrega a Constante de Criação junto, como
+           na ficha: lá `state.derived[key]` é mecânicas + derivedModifiers, e é
+           dele que `[Altura]` sai quando o Peso é calculado. Sem somar aqui, subir
+           a Altura na Véspera não engordava o Peso no wizard — mas engordava na
+           ficha. `results` fica sem a constante: o slider a soma na exibição. */
+        const mods = state.derivedModifiers || {};
         for (let pass = 0; pass < 4; pass++) {
             runPass();
-            snapshot = { ...results };
+            snapshot = {};
+            for (const id in results) snapshot[id] = results[id] + (mods[id] || 0);
         }
     }
 

@@ -18,20 +18,39 @@
 // momento do disparo não entra. É o que dá à besta a identidade de "a arma de
 // tiro de quem não tem Força".
 //
+// 🤾 ARREMESSO é a outra régua, e ela inverte a lógica acima: uma adaga não tem
+// alcance próprio, quem lança é o braço. Item com `alcanceFator` (N) chega a
+// (FOR + Atletismo + Arremessar) × N metros. Aqui NÃO entra o corte de FOR × 10:
+// a Força já está dentro da soma, e descontá-la de novo cobraria o mesmo
+// atributo duas vezes.
+//
 // Sem Firestore e sem tela.
 // =============================================
 
 /** Metros de alcance que cada ponto de FOR sustenta. */
 export const METROS_POR_FOR = 10;
 
+/** O braço que lança: FOR + Atletismo + Arremessar. */
+export function bracoDeArremesso(forca, atletismo, arremessar) {
+    return (Number(forca) || 0) + (Number(atletismo) || 0) + (Number(arremessar) || 0);
+}
+
 /**
  * Até onde ESTA arma, nas mãos DESTE atirador, chega.
  *
- * @param arma { alcanceM, ignoraLimiteForDisparo }
+ * @param arma  { alcanceM, ignoraLimiteForDisparo, alcanceFator }
  * @param forca valor de FOR na ficha
+ * @param braco FOR + Atletismo + Arremessar (só usado por peça de arremesso)
  * @returns { metros, limitadoPorFor, capacidadeDaArma, limiteDoBraco }
  */
-export function alcanceDeDisparo(arma, forca) {
+export function alcanceDeDisparo(arma, forca, braco) {
+    // Arremesso: a capacidade é do braço, não da peça.
+    const fator = Math.max(0, Number(arma?.alcanceFator) || 0);
+    if (fator) {
+        const m = Math.max(0, Number(braco) || 0) * fator;
+        return { metros: m, limitadoPorFor: false, capacidadeDaArma: m, limiteDoBraco: m };
+    }
+
     const capacidade = Math.max(0, Number(arma?.alcanceM) || 0);
     if (!capacidade) return { metros: 0, limitadoPorFor: false, capacidadeDaArma: 0, limiteDoBraco: 0 };
 
@@ -56,11 +75,13 @@ export function alcanceDeDisparo(arma, forca) {
  * @returns { metros, arma, limitadoPorFor } — `arma` é a que rendeu o maior
  *          alcance, para a tela poder dizer de onde saiu o número.
  */
-export function melhorDisparo(linhas, forca) {
+export function melhorDisparo(linhas, forca, braco) {
     let melhor = { metros: 0, arma: null, limitadoPorFor: false };
     for (const l of linhas || []) {
-        if (!l?.distancia) continue;
-        const a = alcanceDeDisparo(l, forca);
+        // Peça de arremesso entra mesmo sendo linha corpo a corpo: a adaga é
+        // `uma_mao`, e `distancia` continua descrevendo a pegada dela na mesa.
+        if (!l?.distancia && !(Number(l?.alcanceFator) > 0)) continue;
+        const a = alcanceDeDisparo(l, forca, braco);
         if (a.metros > melhor.metros) {
             melhor = { metros: a.metros, arma: l.nome || null, limitadoPorFor: a.limitadoPorFor };
         }
@@ -77,7 +98,7 @@ export function melhorDisparo(linhas, forca) {
  * cobrir os dois, uma besta antiga perderia o alcance em silêncio.
  *
  * @param itens   [{ nome, equipado, modeloId|origemTemplateId, ...campos }]
- * @param catalog [{ id, categoriaArma, alcanceM, ignoraLimiteForDisparo }]
+ * @param catalog [{ id, categoriaArma, alcanceM, ignoraLimiteForDisparo, alcanceFator }]
  */
 export function linhasDeDisparo(itens, catalog) {
     const cat = catalog || [];
@@ -90,11 +111,13 @@ export function linhasDeDisparo(itens, catalog) {
         return tplDe(i)?.[k];
     };
     return (itens || [])
-        .filter(i => i && i.equipado && campo(i, 'categoriaArma') === 'distancia')
+        .filter(i => i && i.equipado
+            && (campo(i, 'categoriaArma') === 'distancia' || Number(campo(i, 'alcanceFator')) > 0))
         .map(i => ({
             nome: i.nome || 'Arma',
             distancia: true,
             alcanceM: Number(campo(i, 'alcanceM')) || 0,
             ignoraLimiteForDisparo: !!campo(i, 'ignoraLimiteForDisparo'),
+            alcanceFator: Number(campo(i, 'alcanceFator')) || 0,
         }));
 }

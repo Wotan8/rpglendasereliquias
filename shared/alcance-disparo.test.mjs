@@ -2,7 +2,7 @@
 // A arma tem capacidade; o atirador tem braço. Vale o menor dos dois — menos
 // para a besta, que é armada por manivela antes do tiro.
 import assert from 'node:assert/strict';
-import { alcanceDeDisparo, melhorDisparo, linhasDeDisparo, METROS_POR_FOR } from './alcance-disparo.js';
+import { alcanceDeDisparo, melhorDisparo, linhasDeDisparo, bracoDeArremesso, METROS_POR_FOR } from './alcance-disparo.js';
 
 const ARCO_LONGO = { nome: 'Arco Longo', alcanceM: 60, distancia: true };
 const ARCO_SIMPLES = { nome: 'Arco Simples', alcanceM: 30, distancia: true };
@@ -101,4 +101,51 @@ assert.deepEqual(linhasDeDisparo(null, CAT), []);
 assert.equal(melhorDisparo(ls, 2).arma, 'Besta velha');
 assert.equal(melhorDisparo(ls, 2).metros, 30);
 
-console.log('✅ alcance-disparo: braço e arma como gargalo, besta livre da FOR, campo vazio = sem tiro, melhor arma em mãos OK');
+/* ═══ 🤾 arremesso: quem tem alcance é o braço, não a peça ═══ */
+// N por grupo: 0,75 curto (machadinha, boleadeira, frasco), 1,0 adaga/faca,
+// 1,5 haste. O braço é FOR + Atletismo + Arremessar.
+const ADAGA_ARR = { nome: 'Adaga', distancia: false, alcanceM: 0, alcanceFator: 1 };
+const LANCA_ARR = { nome: 'Lança', distancia: false, alcanceM: 0, alcanceFator: 1.5 };
+const MACHADINHA = { nome: 'Machadinha', distancia: false, alcanceM: 0, alcanceFator: 0.75 };
+
+assert.equal(bracoDeArremesso(4, 2, 3), 9, 'FOR + Atletismo + Arremessar');
+assert.equal(bracoDeArremesso(2, null, undefined), 2, 'perícia faltando não vira NaN');
+
+// competente (braço 9): a ordem que o design pediu — haste > adaga > machadinha
+assert.equal(alcanceDeDisparo(ADAGA_ARR, 4, 9).metros, 9);
+assert.equal(alcanceDeDisparo(LANCA_ARR, 4, 9).metros, 13.5);
+assert.equal(alcanceDeDisparo(MACHADINHA, 4, 9).metros, 6.75);
+
+// o teto do catálogo: nem o veterano (braço 13) passa a Funda, que tem 20 m
+assert.ok(alcanceDeDisparo(LANCA_ARR, 4, 13).metros < 20,
+    'lança arremessada não pode bater arma de disparo');
+
+// FOR × 10 NÃO corta o arremesso: a Força já está dentro do braço
+assert.equal(alcanceDeDisparo(LANCA_ARR, 1, 9).limitadoPorFor, false);
+assert.equal(alcanceDeDisparo(LANCA_ARR, 1, 9).metros, 13.5, 'FOR 1 não corta em 10 m');
+
+// braço zerado é 0 m, nunca "ilimitado" — mesma regra do alcance não cadastrado
+assert.equal(alcanceDeDisparo(ADAGA_ARR, 4, 0).metros, 0);
+assert.equal(alcanceDeDisparo(ADAGA_ARR, 4).metros, 0, 'sem braço informado não inventa alcance');
+
+// entra no melhor disparo mesmo sendo linha corpo a corpo (distancia: false)
+assert.equal(melhorDisparo([ADAGA_ARR], 4, 9).arma, 'Adaga');
+// mas o arco continua ganhando de qualquer arremesso, que é o desenho
+assert.equal(melhorDisparo([ADAGA_ARR, ARCO_SIMPLES], 4, 9).arma, 'Arco Simples');
+
+// nada disso mexe em quem não tem alcanceFator
+assert.equal(alcanceDeDisparo(ARCO_SIMPLES, 3, 99).metros, 30, 'braço não afeta arma de disparo');
+assert.equal(melhorDisparo([{ nome: 'Adaga', distancia: false, alcanceM: 0.5 }], 5, 9).metros, 0,
+    'adaga SEM alcanceFator continua sem disparo');
+
+// inventário cru: peça de arremesso equipada entra, guardada não
+const CAT_ARR = [...CAT, { id: 'tpl_adaga_arr', categoriaArma: 'uma_mao', alcanceFator: 1 }];
+const lsArr = linhasDeDisparo([
+    { nome: 'Adaga de Arremesso', modeloId: 'tpl_adaga_arr', equipado: true },
+    { nome: 'Adaga na bota', modeloId: 'tpl_adaga_arr', equipado: false },
+    { nome: 'Adaga comum', modeloId: 'tpl_adaga', equipado: true },
+], CAT_ARR);
+assert.deepEqual(lsArr.map(l => l.nome), ['Adaga de Arremesso']);
+assert.equal(lsArr[0].alcanceFator, 1, 'o fator desce do modelo para a linha');
+
+console.log('✅ alcance-disparo: braço e arma como gargalo, besta livre da FOR, campo vazio = sem tiro, melhor arma em mãos, arremesso pelo braço OK');
