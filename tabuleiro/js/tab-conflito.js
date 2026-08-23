@@ -23,7 +23,7 @@
 //
 // Writes: 1 por etapa, no doc de combate que já existe. Nenhuma coleção nova.
 // =============================================
-import { setDoc, db as _db, doc as _doc, updateDoc as _upd, deleteDoc as _del } from '../../painel-mestre/js/firebase-config.js';
+import { setDoc, db as _db, doc as _doc, updateDoc as _upd, deleteDoc as _del, getDoc as _get, increment as _inc } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, toast, uid, normChave, valorComponente, gridSize, pxParaUnidades, registrarFlutuante, trazerParaFrente } from './tab-state.js';
 import { golpesDe, golpesCacheados, escolherGolpe, golpesCorpoACorpo, alcanceDoGolpe } from './tab-golpes.js';
 import { refCombate } from './tab-main.js';
@@ -341,9 +341,48 @@ window.tbConfRolarAcerto = async (naMesa) => {
     if (graus <= 0) await marcarFalhaDeConjuracao(c.atacante?.pid);
     // 🏹 A flecha saiu: gasta do maço e decide se sobrou inteira.
     if (c.acao?.projetil) await resolverProjetil(c, graus > 0);
+    // 💀 Falha Crítica come Integridade da peça usada (§5.5).
+    if (dado === 10) await desgastarPorFalhaCritica(c);
     logChat(`🎯 ${c.atacante.nome} ataca com ${c.acao.nome}: d10 ${dado}${naMesa ? ' (mesa)' : ''} vs Alvo ${alvo}${bonusMarca ? ` (${c.acao.alvoAcerto} +${bonusMarca} da Marca de Caça)` : ''} → ${graus > 0 ? '+' : ''}${graus} Graus`
         + (dado === 1 ? ' ✨ crítico!' : dado === 10 ? ' 💀 falha crítica!' : ''));
 };
+
+/**
+ * 💀 FALHA CRÍTICA COME A PEÇA
+ *
+ * §5.5 já dizia que arma improvisada (Liga 0) é DESTRUÍDA numa Falha Crítica;
+ * aqui a régua vira contínua: a peça perde 1 de Integridade, e Liga 0 continua
+ * acabando ali. A escada mora na própria faixa — 1 ponto é um sétimo de uma
+ * adaga e um vigésimo de um espadão, porque o máximo escala com Liga e Tamanho.
+ *
+ * O acabamento (Afiação/Reforço) continua sendo escolha do Narrador pelo §6.7:
+ * isto é a consequência que o Tabuleiro aplica sozinho, sem perguntar.
+ *
+ * Só o dono do ataque executa — dois clientes com a aba aberta cobrariam duas.
+ */
+async function desgastarPorFalhaCritica(c) {
+    const itemId = c.acao?.golpe?.itemId;
+    if (!itemId || c.acao?.golpe?.desarmado) return;      // o corpo não é peça
+    if (!controla(c.atacante?.pid)) return;
+    try {
+        const M = await import('../../shared/inventario-motor.js?v=6');
+        const ref = _doc(_db, 'items', itemId);
+        const snap = await _get(ref);
+        if (!snap.exists()) return;
+        const item = { id: snap.id, ...snap.data() };
+        const sys = window._npcSys || window._systemData || {};
+        const tpl = M.tplDoItem(item, sys);
+        const perda = M.perdaFalhaCritica(item, tpl);
+        if (!perda) return;
+
+        await _upd(ref, { avaria: _inc(perda) });
+        const restou = Math.max(0, M.integridadeDe(item, tpl) - perda);
+        logChat(restou <= 0
+            ? `💀 Falha crítica: ${c.atacante.nome} arruinou ${item.nome || 'a peça'} — sem efeito até consertar`
+            : `💀 Falha crítica: ${item.nome || 'a peça'} perdeu ${perda} de Integridade (${restou.toFixed(0)}/${M.integridadeMax(item, tpl).toFixed(0)})`);
+        if (restou <= 0) toast(`🧱 ${item.nome || 'A peça'} arruinou — não aplica mais efeito`, 'warning');
+    } catch (e) { console.warn('falha crítica/integridade', e); }
+}
 
 /**
  * 🏹 O que acontece com a munição depois do tiro.

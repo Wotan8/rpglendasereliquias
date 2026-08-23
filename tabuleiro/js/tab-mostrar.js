@@ -2,7 +2,7 @@
 // TABULEIRO — "Mostrar" (NPCs, Equipamentos, Caixa do Mestre)
 // + Ficha rápida de NPC + entrega de itens ao inventário
 // =============================================
-import { db, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, writeBatch } from '../../painel-mestre/js/firebase-config.js';
+import { db, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, writeBatch, increment } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, toast, markDirty, gridSize, tokenDoUsuario } from './tab-state.js';
 import { abrirModal, fecharModal } from './tab-main.js';
 import { addObj, updObj, delObj, vincularNpcNaMesa, trancaConfigHtml } from './tab-objects.js';
@@ -666,6 +666,40 @@ function dropClique(ev) {
 // Debounce por token: uma caminhada de setas/arrastos emendados é UMA viagem —
 // checa (e paga a query de itens) só no primeiro passo da rajada.
 const _dropSoltosTs = new Map();   // tokenId -> último disparo
+
+/**
+ * 🧱 Desgaste de viagem: só contêiner que passou do teto cadastrado paga, e
+ * paga 1/3 do que uma mudança de conteúdo custa — andar é fadiga cíclica, e o
+ * §0.6 já preça a Ação de Movimento nessa proporção contra a Ação Padrão.
+ * Rompendo, os itens de dentro perdem o pai e voltam a ser Soltos (o que, no
+ * Tabuleiro, significa que ficam para trás na próxima viagem — a regra que já
+ * existe, agora com consequência).
+ */
+async function _desgastarConteineresNaViagem(itens) {
+    const M = await import('../../shared/inventario-motor.js?v=6');
+    const cheios = itens.filter(i => M.ehContainer(i));
+    for (const c of cheios) {
+        const tpl = M.tplDoItem(c, _sysDoTabuleiro());
+        const r = M.desgastarConteiner(c, itens, tpl, M.GATILHO.movimento);
+        if (!r.perda) continue;
+        try {
+            await updateDoc(doc(db, 'items', c.id), { avaria: increment(r.perda) });
+            if (r.rompeu) {
+                const lote = writeBatch(db);
+                for (const id of r.filhos) lote.update(doc(db, 'items', id), { parentItemId: null });
+                await lote.commit();
+                for (const f of itens) if (r.filhos.includes(f.id)) f.parentItemId = null;
+                toast(`🎒 ${c.nome || 'O contêiner'} rompeu na viagem — ${r.filhos.length} item(ns) soltos`, 'warning');
+            }
+        } catch (e) { console.warn('desgaste de viagem', e); }
+    }
+}
+
+/** O registro do sistema, para a Integridade herdar do modelo do catálogo.
+ *  É o mesmo cache que a Ficha de Combate e o Painel do Mestre já usam. */
+function _sysDoTabuleiro() {
+    return window._npcSys || window._systemData || {};
+}
 window.tbDroparSoltosDoToken = async function(o, origem) {
     try {
         const tipo = o?.vinculo?.tipo, donoId = o?.vinculo?.id;
@@ -677,6 +711,12 @@ window.tbDroparSoltosDoToken = async function(o, origem) {
 
         const snap = await getDocs(query(collection(db, 'items'), where('characterId', '==', donoId)));
         const itens = []; snap.forEach(d => itens.push({ id: d.id, ...d.data() }));
+
+        // 🧱 A caminhada cobra Integridade de contêiner sobrecarregado. Aproveita
+        // a MESMA query e o MESMO debounce: uma rajada de passos é uma viagem, e
+        // a bolsa paga uma vez por viagem, não por pixel.
+        await _desgastarConteineresNaViagem(itens);
+
         const soltos = itens.filter(i => !i.equipado && !i.parentItemId);
         if (!soltos.length) return;
 

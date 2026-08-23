@@ -1,7 +1,7 @@
 // =============================================
 // AREA MESAS — Inventário Geral + Caixa do Mestre + Personagens
 // =============================================
-import { db, collection, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, query, where, onSnapshot, writeBatch } from './firebase-config.js';
+import { db, collection, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, query, where, onSnapshot, writeBatch, increment } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 // Os construtores de seletor do Criador (mecanicas, VDs com Equacao de Valor,
@@ -11,12 +11,13 @@ import * as SEL from '../../painel-criador/js/painel-mechanics.js';
 import {
     camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo, modeloDaInstancia,
-} from '../../shared/equip-campos.js?v=10';
+} from '../../shared/equip-campos.js?v=11';
 import { ensureNpcSystemData } from './npc-system-data.js';
 import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
     pressaoItem, htmlInventario, tratarClique, iniciarArrasto, cabeNoConteiner, tplDoItem,
-} from '../../shared/inventario-motor.js?v=5';
+    desgastarConteiner, GATILHO,
+} from '../../shared/inventario-motor.js?v=6';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML, modeloDoItem } from '../../shared/restaurar-item.js?v=1';
 
 
@@ -387,6 +388,7 @@ async function _moverItemMestre(ownerId, itemId, alvo) {
             await lote.commit();
         }
         _estadoDe(ownerId).contAbertos.add(contId);
+        await _desgastarPorConteudo(ownerId, c);
         _logMesaItem(ownerId, `📦 ${plano.qtd}× "${i.nome || 'Item'}" guardado em "${c.nome || 'contêiner'}"`, [
             { label: 'Item', from: i.nome || itemId, to: i.nome || itemId },
             { label: 'Contêiner', from: '—', to: c.nome || contId },
@@ -463,6 +465,29 @@ function _filhosDe(ownerId, contId) {
         }
     }
     return saida;
+}
+
+/**
+ * 🧱 Sobrecarga cobra Integridade quando o conteudo muda. So cobra de conteiner
+ * que passou do teto cadastrado. Zerou, rompe: os filhos perdem o parentItemId
+ * e reaparecem em Itens Soltos. Nada e apagado.
+ */
+async function _desgastarPorConteudo(ownerId, cont) {
+    const itens = _donos.get(ownerId)?.itens || [];
+    const tpl = tplDoItem(cont, window._npcSys || window._systemData || {});
+    const r = desgastarConteiner(cont, itens, tpl, GATILHO.conteudo);
+    if (!r.perda) return;
+    try {
+        await updateDoc(doc(db, 'items', cont.id), { avaria: increment(r.perda) });
+        if (r.rompeu) {
+            const lote = writeBatch(db);
+            for (const id of r.filhos) lote.update(doc(db, 'items', id), { parentItemId: null });
+            await lote.commit();
+            _logMesaItem(ownerId, `🎒 "${cont.nome || 'Contêiner'}" rompeu — ${r.filhos.length} item(ns) para Itens Soltos`,
+                [{ label: 'Integridade', from: 'sobrecarregado', to: '0' }]);
+            showAlert(`🎒 ${cont.nome || 'O contêiner'} rompeu — ${r.filhos.length} item(ns) foram para Itens Soltos`, 'warning');
+        }
+    } catch (e) { console.error('desgaste', e); }
 }
 
 /** Tirar do corpo. */

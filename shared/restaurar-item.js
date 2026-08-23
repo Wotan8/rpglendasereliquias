@@ -14,7 +14,7 @@
 // modelo não define vira `null` explícito: sem isso o merge deixaria viva
 // justamente a alteração que o Mestre mandou apagar.
 // =============================================================
-import { CAMPOS_EQUIPAMENTO, instanciarDoModelo, normalizaFormaEquipar } from './equip-campos.js?v=10';
+import { CAMPOS_EQUIPAMENTO, instanciarDoModelo, normalizaFormaEquipar } from './equip-campos.js?v=11';
 
 /** Campos que a instância guarda com OUTRO nome que o catálogo. */
 const RENOME = { imagemUrl: 'imagem', mecanicaIds: 'mecanicaIdsProprias' };
@@ -52,6 +52,13 @@ export function patchRestauracao(tpl) {
     p.equipavelEm = (p.equipavelEm || []).length ? p.equipavelEm : null;
     p.mecanicaIdsProprias = p.mecanicaIdsProprias || [];
 
+    /* 🧱 Restaurar CONSERTA: a peça volta inteira. `avaria` não é campo de
+       CAMPOS_EQUIPAMENTO, então não vinha junto pela iteração acima — e sem
+       esta linha a Integridade seria uma barra que só desce, o jeito mais
+       rápido de uma regra morrer. É o conserto do ferreiro, e é a única UI de
+       conserto que existe: o botão já está em cinco telas. */
+    p.avaria = 0;
+
     // "Segurar" desliga TODO efeito da peça. A checagem roda sobre o MODELO
     // porque lá as mecânicas ainda se chamam `mecanicaIds`.
     const espelho = { ...doModelo, formaEquipar: p.formaEquipar };
@@ -71,6 +78,7 @@ export function textoConfirmacao(item, tpl) {
     return `Restaurar "${item?.nome || item?.name || 'este item'}" ao cadastro de "${tpl?.nome || 'modelo'}"?\n\n`
         + 'Tudo que foi alterado NESTA peça volta ao que o catálogo diz — nome, dano, '
         + 'vínculos, tags, imagem.\n'
+        + 'A peça também volta INTEIRA: a Integridade é restaurada ao máximo.\n'
         + 'Onde ela está, com quem, em que slot e quantas unidades NÃO mudam.';
 }
 

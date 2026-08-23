@@ -9,6 +9,9 @@
 // Saída:    { attrs, derived, infos, avisos }
 // =============================================
 
+// O motor e puro: importa em vez de olhar `window` como o resto do painel faz.
+import { integridadeZerada } from '../../shared/inventario-motor.js?v=6';
+
 const ATTR_SIGLAS = ['INT', 'RAC', 'PRS', 'FOR', 'DES', 'VIG', 'PRE', 'MAN', 'AUT'];
 
 const ATTR_NOMES = {
@@ -203,8 +206,20 @@ function _npcReqNome(req, ctx) {
     return tpl?.nome || t.value;
 }
 
-function _npcItemFormas(item) {
+/** Modelo do catalogo do item — a Integridade herda dele quando a instancia cala. */
+function _npcTplDoItem(item, catalogo) {
+    if (!item?.modeloId) return null;
+    return (catalogo || []).find(t => t.id === item.modeloId) || null;
+}
+
+function _npcItemFormas(item, catalogo) {
     const formas = [];
+    /* Integridade zerada silencia a peca: continua equipada, continua pesando,
+       nao faz mais nada. O predicado esta duplicado em tres arquivos (ficha,
+       Tabuleiro, motor de NPC) e o corte tem de ser nos tres — senao item
+       arruinado segue dando bonus em duas telas. */
+    if (integridadeZerada(item, _npcTplDoItem(item, catalogo))) return formas;
+
     if (!item.equipado || item.parentItemId || item.estadoEquip === 'armazenado') return formas;
     if (item.estadoEquip === 'fixado') { formas.push('fixado'); return formas; }
     if (item.estadoEquip === 'segurar') { formas.push('segurando'); return formas; }
@@ -245,10 +260,11 @@ function _npcMatchItems(req, ctx) {
 }
 
 /** Item equipado numa das formas exigidas (lista vazia = qualquer forma equipada). */
-function _npcItemEquipValido(item, formas) {
-    if (!item.equipado || item.parentItemId || item.estadoEquip === 'armazenado') return false;
+function _npcItemEquipValido(item, formas, catalogo) {
+    // Peca arruinada nao serve de requisito: _npcItemFormas devolve lista vazia.
+    const atuais = _npcItemFormas(item, catalogo);
+    if (!atuais.length) return false;
     if (!formas || formas.length === 0) return true;
-    const atuais = _npcItemFormas(item);
     return formas.some(f => atuais.includes(f));
 }
 
@@ -256,14 +272,14 @@ function _npcItemEquipValido(item, formas) {
 function _npcCountReq(req, ctx) {
     const formas = _npcReqFormas(req);
     return _npcMatchItems(req, ctx)
-        .filter(i => _npcItemEquipValido(i, formas))
+        .filter(i => _npcItemEquipValido(i, formas, ctx?.equipCatalog))
         .reduce((s, i) => s + (parseInt(i.quantidade, 10) || 1), 0);
 }
 
 /** Itens com Efeitos Ativos — os que aplicam as próprias mecânicas. */
 function _npcItensComEfeitos(ctx) {
     const items = Array.isArray(ctx?.inventoryItems) ? ctx.inventoryItems : [];
-    return items.filter(i => _npcItemFormas(i).includes('efeitos'));
+    return items.filter(i => _npcItemFormas(i, ctx?.equipCatalog).includes('efeitos'));
 }
 
 /**

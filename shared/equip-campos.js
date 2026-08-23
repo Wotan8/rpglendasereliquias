@@ -96,6 +96,11 @@ export const CAMPOS_EQUIPAMENTO = [
     // cobra que a Blindagem tenha subido junto.
     { key: 'reforco', label: '🛡️ Reforço (acabamento de proteção — teto é a Qualidade)', type: 'number', placeholder: '0 a 5' },
     { key: 'blindagemQ0', label: '⚓ Blindagem quando nova (âncora do audit — não editar à toa)', type: 'number', placeholder: '0' },
+    /* Quanto a peça aguenta. Vazio = derivar de (Liga + Tamanho) × 3, que é a
+       forma do §7.6 na escala do §2.8 — ver integridadeMax em
+       shared/inventario-motor.js. Este campo é a manopla de calibração, como
+       pressaoBase: só preencha para fugir da régua. */
+    { key: 'integridadeBase', label: '🧱 Integridade máxima (vazio = derivar de Liga + Tamanho)', type: 'number', placeholder: '0 = derivar' },
     { key: 'preco', label: '💰 Preço base (L$)', type: 'number', placeholder: 'Ex: 1100' },
     { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
     { key: 'imagemUrl', label: 'Imagem (URL)', type: 'text', placeholder: 'https://...' },
@@ -213,7 +218,7 @@ const HERDA_DO_MODELO = new Set([
     'liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'preco', 'formulaDano', 'formulaDano2Maos',
     'valoresDerivadosVinculados', 'statusVitaisVinculados', 'atributosVinculados',
     'periciasVinculadas', 'condicaoIds', 'slotsAdicionais', 'tags', 'tipoGolpe',
-    'equipavelEmGuardado',
+    'equipavelEmGuardado', 'integridadeBase',
 ]);
 export const herdaDoModelo = (key) => HERDA_DO_MODELO.has(key);
 

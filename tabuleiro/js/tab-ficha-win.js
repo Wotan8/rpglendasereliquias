@@ -33,7 +33,8 @@ import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, itensIdenticos, escolherQtd,
     tplDoItem as tplDoItemMotor, formulaDanoDoItem as formulaDanoMotor, fmtN,
     htmlInventario as htmlInvMotor, tratarClique as tratarCliqueInv, iniciarArrasto, cabeNoConteiner,
-} from '../../shared/inventario-motor.js?v=5';
+    integridadeZerada, integridadeDe, integridadeMax, perdaSobrecarga, perdaFalhaCritica, GATILHO,
+} from '../../shared/inventario-motor.js?v=6';
 
 // Mesmo ritmo do painel de combate (ver CUSTOS-FIRESTORE.md): cliques rápidos
 // em ± não viram um write por clique.
@@ -913,6 +914,12 @@ const formulaDanoDoItem = (i) => formulaDanoMotor(i, _sys);
  *  e itemFormasAtuais (ficha): equipado, fora de contêiner, no estado que a
  *  forma de equipar pede; segurar/fixado não ligam os efeitos. */
 function temEfeitosAtivos(i) {
+    /* Integridade zerada silencia a peca: continua equipada, continua pesando,
+       nao faz mais nada. O predicado esta duplicado em tres arquivos (ficha,
+       Tabuleiro, motor de NPC) e o corte tem de ser nos tres — senao item
+       arruinado segue dando bonus em duas telas. */
+    if (integridadeZerada(i, tplDoItemMotor(i, _sys))) return false;
+
     if (!i.equipado || i.parentItemId || i.estadoEquip === 'armazenado') return false;
     if (i.estadoEquip === 'fixado' || i.estadoEquip === 'segurar') return false;
     if (i.formaEquipar) {
@@ -1192,6 +1199,8 @@ export async function linhasDeAtaque(tipo, id) {
             continue;
         }
         const i = itens.find(x => (x.nome || 'Item') === l.nome);
+        // 🧱 Qual peca deu este golpe: e ela que paga a Falha Critica (§5.5).
+        l.itemId = i?.id || null;
         l.alcanceM = Number(i?.alcanceM ?? (i ? tplDoItem(i)?.alcanceM : 0)) || 0;
         // 🏹 Arma a distância não tem arco de balanço: mira por alvo (ver tab-turno)
         l.distancia = (i?.categoriaArma || (i ? tplDoItem(i)?.categoriaArma : '')) === 'distancia';

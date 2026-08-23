@@ -69,6 +69,8 @@ export function metaDoGolpe(l) {
         tipos: (l.tiposGolpe || []).map(t => t.nome),
         distancia: !!l.distancia,
         desarmado: !!l.desarmado,
+        // 🧱 A peca que paga a Falha Critica (§5.5). Desarmado nao tem peca.
+        itemId: l.itemId || null,
     };
 }
 

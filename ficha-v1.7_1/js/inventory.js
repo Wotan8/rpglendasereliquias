@@ -299,6 +299,13 @@ function itemFormasAtuais(item) {
  * `equipavelEm`. É o predicado que decide se as mecânicas do item valem.
  */
 function itemTemEfeitosAtivos(item) {
+    /* Integridade zerada silencia a peca: continua equipada, continua pesando,
+       nao faz mais nada. O predicado esta duplicado em tres arquivos (ficha,
+       Tabuleiro, motor de NPC) e o corte tem de ser nos tres — senao item
+       arruinado segue dando bonus em duas telas. */
+    const tplInt = item?.modeloId ? (window._inventoryState.catalog || []).find(t => t.id === item.modeloId) : null;
+    if (window.InvMotor?.integridadeZerada(item, tplInt)) return false;
+
     if (!itemFormasAtuais(item).includes('efeitos')) return false;
 
     const equipavelEm = Array.isArray(item.equipavelEm)
@@ -1950,10 +1957,43 @@ window.moveToContainer = async function(itemId, destinoId) {
         }
         if (typeof recalcAll === 'function') recalcAll();
         if (aviso) alert('⚠️ ' + aviso);
+        await _desgastarPorConteudo(contItem, tplCont);
     } catch (e) {
         console.error('❌ Erro ao mover para container:', e);
     }
 };
+
+/**
+ * 🧱 Sobrecarga cobra Integridade quando o conteúdo muda. Só cobra de contêiner
+ * que passou do teto cadastrado — a maioria nem calcula. Zerou, rompe: os itens
+ * de dentro perdem o `parentItemId` e reaparecem em Itens Soltos, que é
+ * literalmente "sem pai e não equipado". Nada é apagado.
+ */
+async function _desgastarPorConteudo(cont, tpl) {
+    const M = window.InvMotor;
+    if (!M || !cont) return;
+    const r = M.desgastarConteiner(cont, window._inventoryState.items, tpl, M.GATILHO.conteudo);
+    if (!r.perda) return;
+    try {
+        const { doc, updateDoc, increment } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        const db = _getFirestore();
+        await updateDoc(doc(db, 'items', cont.id), { avaria: increment(r.perda) });
+        cont.avaria = (Number(cont.avaria) || 0) + r.perda;
+
+        if (r.rompeu) {
+            for (const id of r.filhos) {
+                await _firestoreSetDoc('items', id, { parentItemId: null, lastModified: new Date().toISOString() });
+                const f = window._inventoryState.items.find(x => x.id === id);
+                if (f) f.parentItemId = null;
+            }
+            if (window._openContainerId === cont.id) window._openContainerId = null;
+            alert(`🎒 ${cont.nome || 'O contêiner'} rompeu — ${r.filhos.length} item(ns) foram para Itens Soltos.`);
+        }
+        renderEquippedItems();
+        renderInventoryTab();
+        recalcInventoryPressure();
+    } catch (e) { console.error('❌ Erro ao desgastar contêiner:', e); }
+}
 
 window.updateItemQuantity = async function(itemId, newQty) {
     if (!window.podeEditarItens()) return;

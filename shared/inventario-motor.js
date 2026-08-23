@@ -143,6 +143,12 @@ export function cabeNoConteiner(item, cont, itens, tpl) {
     if (ehContainer(item)) return { ok: false, motivo: 'Contêiner não entra em contêiner' };
     if (item.parentItemId === cont.id) return { ok: false, motivo: '' };   // já está lá, sem alarde
 
+    // Rompido não recebe mais nada: sem isto o jogador re-enche o saco furado no
+    // turno seguinte e a regra vira decoração.
+    if (integridadeZerada(cont, tpl)) {
+        return { ok: false, motivo: `${cont.nome || 'O contêiner'} está rompido` };
+    }
+
     const cap = capacidadeDe(cont, tpl);
     if (cap > 0) {
         const dentro = (itens || []).filter(x => x.parentItemId === cont.id && x.id !== item.id).length;
@@ -161,6 +167,113 @@ export function avisoDePeso(item, cont, itens, tpl, qtd) {
     const total = pesoDentro(cont.id, itens, item.id) + (parseFloat(item.peso) || 0) * q;
     if (total <= pmax + 1e-9) return null;
     return `${cont.nome || 'O contêiner'} passa do peso: ${total.toFixed(2)} kg de ${pmax} kg`;
+}
+
+/* ===== INTEGRIDADE =====
+   Quanto a peça aguenta antes de parar de servir. O Livro §7.6 já publicou o
+   termo e a forma para objetos de cenário — "Integridade (Dureza + Tamanho)" —
+   e §5.5 já converte Liga em Dureza. Aqui é a mesma ideia na escala de
+   Vitalidade do §2.8, `(VIG + Tamanho) × 3`:
+
+       integridadeMax = (Liga + Tamanho) × 3, nunca menos que 3
+
+   Nenhuma constante nova. Nos contêineres reais dá 6 a 24, e a Mochila Média
+   cai em 18 — a Vitalidade de referência do sistema.
+
+   Liga vazia lê 1 e não 0 porque §5.5 define Liga 0 como "improvisada — pedra,
+   galho, garrafa quebrada". Peça de catálogo, com preço, não é improvisada:
+   Liga 0 tem de ser declarada. Isso cobre 143 modelos sem escrever um byte.
+
+   ⚠️ O que se GRAVA é `avaria`, o dano acumulado — nunca "quanto resta".
+   Dois motivos:
+     · `increment(perda)` é aplicado pelo servidor. Guardar o que resta é
+       ler-modificar-escrever sobre o cache persistente multi-aba, e mestre no
+       Tabuleiro com jogador na ficha perderiam escrita em silêncio.
+     · Subir a Liga da peça sobe o máximo sozinha, e o estrago continua sendo o
+       mesmo estrago.
+   O nome `integridade` está ocupado: 143 docs vivos de `items` carregam o campo
+   com dado de v1.6 (valores 1 a 10 e um 999999, e em 62 deles nem bate com a
+   fórmula do Livro). `desgaste` também está, como CHANCE, no Laboratorium. */
+
+/** Máximo da peça. `integridadeBase` no cadastro vence a derivação. */
+export function integridadeMax(item, tpl) {
+    const base = Number(item?.integridadeBase ?? tpl?.integridadeBase) || 0;
+    if (base > 0) return base;
+    const liga = Number(item?.liga ?? tpl?.liga);
+    const tam = Number(item?.tamanho ?? tpl?.tamanho) || 1;
+    // Liga ausente lê 1 (Bruta); Liga 0 declarada é improvisada e vale 0 mesmo.
+    const dureza = Number.isFinite(liga) ? liga : 1;
+    return Math.max(3, (dureza + tam) * 3);
+}
+
+/** Quanto resta. Nunca negativo. */
+export function integridadeDe(item, tpl) {
+    return Math.max(0, integridadeMax(item, tpl) - (Number(item?.avaria) || 0));
+}
+
+/** A peça está arruinada? Item arruinado não aplica efeito nenhum. */
+export function integridadeZerada(item, tpl) {
+    return integridadeDe(item, tpl) <= 0;
+}
+
+/**
+ * Perda por SOBRECARGA. Razão, nunca quilo absoluto: o teto varia 300× no
+ * catálogo (aljava 1 kg, bolsa 300 kg), e excedente em kg esmagaria a aljava e
+ * faria cócegas na bolsa.
+ *
+ *     excesso = min(max(0, pesoDentro ÷ teto − 1), 2)
+ *     perda   = peso do gatilho × excesso
+ *
+ * Sem arredondar para baixo: `floor` tornaria o gatilho de movimento
+ * inalcançável para os contêineres de pool pequeno em QUALQUER carga, e
+ * inverteria o começo do estrago — a mochila cara apodreceria antes do saco
+ * barato. Teto de excesso em 2 (3× o limite): acima disso a bolsa já arrebentou
+ * na ficção, e é o que impede o lixo do banco de virar Infinity.
+ *
+ * Sem `pesoMaximoContainer` cadastrado a regra não existe — mesma doutrina de
+ * cabeNoConteiner, que se recusou a inventar um padrão.
+ *
+ * @param gatilho GATILHO.conteudo (1) ou GATILHO.movimento (0,333)
+ */
+export const GATILHO = { conteudo: 1, movimento: 1 / 3 };
+
+export function perdaSobrecarga(cont, itens, tpl, gatilho) {
+    const pmax = pesoMaxDe(cont, tpl);
+    if (!pmax || !ehContainer(cont)) return 0;
+    const r = pesoDentro(cont.id, itens) / pmax;
+    const excesso = Math.min(Math.max(0, r - 1), 2);
+    if (!excesso) return 0;
+    return (Number(gatilho) || 0) * excesso;
+}
+
+/**
+ * Perda por FALHA CRÍTICA (§5.5). O acabamento continua sendo escolha do
+ * Narrador (§6.7); isto é a consequência que o Tabuleiro aplica sozinho.
+ *
+ * 1 ponto, sempre. A escada já está na faixa: 1 é um sétimo de uma adaga e um
+ * vigésimo de um espadão, porque o máximo escala com Liga e Tamanho.
+ *
+ * Liga 0 é o caso que o Livro já resolvia: "armas improvisadas tendem a
+ * quebrar: numa Falha Crítica, a arma é destruída".
+ */
+/**
+ * O veredito de um gatilho de sobrecarga, para o host so traduzir em escrita.
+ * @returns {{perda:number, rompeu:boolean, filhos:string[]}} `filhos` sao os
+ *   ids que vao para Itens Soltos quando o conteiner rompe.
+ */
+export function desgastarConteiner(cont, itens, tpl, gatilho) {
+    const perda = perdaSobrecarga(cont, itens, tpl, gatilho);
+    if (!perda) return { perda: 0, rompeu: false, filhos: [] };
+    const rompeu = ((Number(cont.avaria) || 0) + perda) >= integridadeMax(cont, tpl);
+    const filhos = rompeu ? (itens || []).filter(x => x.parentItemId === cont.id).map(x => x.id) : [];
+    return { perda, rompeu, filhos };
+}
+
+export function perdaFalhaCritica(item, tpl) {
+    if (!item || item.desarmado) return 0;
+    const liga = Number(item.liga ?? tpl?.liga);
+    if (liga === 0) return integridadeMax(item, tpl);   // improvisada: acaba ali
+    return 1;
 }
 
 /** Detalhe expandido: TODAS as informações do item (instância + modelo do catálogo). */

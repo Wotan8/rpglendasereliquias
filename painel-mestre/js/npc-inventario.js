@@ -4,7 +4,7 @@
 // anatomia/slots do NPC e transferências (NPC ⇄ NPC / Personagem / Caixa).
 // Respeita a lógica de logs do painel (addLog → coleção 'logs').
 // =============================================
-import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, query, where, updateDoc, writeBatch } from './firebase-config.js';
+import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, query, where, updateDoc, writeBatch, increment } from './firebase-config.js';
 import { linhasDeDisparo } from '../../shared/alcance-disparo.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
@@ -16,11 +16,12 @@ import * as SEL from '../../painel-criador/js/painel-mechanics.js';
 import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
     htmlInventario, tratarClique, iniciarArrasto, tplDoItem, cabeNoConteiner,
-} from '../../shared/inventario-motor.js?v=5';
+    desgastarConteiner, GATILHO,
+} from '../../shared/inventario-motor.js?v=6';
 import {
     camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo,
-} from '../../shared/equip-campos.js?v=10';
+} from '../../shared/equip-campos.js?v=11';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML } from '../../shared/restaurar-item.js?v=1';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário
@@ -361,6 +362,7 @@ async function moverItemNpc(itemId, alvo) {
             await lote.commit();
         }
         NI.contAbertos.add(contId);
+        await _desgastarPorConteudo(c);
         _logItem(`📦 ${plano.qtd}× "${i.nome || 'Item'}" guardado em "${c.nome || 'contêiner'}"`, [
             { label: 'Item', from: i.nome || itemId, to: i.nome || itemId },
             { label: 'Contêiner', from: '—', to: c.nome || contId },
@@ -368,6 +370,29 @@ async function moverItemNpc(itemId, alvo) {
         ]);
         await loadNpcInventory();
     } catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
+}
+
+/**
+ * 🧱 Sobrecarga cobra Integridade quando o conteudo muda. So cobra de conteiner
+ * que passou do teto cadastrado. Zerou, rompe: os filhos perdem o parentItemId
+ * e reaparecem em Itens Soltos. Nada e apagado.
+ */
+async function _desgastarPorConteudo(cont) {
+    const tpl = tplDoItem(cont, window._npcSys || window._systemData || {});
+    const r = desgastarConteiner(cont, NI.items, tpl, GATILHO.conteudo);
+    if (!r.perda) return;
+    try {
+        await updateDoc(doc(db, 'items', cont.id), { avaria: increment(r.perda) });
+        if (r.rompeu) {
+            const lote = writeBatch(db);
+            for (const id of r.filhos) lote.update(doc(db, 'items', id), { parentItemId: null });
+            await lote.commit();
+            _logItem(`🎒 "${cont.nome || 'Contêiner'}" rompeu — ${r.filhos.length} item(ns) para Itens Soltos`,
+                [{ label: 'Integridade', from: 'sobrecarregado', to: '0' }]);
+            showAlert(`🎒 ${cont.nome || 'O contêiner'} rompeu — ${r.filhos.length} item(ns) foram para Itens Soltos`, 'warning');
+        }
+        await loadNpcInventory();
+    } catch (e) { console.error('desgaste', e); }
 }
 
 /** Log de inventário no padrão do painel (mesmos campos dos demais). */

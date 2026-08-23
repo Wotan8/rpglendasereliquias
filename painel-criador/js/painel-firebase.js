@@ -4,7 +4,7 @@
 // =============================================
 
 import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=16';
-import { CAMPOS_EQUIPAMENTO, normalizaFormaEquipar } from '../../shared/equip-campos.js?v=10';
+import { CAMPOS_EQUIPAMENTO, normalizaFormaEquipar } from '../../shared/equip-campos.js?v=11';
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 import { versaoDoLivro } from '../../shared/livros-pub.js';
 
