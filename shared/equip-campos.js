@@ -37,6 +37,12 @@ export const CAMPOS_EQUIPAMENTO = [
     },
     { key: 'tags', label: '🏷️ Tags', type: 'tags', placeholder: 'Digite e Enter para adicionar (Ex: metálico, mágico, leve)' },
     { key: 'equipavelEm', label: 'Equipável em', type: 'body_parts_selector' },
+    /* Onde a peça é só CARREGADA, sem efeito: arco nas Costas, escudo no Braço,
+       alaúde pendurado no Pescoço. Sempre resolve para o estado "Fixado", que
+       não aplica mecânica. Sem esta lista, o cadastro tentava dizer a mesma
+       coisa pondo a parte em `equipavelEm` — e ela virava letra morta, porque
+       Costas não empunha. Ver formaNoSlot em shared/equip-slots.js. */
+    { key: 'equipavelEmGuardado', label: '🎒 Guardável em (carregada sem efeito)', type: 'body_parts_selector' },
     // Slots ALÉM do principal. Espada de duas mãos = +1 Mão; armadura
     // completa = +1 Pernas, +2 Braço. É COBERTURA, não requisito: o que não
     // existir no corpo ou estiver tomado simplesmente não é ocupado.
@@ -207,6 +213,7 @@ const HERDA_DO_MODELO = new Set([
     'liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'preco', 'formulaDano', 'formulaDano2Maos',
     'valoresDerivadosVinculados', 'statusVitaisVinculados', 'atributosVinculados',
     'periciasVinculadas', 'condicaoIds', 'slotsAdicionais', 'tags', 'tipoGolpe',
+    'equipavelEmGuardado',
 ]);
 export const herdaDoModelo = (key) => HERDA_DO_MODELO.has(key);
 

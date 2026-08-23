@@ -30,7 +30,8 @@
   </div>
 </div>
 
-<script src="../shared/equip-slots.js"></script>
+<!-- sem cache: arnes tem de ler o arquivo do disco, senao testa o de ontem -->
+<script>document.write('<script src="../shared/equip-slots.js?t=' + Date.now() + '"><\/script>');</script>
 <script src="js/inventory.js?c=1"></script>
 <script type="module">
 import * as InvMotor from '../shared/inventario-motor.js?v=5';

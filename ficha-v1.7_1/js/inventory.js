@@ -1207,12 +1207,17 @@ function _getCompatibleSlots(item) {
     const slotRestritoLegacy = Array.isArray(item.slotRestrito) ? item.slotRestrito : (item.slotRestrito ? [item.slotRestrito] : []);
     const restricoes = equipavelEm.length > 0 ? equipavelEm : slotRestritoLegacy;
 
+    // Onde a peça é só CARREGADA (arco nas Costas, escudo no Braço). A regra
+    // mora em shared/equip-slots.js — os quatro inventários usam a mesma.
+    const guarda = window.EquipSlots.partesDeGuarda(item, window._inventoryState.catalog);
+
     for (const [slotKey, slotDef] of Object.entries(bodySlots)) {
         const isNative = restricoes.length === 0 || restricoes.includes(slotDef.partId);
+        const ehGuarda = guarda.includes(slotDef.partId);
         const canHold = !!slotDef.podeSegurar;
 
-        // Adiciona à lista se for slot nativo OU se o slot permitir segurar itens
-        if (!isNative && !canHold) continue;
+        // Entra se for slot de uso, de guarda, ou se o slot souber segurar
+        if (!isNative && !ehGuarda && !canHold) continue;
         
         // Contar itens no slot (ignorando 'armazenado' e 'fixado')
         // _itemOcupaSlot e não slotAnatomico: sem isso a 2a mão de uma arma de
@@ -1269,6 +1274,15 @@ function _getAvailableStates(item, slotKey) {
     const slotRestritoLegacy = Array.isArray(item.slotRestrito) ? item.slotRestrito : (item.slotRestrito ? [item.slotRestrito] : []);
     const restricoes = equipavelEm.length > 0 ? equipavelEm : slotRestritoLegacy;
     const isNative = restricoes.length === 0 || restricoes.includes(slotDef.partId);
+
+    /* Parte de GUARDA: a peça só é carregada ali, sem efeito. Vem antes do slot
+       nativo porque é a resposta mais específica — e "Fixado" já é o estado do
+       sistema que não aplica mecânica. */
+    if (!isNative && window.EquipSlots.partesDeGuarda(item, window._inventoryState.catalog).includes(slotDef.partId)) {
+        if (slotDef.podeFixar) states.push('fixado');
+        else if (slotDef.podeSegurar) states.push('segurar');
+        return states;
+    }
 
     // Se é o slot nativo dele
     if (isNative) {

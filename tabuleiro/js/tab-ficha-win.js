@@ -509,14 +509,34 @@ function optsSlotEquipar(item, slots, itens, itemId) {
     const ocupados = new Set(itens.filter(i => i.equipado && i.id !== itemId)
         .flatMap(i => ES ? ES.slotsDoItem(i) : [i.slotAnatomico]).filter(Boolean));
     const permitidas = Array.isArray(item.equipavelEm) && item.equipavelEm.length ? new Set(item.equipavelEm) : null;
+    // Onde a peça é só carregada, sem efeito (arco nas Costas, escudo no Braço).
+    const guardaveis = new Set(ES ? ES.partesDeGuarda(item, _sys.equipment) : []);
 
     return Object.keys(slots).map(k => {
         const s = slots[k];
-        const bloq = permitidas && !permitidas.has(s.partId);
+        const ehGuarda = guardaveis.has(s.partId);
+        const bloq = permitidas && !permitidas.has(s.partId) && !ehGuarda;
         const ocup = ocupados.has(k);
-        return `<option value="${esc(k)}" ${bloq || ocup ? 'disabled' : ''}>${esc(s.icon)} ${esc(s.label)}${ocup ? ' (ocupado)' : ''}${bloq ? ' (não permitido)' : ''}</option>`;
+        const estados = ES ? ES.estadosNoSlot(item, s, _sys.equipment) : [];
+        const semEstado = !bloq && estados.length === 0;
+        return `<option value="${esc(k)}" data-estados="${esc(estados.join(','))}" ${bloq || ocup || semEstado ? 'disabled' : ''}>${esc(s.icon)} ${esc(s.label)}${ocup ? ' (ocupado)' : ''}${bloq ? ' (não permitido)' : ''}${ehGuarda ? ' 🎒 guardar' : ''}${semEstado ? ' (não aceita)' : ''}</option>`;
     }).join('');
 }
+
+/** O estado segue o slot: parte de guarda só aceita Fixado. */
+function estadoSegueSlot() {
+    const sSlot = document.getElementById('tbEqSlot');
+    const sEstado = document.getElementById('tbEqEstado');
+    if (!sSlot || !sEstado) return;
+    const permitidos = (sSlot.selectedOptions[0]?.dataset.estados || '').split(',').filter(Boolean);
+    let primeiro = null;
+    for (const op of sEstado.options) {
+        op.disabled = permitidos.length > 0 && !permitidos.includes(op.value);
+        if (!op.disabled && primeiro === null) primeiro = op.value;
+    }
+    if (primeiro !== null) sEstado.value = primeiro;
+}
+window._tbEstadoSegueSlot = estadoSegueSlot;
 
 /** Estados de equipe; a `formaEquipar` da peça tranca os que não servem. */
 function optsEstadoEquipar(item) {
@@ -578,7 +598,7 @@ function abrirEquipar(win, itemId) {
             <button class="tb-mini-btn" data-eqx title="Cancelar">✕</button></div>
         <div class="tb-fwin-equip-corpo">
             <div class="tb-form-grid tb-form-grid-1">
-                <label>Slot anatômico<select id="tbEqSlot">${optsSlotEquipar(item, slots, win.itens || [], itemId)}</select></label>
+                <label>Slot anatômico<select id="tbEqSlot" onchange="window._tbEstadoSegueSlot()">${optsSlotEquipar(item, slots, win.itens || [], itemId)}</select></label>
                 <label>Estado<select id="tbEqEstado">${optsEstadoEquipar(item)}</select></label>
                 ${ES && ES.escolheMaos(item) ? `<label>✋ Mãos<select id="tbEqMaos">
                     <option value="1" ${Number(item.maosUsadas) === 2 ? '' : 'selected'}>🤚 1 Mão</option>
@@ -589,6 +609,7 @@ function abrirEquipar(win, itemId) {
         </div>
     </div>`;
     document.body.appendChild(ov);
+    estadoSegueSlot();
     ov.addEventListener('click', async e => {
         if (e.target === ov || e.target.closest('[data-eqx]')) { ov.remove(); return; }
         if (!e.target.closest('[data-eqok]')) return;

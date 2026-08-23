@@ -5,7 +5,8 @@
 <link rel="stylesheet" href="../shared/tokens.css">
 <link rel="stylesheet" href="css/tabuleiro.css?v=14">
 <link rel="stylesheet" href="../shared/inventario-motor.css">
-<script src="../shared/equip-slots.js"></script>
+<!-- sem cache: arnes tem de ler o arquivo do disco, senao testa o de ontem -->
+<script>document.write('<script src="../shared/equip-slots.js?t=' + Date.now() + '"><\/script>');</script>
 <style>
   html,body{margin:0;min-height:100%;background:#0b0e14;color:#e6e8ef;font:14px/1.6 Inter,system-ui,sans-serif}
   #saida{position:fixed;inset:12px auto 12px 12px;width:540px;z-index:210;background:#12161f;

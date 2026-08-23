@@ -468,12 +468,12 @@
     <script src="js/class-modules-renderer.js?v=24"></script>
     <script src="js/runomancia-module.js?v=5"></script>
     <script src="js/item-scope-calc.js?v=3"></script>
-    <script src="../shared/equip-slots.js?v=1"></script>
+    <script src="../shared/equip-slots.js?v=2"></script>
     <!-- Motor de arrasto do inventário (mesmo do Tabuleiro e do Painel do Mestre).
          inventory.js é script clássico, então o módulo entra por window. -->
     <script type="module">
         import * as InvMotor from '../shared/inventario-motor.js?v=5';
-        import * as EquipCampos from '../shared/equip-campos.js?v=9';
+        import * as EquipCampos from '../shared/equip-campos.js?v=10';
         // Os construtores de seletor do Painel do Criador: o formulário de item
         // da ficha mostra os MESMOS controles do cadastro de Equipamento.
         // painel-mechanics.js não importa nada — só lê globais window._*Cache.

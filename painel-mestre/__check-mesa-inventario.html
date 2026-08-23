@@ -29,7 +29,8 @@
   <div id="tela" style="max-height:420px;overflow-y:auto"></div>
 </div>
 
-<script src="../shared/equip-slots.js"></script>
+<!-- sem cache: arnes tem de ler o arquivo do disco, senao testa o de ontem -->
+<script>document.write('<script src="../shared/equip-slots.js?t=' + Date.now() + '"><\/script>');</script>
 <script type="module">
 import { _pintarHosts } from './js/area-mesas-inventario.js?c=1';
 import { alvoSob } from '../shared/inventario-motor.js?v=5';

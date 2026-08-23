@@ -20,7 +20,7 @@ import {
 import {
     camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo,
-} from '../../shared/equip-campos.js?v=9';
+} from '../../shared/equip-campos.js?v=10';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML } from '../../shared/restaurar-item.js?v=1';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário
@@ -670,12 +670,21 @@ window.openNpcEquipModal = function(itemId) {
 
     // Restringe às partes permitidas do item, se definidas
     const permitidas = Array.isArray(item.equipavelEm) && item.equipavelEm.length ? new Set(item.equipavelEm) : null;
+    // Onde a peça é só carregada, sem efeito (arco nas Costas, escudo no Braço).
+    const guardaveis = new Set(window.EquipSlots.partesDeGuarda(item, _catalogo()));
 
+    /* O estado tem de seguir o slot: numa parte de guarda a peça só pode ser
+       Fixada. Sem isso dava para escolher "Empunhado" nas Costas e a ficha
+       recusava depois, em silêncio. */
+    const estadosPorSlot = {};
     const opts = slotKeys.map(k => {
         const s = slots[k];
-        const bloqueadoPorParte = permitidas && !permitidas.has(s.part.id);
+        const ehGuarda = guardaveis.has(s.part.id);
+        const bloqueadoPorParte = permitidas && !permitidas.has(s.part.id) && !ehGuarda;
         const ocupado = ocupados.has(k);
-        return `<option value="${k}" ${bloqueadoPorParte || ocupado ? 'disabled' : ''}>${s.icon} ${escapeHtml(s.label)}${ocupado ? ' (ocupado)' : ''}${bloqueadoPorParte ? ' (não permitido)' : ''}</option>`;
+        estadosPorSlot[k] = window.EquipSlots.estadosNoSlot(item, s.part, _catalogo());
+        const semEstado = !bloqueadoPorParte && estadosPorSlot[k].length === 0;
+        return `<option value="${k}" ${bloqueadoPorParte || ocupado || semEstado ? 'disabled' : ''}>${s.icon} ${escapeHtml(s.label)}${ocupado ? ' (ocupado)' : ''}${bloqueadoPorParte ? ' (não permitido)' : ''}${ehGuarda ? ' 🎒 guardar' : ''}${semEstado ? ' (não aceita)' : ''}</option>`;
     }).join('');
 
     const forma = item.formaEquipar;
@@ -697,7 +706,8 @@ window.openNpcEquipModal = function(itemId) {
         </div>
         <div class="inv-modal-body">
             <div class="inv-form-group"><label class="inv-form-label">Slot anatômico</label>
-                <select id="npcEquipSlot" class="inv-form-select">${opts}</select></div>
+                <select id="npcEquipSlot" class="inv-form-select"
+                    onchange="window._npcEstadosDoSlot(this.value)">${opts}</select></div>
             <div class="inv-form-group" style="margin-top:10px"><label class="inv-form-label">Estado</label>
                 <select id="npcEquipEstado" class="inv-form-select">${estadoOpts}</select></div>
             ${window.EquipSlots.escolheMaos(item) ? `
@@ -713,6 +723,22 @@ window.openNpcEquipModal = function(itemId) {
         </div>
     </div>`;
     document.body.appendChild(modal);
+    modal._estadosPorSlot = estadosPorSlot;
+    window._npcEstadosDoSlot(document.getElementById('npcEquipSlot')?.value);
+};
+
+/** O estado segue o slot: parte de guarda só aceita Fixado. */
+window._npcEstadosDoSlot = function(slotKey) {
+    const modal = document.getElementById('npcEquipModal');
+    const sel = document.getElementById('npcEquipEstado');
+    if (!modal || !sel) return;
+    const permitidos = (modal._estadosPorSlot || {})[slotKey] || [];
+    let primeiro = null;
+    for (const op of sel.options) {
+        op.disabled = permitidos.length > 0 && !permitidos.includes(op.value);
+        if (!op.disabled && primeiro === null) primeiro = op.value;
+    }
+    if (primeiro !== null) sel.value = primeiro;
 };
 
 window.confirmNpcEquip = async function(itemId) {

@@ -38,6 +38,87 @@
         return (tpl && Array.isArray(tpl[key])) ? tpl[key] : [];
     }
 
+    /* ===== EQUIPAR versus GUARDAR =====
+       Uma peça tem DUAS listas de partes no cadastro:
+
+         equipavelEm          onde ela é USADA, na Forma de Equipar dela
+         equipavelEmGuardado  onde ela é só CARREGADA, sem efeito nenhum
+
+       É o que o cadastro já tentava dizer quando o Arco Curto listava "Mão,
+       Costas" com forma `empunhar`: arco nas costas não atira. Antes disso a
+       parte extra virava letra morta — aparecia no modal e não oferecia estado.
+
+       Guardar SEMPRE resolve para o estado `fixado`, que o sistema já define
+       como "pendurado/anexado para saque rápido" e que não aplica mecânica.
+       Isso é cinto e suspensório: o estado não liga efeito, e a parte também
+       não está em `equipavelEm`, que é o outro portão (itemTemEfeitosAtivos). */
+
+    /** Partes em que a peça é só carregada: arco nas costas, escudo no braço. */
+    function partesDeGuarda(item, catalog) {
+        return campoComModelo(item, 'equipavelEmGuardado', catalog);
+    }
+
+    /** Partes em que a peça é usada de verdade. Vazio = qualquer uma serve. */
+    function partesDeUso(item, catalog) {
+        const legado = campoComModelo(item, 'slotRestrito', catalog);
+        const proprias = campoComModelo(item, 'equipavelEm', catalog);
+        return proprias.length ? proprias : legado;
+    }
+
+    /**
+     * O que a peça faz NESTA parte do corpo.
+     * @returns {{guarda: boolean, forma: string|null}} `forma` é a Forma de
+     *   Equipar que vale ali; guarda=true força 'fixar' e nenhum efeito.
+     */
+    function formaNoSlot(item, partId, catalog) {
+        const uso = partesDeUso(item, catalog);
+        // Sem restrição, ou parte de uso: a Forma de Equipar da peça manda.
+        if (!uso.length || uso.includes(partId)) {
+            return { guarda: false, forma: (item && item.formaEquipar) || null };
+        }
+        if (partesDeGuarda(item, catalog).includes(partId)) {
+            return { guarda: true, forma: 'fixar' };
+        }
+        // Parte fora das duas listas: regra antiga (só entra se souber segurar).
+        return { guarda: false, forma: (item && item.formaEquipar) || null };
+    }
+
+    const _CAPACIDADE = { segurar: 'podeSegurar', empunhar: 'podeEmpunhar', vestir: 'podeVestir', fixar: 'podeFixar' };
+    const _ESTADO = { segurar: 'segurar', empunhar: 'empunhado', vestir: 'vestido', fixar: 'fixado' };
+
+    /**
+     * Estados que a peça aceita NESTA parte do corpo. Lista vazia = a parte não
+     * serve para ela. É o que os quatro modais de equipar consultam, para o
+     * mesmo item nunca oferecer coisas diferentes em telas diferentes.
+     * @param parte objeto da parte, com as flags pode*
+     */
+    function estadosNoSlot(item, parte, catalog) {
+        if (!parte) return [];
+        /* Parte sem NENHUMA das quatro flags e dado legado, nao proibicao: copia
+           velha de personagem, NPC importado, semeadura de teste. Bloquear tudo
+           ali trancaria fichas antigas fora do proprio corpo — entao a Forma de
+           Equipar da peca passa, e quem decide e o cadastro da parte quando ele
+           existir. */
+        const semFlags = !parte.podeSegurar && !parte.podeEmpunhar && !parte.podeVestir && !parte.podeFixar;
+        const r = formaNoSlot(item, parte.id || parte.partId, catalog);
+        if (semFlags) return [r.guarda ? 'fixado' : (_ESTADO[r.forma] || 'segurar')];
+        if (r.guarda) {
+            if (parte.podeFixar) return ['fixado'];
+            return parte.podeSegurar ? ['segurar'] : [];
+        }
+        if (r.forma) {
+            return parte[_CAPACIDADE[r.forma]] ? [_ESTADO[r.forma]] : [];
+        }
+        // Peça sem Forma de Equipar cadastrada: vale o que a parte souber fazer.
+        return Object.keys(_CAPACIDADE).filter(f => parte[_CAPACIDADE[f]]).map(f => _ESTADO[f]);
+    }
+
+    /** A peça pode ir para esta parte, de um jeito ou de outro? */
+    function aceitaSlot(item, partId, catalog) {
+        const uso = partesDeUso(item, catalog);
+        return !uso.length || uso.includes(partId) || partesDeGuarda(item, catalog).includes(partId);
+    }
+
     /**
      * Slots extras que o item cobre, além do principal.
      * @returns {Array<{parteId: string, quantidade: number}>}
@@ -178,5 +259,6 @@
     raiz.EquipSlots = {
         slotsDoItem, itemOcupaSlot, slotsExtrasNecessarios, reservarSlots, planejarEquipar,
         escolheMaos, maosDoItem, vinculoValeComMaos, formulaDanoPorMaos,
+        partesDeGuarda, partesDeUso, formaNoSlot, aceitaSlot, estadosNoSlot,
     };
 })(typeof window !== 'undefined' ? window : globalThis);

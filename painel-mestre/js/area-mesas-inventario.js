@@ -11,7 +11,7 @@ import * as SEL from '../../painel-criador/js/painel-mechanics.js';
 import {
     camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo, modeloDaInstancia,
-} from '../../shared/equip-campos.js?v=9';
+} from '../../shared/equip-campos.js?v=10';
 import { ensureNpcSystemData } from './npc-system-data.js';
 import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
@@ -496,12 +496,22 @@ function _equiparMestre(ownerId, itemId) {
     const ocupados = new Set((dono.itens || []).filter(i => i.equipado && i.id !== itemId)
         .flatMap(i => window.EquipSlots.slotsDoItem(i)));
     const permitidas = Array.isArray(item.equipavelEm) && item.equipavelEm.length ? new Set(item.equipavelEm) : null;
+    // Onde a peça é só carregada, sem efeito (arco nas Costas, escudo no Braço).
+    const guardaveis = new Set(window.EquipSlots.partesDeGuarda(item, _catalogoMestre()));
 
+    /* O estado tem de seguir o slot: numa parte de guarda a peça só pode ser
+       Fixada. Cada opção carrega os estados que aquele slot aceita, e o
+       onchange desliga o resto — sem isso dava para escolher "Empunhado" nas
+       Costas, e a ficha depois recusava em silêncio. */
+    const estadosPorSlot = {};
     const opts = slotKeys.map(k => {
         const s = slots[k];
-        const bloqueadoPorParte = permitidas && !permitidas.has(s.part.id);
+        const ehGuarda = guardaveis.has(s.part.id);
+        const bloqueadoPorParte = permitidas && !permitidas.has(s.part.id) && !ehGuarda;
         const ocupado = ocupados.has(k);
-        return `<option value="${k}" ${bloqueadoPorParte || ocupado ? 'disabled' : ''}>${s.icon} ${escapeHtml(s.label)}${ocupado ? ' (ocupado)' : ''}${bloqueadoPorParte ? ' (não permitido)' : ''}</option>`;
+        estadosPorSlot[k] = window.EquipSlots.estadosNoSlot(item, s.part, _catalogoMestre());
+        const semEstado = !bloqueadoPorParte && estadosPorSlot[k].length === 0;
+        return `<option value="${k}" ${bloqueadoPorParte || ocupado || semEstado ? 'disabled' : ''}>${s.icon} ${escapeHtml(s.label)}${ocupado ? ' (ocupado)' : ''}${bloqueadoPorParte ? ' (não permitido)' : ''}${ehGuarda ? ' 🎒 guardar' : ''}${semEstado ? ' (não aceita)' : ''}</option>`;
     }).join('');
 
     const forma = item.formaEquipar;
@@ -522,7 +532,8 @@ function _equiparMestre(ownerId, itemId) {
         </div>
         <div class="inv-modal-body">
             <div class="inv-form-group"><label class="inv-form-label">Slot anatômico</label>
-                <select id="mestreEquipSlot" class="inv-form-select">${opts}</select></div>
+                <select id="mestreEquipSlot" class="inv-form-select"
+                    onchange="window._mestreEstadosDoSlot(this.value)">${opts}</select></div>
             <div class="inv-form-group" style="margin-top:10px"><label class="inv-form-label">Estado</label>
                 <select id="mestreEquipEstado" class="inv-form-select">${estadoOpts}</select></div>
             ${window.EquipSlots.escolheMaos(item) ? `
@@ -538,7 +549,23 @@ function _equiparMestre(ownerId, itemId) {
         </div>
     </div>`;
     document.body.appendChild(modal);
+    modal._estadosPorSlot = estadosPorSlot;
+    window._mestreEstadosDoSlot(document.getElementById('mestreEquipSlot')?.value);
 }
+
+/** O estado segue o slot: parte de guarda só aceita Fixado. */
+window._mestreEstadosDoSlot = function(slotKey) {
+    const modal = document.getElementById('mestreEquipModal');
+    const sel = document.getElementById('mestreEquipEstado');
+    if (!modal || !sel) return;
+    const permitidos = (modal._estadosPorSlot || {})[slotKey] || [];
+    let primeiro = null;
+    for (const op of sel.options) {
+        op.disabled = permitidos.length > 0 && !permitidos.includes(op.value);
+        if (!op.disabled && primeiro === null) primeiro = op.value;
+    }
+    if (primeiro !== null) sel.value = primeiro;
+};
 
 window._confirmMestreEquip = async function(ownerId, itemId) {
     const dono = _donos.get(ownerId);

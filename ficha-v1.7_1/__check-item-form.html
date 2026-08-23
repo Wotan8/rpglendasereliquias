@@ -23,11 +23,12 @@
 <div id="placar"></div>
 
 <script src="../shared/campo-imagem.js"></script>
-<script src="../shared/equip-slots.js"></script>
+<!-- sem cache: arnes tem de ler o arquivo do disco, senao testa o de ontem -->
+<script>document.write('<script src="../shared/equip-slots.js?t=' + Date.now() + '"><\/script>');</script>
 <script src="js/inventory.js?c=2"></script>
 <script type="module">
 import * as InvMotor from '../shared/inventario-motor.js?v=5';
-import * as EquipCampos from '../shared/equip-campos.js?v=9';
+import * as EquipCampos from '../shared/equip-campos.js?v=10';
 import * as EquipSel from '../painel-criador/js/painel-mechanics.js?v=16';
 window.InvMotor = InvMotor;
 window.EquipCampos = EquipCampos;
@@ -40,6 +41,10 @@ let ok = 0;
 const teste = (nome, passou) => { linhas.push([nome, passou]); if (passou) ok++; };
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+/* inventory.js carrega shared/restaurar-item.js por import DINAMICO: numa rede
+   fria a promessa resolve depois deste modulo. Espera a condicao em vez de
+   medir cedo e acusar falha que nao existe. */
+const esperar = async (cond) => { for (let i = 0; i < 90 && !cond(); i++) await new Promise(r => setTimeout(r, 16)); return cond(); };
 
 // ---- semeadura ----
 window.isMestre = true;                 // libera podeEditarItens()
@@ -87,6 +92,9 @@ for (const k of ['tags', 'liga', 'qualidade', 'afiacao', 'reforco', 'preco', 'ti
                  'atributosVinculados', 'periciasVinculadas', 'condicaoIds']) {
     if (!$(`#field_${k}`, corpo)) linhas.push([`   ⤷ campo novo ausente: ${k}`, false]);
 }
+
+teste('T2b · "Guardável em" existe e lista as partes do personagem',
+    ($('#field_equipavelEmGuardado', corpo)?.options.length || 0) === window.state.partesDoCorpo.length);
 
 teste('T3 · picker do catálogo aparece ao criar', !!$('#invListaCat', corpo));
 teste('T4 · "Salvar no Catálogo" nasce marcado', $('#invFormSalvarCatalogo', corpo)?.checked === true);
@@ -137,7 +145,14 @@ window.closeItemFormModal();
 window.openItemFormModal('Editar Item', { id: 'i1', nome: 'Colar', tipo: 'Acessório', modeloId: 'tpl1', quantidade: 1 });
 teste('T21 · ao EDITAR, o picker de catálogo some', !$('#invListaCat'));
 teste('T22 · ao EDITAR, "Salvar no Catálogo" some', !$('#invFormSalvarCatalogo'));
-teste('T23 · ao EDITAR, o botão Restaurar aparece', /restaurar/i.test($('#invFormModal .inv-modal-footer').textContent));
+teste('T23 · ao EDITAR, o botão Restaurar aparece',
+    await esperar(() => {
+        // o rodape so ganha o botao quando o modulo chega; reabre para repintar
+        if (/restaurar/i.test($('#invFormModal .inv-modal-footer')?.textContent || '')) return true;
+        window.closeItemFormModal();
+        window.openItemFormModal('Editar Item', { id: 'i1', nome: 'Colar', tipo: 'Acessório', modeloId: 'tpl1', quantidade: 1 });
+        return /restaurar/i.test($('#invFormModal .inv-modal-footer')?.textContent || '');
+    }));
 
 // ---- responsivo: o formulário tem de caber num celular ----
 // O pane de teste não desce de ~640px, então a coluna única da media query é
