@@ -1,0 +1,97 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__check: blocos de Valores Derivados recolhiveis</title>
+<link rel="stylesheet" href="css/styles_v2.css">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/lendas-reliquias.css">
+<style>
+    body { padding: 16px; }
+    #out { font: 12px/1.5 monospace; white-space: pre-wrap; background: #101418; color: #9f9;
+           padding: 10px; border-radius: 6px; margin-bottom: 12px; }
+</style>
+
+<div id="out">carregando…</div>
+<div class="section">
+    <div class="section-title">Valores Derivados</div>
+    <div id="derivedValuesGrid"></div>
+</div>
+
+<script>
+    /* A ficha inteira não roda sem Firebase; aqui só o que renderDerivedValuesGrid
+       toca. O cache-buster evita medir a versão antiga guardada pelo service worker. */
+    const T = Date.now();
+    document.querySelectorAll('link[rel=stylesheet]').forEach(l => {
+        l.href = l.getAttribute('href').split('?')[0] + '?t=' + T;
+    });
+
+    window.state = { dots: {}, dvAtual: {} };
+    window.isCreator = false;
+    window.CLASS_PECULIARITIES = {};
+    window.TRIBES = {};
+    window.RACES = {};
+
+    const dv = (id, key, nome, icone, bloco, blocoNome, ordemBloco, ordem) => ({
+        id, key, nome, icone, blocoId: bloco, blocoNome, blocoOrdem: ordemBloco,
+        ordem, todoPersonagem: true, descricao: `descrição de ${nome}`,
+        prefixo: '', sufixo: '', campoAtual: false, campoEditavel: false
+    });
+
+    window.DERIVED_VALUES = [
+        dv('1', 'defesa',    'Defesa',           '🛡️', 'combate', 'Combate', 1, 1),
+        dv('2', 'blindagem', 'Blindagem',        '🪖', 'combate', 'Combate', 1, 2),
+        dv('3', 'iniciativa','Iniciativa',       '⚡', 'combate', 'Combate', 1, 3),
+        dv('4', 'bl_corte',  'Blind. de Corte',  '🗡️', 'golpe',   'Blindagens por Golpe', 2, 4),
+        dv('5', 'bl_perf',   'Blind. Perfurante','🏹', 'golpe',   'Blindagens por Golpe', 2, 5),
+        dv('6', 'altura',    'Altura',           '📏', 'geral',   'Geral', 999, 6),
+        dv('7', 'peso',      'Peso',             '⚖️', 'geral',   'Geral', 999, 7),
+        dv('8', 'carga',     'Carga',            '🎒', 'geral',   'Geral', 999, 8),
+    ];
+</script>
+<script src="js/derived-values.js"></script>
+<script>
+    const linhas = [];
+    try {
+        renderDerivedValuesGrid();
+    } catch (e) {
+        linhas.push('ERRO ao renderizar: ' + e.message);
+    }
+
+    // O cache-buster troca o href dos <link>, então o CSS chega DEPOIS deste
+    // script. Medir antes dava bloco sem padding nem borda.
+    window.addEventListener('load', medir);
+
+    function medir() {
+
+    const blocos = [...document.querySelectorAll('#derivedValuesGrid .dv-block-container')];
+    linhas.push(`blocos renderizados: ${blocos.length}`);
+    linhas.push(`todos <details>: ${blocos.every(b => b.tagName === 'DETAILS')}`);
+    linhas.push(`todos recolhidos: ${blocos.every(b => !b.open)}`);
+
+    for (const b of blocos) {
+        const titulo = b.querySelector('summary .attr-block-title')?.textContent;
+        const n = b.querySelector('summary .dv-block-n')?.textContent;
+        const campos = b.querySelectorAll('.mini-field').length;
+        const alturaFechado = Math.round(b.getBoundingClientRect().height);
+        b.open = true;
+        const alturaAberto = Math.round(b.getBoundingClientRect().height);
+        b.open = false;
+        linhas.push(`  ${String(titulo).padEnd(24)} contador=${n} campos=${campos} `
+            + `altura ${alturaFechado}px → ${alturaAberto}px ao abrir`
+            + (alturaAberto > alturaFechado ? '' : '  ⚠️ NÃO EXPANDIU'));
+        if (String(n) !== String(campos)) linhas.push(`  ⚠️ contador ${n} != ${campos} campos`);
+    }
+
+    // O combat-panel identifica o bloco por este seletor: se quebrar, a aba
+    // Combate perde os nomes dos blocos.
+    const nomesParaOCombate = blocos.map(b => b.querySelector('.attr-block-title')?.textContent?.trim());
+    linhas.push(`nomes que o combat-panel enxerga: ${JSON.stringify(nomesParaOCombate)}`);
+
+    // Recolhido não pode sobrar rolagem nem estouro.
+    const grid = document.getElementById('derivedValuesGrid');
+    linhas.push(`rolagem horizontal da página: ${document.documentElement.scrollWidth > document.documentElement.clientWidth ? 'SIM — quebra a regra' : 'não'}`);
+    linhas.push(`altura da grid recolhida: ${Math.round(grid.getBoundingClientRect().height)}px`);
+
+    document.getElementById('out').textContent = linhas.join('\n');
+    }
+</script>

@@ -156,11 +156,11 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
         const newGrade = Math.floor((displayLevel - 1) / baseDots);
         const grauDef = auraInfo.graus.find(g => g.grau === newGrade);
         const grauName = grauDef?.nomeGrau ? ` (${grauDef.nomeGrau})` : '';
-        showUpgradeConfirm(`${label}${grauName}`, displayLevel, check.cost, () => {
-            spendExp(check.cost);
+        showUpgradeConfirm(`${label}${grauName}`, displayLevel, check.cost, (comExp) => {
+            if (comExp) spendExp(check.cost); else concederSemGastar(check.cost);
             _aplicarNivelDot(container, k, newRawLevel);
-            showUpgradeSuccess(`${label}${grauName}`, displayLevel, check.cost);
-        });
+            showUpgradeSuccess(`${label}${grauName}`, displayLevel, check.cost, comExp);
+        }, { semExp: check.semExp });
         return;
     }
 
@@ -196,11 +196,11 @@ function handleDotUpgrade(container, k, clickedVal, specName) {
 
     const label = getDotLabel(k, container, specName);
     const displayLevel = newRawLevel + floorVal;
-    showUpgradeConfirm(label, displayLevel, check.cost, () => {
-        spendExp(check.cost);
+    showUpgradeConfirm(label, displayLevel, check.cost, (comExp) => {
+        if (comExp) spendExp(check.cost); else concederSemGastar(check.cost);
         _aplicarNivelDot(container, k, newRawLevel);
-        showUpgradeSuccess(label, displayLevel, check.cost);
-    });
+        showUpgradeSuccess(label, displayLevel, check.cost, comExp);
+    }, { semExp: check.semExp });
 }
 
 /** Obtém nome legível do parâmetro pela UI */

@@ -677,27 +677,32 @@ function renderEvolutableDotsInline(dotsDiv, raceKey, pec, minLevel, maxLevel) {
             if (custo < 0) {
                 // Mecânica prejudicial: GANHA EXP ao subir de nível
                 const ganho = -custo;
-                showUpgradeConfirm(`${pec.nome} (🎁 +${ganho} EXP)`, i, ganho, () => {
-                    spendExp(custo); // negativo = adiciona EXP
+                showUpgradeConfirm(`${pec.nome} (🎁 +${ganho} EXP)`, i, ganho, (comExp) => {
+                    if (comExp) spendExp(custo); // negativo = adiciona EXP
+                    else concederSemGastar(custo); // custo negativo aqui: não soma nada
                     aplicar(i);
-                    showExpToast(`✅ ${pec.nome} subiu para nível ${i}! (+${ganho} EXP)`, 'success');
+                    const efeito = comExp ? `+${ganho} EXP` : '🛡️ sem mexer no EXP';
+                    showExpToast(`✅ ${pec.nome} subiu para nível ${i}! (${efeito})`, 'success');
                     setTimeout(dismissExpToast, 2000);
                 });
                 return;
             }
 
+            // Mestre/Criador não é barrado por falta de EXP: para ele o custo é
+            // opcional, e o confirm só deixa de oferecer o botão de pagar.
             const currentExp = typeof getCurrentExp === 'function' ? getCurrentExp() : 0;
-            if (custo > currentExp) {
+            const semExp = custo > currentExp;
+            if (semExp && !(typeof podeGastarDeGraca === 'function' && podeGastarDeGraca())) {
                 if (typeof showUpgradeBlocked === 'function')
                     showUpgradeBlocked(`EXP insuficiente! Precisa de ${custo} EXP, mas só tem ${currentExp}.`);
                 return;
             }
 
-            showUpgradeConfirm(pec.nome, i, custo, () => {
-                spendExp(custo);
+            showUpgradeConfirm(pec.nome, i, custo, (comExp) => {
+                if (comExp) spendExp(custo); else concederSemGastar(custo);
                 aplicar(i);
-                if (typeof showUpgradeSuccess === 'function') showUpgradeSuccess(pec.nome, i, custo);
-            });
+                if (typeof showUpgradeSuccess === 'function') showUpgradeSuccess(pec.nome, i, custo, comExp);
+            }, { semExp });
         });
 
         dotsDiv.appendChild(dot);

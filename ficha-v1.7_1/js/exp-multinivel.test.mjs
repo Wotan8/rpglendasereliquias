@@ -39,6 +39,8 @@ vm.runInContext([
     recorta(exp, 'function getCurrentExp('),
     recorta(exp, 'function setCurrentExp('),
     recorta(exp, 'function refundExp('),
+    recorta(exp, 'function concederSemGastar('),
+    recorta(exp, 'function podeGastarDeGraca('),
     recorta(exp, 'function canUpgrade('),
     recorta(pec, 'function _pecCustoLiquido('),
 ].join('\n'), sandbox);
@@ -75,6 +77,21 @@ campos.exp.value = '29';
 assert.equal(roda(`canUpgrade('attr_for', 3, 'attr', null, 0, 0).allowed`), false,
     'com 29 EXP a compra de 30 é recusada');
 
+/* ----- mestre/criador: o custo é opcional, então falta de EXP não barra ----- */
+sandbox.window.isMestre = true;
+const comMestre = roda(`canUpgrade('attr_for', 3, 'attr', null, 0, 0)`);
+assert.equal(comMestre.allowed, true,
+    'mestre sobe nível mesmo sem o EXP — para ele o custo é escolha');
+assert.equal(comMestre.semExp, true,
+    'semExp avisa o confirm para não oferecer o botão de pagar');
+assert.equal(comMestre.cost, 30, 'o custo continua sendo calculado e mostrado');
+
+campos.exp.value = '100';
+assert.equal(roda(`canUpgrade('attr_for', 3, 'attr', null, 0, 0).semExp`), false,
+    'com EXP sobrando, o mestre recebe as duas opções');
+sandbox.window.isMestre = false;
+campos.exp.value = '29';
+
 /* ----- devolução: só "Restante", nunca o Total ----- */
 campos.exp.value = '10';
 campos.exp_total.value = '100';
@@ -95,5 +112,20 @@ sandbox.p = pecMock;
 assert.equal(roda(`_pecCustoLiquido(p, 1, 3)`), 13, 'níveis 2 e 3 somam 5+8');
 assert.equal(roda(`_pecCustoLiquido(p, 1, 4)`), 3, 'o nível de "ganho" abate: 5+8−10');
 assert.equal(roda(`_pecCustoLiquido(p, 3, 3)`), 0, 'sem degrau, sem custo');
+
+/* ----- concessão do mestre: não tira de Restante, mas soma no Total ----- */
+campos.exp.value = '10';
+campos.exp_total.value = '100';
+roda(`concederSemGastar(30)`);
+assert.equal(campos.exp.value, '10',
+    'concessão gratuita não pode encostar no EXP Restante');
+assert.equal(campos.exp_total.value, 130,
+    'o custo do nível concedido entra no Total — é ele que diz quanto o personagem vale');
+
+// Desvantagem que RENDERIA EXP e o mestre optou por não dar: nada a registrar.
+roda(`concederSemGastar(-20)`);
+assert.equal(campos.exp_total.value, 130, 'custo negativo não pode reduzir o Total');
+roda(`concederSemGastar(0)`);
+assert.equal(campos.exp_total.value, 130, 'custo zero não mexe no Total');
 
 console.log('✅ EXP multinível OK — soma degrau a degrau, respeita piso/teto e devolve só em Restante');

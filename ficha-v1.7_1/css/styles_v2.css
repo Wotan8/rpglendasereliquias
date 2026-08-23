@@ -2565,6 +2565,7 @@ html.dark .bg-orange input {
 
 .exp-toast-btns {
     display: flex;
+    flex-wrap: wrap;   /* três botões quando é mestre: quebram em vez de estourar */
     gap: 8px;
 }
 
@@ -2588,6 +2589,12 @@ html.dark .bg-orange input {
 
 .exp-btn-ok:hover {
     background: var(--lr-arcane);
+}
+
+/* Concessão do mestre: ouro, porque é privilégio e não a ação padrão da mesa. */
+.exp-btn-free {
+    background: var(--lr-gold);
+    color: var(--lr-bg-0);
 }
 
 .exp-btn-cancel {
@@ -2881,6 +2888,61 @@ html.dark .pec-capacidade {
    Dezesseis Blindagens repetindo o mesmo número seriam ruído puro. */
 .mini-field.dv-espelho-igual {
     display: none;
+}
+
+/* ===== BLOCOS DE VALORES DERIVADOS (aba Principal) =====
+   <details> recolhido por padrão. Mesma linguagem do .cbt-block da aba
+   Combate, para o jogador reconhecer o mesmo gesto nas duas telas. */
+.dv-block-container {
+    border: 2px solid var(--line);
+    border-radius: var(--lr-radius-lg);
+    margin-bottom: var(--lr-space-2);
+    overflow: hidden;
+}
+
+.dv-block-container > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: var(--lr-space-2) var(--lr-space-3);
+    background: var(--chip);
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-2);
+}
+
+.dv-block-container > summary::-webkit-details-marker { display: none; }
+
+.dv-block-container > summary::before {
+    content: '▸';
+    color: var(--muted);
+    font-size: 11px;
+    transition: transform var(--lr-t-fast) var(--lr-ease);
+}
+
+.dv-block-container[open] > summary::before { transform: rotate(90deg); }
+
+/* Dentro do resumo o título perde a centralização e a margem: ele divide a
+   linha com a seta e o contador. */
+.dv-block-container > summary .attr-block-title {
+    margin: 0;
+    text-align: left;
+}
+
+.dv-block-n {
+    margin-left: auto;
+    /* Borda em vez de contar com o contraste entre --paper e --chip: no tema
+       escuro os dois resolvem para a mesma cor e a pílula sumia no resumo. */
+    border: 1px solid var(--line);
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--muted);
+    background: var(--paper);
+    border-radius: 999px;
+    padding: 1px 6px;
+}
+
+.dv-block-container > .combat-grid {
+    padding: var(--lr-space-3);
 }
 
 /* Todos os campos do bloco escondidos: o título sozinho não diz nada. */

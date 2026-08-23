@@ -183,19 +183,27 @@ function renderDerivedValuesGrid() {
     const blocksArray = _dvAgruparEmBlocos(applicableDVs);
 
     blocksArray.forEach(block => {
-        const blockContainer = document.createElement('div');
+        // <details> nativo, recolhido: sem JS de toggle e sem estado para guardar.
+        // É a mesma peça que a aba Combate usa (.cbt-block); aqui todos nascem
+        // fechados, porque a Principal tem bloco demais para caber de uma vez.
+        const blockContainer = document.createElement('details');
         blockContainer.className = 'dv-block-container';
-        blockContainer.style.marginBottom = '16px';
         // A aba Combate usa a ordem para decidir quais blocos nascem abertos.
         blockContainer.dataset.blocoOrdem = block.ordem;
 
-        if (block.nome) {
-            const titleEl = document.createElement('div');
-            titleEl.className = 'attr-block-title';
-            titleEl.style.marginBottom = '8px';
-            titleEl.textContent = block.nome;
-            blockContainer.appendChild(titleEl);
-        }
+        const resumo = document.createElement('summary');
+        // O título continua sendo .attr-block-title: é por ele que o
+        // combat-panel identifica o bloco em collectBlocks().
+        const titleEl = document.createElement('span');
+        titleEl.className = 'attr-block-title';
+        titleEl.textContent = block.nome || 'Geral';
+        resumo.appendChild(titleEl);
+
+        const contador = document.createElement('span');
+        contador.className = 'dv-block-n';
+        contador.textContent = block.dvs.length;
+        resumo.appendChild(contador);
+        blockContainer.appendChild(resumo);
 
         const blockGrid = document.createElement('div');
         blockGrid.className = 'combat-grid';
@@ -1138,8 +1146,12 @@ function _dvOcultarBlocosVazios() {
     document.querySelectorAll('.dv-block-container').forEach(bloco => {
         const campos = bloco.querySelectorAll('.mini-field');
         if (!campos.length) return;
-        const algumVisivel = [...campos].some(c => !c.classList.contains('dv-espelho-igual'));
-        bloco.classList.toggle('dv-bloco-vazio', !algumVisivel);
+        const visiveis = [...campos].filter(c => !c.classList.contains('dv-espelho-igual'));
+        bloco.classList.toggle('dv-bloco-vazio', !visiveis.length);
+        // Com o bloco recolhido o número no resumo é a única pista do que tem
+        // dentro — então conta o que aparece, não o que foi renderizado.
+        const contador = bloco.querySelector(':scope > summary > .dv-block-n');
+        if (contador) contador.textContent = visiveis.length;
     });
 }
 

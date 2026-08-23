@@ -1,0 +1,94 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__check: mestre sobe nivel sem gastar EXP</title>
+<link rel="stylesheet" href="css/styles_v2.css">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/lendas-reliquias.css">
+<style>
+    body { padding: 16px; }
+    #out { font: 12px/1.5 monospace; white-space: pre-wrap; background: #101418; color: #9f9;
+           padding: 10px; border-radius: 6px; margin-bottom: 12px; }
+    .campos { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
+    .campos input { width: 80px; }
+</style>
+
+<div id="out">carregando…</div>
+
+<div class="campos">
+    <label>EXP Restante <input type="text" data-key="exp" value="100"></label>
+    <label>EXP Total <input type="text" data-key="exp_total" value="250"></label>
+</div>
+
+<!-- O toast real é montado aqui dentro, com o CSS de verdade. -->
+<div id="expToastContainer"></div>
+
+<script>
+    const T = Date.now();
+    document.querySelectorAll('link[rel=stylesheet]').forEach(l => {
+        l.href = l.getAttribute('href').split('?')[0] + '?t=' + T;
+    });
+    window.state = { dots: {} };
+    function scheduleAutosave() {}
+</script>
+<script src="js/exp-upgrade.js"></script>
+<script>
+    const linhas = [];
+    const campo = (k) => document.querySelector(`[data-key="${k}"]`);
+    const ler = () => ({ restante: campo('exp').value, total: campo('exp_total').value });
+    const botoes = () => [...document.querySelectorAll('#expToastContainer .exp-toast-btn')];
+    const clicar = (rotulo) => {
+        const b = botoes().find(x => x.textContent === rotulo);
+        if (!b) { linhas.push(`  ⚠️ botão "${rotulo}" não existe`); return; }
+        b.click();
+    };
+
+    function cenario(titulo, { mestre, custo, escolha }) {
+        window.isMestre = mestre;
+        window.isCreator = false;
+        campo('exp').value = '100';
+        campo('exp_total').value = '250';
+        document.getElementById('expToastContainer').innerHTML = '';
+
+        showUpgradeConfirm('Força', 3, custo, (comExp) => {
+            if (comExp) spendExp(custo); else concederSemGastar(custo);
+        });
+
+        const rotulos = botoes().map(b => b.textContent);
+        linhas.push(`${titulo}`);
+        linhas.push(`  botões: ${JSON.stringify(rotulos)}`);
+        clicar(escolha);
+        const { restante, total } = ler();
+        linhas.push(`  após "${escolha}": Restante ${restante} · Total ${total}`);
+        return { restante, total, rotulos };
+    }
+
+    window.addEventListener('load', () => {
+        const jogador = cenario('JOGADOR paga (comportamento antigo)',
+            { mestre: false, custo: 30, escolha: '✓ Confirmar' });
+        if (jogador.restante !== '70') linhas.push('  ⚠️ jogador deveria ficar com 70 de Restante');
+        if (jogador.total !== '250') linhas.push('  ⚠️ pagar não pode mexer no Total');
+
+        const pagando = cenario('MESTRE escolhe pagar',
+            { mestre: true, custo: 30, escolha: '✓ Gastar 30 EXP' });
+        if (pagando.restante !== '70' || pagando.total !== '250')
+            linhas.push('  ⚠️ mestre que paga tem de se comportar igual ao jogador');
+
+        const concedendo = cenario('MESTRE concede sem gastar',
+            { mestre: true, custo: 30, escolha: '🛡️ Sem gastar' });
+        if (concedendo.restante !== '100') linhas.push('  ⚠️ conceder não pode tirar de Restante');
+        if (String(concedendo.total) !== '280') linhas.push('  ⚠️ o custo tinha de entrar no Total (250 + 30)');
+
+        // Três botões numa tela estreita não podem estourar o toast.
+        const toast = document.querySelector('.exp-toast');
+        const linhaBtn = document.querySelector('.exp-toast-btns');
+        if (toast && linhaBtn) {
+            linhas.push(`largura do toast ${Math.round(toast.getBoundingClientRect().width)}px · `
+                + `linha de botões ${Math.round(linhaBtn.getBoundingClientRect().width)}px · `
+                + `estoura: ${linhaBtn.scrollWidth > linhaBtn.clientWidth + 1 ? 'SIM' : 'não'}`);
+        }
+        linhas.push(`rolagem horizontal da página: ${document.documentElement.scrollWidth > document.documentElement.clientWidth ? 'SIM — quebra a regra' : 'não'}`);
+
+        document.getElementById('out').textContent = linhas.join('\n');
+    });
+</script>

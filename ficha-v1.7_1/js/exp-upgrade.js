@@ -54,6 +54,36 @@ function podeRetroceder() {
     return !!(window.isMestre || window.isCreator);
 }
 
+/**
+ * Mestre e Criador sobem nível com o custo em EXP OPCIONAL: o confirm oferece
+ * "gastar" e "sem gastar", e o EXP do personagem só se mexe se ele escolher
+ * gastar. Serve para corrigir ficha e para conceder nível fora da economia da
+ * mesa, sem ter que dar EXP antes e tomar de volta depois.
+ */
+function podeGastarDeGraca() {
+    return !!(window.isMestre || window.isCreator);
+}
+
+/**
+ * Concessão do mestre: o nível entra sem tirar nada de "Restante", mas o custo
+ * entra no "Total". O Total é o quanto o personagem VALE — um nível dado de
+ * graça que não somasse ali faria a ficha subestimar o personagem, e quem lê o
+ * Total (lista do Menu, painel do Mestre, régua de balanceamento) passaria a
+ * comparar personagens com pesos diferentes.
+ *
+ * Custo negativo — desvantagem que RENDE EXP e o mestre optou por não dar —
+ * não mexe em nada: não houve ganho para registrar.
+ */
+function concederSemGastar(amount) {
+    if (!(amount > 0)) return;
+    const totalEl = document.querySelector('[data-key="exp_total"]');
+    if (totalEl) {
+        const atual = parseInt(totalEl.value || '0', 10) || 0;
+        totalEl.value = atual + amount;
+    }
+    scheduleAutosave();
+}
+
 function spendExp(amount) {
     const current = getCurrentExp();
     setCurrentExp(current - amount);
@@ -179,8 +209,11 @@ function canUpgrade(dotKey, newLevel, type, specName, floorBonus, fromLevel) {
         }
     }
 
-    // Verificar EXP suficiente
-    if (cost > currentExp) {
+    // Verificar EXP suficiente. Mestre/Criador passa: para ele o custo é
+    // opcional, então falta de EXP só tira a opção de PAGAR — não o upgrade.
+    // `semExp` avisa o confirm para não oferecer o botão de gastar.
+    const semExp = cost > currentExp;
+    if (semExp && !podeGastarDeGraca()) {
         return { allowed: false, reason: `EXP insuficiente! Precisa de ${cost} EXP, mas só tem ${currentExp}.`, cost };
     }
 
@@ -220,7 +253,7 @@ function canUpgrade(dotKey, newLevel, type, specName, floorBonus, fromLevel) {
         }
     }
 
-    return { allowed: true, reason: '', cost };
+    return { allowed: true, reason: '', cost, semExp };
 }
 
 /* ===== UI DE CONFIRMAÇÃO ===== */
@@ -281,15 +314,40 @@ function dismissExpToast() {
 /**
  * Exibe a confirmação de upgrade.
  */
-function showUpgradeConfirm(label, newLevel, cost, onConfirm) {
-    showExpToast(
-        `⬆️ ${label} → Nível ${newLevel}? Custo: ${cost} EXP`,
-        'confirm',
-        [
-            { label: '✓ Confirmar', cls: 'exp-btn-ok', action: onConfirm },
-            { label: '✕ Cancelar', cls: 'exp-btn-cancel' }
-        ]
-    );
+/**
+ * Confirmação de upgrade.
+ * @param {function(boolean)} onConfirm recebe `true` se o EXP deve ser cobrado
+ *        e `false` na concessão gratuita do mestre. Todo chamador precisa
+ *        respeitar a flag — é ela que decide se spendExp() roda.
+ * @param {{semExp?: boolean}} [opcoes] semExp = o personagem não tem o custo,
+ *        então só a concessão gratuita é oferecida.
+ */
+function showUpgradeConfirm(label, newLevel, cost, onConfirm, opcoes) {
+    const gratis = podeGastarDeGraca();
+    const semExp = !!(opcoes && opcoes.semExp);
+
+    const botoes = [];
+    if (!semExp) {
+        botoes.push({
+            label: gratis ? `✓ Gastar ${cost} EXP` : '✓ Confirmar',
+            cls: 'exp-btn-ok',
+            action: () => onConfirm(true)
+        });
+    }
+    if (gratis) {
+        botoes.push({
+            label: '🛡️ Sem gastar',
+            cls: 'exp-btn-free',
+            action: () => onConfirm(false)
+        });
+    }
+    botoes.push({ label: '✕ Cancelar', cls: 'exp-btn-cancel' });
+
+    const custoTexto = semExp
+        ? `Custo: ${cost} EXP — o personagem não tem esse EXP`
+        : `Custo: ${cost} EXP`;
+
+    showExpToast(`⬆️ ${label} → Nível ${newLevel}? ${custoTexto}`, 'confirm', botoes);
 }
 
 /**
@@ -326,7 +384,10 @@ function showUpgradeBlocked(reason) {
 /**
  * Exibe mensagem de sucesso.
  */
-function showUpgradeSuccess(label, newLevel, cost) {
-    showExpToast(`✅ ${label} subiu para nível ${newLevel}! (-${cost} EXP)`, 'success');
+function showUpgradeSuccess(label, newLevel, cost, comExp) {
+    const efeito = comExp === false
+        ? (cost > 0 ? `🛡️ concedido pelo mestre · +${cost} no EXP Total` : '🛡️ concedido pelo mestre')
+        : `-${cost} EXP`;
+    showExpToast(`✅ ${label} subiu para nível ${newLevel}! (${efeito})`, 'success');
     setTimeout(dismissExpToast, 2000);
 }

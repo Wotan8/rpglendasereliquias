@@ -80,6 +80,22 @@ function confirmPrint() {
     }, 500);
 }
 
+/* Bloco recolhido não imprime: o navegador esconde o conteúdo de um <details>
+   fechado, e os Valores Derivados da aba Principal nascem fechados. Abre tudo
+   antes de imprimir e devolve ao estado anterior depois — vale também para os
+   blocos da aba Combate, que já eram <details>. */
+let _detailsFechadosNoPrint = [];
+
+window.addEventListener('beforeprint', () => {
+    _detailsFechadosNoPrint = [...document.querySelectorAll('details:not([open])')];
+    _detailsFechadosNoPrint.forEach(d => d.open = true);
+});
+
+window.addEventListener('afterprint', () => {
+    _detailsFechadosNoPrint.forEach(d => d.open = false);
+    _detailsFechadosNoPrint = [];
+});
+
 // Expose to window
 window.openPrintModal = openPrintModal;
 window.closePrintModal = closePrintModal;

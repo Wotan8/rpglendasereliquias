@@ -1083,8 +1083,12 @@ function _cmValidarECobrar(mod, predef) {
         }
     }
 
-    const executar = () => {
-        if (custoExp > 0 && typeof spendExp === 'function') spendExp(custoExp);
+    // comExp = false quando o mestre concede sem cobrar (ver showUpgradeConfirm).
+    const executar = (comExp = true) => {
+        if (custoExp > 0) {
+            if (comExp && typeof spendExp === 'function') spendExp(custoExp);
+            else if (!comExp && typeof concederSemGastar === 'function') concederSemGastar(custoExp);
+        }
         if (check.consumos.length > 0) _cmConsumirEquipamentos(check.consumos);
         if (criacaoIds.length > 0) _cmApplyMechanicsCosts(criacaoIds);
         _doAddModuleItem(mod, predef);
