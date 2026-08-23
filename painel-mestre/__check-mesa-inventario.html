@@ -32,10 +32,22 @@
 <script src="../shared/equip-slots.js"></script>
 <script type="module">
 import { _pintarHosts } from './js/area-mesas-inventario.js?c=1';
-import { alvoSob } from '../shared/inventario-motor.js?v=4';
+import { alvoSob } from '../shared/inventario-motor.js?v=5';
 
 // Cede um turno: o módulo roda com o documento ainda aberto e metade dos
 // testes daqui mede geometria (elementFromPoint no arrasto).
+/* O CSS pode chegar DEPOIS deste módulo quando a folha vem da rede (foi o que
+   aconteceu no primeiro load após editar inventory.css). Metade dos testes daqui
+   mede geometria, e página sem estilo acusa falha que não existe — então espera
+   a largura aparecer. Não dá para esperar o evento 'load': módulo bloqueia o
+   load, e o await nunca voltaria. */
+async function esperarLayout(sel) {
+    for (let i = 0; i < 90; i++) {
+        if (document.querySelector(sel)?.getBoundingClientRect().width > 0) return;
+        await new Promise(r => setTimeout(r, 16));
+    }
+}
+await esperarLayout('#tela');
 await new Promise(r => setTimeout(r, 0));
 
 const linhas = [];

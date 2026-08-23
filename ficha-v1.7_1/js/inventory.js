@@ -45,10 +45,14 @@ function _getCharacterBodySlots() {
                 // manda; a cópia só responde se ele não tiver a parte).
                 formulaDano: (cat ? cat.formulaDano : bp.formulaDano) || '',
                 tiposGolpe: (cat ? cat.tipoGolpe : bp.tipoGolpe) || null,
-                podeSegurar: !!bp.podeSegurar,
-                podeEmpunhar: !!bp.podeEmpunhar,
-                podeVestir: !!bp.podeVestir,
-                podeFixar: !!bp.podeFixar,
+                /* As quatro capacidades seguem a MESMA regra do golpe: quem decide
+                   como a peça prende no corpo é o cadastro. Sem isto, ligar
+                   podeFixar numa parte no Painel não chegava em ninguém que já
+                   existia — a cópia congelada respondia para sempre. */
+                podeSegurar: !!(cat ? cat.podeSegurar : bp.podeSegurar),
+                podeEmpunhar: !!(cat ? cat.podeEmpunhar : bp.podeEmpunhar),
+                podeVestir: !!(cat ? cat.podeVestir : bp.podeVestir),
+                podeFixar: !!(cat ? cat.podeFixar : bp.podeFixar),
                 // Mantém compatibilidade com selects de UI iterativos
                 accepts: [] 
             };
@@ -954,10 +958,6 @@ function _renderInvItemRow(item, isEquipped) {
         ? `<img src="${_escHtml(img)}" class="inv-row-img" alt="">`
         : `<div class="inv-row-img inv-row-img-ph">${tipoEmoji}</div>`;
 
-    const equipBtn = isEquipped
-        ? `<button class="inv-btn inv-btn-unequip" onclick="event.stopPropagation();unequipItem('${item.id}')" title="Desequipar">⬇️</button>`
-        : `<button class="inv-btn inv-btn-equip" onclick="event.stopPropagation();openEquipModal('${item.id}')" title="Equipar">⬆️</button>`;
-
     // State/slot badge for equipped items
     let stateBadge = '';
     if (isEquipped && item.estadoEquip && EQUIP_STATES[item.estadoEquip]) {
@@ -971,12 +971,6 @@ function _renderInvItemRow(item, isEquipped) {
     if (item.ehContainer) {
         const isOpen = window._openContainerId === item.id;
         containerBtn = `<button class="inv-btn ${isOpen ? 'inv-btn-open' : 'inv-btn-closed'}" onclick="event.stopPropagation();toggleContainer('${item.id}')" title="${isOpen ? 'Fechar' : 'Abrir'} container">${isOpen ? '📂' : '📁'}</button>`;
-    }
-
-    // Move to Container button — only when a container is open and this item isn't the open container itself
-    let moveToContainerBtn = '';
-    if (window._openContainerId && window._openContainerId !== item.id) {
-        moveToContainerBtn = `<button class="inv-btn inv-btn-move-container" onclick="event.stopPropagation();moveToContainer('${item.id}')" title="Mover para container aberto">📦➡️</button>`;
     }
 
     // Quantity — editable if loose, or if equipped AND type is Projétil/Consumível
@@ -1000,9 +994,7 @@ function _renderInvItemRow(item, isEquipped) {
         ${stateBadge}
         <div class="inv-item-actions no-print" onclick="event.stopPropagation()">
             ${qty > 1 && !item.ehContainer && item.tipo !== 'Container' ? `<button class="inv-btn inv-btn-split" onclick="event.stopPropagation();openSplitModal('${item.id}')" title="Dividir">➗</button>` : ''}
-            ${moveToContainerBtn}
             ${containerBtn}
-            ${equipBtn}
             <button class="inv-btn inv-btn-delete" onclick="event.stopPropagation();deleteInventoryItem('${item.id}')" title="Excluir">🗑️</button>
         </div>
     </div>`;
@@ -1019,9 +1011,13 @@ function _renderInvItemRow(item, isEquipped) {
    Aqui só o ARRASTO é do motor: a lista continua sendo a desta ficha (cartas de
    slot, efeitos ativos, estados de equipar), então nada de htmlInventario. */
 
-/** Alça de arrasto. Quem não pode editar itens não arrasta. */
+/* Alça de arrasto — de TODO MUNDO, não só do Mestre. Equipar, guardar em
+   contêiner e juntar pilha são coisas do próprio inventário; o que é privilégio
+   (criar, editar, excluir, mexer na quantidade) já tem a sua guarda em cada
+   ação. Sem isto o jogador ficaria sem nenhum caminho depois que os botões de
+   equipar saíram do card. */
 function _grabHtml(item) {
-    if (!window.podeEditarItens() || !window.InvMotor) return '';
+    if (!window.InvMotor) return '';
     return `<span class="lr-inv-grab" data-grab="${_escHtml(item.id)}" title="Arraste: equipar, contêiner ou pilha igual">⠿</span>`;
 }
 
@@ -1073,6 +1069,13 @@ async function _fundirPilhas(origemId, alvoId) {
         renderEquippedItems();
         renderInventoryTab();
         recalcInventoryPressure();
+        /* A pilha apagada podia estar equipada — sem reaplicar, as mecânicas
+           dela seguem vivas até um F5. O botão Mesclar fazia isto no fim; ele
+           saiu, a obrigação ficou. */
+        if (typeof applyAllRaceMechanics === 'function') {
+            applyAllRaceMechanics(document.getElementById('selRaca')?.value);
+        }
+        if (typeof recalcAll === 'function') recalcAll();
     } catch (e) {
         console.error('❌ Erro ao juntar pilhas:', e);
     }
@@ -1100,8 +1103,10 @@ function _renderOpenContainers() {
     if (!contItem) { viewer.innerHTML = ''; return; }
 
     const inside = window._inventoryState.items.filter(i => i.parentItemId === cid);
-    const cap = contItem.capacidadeContainer || 10;
-    const pesoMax = contItem.pesoMaximoContainer || null;
+    // Vazio = SEM limite; nada de carimbar 10 (ver cabeNoConteiner no motor).
+    const tplCont = (window._inventoryState.catalog || []).find(t => t.id === contItem.modeloId);
+    const cap = Number(contItem.capacidadeContainer ?? tplCont?.capacidadeContainer) || 0;
+    const pesoMax = Number(contItem.pesoMaximoContainer ?? tplCont?.pesoMaximoContainer) || null;
     const insideWeight = inside.reduce((sum, i) => {
         const iQty = Math.max(1, parseInt(i.quantidade) || 1);
         return sum + ((i.peso || 0) * iQty);
@@ -1147,14 +1152,18 @@ function _renderOpenContainers() {
         }).join('');
     }
 
+    const capDisplay = cap > 0 ? `${inside.length} / ${cap}` : `${inside.length}`;
     const weightDisplay = pesoMax != null
         ? `⚖️ Peso: ${insideWeight.toFixed(2)} / ${_pesoKg(pesoMax)}${overWeight ? ' ⚠️' : ''}`
         : `⚖️ Peso: ${_pesoKg(insideWeight)}`;
 
-    viewer.innerHTML = `<div class="inv-container-viewer">
+    /* data-drop: o painel inteiro aceita soltura (shared/inventario-motor.js,
+       alvoSob). Sem isto, arrastar até aqui não fazia NADA — nem erro no
+       console —, que era o bug do contêiner que não recebia item. */
+    viewer.innerHTML = `<div class="inv-container-viewer" data-drop="cont:${cid}">
         <div class="inv-container-header">
             <span class="inv-container-title">📂 ${_escHtml(contItem.nome || 'Container')}</span>
-            <span class="inv-container-cap">Itens: ${inside.length} / ${cap}</span>
+            <span class="inv-container-cap">Itens: ${capDisplay}</span>
             <button class="inv-btn inv-btn-close" onclick="toggleContainer('${cid}')">✕</button>
         </div>
         <div class="inv-container-stats">
@@ -1367,13 +1376,20 @@ window.openEquipModal = function(itemId) {
         
         // Permite clicar mesmo se cheio, caso o slot suporte "fixar"
         const canFixItem = s.podeFixar && (!item.formaEquipar || item.formaEquipar === 'fixar');
-        const clickable = !s.full || canFixItem;
+        /* Slot que não produz estado nenhum sai apagado, com o motivo. Antes ele
+           era oferecido, aceitava o clique e a janela ficava muda: nenhum estado
+           aparecia e o Confirmar nunca habilitava — sem dizer o porquê. */
+        const semEstado = _getAvailableStates(item, s.key).length === 0;
+        const clickable = (!s.full || canFixItem) && !semEstado;
 
-        return `<div class="inv-equip-slot-option ${fullClass}" data-slot="${s.key}" onclick="${clickable ? `selectEquipSlot('${s.key}')` : ''}">
+        return `<div class="inv-equip-slot-option ${fullClass}${semEstado ? ' inv-slot-full' : ''}" data-slot="${s.key}"
+            ${semEstado ? `title="${_escHtml(s.label)} não aceita a Forma de Equipar desta peça"` : ''}
+            onclick="${clickable ? `selectEquipSlot('${s.key}')` : ''}">
             <span class="inv-equip-slot-icon">${icon}</span>
             <span class="inv-equip-slot-label">${s.label}</span>
             <span class="inv-equip-slot-cap">${s.current}/${s.max}</span>
             ${s.full ? '<span class="inv-equip-slot-full-tag">CHEIO</span>' : ''}
+            ${!s.full && semEstado ? '<span class="inv-equip-slot-full-tag">NÃO ACEITA</span>' : ''}
         </div>`;
     }).join('');
 
@@ -1476,7 +1492,14 @@ window.selectEquipSlot = function(slotKey) {
     }
 
     if (availableStates.length === 0) {
-        stateSection.style.display = 'none';
+        /* Sem estado não há o que confirmar. Reavaliar o botão ANTES de sair é o
+           que impedia o Confirmar de ficar preso em habilitado por uma escolha
+           anterior — e o aviso troca a janela muda por uma explicação. */
+        st.selectedState = null;
+        _updateEquipConfirmBtn();
+        stateSection.style.display = 'block';
+        statesGrid.innerHTML = `<div class="inv-equip-note">🚫 Este slot não aceita a
+            <b>Forma de Equipar</b> desta peça. Ajuste a peça no cadastro, ou escolha outro slot.</div>`;
         return;
     }
 
@@ -1886,6 +1909,19 @@ window.moveToContainer = async function(itemId, destinoId) {
     if (!containerId || containerId === itemId) return;
     const contItem = window._inventoryState.items.find(i => i.id === containerId);
     if (!contItem) return;
+
+    /* Capacidade é trava; peso é aviso. A regra mora no motor compartilhado —
+       os quatro inventários usam a MESMA, senão a mesma bolsa aceitaria coisas
+       diferentes na ficha e no painel do mestre. */
+    const item = window._inventoryState.items.find(i => i.id === itemId);
+    const tplCont = (window._inventoryState.catalog || []).find(t => t.id === contItem.modeloId);
+    const veredito = window.InvMotor?.cabeNoConteiner(item, contItem, window._inventoryState.items, tplCont);
+    if (veredito && !veredito.ok) {
+        if (veredito.motivo) alert('📦 ' + veredito.motivo);
+        return;
+    }
+    const aviso = window.InvMotor?.avisoDePeso(item, contItem, window._inventoryState.items, tplCont);
+
     try {
         await _firestoreSetDoc('items', itemId, { parentItemId: containerId, equipado: false, lastModified: new Date().toISOString() });
         const item = window._inventoryState.items.find(i => i.id === itemId);
@@ -1899,6 +1935,7 @@ window.moveToContainer = async function(itemId, destinoId) {
             applyAllRaceMechanics(raca);
         }
         if (typeof recalcAll === 'function') recalcAll();
+        if (aviso) alert('⚠️ ' + aviso);
     } catch (e) {
         console.error('❌ Erro ao mover para container:', e);
     }
@@ -2020,6 +2057,18 @@ window.openItemDetail = function(itemId) {
         }
     }
 
+    /* Contêiner aberto na aba: guardar daqui é a saída de quem não quer (ou não
+       consegue) arrastar. Duas guardas: o contêiner não se guarda em si mesmo, e
+       item que já está dentro não mostra o botão. */
+    const contAberto = (window._openContainerId && window._openContainerId !== item.id)
+        ? window._inventoryState.items.find(i => i.id === window._openContainerId) : null;
+    const guardarBtn = (contAberto && item.parentItemId !== contAberto.id && !item.ehContainer)
+        ? `<button class="inv-btn-action" onclick="moveToContainer('${item.id}');closeItemDetail()">📦 Guardar em ${_escHtml(contAberto.nome || 'Contêiner')}</button>`
+        : '';
+    const tirarBtn = item.parentItemId
+        ? `<button class="inv-btn-action" onclick="removeFromContainer('${item.id}');closeItemDetail()">📤 Tirar do contêiner</button>`
+        : '';
+
     const modal = document.createElement('div');
     modal.className = 'inv-modal';
     modal.id = 'invDetailModal';
@@ -2054,6 +2103,8 @@ window.openItemDetail = function(itemId) {
         <div class="inv-modal-footer">
             ${window.podeUsarItem(item) ? `<button class="inv-btn-action" onclick="usarItem('${item.id}');closeItemDetail()">🧪 Usar</button>` : ''}
             <button class="inv-btn-action" onclick="toggleEquip('${item.id}',${!item.equipado});closeItemDetail()">${item.equipado ? '⬇️ Desequipar' : '⬆️ Equipar'}</button>
+            ${guardarBtn}
+            ${tirarBtn}
             <button class="inv-btn-transfer" onclick="openTransferModal('${item.id}')">🔄 Transferir</button>
             ${qty > 1 && !item.ehContainer && item.tipo !== 'Container' ? `<button class="inv-btn-action" onclick="closeItemDetail();openSplitModal('${item.id}')">➗ Dividir</button>` : ''}
             ${window.podeEditarItens() ? `<button class="inv-btn-action" onclick="closeItemDetail();openItemFormModal('Editar Item', window._inventoryState.items.find(i=>i.id==='${item.id}'))" style="margin-left:auto">✏️ Editar</button>` : ''}
@@ -2461,17 +2512,67 @@ window.transferItem = async function(itemId, targetCharId, targetOwnerUid) {
     }
 };
 
-// ===== ITEM FORM MODAL (Create/Edit) =====
+/* ===== FORMULÁRIO DE ITEM =========================================
+   MESMOS campos do cadastro de Equipamento do Painel do Criador
+   (shared/equip-campos.js), só que gravando em `items/<id>`: mexe nesta peça e
+   em mais nenhuma. Campo novo no cadastro aparece aqui sozinho — antes esta
+   ficha mostrava 15 de 31 campos, e o motor DELA já lia os 31.
+
+   Os módulos entram por window (ver o <script type="module"> em
+   ficha-v1.7_1.html): este arquivo é script clássico e não importa nada. */
+
+/** Registros que os seletores do formulário consomem. */
+function _cachesDoForm() {
+    const sd = window._systemData || {};
+    return {
+        derivedValues: sd.derivedValues || [],
+        vitalStats: sd.vitalStats || [],
+        skills: sd.skills || [],
+        mechanics: sd.mechanics || [],
+        conditions: sd.conditions || [],
+        /* As partes do PERSONAGEM, não o catálogo inteiro: item de Ratling não
+           oferece Asa. Cai no catálogo quando o personagem não tem cópia. */
+        bodyParts: (window.state?.partesDoCorpo?.length ? window.state.partesDoCorpo : sd.bodyParts) || [],
+    };
+}
+
+/** Redesenha os campos para um item (ou para a semente de um modelo). */
+function _pintarCamposItem(item, modelo) {
+    const corpoEl = document.querySelector('#invFormModal .inv-modal-body');
+    const grade = corpoEl?.querySelector('.inv-form-grid');
+    if (!grade) return;
+    const EC = window.EquipCampos;
+    const caches = _cachesDoForm();
+    window._mechCache = caches.mechanics;   // os construtores de seletor leem daqui
+    grade.innerHTML = EC.camposDaInstancia()
+        .map(f => EC.htmlCampo(f, EC.valorDoItem(item, f), { sel: window.EquipSel, caches, modelo })).join('');
+
+    const nota = corpoEl.querySelector('[data-nota-modelo]');
+    if (nota) nota.innerHTML = modelo
+        ? `<div class="inv-form-nota">📘 Cópia completa de <b>${_escHtml(modelo.nome || 'modelo do catálogo')}</b> —
+            cadastro inteiro trazido, inclusive vínculos e equações. O que você mudar aqui vale
+            <b>só para este item</b>, e mexer no catálogo depois <b>não altera</b> esta peça.</div>`
+        : '';
+    const mid = corpoEl.querySelector('#invFormModeloId');
+    if (mid) mid.value = modelo?.id || '';
+    const qi = corpoEl.querySelector('#invFormQtdInicial');
+    if (qi) qi.value = item?.quantidade ?? '';
+    EC.aplicarVisibilidade(corpoEl);
+}
+
 window.openItemFormModal = function(title, item, containerId) {
     // Guarda única para todos os caminhos (criar solto, criar no container, editar).
     if (!window.podeEditarItens()) {
         alert('🔒 Só o Mestre ou o Criador pode criar e editar itens.');
         return;
     }
-    let existing = document.getElementById('invFormModal');
-    if (existing) existing.remove();
+    if (!window.EquipCampos || !window.EquipSel) {
+        alert('⏳ O formulário ainda está carregando. Tente de novo em um instante.');
+        return;
+    }
+    document.getElementById('invFormModal')?.remove();
 
-    // ====== VALIDAÇÃO E INJEÇÃO AUTOMÁTICA DE DEPENDÊNCIAS ======
+    // ====== As partes do corpo precisam existir antes de montar o campo ======
     if (!window.state) window.state = {};
     if (!window.state.partesDoCorpo || window.state.partesDoCorpo.length === 0) {
         const racaNome = document.getElementById('selRaca')?.value || (window.state.fields && window.state.fields['raca']);
@@ -2486,157 +2587,97 @@ window.openItemFormModal = function(title, item, containerId) {
             if (typeof scheduleAutosave === 'function') scheduleAutosave();
         }
     }
-    // =============================================================
 
     const isEdit = !!item;
+    const catalog = (window._inventoryState.catalog || []);
+    const modelo = item?.modeloId ? catalog.find(t => t.id === item.modeloId) : null;
+
+    // Buscar no catálogo só ao CRIAR: trocar o modelo de um item que já existe
+    // apagaria o que foi ajustado nele.
+    const buscaHtml = (!isEdit && catalog.length) ? `
+        <div class="inv-form-catalogo">
+            <label class="inv-form-label" for="invBuscaCat">📚 Partir de um equipamento do catálogo</label>
+            <input type="search" id="invBuscaCat" class="inv-form-input" autocomplete="off"
+                placeholder="🔍 Buscar por nome, tipo ou tag — ou deixe em branco para item personalizado"
+                oninput="window._fichaFiltrarCatalogo()">
+            <select id="invListaCat" class="inv-form-select" size="6"
+                onchange="window.fillFromCatalog(this.value)"></select>
+            <small class="inv-form-hint">O item nasce vinculado ao modelo: o que você não preencher
+                continua seguindo o catálogo.</small>
+        </div>` : '';
+
+    /* "Salvar no Catálogo" — só quem tem papel de criador grava em
+       system/data/* (firestore.rules). O Mestre grava como RASCUNHO
+       (publicado:false): a peça aparece no Painel do Criador para ser publicada,
+       e some dos pickers até lá. Quem não é nem um nem outro não vê a caixa. */
+    const podeCatalogo = !!(window.isCreator || window.isMestre);
+    const catalogoHtml = (!isEdit && podeCatalogo) ? `
+        <label class="inv-form-check inv-form-wide" style="margin-top:10px">
+            <input type="checkbox" id="invFormSalvarCatalogo" checked>
+            <span>📚 Salvar no Catálogo${window.isCreator ? '' : ' <em>(como rascunho, para o Criador publicar)</em>'}</span>
+        </label>` : '';
+
     const modal = document.createElement('div');
     modal.className = 'inv-modal active';
     modal.id = 'invFormModal';
-
-    // Se temos catálogo, mostrar picker com busca
-    const catalog = window._inventoryState.catalog || [];
-    let catalogHtml = '';
-    if (!isEdit && catalog.length > 0) {
-        const options = catalog.map(t => ({
-            value: t.id,
-            label: `${_escHtml(t.nome)} (${t.tipo || '-'})`,
-            sub: t.descricao ? t.descricao.substring(0, 60) + (t.descricao.length > 60 ? '...' : '') : ''
-        }));
-        catalogHtml = `<div class="inv-form-section">
-            <label class="inv-form-label">📚 Criar a partir do catálogo</label>
-            ${_createSearchableSelectHTML('invCatalogPicker', options, '— Item personalizado —', 'Pesquisar item...')}
-        </div>`;
-    }
-
-    modal.innerHTML = `<div class="inv-modal-content" style="max-width:600px">
+    modal.innerHTML = `<div class="inv-modal-content" style="max-width:760px">
         <div class="inv-modal-header">
-            <span class="inv-modal-title">${title || (isEdit ? 'Editar Item' : 'Criar Item')}</span>
+            <span class="inv-modal-title">${_escHtml(title || (isEdit ? 'Editar Item' : 'Criar Item'))}</span>
             <button class="inv-modal-close" onclick="closeItemFormModal()">✕</button>
         </div>
         <div class="inv-modal-body">
-            ${catalogHtml}
-            <div class="inv-form-grid">
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">Nome *</label>
-                    <input type="text" id="invFormName" class="inv-form-input" value="${_escHtml(item?.nome || '')}" placeholder="Nome do item">
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Tipo</label>
-                    <select id="invFormTipo" class="inv-form-select" onchange="_toggleContainerFields()">
-                        <option value="Objeto" ${item?.tipo === 'Objeto' ? 'selected' : ''}>📦 Objeto</option>
-                        <option value="Arma" ${item?.tipo === 'Arma' ? 'selected' : ''}>⚔️ Arma</option>
-                        <option value="Vestimenta" ${item?.tipo === 'Vestimenta' ? 'selected' : ''}>🧥 Vestimenta</option>
-                        <option value="Acessório" ${item?.tipo === 'Acessório' ? 'selected' : ''}>💍 Acessório</option>
-                        <option value="Projétil" ${item?.tipo === 'Projétil' ? 'selected' : ''}>🎯 Projétil</option>
-                        <option value="Container" ${item?.tipo === 'Container' ? 'selected' : ''}>📦 Container</option>
-                        <option value="Consumível" ${item?.tipo === 'Consumível' ? 'selected' : ''}>🧪 Consumível</option>
-                        <option value="Relíquia" ${item?.tipo === 'Relíquia' ? 'selected' : ''}>✨ Relíquia</option>
-                    </select>
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Equipável em</label>
-                    <select id="invFormEquipavelEm" class="inv-form-select" multiple size="4" onchange="_updateFormaEquiparOptions()">
-                        ${(window.state?.partesDoCorpo || []).map(bp => {
-                            const selected = Array.isArray(item?.equipavelEm) && item.equipavelEm.includes(bp.id) ? 'selected' : '';
-                            return `<option value="${bp.id}" data-segurar="${!!bp.podeSegurar}" data-empunhar="${!!bp.podeEmpunhar}" data-vestir="${!!bp.podeVestir}" data-fixar="${!!bp.podeFixar}" ${selected}>${bp.icone || '🦴'} ${bp.nome}</option>`;
-                        }).join('')}
-                    </select>
-                    <small style="color:var(--muted); font-size: 0.8rem;">Segure Ctrl/Cmd p/ selecionar vários. Deixe vazio para Livre.</small>
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Forma de equipar</label>
-                    <select id="invFormFormaEquipar" class="inv-form-select">
-                        <option value="" ${!item?.formaEquipar ? 'selected' : ''}>— Livre —</option>
-                        <option value="segurar" ${item?.formaEquipar === 'segurar' ? 'selected' : ''}>Segurar</option>
-                        <option value="empunhar" ${item?.formaEquipar === 'empunhar' ? 'selected' : ''}>Empunhar</option>
-                        <option value="vestir" ${item?.formaEquipar === 'vestir' ? 'selected' : ''}>Vestir</option>
-                        <option value="fixar" ${item?.formaEquipar === 'fixar' ? 'selected' : ''}>Fixar</option>
-                    </select>
-                </div>
-                <div class="inv-form-group" id="invFormCategoriaArmaGroup" style="display:${item?.tipo === 'Arma' ? 'flex' : 'none'}">
-                    <label class="inv-form-label">Categoria da Arma *</label>
-                    <select id="invFormCategoriaArma" class="inv-form-select">
-                        <option value="" disabled ${!item?.categoriaArma ? 'selected' : ''}>— Selecione —</option>
-                        <option value="uma_mao" ${item?.categoriaArma === 'uma_mao' ? 'selected' : ''}>🗡️ Arma de Uma Mão</option>
-                        <option value="duas_maos" ${item?.categoriaArma === 'duas_maos' ? 'selected' : ''}>⚔️ Arma de Duas Mãos</option>
-                        <option value="versatil" ${item?.categoriaArma === 'versatil' ? 'selected' : ''}>🔄 Arma Versátil</option>
-                        <option value="escudo" ${item?.categoriaArma === 'escudo' ? 'selected' : ''}>🛡️ Escudo</option>
-                        <option value="distancia" ${item?.categoriaArma === 'distancia' ? 'selected' : ''}>🏹 Arma a Distância</option>
-                    </select>
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Peso</label>
-                    <input type="number" id="invFormPeso" class="inv-form-input" value="${item?.peso || 1}" min="0" step="0.01" placeholder="kg">
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Tamanho (m)</label>
-                    <input type="number" id="invFormTamanho" class="inv-form-input" value="${item?.tamanho || 1}" min="0" step="0.01" placeholder="m">
-                </div>
-                <div class="inv-form-group" id="invFormQuantidadeGroup" style="display:${(item?.tipo === 'Container' || item?.tipo === 'Arma' || item?.ehContainer) ? 'none' : 'flex'}">
-                    <label class="inv-form-label">Quantidade</label>
-                    <input type="number" id="invFormQuantidade" class="inv-form-input" value="${(item?.tipo === 'Container' || item?.tipo === 'Arma' || item?.ehContainer) ? 1 : (item?.quantidade || 1)}" min="1">
-                </div>
-                <div id="invContainerFields" class="inv-form-group inv-form-wide" style="display:${(item?.tipo === 'Container' || item?.ehContainer) ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="inv-form-group">
-                        <label class="inv-form-label">⚖️ Peso Máximo</label>
-                        <input type="number" id="invFormPesoMaximo" class="inv-form-input" value="${item?.pesoMaximoContainer || 10}" min="0" step="0.1" placeholder="Limite de peso interno">
-                    </div>
-                    <div class="inv-form-group">
-                        <label class="inv-form-label">✖️ Multiplicador de Pressão</label>
-                        <input type="number" id="invFormMultPressao" class="inv-form-input" value="${item?.multiplicadorPressao || 1}" min="0" step="0.01" placeholder="Ex: 0.5">
-                    </div>
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">💥 Fórmula de Dano</label>
-                    <input type="text" id="invFormFormulaDano" class="inv-form-input" value="${_escHtml(item?.formulaDano || '')}" placeholder="Ex: 1d10 — bônus numéricos vêm dos Valores Derivados">
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">💥 Fórmula de Dano (empunhada com 2 mãos)</label>
-                    <input type="text" id="invFormFormulaDano2Maos" class="inv-form-input" value="${_escHtml(item?.formulaDano2Maos || '')}" placeholder="Ex: 1d12 — vazio = o mesmo dado de 1 mão">
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">Descrição</label>
-                    <textarea id="invFormDesc" class="inv-form-textarea" rows="3" placeholder="Descrição do item">${_escHtml(item?.descricao || '')}</textarea>
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">Imagem</label>
-                    ${CampoImagem.html({ id: 'invFormImagem', classe: 'inv-form-input', valor: item?.imagem || item?.imagemUrl || '', pasta: 'imagens/itens' })}
-                </div>
-                <div class="inv-form-group inv-form-wide" id="invFormMechanicsGroup" style="display:none; margin-top: 8px;">
-                    <label class="inv-form-label" style="color: var(--accent-color);">✨ Efeitos do Item</label>
-                    <div id="invFormMechanicsPreview" style="background:var(--bg-lighter); padding:10px; border-radius:6px; font-size:0.9rem; color:var(--text-color); border: 1px solid var(--border-color); line-height: 1.4;"></div>
-                </div>
-            </div>
-            <input type="hidden" id="invFormModeloId" value="${item?.modeloId || ''}">
-            <input type="hidden" id="invFormContainerId" value="${containerId || ''}">
-            ${isEdit ? `<input type="hidden" id="invFormEditId" value="${item.id}">` : ''}
+            ${buscaHtml}
+            <div data-nota-modelo></div>
+            <div class="inv-form-grid"></div>
+            ${catalogoHtml}
+            <input type="hidden" id="invFormContainerId" value="${_escHtml(containerId || '')}">
+            <input type="hidden" id="invFormModeloId" value="${_escHtml(item?.modeloId || '')}">
+            <input type="hidden" id="invFormQtdInicial" value="${_escHtml(String(item?.quantidade ?? ''))}">
+            ${isEdit ? `<input type="hidden" id="invFormEditId" value="${_escHtml(item.id)}">` : ''}
         </div>
         <div class="inv-modal-footer">
-            ${(isEdit && _RestaurarItem?.modeloDoItem(item, catalog))
-                ? _RestaurarItem.botaoRestaurarHTML('restaurarItemDoModelo()') : ''}
+            ${isEdit && modelo && _RestaurarItem ? _RestaurarItem.botaoRestaurarHTML('window.restaurarItemDoModelo()') : ''}
             <button class="inv-btn-cancel" onclick="closeItemFormModal()">Cancelar</button>
             <button class="inv-btn-save" onclick="saveInventoryItemForm()">💾 Salvar</button>
         </div>
     </div>`;
     document.body.appendChild(modal);
 
-    if (window._updateFormaEquiparOptions) {
-        window._updateFormaEquiparOptions();
-        // Se for edição, garantir que a forma de equipar antiga está selecionada, se possível
-        if (isEdit && item?.formaEquipar) {
-            const formaSelect = document.getElementById('invFormFormaEquipar');
-            if (formaSelect) formaSelect.value = item.formaEquipar;
+    _pintarCamposItem(item, modelo);
+    if (!isEdit && catalog.length) window._fichaFiltrarCatalogo();
+
+    // Tipo e "É Container?" abrem/fecham os campos dependentes
+    const corpoEl = modal.querySelector('.inv-modal-body');
+    corpoEl.addEventListener('change', e => {
+        if (e.target.id === 'field_tipo' || e.target.id === 'field_ehContainer') {
+            window.EquipCampos.aplicarVisibilidade(corpoEl);
         }
-    }
+    });
+};
 
-    // Initialize searchable select for catalog after DOM insertion
-    if (!isEdit && catalog.length > 0) {
-        _initSearchableSelect('invCatalogPicker', (value) => {
-            fillFromCatalog(value);
-        });
-    }
+/** Filtra o catálogo por nome, tipo ou tag. Sem busca, mostra tudo. */
+window._fichaFiltrarCatalogo = function() {
+    const lista = document.getElementById('invListaCat');
+    if (!lista) return;
+    const q = (document.getElementById('invBuscaCat')?.value || '').trim().toLowerCase();
+    const casa = (t) => !q || [t.nome, t.tipo, ...(t.tags || [])]
+        .some(v => String(v || '').toLowerCase().includes(q));
+    const achados = (window._inventoryState.catalog || []).filter(casa)
+        .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
-    _toggleContainerFields();
+    lista.innerHTML = achados.length
+        ? achados.slice(0, 200).map(t => {
+            const det = [t.tipo, t.liga != null ? 'Liga ' + t.liga : '', t.formulaDano].filter(Boolean).join(' · ');
+            return `<option value="${_escHtml(t.id)}">${_escHtml(t.nome || 'Sem nome')}${det ? ' — ' + _escHtml(det) : ''}</option>`;
+        }).join('')
+        : '<option value="" disabled>Nenhum equipamento encontrado</option>';
+};
+
+/** Escolheu um modelo: semeia os campos e vincula a instância a ele. */
+window.fillFromCatalog = function(templateId) {
+    const tpl = (window._inventoryState.catalog || []).find(t => t.id === templateId);
+    if (!tpl) return;
+    _pintarCamposItem(window.EquipCampos.instanciarDoModelo(tpl), tpl);
 };
 
 window.closeItemFormModal = function() {
@@ -2648,130 +2689,32 @@ window.restaurarItemDoModelo = async function() {
     if (!_RestaurarItem) return;
     const editId = document.getElementById('invFormEditId')?.value || '';
     const item = window._inventoryState.items.find(i => i.id === editId);
-    const tpl = _RestaurarItem.modeloDoItem(item, window._inventoryState.catalog || []);
+    const tpl = item?.modeloId ? (window._inventoryState.catalog || []).find(t => t.id === item.modeloId) : null;
     const patch = _RestaurarItem.patchRestauracao(tpl);
     if (!patch) { alert('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.'); return; }
     if (!confirm(_RestaurarItem.textoConfirmacao(item, tpl))) return;
     try {
         await _firestoreSetDoc('items', editId, patch);
+        const idx = window._inventoryState.items.findIndex(i => i.id === editId);
+        if (idx >= 0) window._inventoryState.items[idx] = { ...window._inventoryState.items[idx], ...patch };
         closeItemFormModal();
-        // Recarrega inteiro: restaurar mexe em vínculo (VD, atributo, perícia),
-        // e esses só voltam ao lugar no recálculo completo.
-        if (window.currentCharacterId) await loadCharacterItems(window.currentCharacterId);
-        else { renderEquippedItems(); renderInventoryTab(); recalcInventoryPressure(); }
+        renderEquippedItems();
+        renderInventoryTab();
+        recalcInventoryPressure();
+        if (typeof recalcAll === 'function') recalcAll();
     } catch (e) {
         console.error('❌ Erro ao restaurar item:', e);
-        alert('Erro ao restaurar item: ' + e.message);
-    }
-};
-
-window.fillFromCatalog = function(templateId) {
-    if (!templateId) return;
-    const tpl = window._inventoryState.catalog.find(t => t.id === templateId);
-    if (!tpl) return;
-
-    document.getElementById('invFormName').value = tpl.nome || '';
-    document.getElementById('invFormTipo').value = tpl.tipo || 'Objeto';
-    document.getElementById('invFormPeso').value = tpl.peso || 1;
-    document.getElementById('invFormTamanho').value = tpl.tamanho || 1;
-    document.getElementById('invFormDesc').value = tpl.descricao || '';
-    document.getElementById('invFormImagem').value = tpl.imagemUrl || '';
-    const fdEl = document.getElementById('invFormFormulaDano');
-    if (fdEl) fdEl.value = tpl.formulaDano || '';
-    const fd2El = document.getElementById('invFormFormulaDano2Maos');
-    if (fd2El) fd2El.value = tpl.formulaDano2Maos || '';
-    document.getElementById('invFormModeloId').value = tpl.id;
-    document.getElementById('invFormQuantidade').value = 1;
-
-    // Preencher categoria da arma do catálogo
-    if (tpl.tipo === 'Arma' && tpl.categoriaArma) {
-        const catSel = document.getElementById('invFormCategoriaArma');
-        if (catSel) catSel.value = tpl.categoriaArma;
-    }
-
-    // Preencher campos de container do catálogo
-    if (tpl.ehContainer || tpl.tipo === 'Container') {
-        document.getElementById('invFormPesoMaximo').value = tpl.pesoMaximoContainer || 10;
-        document.getElementById('invFormMultPressao').value = tpl.multiplicadorPressao || 1;
-    }
-    
-    const equipSelect = document.getElementById('invFormEquipavelEm');
-    if (equipSelect) {
-        const slots = Array.isArray(tpl.equipavelEm) ? tpl.equipavelEm : (tpl.equipavelEm ? [tpl.equipavelEm] : []);
-        Array.from(equipSelect.options).forEach(opt => {
-            opt.selected = slots.includes(opt.value);
-        });
-        if (window._updateFormaEquiparOptions) window._updateFormaEquiparOptions();
-    }
-    const formaSelect = document.getElementById('invFormFormaEquipar');
-    if (formaSelect && tpl.formaEquipar) {
-        formaSelect.value = tpl.formaEquipar;
-    }
-    
-    _toggleContainerFields();
-
-    // Mostrar preview das mecânicas, se houver
-    const mechGroup = document.getElementById('invFormMechanicsGroup');
-    const mechPreview = document.getElementById('invFormMechanicsPreview');
-    if (mechGroup && mechPreview) {
-        if (tpl.mecanicaIds && tpl.mecanicaIds.length > 0 && window._systemData && window._systemData.mechanics) {
-            const previews = [];
-            for (const mechId of tpl.mecanicaIds) {
-                const mech = window._systemData.mechanics.find(m => m.id === mechId);
-                if (mech) {
-                    const txt = (typeof generatePreviewText === 'function') ? generatePreviewText(mech) : (mech.previewTexto || mech.descricao || '');
-                    if (txt) previews.push(`• ${_escHtml(txt)}`);
-                }
-            }
-            if (previews.length > 0) {
-                mechPreview.innerHTML = previews.join('<br>');
-                mechGroup.style.display = 'block';
-            } else {
-                mechGroup.style.display = 'none';
-            }
-        } else {
-            mechGroup.style.display = 'none';
-        }
-    }
-};
-
-window._updateFormaEquiparOptions = function() {
-    const equipSelect = document.getElementById('invFormEquipavelEm');
-    const formaSelect = document.getElementById('invFormFormaEquipar');
-    if (!equipSelect || !formaSelect) return;
-
-    let canSegurar = false;
-    let canEmpunhar = false;
-    let canVestir = false;
-    let canFixar = false;
-
-    if (equipSelect.selectedOptions.length === 0) {
-        canSegurar = canEmpunhar = canVestir = canFixar = true;
-    } else {
-        Array.from(equipSelect.selectedOptions).forEach(opt => {
-            if (opt.dataset.segurar === 'true') canSegurar = true;
-            if (opt.dataset.empunhar === 'true') canEmpunhar = true;
-            if (opt.dataset.vestir === 'true') canVestir = true;
-            if (opt.dataset.fixar === 'true') canFixar = true;
-        });
-    }
-
-    const currentVal = formaSelect.value;
-    let html = '<option value="">— Livre —</option>';
-    if (canSegurar) html += `<option value="segurar" ${currentVal === 'segurar' ? 'selected' : ''}>Segurar</option>`;
-    if (canEmpunhar) html += `<option value="empunhar" ${currentVal === 'empunhar' ? 'selected' : ''}>Empunhar</option>`;
-    if (canVestir) html += `<option value="vestir" ${currentVal === 'vestir' ? 'selected' : ''}>Vestir</option>`;
-    if (canFixar) html += `<option value="fixar" ${currentVal === 'fixar' ? 'selected' : ''}>Fixar</option>`;
-
-    formaSelect.innerHTML = html;
-    if (currentVal && !html.includes(`value="${currentVal}"`)) {
-        formaSelect.value = '';
+        alert('Erro ao restaurar: ' + e.message);
     }
 };
 
 window.saveInventoryItemForm = async function() {
-    const nome = document.getElementById('invFormName')?.value?.trim();
+    const EC = window.EquipCampos;
+    const dados = EC.coletarCampos(EC.camposDaInstancia());
+
+    const nome = String(dados.nome || '').trim();
     if (!nome) { alert('Nome obrigatório'); return; }
+    if (dados.tipo === 'Arma' && !dados.categoriaArma) { alert('Selecione a categoria da arma'); return; }
 
     const charId = _getCurrentCharId();
     const user = _getCurrentUser();
@@ -2779,70 +2722,53 @@ window.saveInventoryItemForm = async function() {
 
     const containerId = document.getElementById('invFormContainerId')?.value || '';
     const editId = document.getElementById('invFormEditId')?.value || '';
+    const old = editId ? window._inventoryState.items.find(i => i.id === editId) : null;
+    const isContainer = dados.tipo === 'Container' || !!dados.ehContainer;
 
-    const tipo = document.getElementById('invFormTipo')?.value || 'Objeto';
-    const isContainer = tipo === 'Container';
+    let modeloId = document.getElementById('invFormModeloId')?.value || null;
 
-    // Validar categoria da arma quando tipo é Arma
-    const categoriaArma = document.getElementById('invFormCategoriaArma')?.value || null;
-    if (tipo === 'Arma' && !categoriaArma) {
-        alert('Selecione a categoria da arma'); return;
-    }
-
-        const equipSelect = document.getElementById('invFormEquipavelEm');
-        const equipavelEm = equipSelect ? Array.from(equipSelect.selectedOptions).map(o => o.value) : [];
-        const formaEquipar = document.getElementById('invFormFormaEquipar')?.value || null;
-
-        const itemData = {
-            nome,
-            tipo,
-            categoriaArma: tipo === 'Arma' ? categoriaArma : null,
-            peso: parseFloat(document.getElementById('invFormPeso')?.value) || 1,
-            // Metros, fracionado: 0,1 = 10 cm. parseInt zerava a fração.
-            tamanho: parseFloat(document.getElementById('invFormTamanho')?.value) || 1,
-            // Containers e Armas NÃO podem ser "stacados" — quantidade sempre 1
-            quantidade: (isContainer || tipo === 'Arma') ? 1 : Math.max(1, parseInt(document.getElementById('invFormQuantidade')?.value) || 1),
-            descricao: document.getElementById('invFormDesc')?.value?.trim() || '',
-            formulaDano: document.getElementById('invFormFormulaDano')?.value?.trim() || '',
-            formulaDano2Maos: document.getElementById('invFormFormulaDano2Maos')?.value?.trim() || '',
-            imagem: document.getElementById('invFormImagem')?.value?.trim() || '',
-            modeloId: document.getElementById('invFormModeloId')?.value || null,
-            equipavelEm: equipavelEm.length > 0 ? equipavelEm : null,
-            formaEquipar,
-        characterId: charId,
-        ownerUid: user.uid,
-        equipado: false,
-        slotAnatomico: null,
-        estadoEquip: null,
-        maosUsadas: null,
-        parentItemId: containerId || null,
-        criadoPor: window.isCreator ? 'criador' : (window.isMestre ? 'mestre' : 'jogador'),
-        lastModified: new Date().toISOString(),
-        // Campos de container
-        ehContainer: isContainer,
-        pesoMaximoContainer: isContainer ? (parseFloat(document.getElementById('invFormPesoMaximo')?.value) || 10) : null,
-        multiplicadorPressao: isContainer ? (parseFloat(document.getElementById('invFormMultPressao')?.value) || 1) : null,
-        pressaoBase: parseFloat(document.getElementById('invFormPeso')?.value) || 1
-    };
-
-    // "Segurar" desliga TODO efeito do item (ver itemFormasAtuais acima), então
-    // arma ou peça com dano nunca sai daqui como Segurar. Mesma regra de
-    // normalizaFormaEquipar() em shared/equip-campos.js — aqui inline porque
-    // este arquivo é script clássico e não importa módulo.
-    if (itemData.formaEquipar === 'segurar' && (itemData.tipo === 'Arma' || itemData.formulaDano)) {
-        itemData.formaEquipar = 'empunhar';
-    }
-
-    // Herdar campos do template se modeloId existe
-    if (itemData.modeloId) {
-        const tpl = window._inventoryState.catalog.find(t => t.id === itemData.modeloId);
-        if (tpl) {
-            itemData.pressaoBase = itemData.peso;
-            itemData.ehContainer = tpl.ehContainer || false;
-            itemData.multiplicadorPressao = tpl.multiplicadorPressao || 1;
-            itemData.capacidadeContainer = tpl.capacidadeContainer || 10;
+    // 📚 Salvar no Catálogo (só ao criar) — grava o MODELO antes, para o item
+    // já nascer vinculado a ele.
+    if (!editId && document.getElementById('invFormSalvarCatalogo')?.checked) {
+        try {
+            const novoId = await _publicarNoCatalogo(dados, nome, user);
+            if (novoId) modeloId = novoId;
+        } catch (e) {
+            console.error('❌ Erro ao salvar no catálogo:', e);
+            alert('⚠️ O item foi salvo no inventário, mas não entrou no catálogo: ' + e.message);
         }
     }
+
+    const itemData = {
+        ...dados,
+        nome,
+        // A instância guarda a imagem em `imagem`; `imagemUrl` é chave do catálogo
+        imagem: dados.imagemUrl || '',
+        // Mecânicas da instância não se misturam com as do modelo
+        mecanicaIdsProprias: dados.mecanicaIds || [],
+        ehContainer: isContainer,
+        equipavelEm: (dados.equipavelEm || []).length ? dados.equipavelEm : null,
+        formaEquipar: dados.formaEquipar || null,
+        categoriaArma: dados.tipo === 'Arma' ? dados.categoriaArma : null,
+        peso: Number(dados.peso) || 1,
+        // Metros, fracionado: 0,1 = 10 cm.
+        tamanho: Number(dados.tamanho) || 1,
+        pressaoBase: dados.pressaoBase != null ? Number(dados.pressaoBase) : (Number(dados.peso) || 1),
+        modeloId,
+        characterId: charId,
+        ownerUid: old?.ownerUid || user.uid,
+        criadoPor: old?.criadoPor || (window.isCreator ? 'criador' : (window.isMestre ? 'mestre' : 'jogador')),
+        lastModified: new Date().toISOString(),
+    };
+    delete itemData.imagemUrl;
+    delete itemData.mecanicaIds;
+    if (!isContainer) { itemData.pesoMaximoContainer = null; itemData.multiplicadorPressao = null; itemData.capacidadeContainer = null; }
+    // Arma e contêiner nunca empilham. Nos demais: mantém a pilha atual ao
+    // editar; ao criar do catálogo, nasce com o "padrão ao instanciar" do modelo.
+    const qtdSemente = parseInt(document.getElementById('invFormQtdInicial')?.value) || 0;
+    itemData.quantidade = (isContainer || dados.tipo === 'Arma')
+        ? 1
+        : Math.max(1, parseInt(old?.quantidade) || qtdSemente || 1);
 
     try {
         if (editId) {
@@ -2850,6 +2776,11 @@ window.saveInventoryItemForm = async function() {
             const idx = window._inventoryState.items.findIndex(i => i.id === editId);
             if (idx >= 0) window._inventoryState.items[idx] = { ...window._inventoryState.items[idx], ...itemData };
         } else {
+            itemData.equipado = false;
+            itemData.slotAnatomico = null;
+            itemData.estadoEquip = null;
+            itemData.maosUsadas = null;
+            itemData.parentItemId = containerId || null;
             const newId = 'item-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
             itemData.id = newId;
             await _firestoreSetDoc('items', newId, itemData);
@@ -2859,11 +2790,55 @@ window.saveInventoryItemForm = async function() {
         renderEquippedItems();
         renderInventoryTab();
         recalcInventoryPressure();
+        if (typeof recalcAll === 'function') recalcAll();
     } catch (e) {
         console.error('❌ Erro ao salvar item:', e);
         alert('Erro ao salvar item: ' + e.message);
     }
 };
+
+/**
+ * 📚 Grava a peça no cadastro de Equipamentos do Painel do Criador.
+ *
+ * `firestore.rules` só deixa quem tem papel `criador` escrever em system/data/*.
+ * O Mestre grava como RASCUNHO (`publicado: false`) — a regra abre exatamente
+ * essa fresta, e a peça aparece no Painel do Criador com o selo 📝 Rasc para ser
+ * publicada. Enquanto não for, ela some dos pickers, que filtram por publicado.
+ *
+ * Modelo de mesmo nome e tipo é reaproveitado em vez de duplicado: sem isso o
+ * catálogo enche de "Poção Vermelha" repetida a cada item criado na mesa.
+ *
+ * @returns id do modelo (novo ou reaproveitado), ou null.
+ */
+async function _publicarNoCatalogo(dados, nome, user) {
+    const EC = window.EquipCampos;
+    if (!EC?.modeloDaInstancia) return null;
+
+    const catalogo = window._systemData?.equipment || [];
+    const igual = catalogo.find(t =>
+        String(t.nome || '').trim().toLowerCase() === nome.toLowerCase()
+        && (t.tipo || '') === (dados.tipo || ''));
+    if (igual) return igual.id;
+
+    const modelo = {
+        ...EC.modeloDaInstancia({ ...dados, nome }),
+        publicado: !!window.isCreator,
+        versao: 1,
+        criadoPor: user.uid,
+        criadoEm: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    };
+    const novoId = 'equip-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+    await _firestoreSetDoc('system/data/equipment', novoId, modelo, false);
+
+    // Cache local: o item aparece no picker sem F5.
+    const comId = { id: novoId, ...modelo };
+    if (Array.isArray(window._systemData?.equipment)) window._systemData.equipment.push(comId);
+    if (modelo.publicado && Array.isArray(window._inventoryState.catalog)) {
+        window._inventoryState.catalog.push(comId);
+    }
+    return novoId;
+}
 
 // ===== LEGACY COMPAT: Keep old functions to not break existing calls =====
 // Note: wC, aC, pC, cC, iC are already declared in app.js (same global scope)
@@ -3240,57 +3215,6 @@ function _triggerConditionMechanicsUpdate() {
 }
 
 // ===== TOGGLE CONTAINER FIELDS =====
-window._toggleContainerFields = function() {
-    const tipo = document.getElementById('invFormTipo')?.value;
-    const fields = document.getElementById('invContainerFields');
-    if (fields) {
-        fields.style.display = tipo === 'Container' ? 'grid' : 'none';
-    }
-    // Mostrar/ocultar categoria da arma
-    const armaGroup = document.getElementById('invFormCategoriaArmaGroup');
-    if (armaGroup) {
-        armaGroup.style.display = tipo === 'Arma' ? 'flex' : 'none';
-    }
-    // Containers e Armas NÃO podem ser "stacados" — ocultar campo de quantidade
-    const qtyGroup = document.getElementById('invFormQuantidadeGroup');
-    if (qtyGroup) {
-        qtyGroup.style.display = (tipo === 'Container' || tipo === 'Arma') ? 'none' : 'flex';
-    }
-    // Resetar quantidade para 1 quando for Container ou Arma
-    if (tipo === 'Container' || tipo === 'Arma') {
-        const qtyInput = document.getElementById('invFormQuantidade');
-        if (qtyInput) qtyInput.value = 1;
-    }
-    
-    // Atualizar opções de slot restrito
-    const slotSelect = document.getElementById('invFormSlotRestrito');
-    if (slotSelect) {
-        let initialValStr = slotSelect.dataset.value || '[]';
-        let initialVal = [];
-        try { initialVal = JSON.parse(initialValStr); } catch(e) {}
-        if (!Array.isArray(initialVal)) initialVal = initialVal ? [initialVal] : [];
-        
-        let currentVals = Array.from(slotSelect.selectedOptions).map(o => o.value);
-        let targetVals = currentVals.length > 0 ? currentVals : initialVal;
-        
-        let html = '';
-        const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : {};
-        for (const [key, def] of Object.entries(bodySlots)) {
-            if (def.accepts && def.accepts.includes(tipo)) {
-                html += `<option value="${key}">${def.label}</option>`;
-            }
-        }
-        slotSelect.innerHTML = html;
-        
-        // Restore previous values
-        for (let i = 0; i < slotSelect.options.length; i++) {
-            if (targetVals.includes(slotSelect.options[i].value)) {
-                slotSelect.options[i].selected = true;
-            }
-        }
-        slotSelect.dataset.value = '[]'; // Clear initial value after first use
-    }
-};
 
 // ===== UTILITY =====
 function _escHtml(str) {
@@ -3298,118 +3222,6 @@ function _escHtml(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// ===== MERGE / STACK SYSTEM =====
-/**
- * Mescla itens idênticos no inventário, somando suas quantidades.
- * Itens são considerados "idênticos" se possuem o mesmo:
- *   nome, tipo, modeloId, peso, tamanho, descricao, imagem, parentItemId, equipado.
- * Containers e Armas NUNCA são mesclados (não podem ser stacados).
- * Retorna a quantidade de merges realizados.
- */
-window.mergeInventoryItems = async function() {
-    const charId = _getCurrentCharId();
-    if (!charId) { alert('Erro: personagem não carregado'); return 0; }
-
-    const items = window._inventoryState.items;
-    if (items.length < 2) {
-        alert('ℹ️ Não há itens suficientes para mesclar.');
-        return 0;
-    }
-
-    // Chave de identidade para comparar itens
-    function _itemKey(item) {
-        return [
-            (item.nome || '').trim().toLowerCase(),
-            (item.tipo || '').toLowerCase(),
-            item.modeloId || '',
-            parseFloat(item.peso || 0),
-            parseFloat(item.tamanho || 0),
-            (item.descricao || '').trim().toLowerCase(),
-            (item.imagem || item.imagemUrl || '').trim(),
-            item.parentItemId || '__root__',
-            !!item.equipado
-        ].join('||');
-    }
-
-    // Agrupar por chave — excluir Containers e Armas (nunca mesclam)
-    const groups = {};
-    for (const item of items) {
-        if (item.ehContainer || item.tipo === 'Container' || item.tipo === 'Arma') continue;
-        const key = _itemKey(item);
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(item);
-    }
-
-    // Filtrar apenas grupos com 2+ itens
-    const mergeableGroups = Object.values(groups).filter(g => g.length > 1);
-    if (mergeableGroups.length === 0) {
-        alert('ℹ️ Nenhum item idêntico encontrado para mesclar.');
-        return 0;
-    }
-
-    // Confirmar
-    const totalMerges = mergeableGroups.reduce((sum, g) => sum + g.length - 1, 0);
-    const groupNames = mergeableGroups.map(g => `"${g[0].nome}" (${g.length} → 1)`).join('\n');
-    if (!confirm(`🔀 Mesclar ${totalMerges} item(ns) em ${mergeableGroups.length} stack(s)?\n\n${groupNames}`)) {
-        return 0;
-    }
-
-    let mergeCount = 0;
-    try {
-        for (const group of mergeableGroups) {
-            // O primeiro item do grupo é o "sobrevivente"
-            const survivor = group[0];
-            let totalQty = 0;
-            for (const item of group) {
-                totalQty += Math.max(1, parseInt(item.quantidade) || 1);
-            }
-
-            // Atualizar quantidade do sobrevivente
-            await _firestoreSetDoc('items', survivor.id, {
-                quantidade: totalQty,
-                lastModified: new Date().toISOString()
-            });
-            survivor.quantidade = totalQty;
-
-            // Excluir os demais
-            for (let i = 1; i < group.length; i++) {
-                await _firestoreDeleteDoc('items', group[i].id);
-                window._inventoryState.items = window._inventoryState.items.filter(x => x.id !== group[i].id);
-                mergeCount++;
-            }
-        }
-
-        renderEquippedItems();
-        renderInventoryTab();
-        recalcInventoryPressure();
-
-        // Re-apply mechanics
-        if (typeof applyAllRaceMechanics === 'function') {
-            const raca = document.getElementById('selRaca')?.value;
-            applyAllRaceMechanics(raca);
-        }
-        if (typeof recalcAll === 'function') recalcAll();
-
-        alert(`✅ ${mergeCount} item(ns) mesclado(s) com sucesso!`);
-    } catch (e) {
-        console.error('❌ Erro ao mesclar itens:', e);
-        alert('❌ Erro ao mesclar itens: ' + e.message);
-    }
-    return mergeCount;
-};
-
-// ===== EXPOSE GLOBALLY =====
-window.loadCharacterItems = loadCharacterItems;
-window.loadInventoryCatalog = loadInventoryCatalog;
-window.applyEquippedItemsMechanics = applyEquippedItemsMechanics;
-window.recalcInventoryPressure = recalcInventoryPressure;
-window.renderEquippedItems = renderEquippedItems;
-window.renderInventoryTab = renderInventoryTab;
-window.openItemFormModal = openItemFormModal;
-window.openTransferModal = openTransferModal;
-window.closeTransferModal = closeTransferModal;
-window.transferItem = transferItem;
-window.mergeInventoryItems = mergeInventoryItems;
 window.renderConditions = renderConditions;
 window.addCondition = addCondition;
 window.openConditionFormModal = openConditionFormModal;

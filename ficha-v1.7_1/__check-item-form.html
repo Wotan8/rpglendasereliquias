@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Formulário de item da Ficha</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<!-- sem cache: arnês tem de ler o CSS do disco, senão mede o de ontem -->
+<script>document.write('<link rel="stylesheet" href="css/inventory.css?t=' + Date.now() + '">');</script>
+<link rel="stylesheet" href="../shared/equip-campos.css">
+<style>
+  body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table { border-collapse: collapse; font: 11px ui-monospace, monospace; width: 620px; }
+  td { border: 1px solid var(--lr-border); padding: 2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight: 700; }
+  #placar { font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--lr-border); }
+  h1 { font-size: 1rem; margin: 0 0 4px; } p { margin: 0 0 10px; color: var(--lr-text-2); font-size: .8rem; }
+</style></head>
+<body>
+<h1>🗡️ Formulário de item da Ficha = cadastro do Painel do Criador</h1>
+<p>A ficha parou de ter lista de campos própria: ela desenha
+   <code>camposDaInstancia()</code> de shared/equip-campos.js, a MESMA lista do
+   Criador. Sem Firestore — o modal é aberto na mão sobre dados semeados.</p>
+<table id="saida"></table>
+<div id="placar"></div>
+
+<script src="../shared/campo-imagem.js"></script>
+<script src="../shared/equip-slots.js"></script>
+<script src="js/inventory.js?c=2"></script>
+<script type="module">
+import * as InvMotor from '../shared/inventario-motor.js?v=5';
+import * as EquipCampos from '../shared/equip-campos.js?v=9';
+import * as EquipSel from '../painel-criador/js/painel-mechanics.js?v=16';
+window.InvMotor = InvMotor;
+window.EquipCampos = EquipCampos;
+window.EquipSel = EquipSel;
+
+await new Promise(r => setTimeout(r, 0));
+
+const linhas = [];
+let ok = 0;
+const teste = (nome, passou) => { linhas.push([nome, passou]); if (passou) ok++; };
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+// ---- semeadura ----
+window.isMestre = true;                 // libera podeEditarItens()
+window.isCreator = false;               // mestre puro: catálogo vira rascunho
+window.currentCharacterId = 'char-teste';
+window.currentUser = { uid: 'u1' };
+window.state = { partesDoCorpo: [
+    { id: 'bp-mao', nome: 'Mão', icone: '🤚', slots: 2, podeEmpunhar: true, podeSegurar: true },
+    { id: 'bp-pescoco', nome: 'Pescoço', icone: '📿', slots: 1, podeVestir: true, podeFixar: true },
+] };
+window._systemData = {
+    derivedValues: [{ id: 'dv1', nome: 'Acerto', key: 'acerto' }],
+    vitalStats: [{ id: 'vs1', nome: 'Vitalidade' }],
+    skills: [{ id: 'sk1', nome: 'Atletismo' }],
+    mechanics: [{ id: 'me1', nome: 'Bônus de Teste', tipo: 'modificar' }],
+    conditions: [{ id: 'cd1', nome: 'Sangrando' }],
+    bodyParts: window.state.partesDoCorpo,
+    equipment: [],
+};
+const modelo = {
+    id: 'tpl1', nome: 'Colar de Ametista', tipo: 'Acessório', publicado: true,
+    equipavelEm: ['bp-pescoco'], formaEquipar: 'vestir', peso: 0.1, tamanho: 0.1,
+    liga: '2', qualidade: '1', preco: 300, tags: ['mágico', 'ametista'],
+    descricao: 'Uma pedra roxa em corrente de prata.',
+    valoresDerivadosVinculados: [{ id: 'dv1', modificador: 2 }],
+    quantidade: 1,
+};
+window._inventoryState = { items: [], catalog: [modelo] };
+
+// ---- abre o modal de CRIAR ----
+window.openItemFormModal('Criar Item');
+const corpo = $('#invFormModal .inv-modal-body');
+
+teste('T1 · o modal abriu', !!corpo);
+
+const spec = EquipCampos.camposDaInstancia();
+const faltando = spec.filter(f => !$(`#field_${f.key}`, corpo)).map(f => f.key);
+teste(`T2 · os ${spec.length} campos da spec estão na tela` + (faltando.length ? ' — faltam: ' + faltando.join(', ') : ''),
+    faltando.length === 0);
+
+// Os que a ficha NÃO tinha antes — a razão do pedido
+for (const k of ['tags', 'liga', 'qualidade', 'afiacao', 'reforco', 'preco', 'tipoGolpe',
+                 'alcanceM', 'alcanceFator', 'tipoProjetil', 'slotsAdicionais',
+                 'valoresDerivadosVinculados', 'statusVitaisVinculados',
+                 'atributosVinculados', 'periciasVinculadas', 'condicaoIds']) {
+    if (!$(`#field_${k}`, corpo)) linhas.push([`   ⤷ campo novo ausente: ${k}`, false]);
+}
+
+teste('T3 · picker do catálogo aparece ao criar', !!$('#invListaCat', corpo));
+teste('T4 · "Salvar no Catálogo" nasce marcado', $('#invFormSalvarCatalogo', corpo)?.checked === true);
+teste('T5 · mestre puro é avisado que vai como rascunho',
+    /rascunho/i.test($('#invFormSalvarCatalogo', corpo)?.closest('label')?.textContent || ''));
+
+// ---- partir de um modelo do catálogo ----
+window.fillFromCatalog('tpl1');
+teste('T6 · o modelo preenche o nome', $('#field_nome')?.value === 'Colar de Ametista');
+teste('T7 · o modelo traz as tags', ($('#field_tags')?.value || '').includes('ametista'));
+teste('T8 · o modelo traz Liga e Qualidade',
+    $('#field_liga')?.value === '2' && $('#field_qualidade')?.value === '1');
+teste('T9 · o modelo traz o vínculo de Valor Derivado COM a equação',
+    JSON.parse($('#field_valoresDerivadosVinculados')?.value || '[]').length === 1);
+teste('T10 · o vínculo com o modelo fica registrado', $('#invFormModeloId')?.value === 'tpl1');
+teste('T11 · a quantidade padrão do modelo vem junto', $('#invFormQtdInicial')?.value === '1');
+
+// ---- visibilidade condicional ----
+teste('T12 · campo de Arma escondido para Acessório',
+    $('[data-campo="categoriaArma"]', corpo)?.style.display === 'none');
+$('#field_tipo').value = 'Arma';
+EquipCampos.aplicarVisibilidade(corpo);
+teste('T13 · virou Arma e a Categoria apareceu',
+    $('[data-campo="categoriaArma"]', corpo)?.style.display !== 'none');
+$('#field_tipo').value = 'Acessório';
+EquipCampos.aplicarVisibilidade(corpo);
+
+// ---- coleta de volta ----
+const colhido = EquipCampos.coletarCampos(spec);
+teste('T14 · a coleta devolve o que o modelo semeou', colhido.nome === 'Colar de Ametista');
+teste('T15 · a coleta devolve as tags como lista', Array.isArray(colhido.tags) && colhido.tags.length === 2);
+
+// ---- o modelo gerado a partir da instância não leva dado de dono ----
+const m = EquipCampos.modeloDaInstancia({ ...colhido, imagem: 'x.png', mecanicaIdsProprias: ['me1'],
+    characterId: 'char-teste', ownerUid: 'u1', equipado: true, parentItemId: 'c9', quantidade: 3 });
+teste('T16 · modeloDaInstancia renomeia imagem -> imagemUrl', m.imagemUrl === 'x.png');
+teste('T17 · modeloDaInstancia renomeia mecanicaIdsProprias -> mecanicaIds',
+    Array.isArray(m.mecanicaIds) && m.mecanicaIds[0] === 'me1');
+teste('T18 · nenhum dado de dono vaza para o catálogo',
+    !('characterId' in m) && !('ownerUid' in m) && !('equipado' in m) && !('parentItemId' in m));
+teste('T19 · a quantidade vira o "padrão ao instanciar"', m.quantidade === 3);
+
+// ---- o campo de imagem é o mesmo do Criador (cola URL ou envia arquivo) ----
+teste('T20 · imagem tem o botão de enviar arquivo', !!$('[data-ci-btn]', corpo));
+
+// ---- edição não oferece trocar de modelo ----
+window.closeItemFormModal();
+window.openItemFormModal('Editar Item', { id: 'i1', nome: 'Colar', tipo: 'Acessório', modeloId: 'tpl1', quantidade: 1 });
+teste('T21 · ao EDITAR, o picker de catálogo some', !$('#invListaCat'));
+teste('T22 · ao EDITAR, "Salvar no Catálogo" some', !$('#invFormSalvarCatalogo'));
+teste('T23 · ao EDITAR, o botão Restaurar aparece', /restaurar/i.test($('#invFormModal .inv-modal-footer').textContent));
+
+// ---- responsivo: o formulário tem de caber num celular ----
+// O pane de teste não desce de ~640px, então a coluna única da media query é
+// forçada na mão. O que se mede é o que importa: campo que não encolhe estoura.
+(() => {
+    const md = $('#invFormModal');
+    const c = md.querySelector('.inv-modal-content');
+    const larguraOriginal = c.style.maxWidth;
+    c.style.maxWidth = '360px'; c.style.width = '360px';
+    md.querySelector('.inv-form-grid').style.gridTemplateColumns = '1fr';
+    const r = c.getBoundingClientRect();
+    const estoura = $$('input,select,textarea', md).filter(e => e.getBoundingClientRect().right > r.right + 1);
+    teste(`T24 · a 360px nenhum campo estoura a janela${estoura.length ? ' — ' + estoura.slice(0, 3).map(e => e.id).join(', ') : ''}`,
+        estoura.length === 0);
+    c.style.maxWidth = larguraOriginal; c.style.width = '';
+    md.querySelector('.inv-form-grid').style.gridTemplateColumns = '';
+})();
+
+// ---- saída ----
+$('#saida').innerHTML = linhas.map(([n, p]) =>
+    `<tr><td>${n}</td><td class="${p ? 'ok' : 'fail'}">${p ? 'OK' : 'FALHOU'}</td></tr>`).join('');
+$('#placar').innerHTML = `<span class="${ok === linhas.length ? 'ok' : 'fail'}">${ok}/${linhas.length} passaram</span>`;
+document.title = `__check item-form ${ok}/${linhas.length}`;
+</script>
+</body></html>

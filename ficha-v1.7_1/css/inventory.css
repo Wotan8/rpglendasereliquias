@@ -439,8 +439,6 @@
     color: var(--muted, var(--lr-text-2));
 }
 .inv-btn:hover { border-color: var(--primary, var(--lr-abyssal)); color: var(--light, var(--lr-text-1)); }
-.inv-btn-equip:hover { border-color: var(--lr-nature); color: var(--lr-nature); }
-.inv-btn-unequip:hover { border-color: var(--lr-gold); color: var(--lr-gold); }
 .inv-btn-delete:hover { border-color: var(--lr-blood-2); color: var(--lr-blood-2); }
 .inv-btn-split:hover { border-color: var(--lr-arcane); color: var(--lr-arcane); }
 .inv-btn-open { border-color: rgba(63, 174, 106, 0.5); color: var(--lr-nature); }
@@ -593,6 +591,10 @@
     padding: 12px 20px;
     border-top: 2px solid var(--line, rgba(91, 63, 184, 0.1));
     display: flex;
+    /* Equipar, Guardar, Tirar, Usar, Transferir, Dividir, Editar: passou de seis
+       botões, e sem wrap na regra BASE isso estoura a largura no tablet — a
+       media query de 600px chegava tarde demais. */
+    flex-wrap: wrap;
     gap: 10px;
     justify-content: flex-end;
 }
@@ -665,6 +667,12 @@
 .inv-form-input,
 .inv-form-select,
 .inv-form-textarea {
+    /* Sem estes três o campo não encolhe: o tamanho intrínseco do <input>
+       (~370px) vira o mínimo automático do item flex e estoura a coluna no
+       celular. Vale para as quatro telas que usam estas classes. */
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
     padding: 8px 12px;
     background: var(--lr-bg-0);
     border: 2px solid var(--line, rgba(91, 63, 184, 0.15));
@@ -760,24 +768,6 @@
     font-size: 0.68rem;
     color: var(--muted, var(--lr-text-2));
     font-weight: 600;
-}
-
-/* === MOVE TO CONTAINER BUTTON === */
-.inv-btn-move-container {
-    background: none;
-    border: 1px solid rgba(63, 174, 106, 0.3);
-    border-radius: 6px;
-    padding: 4px 8px;
-    cursor: pointer;
-    font-size: 0.82rem;
-    transition: all 0.2s;
-    color: var(--lr-nature);
-    white-space: nowrap;
-}
-.inv-btn-move-container:hover {
-    background: rgba(63, 174, 106, 0.12);
-    border-color: var(--lr-nature);
-    color: var(--lr-nature);
 }
 
 /* === TRANSFER BUTTON === */

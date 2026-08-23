@@ -57,13 +57,24 @@
     } catch (e) { /* o form vive dentro do modal; testado pelo DOM abaixo */ }
 
     linhas.push('');
-    linhas.push('FORMULÁRIO (varre o fonte carregado)');
-    fetch('js/inventory.js?t=' + T).then(r => r.text()).then(src => {
-        for (const campo of ['invFormTamanho', 'invFormPeso']) {
-            const linha = src.split('\n').find(l => l.includes(`id="${campo}"`) && l.includes('<input'));
-            const temStep = linha && /step="/.test(linha);
-            const temPlaceholder = linha && /placeholder="(kg|m)"/.test(linha);
-            linhas.push(`  ${campo.padEnd(16)} step=${temStep ? 'sim' : 'NÃO ⚠️'} · placeholder=${temPlaceholder ? 'sim' : 'NÃO ⚠️'}`);
+    linhas.push('FORMULÁRIO (a spec compartilhada é quem desenha os campos)');
+    /* O formulário da ficha deixou de ser escrito à mão: hoje é
+       shared/equip-campos.js, o mesmo do Painel do Criador. Então o que se
+       confere aqui é a SPEC — se ela desenhar peso/tamanho como number de step
+       livre, as quatro telas ganham juntas. */
+    Promise.all([
+        import('../shared/equip-campos.js?v=9'),
+        fetch('js/inventory.js?t=' + T).then(r => r.text()),
+    ]).then(([EC, src]) => {
+        const host = document.createElement('div');
+        for (const key of ['tamanho', 'peso']) {
+            const f = EC.CAMPOS_EQUIPAMENTO.find(x => x.key === key);
+            host.innerHTML = EC.htmlCampo(f, null, { sel: {}, caches: {} });
+            const el = host.querySelector('#field_' + key);
+            const step = el?.getAttribute('step');
+            const ok = el?.type === 'number' && step && step !== '1';
+            linhas.push(`  field_${key.padEnd(10)} type=${el?.type || '—'} · step=${step || 'NÃO'} ${ok ? '' : '⚠️'}`);
+            linhas.push(`      placeholder: ${f.placeholder || 'NÃO ⚠️'}`);
         }
         const parseInts = src.split('\n')
             .map((l, n) => [n + 1, l])

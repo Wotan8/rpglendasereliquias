@@ -32,8 +32,8 @@ import { cenaAtiva, comCenaAtivaPatch } from '../../shared/combate-cenas.js';
 import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, itensIdenticos, escolherQtd,
     tplDoItem as tplDoItemMotor, formulaDanoDoItem as formulaDanoMotor, fmtN,
-    htmlInventario as htmlInvMotor, tratarClique as tratarCliqueInv, iniciarArrasto,
-} from '../../shared/inventario-motor.js?v=4';
+    htmlInventario as htmlInvMotor, tratarClique as tratarCliqueInv, iniciarArrasto, cabeNoConteiner,
+} from '../../shared/inventario-motor.js?v=5';
 
 // Mesmo ritmo do painel de combate (ver CUSTOS-FIRESTORE.md): cliques rápidos
 // em ± não viram um write por clique.
@@ -467,7 +467,10 @@ function partesDoCorpo(win) {
         partes = (dadosNpc(win.id)?.partesDoCorpo || []).map(bp => {
             const cat = (_sys?.bodyParts || []).find(b => b.id === bp.id);
             return cat ? { ...bp, podeGolpear: !!cat.podeGolpear, formulaDano: cat.formulaDano,
-                tipoGolpe: cat.tipoGolpe, valoresDerivadosVinculados: cat.valoresDerivadosVinculados } : bp;
+                tipoGolpe: cat.tipoGolpe, valoresDerivadosVinculados: cat.valoresDerivadosVinculados,
+                // como o golpe: quem decide como a peça prende no corpo é o cadastro
+                podeSegurar: !!cat.podeSegurar, podeEmpunhar: !!cat.podeEmpunhar,
+                podeVestir: !!cat.podeVestir, podeFixar: !!cat.podeFixar } : bp;
         });
     } else {
         const ch = dadosChar(win.id);
@@ -638,7 +641,11 @@ async function moverItem(win, id, alvo) {
     const contId = alvo.slice(5);
     if (contId === id || i.parentItemId === contId) return;
     const c = (win.itens || []).find(x => x.id === contId); if (!c) return;
-    if (ehContainer(i)) { toast('⚠️ Contêiner não entra em contêiner', 'warning'); return; }
+    /* Capacidade trava, peso avisa — a régua é a do cadastro e mora no motor
+       compartilhado, para a mesma bolsa não aceitar coisas diferentes em cada
+       inventário. */
+    const veredito = cabeNoConteiner(i, c, win.itens, tplDoItemMotor(c, _sys));
+    if (!veredito.ok) { if (veredito.motivo) toast('📦 ' + veredito.motivo, 'warning'); return; }
     const q = escolherQtd(i, `Mover quantos "${i.nome || 'item'}" para ${c.nome || 'o contêiner'}?`);
     if (q == null) return;
     const plano = dividirPilha(i, q);

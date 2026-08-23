@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="../shared/texto-mundo.css?v=1">
     <link rel="stylesheet" href="../shared/tokens.css?v=11">
     <link rel="stylesheet" href="../shared/inventario-motor.css?v=1">
+    <link rel="stylesheet" href="../shared/equip-campos.css?v=3">
     <link rel="stylesheet" href="css/print.css?v=8">
 <script type="module" src="/js/global-favicon.js"></script>
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
@@ -329,8 +330,7 @@
             <div class="tab-content" id="tabInventario">
                 <div class="section">
                     <div class="section-title">📋 Inventário
-                        <button class="add-btn no-print" onclick="mergeInventoryItems()" style="margin-left:auto;font-size:0.8rem;padding:4px 12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:var(--lr-arcane-2);" title="Mesclar itens idênticos em stacks">🔀 Mesclar</button>
-                        <button id="btnCriarItem" class="add-btn no-print" onclick="openItemFormModal('Criar Item')" style="font-size:0.8rem;padding:4px 12px;display:none">+ Criar Item</button>
+                        <button id="btnCriarItem" class="add-btn no-print" onclick="openItemFormModal('Criar Item')" style="margin-left:auto;font-size:0.8rem;padding:4px 12px;display:none">+ Criar Item</button>
                     </div>
                     <div id="inventoryItemsGrid">
                         <div class="inv-empty">
@@ -472,13 +472,20 @@
     <!-- Motor de arrasto do inventário (mesmo do Tabuleiro e do Painel do Mestre).
          inventory.js é script clássico, então o módulo entra por window. -->
     <script type="module">
-        import * as InvMotor from '../shared/inventario-motor.js?v=4';
+        import * as InvMotor from '../shared/inventario-motor.js?v=5';
+        import * as EquipCampos from '../shared/equip-campos.js?v=9';
+        // Os construtores de seletor do Painel do Criador: o formulário de item
+        // da ficha mostra os MESMOS controles do cadastro de Equipamento.
+        // painel-mechanics.js não importa nada — só lê globais window._*Cache.
+        import * as EquipSel from '../painel-criador/js/painel-mechanics.js?v=16';
         window.InvMotor = InvMotor;
+        window.EquipCampos = EquipCampos;
+        window.EquipSel = EquipSel;
         // Módulo carrega depois dos scripts clássicos: se o inventário já tiver
         // sido pintado, repinta uma vez para as alças ⠿ aparecerem.
         window.renderInventoryTab?.();
     </script>
-    <script src="js/inventory.js?v=20"></script>
+    <script src="js/inventory.js?v=21"></script>
     <script src="js/combat-panel.js?v=5"></script>
     <script src="js/notes.js"></script>
     <script src="js/aura.js"></script>

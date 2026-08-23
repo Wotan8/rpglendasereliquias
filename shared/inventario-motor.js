@@ -108,6 +108,61 @@ export function pressaoItem(i, itens) {
 
 // ===== RENDER =====
 
+/* ===== O QUE CABE DENTRO DE UM CONTÊINER =====
+   Duas réguas do cadastro, com pesos diferentes de propósito:
+
+   · CAPACIDADE (itens) é TRAVA: contêiner cheio recusa a soltura e o alvo nem
+     acende. Conta PILHA, não unidade — é a mesma conta que a lista já mostra em
+     "Itens: 2 / 10", e é o que o cadastro assume (o Saco de Luns tem capacidade
+     1 e comporta mil moedas).
+   · PESO MÁXIMO é AVISO: deixa guardar e marca o contêiner. Mesa em andamento
+     já tem bolsa estourada por peso digitado errado, e travar isso agora
+     prenderia item de gente que não fez nada.
+
+   Vazio ou zero = SEM limite. Nada de inventar 10 como padrão: a maioria dos
+   contêineres vivos tem os dois campos em branco e passaria a recusar tudo. */
+
+export const capacidadeDe = (c, tpl) => Number(c?.capacidadeContainer ?? tpl?.capacidadeContainer) || 0;
+export const pesoMaxDe = (c, tpl) => Number(c?.pesoMaximoContainer ?? tpl?.pesoMaximoContainer) || 0;
+
+/** Peso do que já está dentro, pilhas multiplicadas. */
+export function pesoDentro(contId, itens, ignorarId) {
+    return (itens || [])
+        .filter(x => x.parentItemId === contId && x.id !== ignorarId)
+        .reduce((s, x) => s + (parseFloat(x.peso) || 0) * qtdDe(x), 0);
+}
+
+/**
+ * Este item pode entrar neste contêiner? Só o que ENTRA é julgado — o conteúdo
+ * atual nunca é revalidado, senão bolsa já estourada travaria sozinha.
+ * @returns {{ok: boolean, motivo: string}}
+ */
+export function cabeNoConteiner(item, cont, itens, tpl) {
+    if (!item || !cont || item.id === cont.id) return { ok: false, motivo: 'Item inválido' };
+    if (!ehContainer(cont)) return { ok: false, motivo: 'O destino não é um contêiner' };
+    if (ehContainer(item)) return { ok: false, motivo: 'Contêiner não entra em contêiner' };
+    if (item.parentItemId === cont.id) return { ok: false, motivo: '' };   // já está lá, sem alarde
+
+    const cap = capacidadeDe(cont, tpl);
+    if (cap > 0) {
+        const dentro = (itens || []).filter(x => x.parentItemId === cont.id && x.id !== item.id).length;
+        if (dentro + 1 > cap) {
+            return { ok: false, motivo: `${cont.nome || 'O contêiner'} está cheio: ${dentro}/${cap} itens` };
+        }
+    }
+    return { ok: true, motivo: '' };
+}
+
+/** Passaria do peso máximo? Texto do aviso, ou null. Nunca trava. */
+export function avisoDePeso(item, cont, itens, tpl, qtd) {
+    const pmax = pesoMaxDe(cont, tpl);
+    if (!pmax) return null;
+    const q = Math.max(1, parseInt(qtd) || qtdDe(item));
+    const total = pesoDentro(cont.id, itens, item.id) + (parseFloat(item.peso) || 0) * q;
+    if (total <= pmax + 1e-9) return null;
+    return `${cont.nome || 'O contêiner'} passa do peso: ${total.toFixed(2)} kg de ${pmax} kg`;
+}
+
 /** Detalhe expandido: TODAS as informações do item (instância + modelo do catálogo). */
 function detalheItem(ctx, i) {
     const sys = ctx.sys;
@@ -175,8 +230,13 @@ function grupoItem(ctx, i) {
     let html = itemRow(ctx, i, false);
     if (ehContainer(i) && ctx.contAbertos.has(i.id)) {
         const filhos = (ctx.itens || []).filter(x => x.parentItemId === i.id);
-        html += filhos.map(f => itemRow(ctx, f, true)).join('')
-            || '<div class="lr-inv-cont-vazio">vazio — arraste um item para cá</div>';
+        // O bloco inteiro do conteúdo é zona de soltura: soltar em cima de um
+        // filho, ou no vazio, guarda no contêiner. Sem isto o convite do texto
+        // era mentira — a soltura resolvia para a seção pai ou para nada.
+        html += `<div data-drop="cont:${esc(i.id)}">`
+            + (filhos.map(f => itemRow(ctx, f, true)).join('')
+                || '<div class="lr-inv-cont-vazio">vazio — arraste um item para cá</div>')
+            + '</div>';
     }
     return html;
 }
@@ -239,11 +299,23 @@ export function alvoSob(ctx, item, x, y) {
     if (row && ctx.raiz.contains(row) && row.dataset.toggleitem !== item.id) {
         const outro = (ctx.itens || []).find(z => z.id === row.dataset.toggleitem);
         if (itensIdenticos(item, outro)) return { tipo: 'merge', id: outro.id, el: row };
-        if (outro && ehContainer(outro) && !ehContainer(item) && item.parentItemId !== outro.id) {
+        if (outro && ehContainer(outro) && cabeNoConteiner(item, outro, ctx.itens).ok) {
             return { tipo: 'drop', drop: 'cont:' + outro.id, el: row };
         }
         // linha sem ação própria: vale a SEÇÃO onde ela está (equipar/desequipar)
     }
+    /* Zona de contêiner — o painel aberto na Ficha e o bloco do contêiner inline
+       nas outras três listas. Vem ANTES de [data-sec] de propósito: a seção
+       ENVOLVE o contêiner inline e o bloco dela sempre retorna, então uma zona
+       colocada depois nunca seria alcançada. */
+    const zonaCont = sob.closest?.('[data-drop^="cont:"]');
+    if (zonaCont && ctx.raiz.contains(zonaCont)) {
+        const cid = zonaCont.dataset.drop.slice(5);
+        const alvo = (ctx.itens || []).find(z => z.id === cid);
+        const r = alvo ? cabeNoConteiner(item, alvo, ctx.itens) : { ok: false };
+        return r.ok ? { tipo: 'drop', drop: 'cont:' + cid, el: zonaCont } : null;
+    }
+
     const sec = sob.closest?.('[data-sec]');
     if (sec && ctx.raiz.contains(sec)) {
         if (sec.dataset.sec === 'eq' && !item.equipado) return { tipo: 'equipar', el: sec };

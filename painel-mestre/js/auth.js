@@ -56,6 +56,9 @@ export function initAuth(onReady) {
             window.location.href = '../menu/menu.html';
             return;
         }
+        /* Quem é criador publica direto no catálogo; quem é só mestre grava
+           rascunho (ver firestore.rules e _publicarNoCatalogo). */
+        window._papelUsuario = role;
 
         // Display user info
         const nameEl = document.getElementById('userDisplayName');

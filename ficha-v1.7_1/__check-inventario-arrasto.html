@@ -33,9 +33,21 @@
 <script src="../shared/equip-slots.js"></script>
 <script src="js/inventory.js?c=1"></script>
 <script type="module">
-import * as InvMotor from '../shared/inventario-motor.js?v=4';
+import * as InvMotor from '../shared/inventario-motor.js?v=5';
 window.InvMotor = InvMotor;
 
+/* O CSS pode chegar DEPOIS deste módulo quando a folha vem da rede (foi o que
+   aconteceu no primeiro load após editar inventory.css). Metade dos testes daqui
+   mede geometria, e página sem estilo acusa falha que não existe — então espera
+   a largura aparecer. Não dá para esperar o evento 'load': módulo bloqueia o
+   load, e o await nunca voltaria. */
+async function esperarLayout(sel) {
+    for (let i = 0; i < 90; i++) {
+        if (document.querySelector(sel)?.getBoundingClientRect().width > 0) return;
+        await new Promise(r => setTimeout(r, 16));
+    }
+}
+await esperarLayout('#abaInventario');
 await new Promise(r => setTimeout(r, 0));
 
 const linhas = [];
@@ -92,15 +104,39 @@ teste('T10 · item de dentro solto em Soltos = tirar do contêiner',
 // ---- as ações existem e apontam para as funções da ficha ----
 teste('T11 · moveToContainer aceita destino explícito',
     window.moveToContainer.length === 2);
-teste('T12 · quem não pode editar não ganha alça',
+teste('T12 · jogador comum TAMBÉM arrasta (equipar/guardar/juntar é do próprio inventário)',
     (() => {
         window.isMestre = false;
         window.renderInventoryTab();
         const n = $$('[data-grab]', $('#inventoryItemsGrid')).length;
         window.isMestre = true;
         window.renderInventoryTab();
-        return n === 0;
+        return n === 4;
     })());
+
+// ---- o card perdeu os botões; a janela de detalhes ganhou ----
+teste('T13 · card não tem mais equipar / desequipar / mover-p-contêiner',
+    $$('.inv-btn-equip,.inv-btn-unequip,.inv-btn-move-container', $('#inventoryItemsGrid')).length === 0);
+teste('T14 · a linha inteira continua abrindo o detalhe',
+    $$('[data-toggleitem]', $('#inventoryItemsGrid'))
+        .every(el => (el.getAttribute('onclick') || '').includes('openItemDetail')));
+
+// ---- o painel do contêiner aberto virou zona de soltura (o bug do print) ----
+const painel = $('#containerViewer .inv-container-viewer');
+teste('T15 · o painel do contêiner aberto é alvo de soltura',
+    painel?.dataset.drop === 'cont:i2');
+teste('T16 · soltar no painel do contêiner guarda dentro',
+    solta(it('i3'), painel)?.drop === 'cont:i2');
+teste('T17 · contêiner cheio recusa a soltura',
+    (() => {
+        const antes = itens.find(x => x.id === 'i2');
+        antes.capacidadeContainer = 1;          // já tem a Corda dentro
+        const r = solta(it('i3'), painel);
+        delete antes.capacidadeContainer;
+        return r === null;
+    })());
+teste('T18 · contêiner não entra em contêiner',
+    solta(it('i2'), painel) === null);
 
 // ---- saída ----
 $('#saida').innerHTML = linhas.map(([n, p]) =>

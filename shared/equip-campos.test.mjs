@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
     CAMPOS_EQUIPAMENTO, camposDaInstancia, valorDoItem, herdaDoModelo, htmlCampo,
     instanciarDoModelo, itemAplicaEfeito, normalizaFormaEquipar,
+    modeloDaInstancia,
 } from './equip-campos.js';
 
 // ===== integridade da spec =====
@@ -197,4 +198,44 @@ for (const f of ['empunhar', 'vestir', 'fixar', undefined]) {
 }
 assert.equal(normalizaFormaEquipar(null), false, 'sem dado, sem crash');
 
-console.log('✅ campos de equipamento: spec, herança instância→modelo, semente do catálogo, render e trava do Segurar OK');
+// ===== O CAMINHO DE VOLTA: instância → modelo do catálogo =====
+// É o que a caixa "Salvar no Catálogo" grava. Duas chaves são renomeadas, e
+// NENHUM campo de dono pode vazar para o cadastro do sistema.
+const instancia = {
+    id: 'item-1', nome: 'Colar de Ametista', tipo: 'Acessório',
+    imagem: 'colar.png', mecanicaIdsProprias: ['me1'],
+    peso: 0.1, tamanho: 0.1, quantidade: 3,
+    // tudo abaixo é do DONO, não do cadastro
+    characterId: 'char-1', ownerUid: 'u1', ownerId: 'u1', equipado: true,
+    slotAnatomico: 'bp-pescoco', slotsOcupados: ['bp-pescoco'], estadoEquip: 'vestido',
+    maosUsadas: 1, parentItemId: 'cont-9', modeloId: 'tpl-antigo',
+    lastModified: 'x', criadoPor: 'mestre',
+};
+const modelo = modeloDaInstancia(instancia);
+assert.equal(modelo.imagemUrl, 'colar.png', 'imagem vira imagemUrl');
+assert.deepEqual(modelo.mecanicaIds, ['me1'], 'mecanicaIdsProprias vira mecanicaIds');
+assert.equal(modelo.quantidade, 3, 'a pilha vira o "padrão ao instanciar"');
+for (const k of ['characterId', 'ownerUid', 'ownerId', 'equipado', 'slotAnatomico', 'slotsOcupados',
+                 'estadoEquip', 'maosUsadas', 'parentItemId', 'modeloId', 'lastModified', 'criadoPor', 'imagem']) {
+    assert.ok(!(k in modelo), `"${k}" é do dono e não pode vazar para o catálogo`);
+}
+
+// Lista VAZIA em mecanicaIds não pode engolir a que tem conteúdo: um doc antigo
+// com `mecanicaIds: []` apagava as mecânicas de verdade ao reabrir o formulário.
+const comSombra = { mecanicaIds: [], mecanicaIdsProprias: ['me9'] };
+assert.deepEqual(valorDoItem(comSombra, { key: 'mecanicaIds' }), ['me9'], 'vence quem tem conteúdo');
+assert.deepEqual(modeloDaInstancia(comSombra).mecanicaIds, ['me9']);
+
+// Ida e volta: o que sai do catálogo e volta para ele não perde campo.
+const tplRedondo = { id: 'tpl9', nome: 'Adaga', tipo: 'Arma', categoriaArma: 'uma_mao',
+    liga: '3', qualidade: '2', peso: 0.5, tamanho: 0.3, formulaDano: '1d4',
+    tags: ['metálico'], tipoGolpe: ['perfurante'], alcanceFator: 1, quantidade: 1 };
+const volta = modeloDaInstancia(instanciarDoModelo(tplRedondo));
+for (const k of ['nome', 'tipo', 'categoriaArma', 'liga', 'qualidade', 'peso', 'tamanho',
+                 'formulaDano', 'alcanceFator', 'quantidade']) {
+    assert.deepEqual(volta[k], tplRedondo[k], `ida e volta preservou ${k}`);
+}
+assert.deepEqual(volta.tags, tplRedondo.tags);
+assert.deepEqual(volta.tipoGolpe, tplRedondo.tipoGolpe);
+
+console.log('✅ campos de equipamento: spec, herança instância→modelo, semente do catálogo, volta ao catálogo, render e trava do Segurar OK');

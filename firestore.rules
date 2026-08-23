@@ -17,6 +17,15 @@ service cloud.firestore {
           .data.role == 'criador';
     }
 
+    /* Papel de Mestre pelo campo `role` — é assim que painel-mestre/js/auth.js
+       decide quem entra no painel. `isMaster()` acima é outra coisa: olha a
+       coleção `masters`, que nem todo mestre tem. */
+    function temPapelMestre() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid))
+          .data.role in ['mestre', 'criador'];
+    }
+
     // Campos que só o servidor (Cloud Functions) e mestres podem alterar
     function naoMexeuEmCamposProtegidos() {
       return !request.resource.data.diff(resource.data).affectedKeys()
@@ -27,6 +36,18 @@ service cloud.firestore {
     match /system/data/{collection}/{document} {
       allow read: if isSignedIn();
       allow write: if isCriador();
+    }
+
+    /* Fresta para o Mestre mandar peça nova ao catálogo de Equipamentos.
+       Ele CRIA como rascunho (publicado: false) e só isso: não edita nem apaga
+       o que já existe, e não publica. A peça aparece no Painel do Criador com o
+       selo "Rasc" e some de todo picker até alguém publicar — o filtro
+       `publicado !== false` já é o que os painéis usam. */
+    match /system/data/equipment/{document} {
+      allow read: if isSignedIn();
+      allow create: if isCriador() ||
+        (temPapelMestre() && request.resource.data.publicado == false);
+      allow update, delete: if isCriador();
     }
 
     // Coleção de mestres (sem alterações)

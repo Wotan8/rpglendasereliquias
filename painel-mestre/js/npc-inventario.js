@@ -15,12 +15,12 @@ import { addLog } from './logs.js';
 import * as SEL from '../../painel-criador/js/painel-mechanics.js';
 import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
-    htmlInventario, tratarClique, iniciarArrasto, tplDoItem,
-} from '../../shared/inventario-motor.js?v=4';
+    htmlInventario, tratarClique, iniciarArrasto, tplDoItem, cabeNoConteiner,
+} from '../../shared/inventario-motor.js?v=5';
 import {
     camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo,
-} from '../../shared/equip-campos.js?v=8';
+} from '../../shared/equip-campos.js?v=9';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML } from '../../shared/restaurar-item.js?v=1';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário
@@ -338,7 +338,11 @@ async function moverItemNpc(itemId, alvo) {
     const contId = alvo.slice(5);
     if (contId === itemId || i.parentItemId === contId) return;
     const c = NI.items.find(x => x.id === contId); if (!c) return;
-    if (ehContainer(i)) { showAlert('⚠️ Contêiner não entra em contêiner', 'warning'); return; }
+    /* Capacidade trava, peso avisa — a régua é a do cadastro e mora no motor
+       compartilhado, para a mesma bolsa não aceitar coisas diferentes em cada
+       inventário. */
+    const veredito = cabeNoConteiner(i, c, NI.items, tplDoItem(c, window._npcSys || window._systemData || {}));
+    if (!veredito.ok) { if (veredito.motivo) showAlert('📦 ' + veredito.motivo, 'warning'); return; }
 
     const q = escolherQtd(i, `Mover quantos "${i.nome || 'item'}" para ${c.nome || 'o contêiner'}?`);
     if (q == null) return;

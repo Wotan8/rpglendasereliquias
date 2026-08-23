@@ -10,13 +10,13 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 import * as SEL from '../../painel-criador/js/painel-mechanics.js';
 import {
     camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
-    instanciarDoModelo,
-} from '../../shared/equip-campos.js?v=8';
+    instanciarDoModelo, modeloDaInstancia,
+} from '../../shared/equip-campos.js?v=9';
 import { ensureNpcSystemData } from './npc-system-data.js';
 import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
-    pressaoItem, htmlInventario, tratarClique, iniciarArrasto,
-} from '../../shared/inventario-motor.js?v=4';
+    pressaoItem, htmlInventario, tratarClique, iniciarArrasto, cabeNoConteiner, tplDoItem,
+} from '../../shared/inventario-motor.js?v=5';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML, modeloDoItem } from '../../shared/restaurar-item.js?v=1';
 
 
@@ -364,7 +364,11 @@ async function _moverItemMestre(ownerId, itemId, alvo) {
     const contId = alvo.slice(5);
     if (contId === itemId || i.parentItemId === contId) return;
     const c = _itemDoDono(ownerId, contId); if (!c) return;
-    if (ehContainer(i)) { showAlert('⚠️ Contêiner não entra em contêiner', 'warning'); return; }
+    /* Capacidade trava, peso avisa — a régua é a do cadastro e mora no motor
+       compartilhado, para a mesma bolsa não aceitar coisas diferentes em cada
+       inventário. */
+    const veredito = cabeNoConteiner(i, c, _donos.get(ownerId)?.itens, tplDoItem(c, window._npcSys || window._systemData || {}));
+    if (!veredito.ok) { if (veredito.motivo) showAlert('📦 ' + veredito.motivo, 'warning'); return; }
 
     const q = escolherQtd(i, `Mover quantos "${i.nome || 'item'}" para ${c.nome || 'o contêiner'}?`);
     if (q == null) return;
@@ -657,6 +661,16 @@ window._openMestreItemFormModal = async function(mesaId, editItemId, targetCharI
                 continua seguindo o catálogo.</small>
         </div>` : '';
 
+    /* "Salvar no Catálogo" — quem tem papel de criador publica direto; o Mestre
+       grava RASCUNHO (publicado:false), que é a fresta que firestore.rules abre.
+       A peça aparece no Painel do Criador com o selo 📝 Rasc e some dos pickers
+       até ser publicada. */
+    const catalogoHtml = isEdit ? '' : `
+        <label class="inv-form-check inv-form-wide" style="margin-top:10px">
+            <input type="checkbox" id="mif_salvarCatalogo" checked>
+            <span>📚 Salvar no Catálogo${_ehCriador() ? '' : ' <em>(como rascunho, para o Criador publicar)</em>'}</span>
+        </label>`;
+
     const modal = document.createElement('div');
     modal.className = 'inv-modal active';
     modal.id = 'invFormModal';
@@ -669,6 +683,7 @@ window._openMestreItemFormModal = async function(mesaId, editItemId, targetCharI
             ${buscaHtml}
             <div data-nota-modelo></div>
             <div class="inv-form-grid"></div>
+            ${catalogoHtml}
             <input type="hidden" id="mif_mesaId" value="${escapeHtml(mesaId || '')}">
             <input type="hidden" id="mif_targetCharId" value="${escapeHtml(targetCharId || '')}">
             <input type="hidden" id="mif_modeloId" value="${escapeHtml(item?.modeloId || '')}">
@@ -747,6 +762,45 @@ window._restaurarMestreItem = async function() {
     }
 };
 
+/** Papel de criador — só ele publica direto em system/data/* (firestore.rules). */
+const _ehCriador = () => window._papelUsuario === 'criador';
+
+/**
+ * 📚 Grava a peça no cadastro de Equipamentos do Painel do Criador.
+ *
+ * Modelo de mesmo nome e tipo é reaproveitado em vez de duplicado: sem isso o
+ * catálogo enche de repetição a cada item criado na mesa.
+ *
+ * @returns id do modelo (novo ou reaproveitado), ou null.
+ */
+async function _publicarNoCatalogo(dados, nome) {
+    const catalogo = window._systemData?.equipment || [];
+    const igual = catalogo.find(t =>
+        String(t.nome || '').trim().toLowerCase() === nome.toLowerCase()
+        && (t.tipo || '') === (dados.tipo || ''));
+    if (igual) return igual.id;
+
+    const modelo = {
+        ...modeloDaInstancia({ ...dados, nome }),
+        publicado: _ehCriador(),
+        versao: 1,
+        criadoPor: S.currentUser?.uid || '',
+        criadoEm: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    };
+    const novoId = 'equip-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+    await setDoc(doc(db, 'system/data/equipment', novoId), modelo);
+
+    // Cache local: a peça aparece no picker sem recarregar a página.
+    if (Array.isArray(window._systemData?.equipment)) {
+        window._systemData.equipment.push({ id: novoId, ...modelo });
+    }
+    showAlert(modelo.publicado
+        ? `📚 "${nome}" entrou no catálogo`
+        : `📚 "${nome}" foi para o catálogo como rascunho — publique no Painel do Criador`, 'success');
+    return novoId;
+}
+
 window._saveMestreItem = async function() {
     const dados = coletarCampos(camposDaInstancia());
 
@@ -765,6 +819,17 @@ window._saveMestreItem = async function() {
         catch (e) { /* segue sem o anterior */ }
     }
 
+    let modeloId = document.getElementById('mif_modeloId')?.value || null;
+    if (!editId && document.getElementById('mif_salvarCatalogo')?.checked) {
+        try {
+            const novo = await _publicarNoCatalogo(dados, nome);
+            if (novo) modeloId = novo;
+        } catch (e) {
+            console.error('❌ catálogo:', e);
+            showAlert('⚠️ Item salvo na mesa, mas não entrou no catálogo: ' + e.message, 'warning');
+        }
+    }
+
     const itemData = {
         ...dados,
         nome,
@@ -781,7 +846,7 @@ window._saveMestreItem = async function() {
         tamanho: Number(dados.tamanho) || 1,
         pressaoBase: dados.pressaoBase != null ? Number(dados.pressaoBase) : (Number(dados.peso) || 1),
         // Vínculo com o catálogo: é ele que faz campo em branco herdar do modelo
-        modeloId: document.getElementById('mif_modeloId')?.value || null,
+        modeloId,
         characterId: targetCharId,
         ownerUid: old?.ownerUid || S.currentUser?.uid || '',
         lastModified: new Date().toISOString(),

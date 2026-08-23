@@ -192,7 +192,13 @@ export const camposDaInstancia = () => CAMPOS_EQUIPAMENTO.filter(f => !f.soCatal
  *  Sem este de-para o formulário abria vazio e a gravação apagava o que existia. */
 export const valorDoItem = (item, f) => {
     if (f.key === 'imagemUrl') return item?.imagem ?? item?.imagemUrl;
-    if (f.key === 'mecanicaIds') return item?.mecanicaIds ?? item?.mecanicaIdsProprias;
+    if (f.key === 'mecanicaIds') {
+        // `??` não basta: lista VAZIA é um valor, e um `mecanicaIds: []` que
+        // sobrou no doc engolia as mecânicas de verdade, que moram na outra
+        // chave. Vence quem tem conteúdo.
+        const propria = item?.mecanicaIds;
+        return (Array.isArray(propria) && propria.length) ? propria : (item?.mecanicaIdsProprias ?? propria);
+    }
     return item?.[f.key];
 };
 
@@ -235,6 +241,28 @@ export function instanciarDoModelo(tpl) {
     // isto: é a pilha com que a peça nasce.
     semente.quantidade = Math.max(1, parseInt(tpl.quantidade) || 1);
     return semente;
+}
+
+/**
+ * O INVERSO de instanciarDoModelo: o que gravar em system/data/equipment a
+ * partir de uma peça que nasceu no inventário.
+ *
+ * Iterar CAMPOS_EQUIPAMENTO já é a lista de permissão — characterId, ownerUid,
+ * equipado, slotAnatomico, parentItemId e companhia não são campos de
+ * Equipamento e por isso não têm como vazar para o catálogo. `valorDoItem`
+ * resolve os dois renomes da instância (imagem→imagemUrl,
+ * mecanicaIdsProprias→mecanicaIds).
+ */
+export function modeloDaInstancia(item) {
+    const m = {};
+    for (const f of CAMPOS_EQUIPAMENTO) {
+        const v = valorDoItem(item, f);
+        m[f.key] = (v === undefined) ? null : v;
+    }
+    // "Quantidade (Padrão ao instanciar)": a pilha com que a peça nasce
+    m.quantidade = Math.max(1, parseInt(item?.quantidade) || 1);
+    normalizaFormaEquipar(m);
+    return m;
 }
 
 const esc = (t) => t == null ? '' : String(t)
