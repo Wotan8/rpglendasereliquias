@@ -2,9 +2,16 @@ import { execSync } from 'child_process';
 import { copyFileSync, existsSync } from 'fs';
 
 const items = [
-    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\fungo_do_veu_1787510269589.jpg', name: 'Fungo-do-Véu' },
-    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\gaita_de_foles_1787510277791.jpg', name: 'Gaita de Foles' },
-    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\gazua_simples_1787510287679.jpg', name: 'Gazua Simples' }
+    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\gibao_acolchoado_1787528065326.jpg', name: 'Gibão Acolchoado' },
+    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\giz_de_selos_1787528074581.jpg', name: 'Giz de Selos' },
+    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\glaive_1787528083738.jpg', name: 'Glaive' },
+    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\gola_de_couro_1787528193844.jpg', name: 'Gola de Couro' },
+    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\gorjal_de_aco_1787528201930.jpg', name: 'Gorjal de Aço' },
+    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\gorjal_de_malha_1787528211683.jpg', name: 'Gorjal de Malha' },
+    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\grevas_de_placas_1787528220591.jpg', name: 'Grevas de Placas' },
+    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\grimorio_de_aprendiz_1787528339060.jpg', name: 'Grimório de Aprendiz' },
+    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\grimorio_dos_ecos_cifrados_1787528347544.jpg', name: 'Grimório dos Ecos Cifrados' },
+    { src: 'C:\\Users\\Soberano\\.gemini\\antigravity\\brain\\109cdc47-385e-44dc-8c3c-894a32dc8518\\harpa_de_colo_1787528357228.jpg', name: 'Harpa de Colo' }
 ];
 
 for (const item of items) {
