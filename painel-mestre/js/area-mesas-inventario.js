@@ -1,11 +1,24 @@
 // =============================================
 // AREA MESAS — Inventário Geral + Caixa do Mestre + Personagens
 // =============================================
-import { db, collection, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc } from './firebase-config.js';
+import { db, collection, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, query, where, onSnapshot, writeBatch } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
-import { buildMechanicSelectorHTML } from '../../painel-criador/js/painel-mechanics.js';
+// Os construtores de seletor do Criador (mecanicas, VDs com Equacao de Valor,
+// status vitais, atributos, pericias, condicoes): o formulario de item da mesa
+// mostra exatamente os mesmos controles do cadastro de Equipamento.
+import * as SEL from '../../painel-criador/js/painel-mechanics.js';
+import {
+    camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
+    instanciarDoModelo,
+} from '../../shared/equip-campos.js?v=8';
+import { ensureNpcSystemData } from './npc-system-data.js';
+import {
+    ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
+    pressaoItem, htmlInventario, tratarClique, iniciarArrasto,
+} from '../../shared/inventario-motor.js?v=4';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML, modeloDoItem } from '../../shared/restaurar-item.js?v=1';
+
 
 const _catalogoMestre = () => (window._systemData?.equipment || window._mestreCatalog || [])
     .filter(t => t.publicado !== false);
@@ -13,52 +26,72 @@ const _catalogoMestre = () => (window._systemData?.equipment || window._mestreCa
 window._loadMesaInventarios = loadMesaInventarios;
 window._loadPersonagensInventario = loadPersonagensInventario;
 
-function _calcItemPressure(item, allItems) {
-    const base = item.pressaoOverride != null ? item.pressaoOverride
-        : (item.pressaoBase != null ? item.pressaoBase : (item.peso || 0));
-    if (item.ehContainer) {
-        const inside = allItems.filter(i => i.parentItemId === item.id);
-        const insideWeight = inside.reduce((sum, i) => sum + ((i.peso || 0) * Math.max(1, parseInt(i.quantidade)||1)), 0);
-        return base + (insideWeight * (item.multiplicadorPressao || 1));
+/* ===== TEMPO REAL =====
+   O jogador mexe no inventario pela ficha e o painel do Mestre repinta sozinho.
+   A escuta cobre os donos DESTA mesa (personagens + Caixa do Mestre) e o que
+   ela entrega vira o cache que as listas leem — sem isso cada repintura
+   relia a colecao `items` inteira. */
+let _unsubItens = null;
+let _ouvindoMesa = null;
+let _itensCache = null;
+
+async function _ouvirItensDaMesa() {
+    if (_ouvindoMesa === S.currentMesaId) return;
+    pararDeOuvirItens();
+    const mesaId = S.currentMesaId;
+    if (!mesaId) return;
+    const chars = await _fetchMesaCharacters();
+    // `in` do Firestore aceita 30 valores; mesa maior que isso cai no fetch cheio.
+    const donos = [_getCaixaMestreId(mesaId), ...chars.map(c => c.id)].filter(Boolean);
+    if (!donos.length || donos.length > 30) return;
+
+    _ouvindoMesa = mesaId;
+    let primeira = true;
+    _unsubItens = onSnapshot(
+        query(collection(db, 'items'), where('characterId', 'in', donos)),
+        snap => {
+            _itensCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            // A primeira entrega e o que os loaders acabaram de pintar; repintar
+            // aqui so duplicaria o trabalho.
+            if (primeira) { primeira = false; return; }
+            _repintarInventarios();
+        },
+        e => { console.warn('items/onSnapshot', e); _ouvindoMesa = null; }
+    );
+}
+
+/** Solta a escuta ao fechar a mesa (chamada por closeMesa). */
+export function pararDeOuvirItens() {
+    if (_unsubItens) { try { _unsubItens(); } catch (e) { /* ja solto */ } }
+    _unsubItens = null; _ouvindoMesa = null; _itensCache = null;
+    _estadoInv.clear(); _accAbertos.clear(); _donos.clear();
+}
+window._pararDeOuvirItens = pararDeOuvirItens;
+
+/** Repinta as duas listas de inventario que podem estar na tela. */
+function _repintarInventarios() {
+    loadMesaInventarios();
+    if (document.getElementById('mesaCharactersInventoryContainer')?.style.display !== 'none') {
+        loadPersonagensInventario();
     }
-    return base;
 }
 
 function _getCaixaMestreId(mesaId) {
     return '__caixa_mestre__' + mesaId;
 }
 
-const TIPO_EMOJI_MAP = {
-    'Arma': '⚔️', 'Vestimenta': '🧥', 'Acessório': '💍', 'Projétil': '🎯',
-    'Container': '📦', 'Objeto': '📦', 'Consumível': '🧪', 'Relíquia': '✨'
-};
-function _getTipoEmoji(tipo) { return TIPO_EMOJI_MAP[tipo] || '📦'; }
-
-window._mestreOpenContainers = {};
-
-window.toggleMestreContainer = function(charId, itemId) {
-    if (window._mestreOpenContainers[charId] === itemId) {
-        delete window._mestreOpenContainers[charId];
-    } else {
-        window._mestreOpenContainers[charId] = itemId;
-    }
-    loadMesaInventarios();
-    if (document.getElementById('mesaCharactersInventoryContainer')?.style.display !== 'none') {
-        loadPersonagensInventario();
-    }
-};
-
 async function loadMesaInventarios() {
     if (!S.currentMesaId) return;
     const el = document.getElementById('mesaInventarioContent'); 
     if (!el) return;
+    _ouvirItensDaMesa();
     try {
         const allItems = await _fetchAllItems();
         const caixaId = _getCaixaMestreId(S.currentMesaId);
         const caixaItems = allItems.filter(it => it.characterId === caixaId);
 
-        let html = _buildCaixaDoMestreHTML(caixaItems, allItems);
-        el.innerHTML = html;
+        el.innerHTML = _buildCaixaDoMestreHTML(caixaItems);
+        _pintarHosts(el, allItems);
     } catch (e) { console.error(e); showAlert('❌ Erro ao carregar inventários', 'danger'); }
 }
 
@@ -66,6 +99,7 @@ async function loadPersonagensInventario() {
     if (!S.currentMesaId) return;
     const el = document.getElementById('mesaCharactersInventoryContainer'); 
     if (!el) return;
+    _ouvirItensDaMesa();
     el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Carregando inventários...</div>';
     try {
         const chars = await _fetchMesaCharacters();
@@ -74,7 +108,7 @@ async function loadPersonagensInventario() {
         const caixaId = _getCaixaMestreId(S.currentMesaId);
         const caixaItems = allItems.filter(it => it.characterId === caixaId);
 
-        let html = _buildCaixaDoMestreHTML(caixaItems, allItems);
+        let html = _buildCaixaDoMestreHTML(caixaItems);
 
         if (!chars.length) {
             html += '<div style="text-align:center;padding:30px;color:var(--muted)">Nenhum personagem nesta mesa</div>';
@@ -87,12 +121,13 @@ async function loadPersonagensInventario() {
                         <div class="accordion-group">`;
             for (const c of chars) {
                 const charItems = allItems.filter(it => it.characterId === c.id);
-                html += _buildCharacterInventoryAccordionHTML(c, charItems, allItems);
+                html += _buildCharacterInventoryAccordionHTML(c, charItems);
             }
             html += `</div></div>`;
         }
 
         el.innerHTML = html;
+        _pintarHosts(el, allItems, chars);
     } catch (e) { console.error(e); showAlert('❌ Erro ao carregar inventários', 'danger'); }
 }
 
@@ -111,14 +146,58 @@ async function _fetchMesaCharacters() {
 }
 
 async function _fetchAllItems() {
+    if (_itensCache) return _itensCache;
     const itemsSnap = await getDocs(collection(db, 'items'));
     const allItems = []; itemsSnap.forEach(d => allItems.push({ id: d.id, ...d.data() }));
     return allItems;
 }
 
-function _buildCaixaDoMestreHTML(caixaItems, allItems) {
+/* ===================================================================
+   LISTAS — motor de inventário compartilhado
+   O MESMO motor da Ficha de Combate do Tabuleiro e da Ficha de NPC
+   (shared/inventario-motor.js): arrasta pela alça ⠿ para equipar, tirar do
+   corpo, guardar em contêiner ou juntar pilha igual. Cada dono (Caixa do
+   Mestre e cada personagem) tem a sua instância, delimitada pelo próprio
+   host — arrastar de um personagem para outro continua sendo o 🔄 Transferir.
+   =================================================================== */
+
+/** Estado de tela por dono: o que está expandido e quais contêineres abertos. */
+const _estadoInv = new Map();
+function _estadoDe(ownerId) {
+    if (!_estadoInv.has(ownerId)) _estadoInv.set(ownerId, { abertos: new Set(), contAbertos: new Set() });
+    return _estadoInv.get(ownerId);
+}
+
+/* Acordeões abertos sobrevivem à repintura — sem isto, cada atualização em
+   tempo real fechava o inventário que o Mestre estava lendo. */
+const _accAbertos = new Set();
+window.toggleAccordion = function(elId) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const fechado = el.style.display === 'none';
+    el.style.display = fechado ? 'block' : 'none';
+    fechado ? _accAbertos.add(elId) : _accAbertos.delete(elId);
+};
+
+/** Partes do corpo do dono → slots equipáveis (mesma regra da ficha de NPC). */
+function _slotsDoDono(partes) {
+    const slots = {};
+    (partes || []).forEach(bp => {
+        const qty = Math.max(1, parseInt(bp.slots) || 1);
+        for (let i = 0; i < qty; i++) {
+            const key = qty > 1 ? `${bp.id}_${i + 1}` : bp.id;
+            slots[key] = { label: qty > 1 ? `${bp.nome} ${i + 1}` : bp.nome, icon: bp.icone || '🦴', part: bp, partId: bp.id };
+        }
+    });
+    return slots;
+}
+
+/** Itens e dono de cada host pintado agora — as ações leem daqui. */
+const _donos = new Map();   // ownerId → { itens, char }
+
+function _buildCaixaDoMestreHTML(caixaItems) {
     const caixaId = _getCaixaMestreId(S.currentMesaId);
-    let html = `<div class="sessao-card" style="margin-bottom:14px;border:2px solid rgba(245,158,11,.25)">
+    return `<div class="sessao-card" data-inv-dono="${escapeHtml(caixaId)}" style="margin-bottom:14px;border:2px solid rgba(245,158,11,.25)">
         <div class="sessao-card-header" style="background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(245,158,11,.02))">
             <div class="sessao-titulo" style="color:var(--lr-gold)">📦 Caixa do Mestre</div>
             <div style="display:flex;gap:8px;align-items:center">
@@ -126,386 +205,517 @@ function _buildCaixaDoMestreHTML(caixaItems, allItems) {
                 <button onclick="_openMestreItemFormModal('${S.currentMesaId}', null, '${caixaId}')" style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.35);color:var(--lr-gold);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:700;transition:all .2s">➕ Criar Item</button>
             </div>
         </div>
-        <div style="padding: 10px;">`;
-    
-    html += _buildInventoryListHTML(caixaItems, allItems, caixaId, true);
-    html += '</div></div>';
-    return html;
+        <div style="padding:10px"><div data-inv-owner="${escapeHtml(caixaId)}"></div></div>
+    </div>`;
 }
 
-window.toggleAccordion = function(elId) {
-    const el = document.getElementById(elId);
-    if(el) {
-        el.style.display = (el.style.display === 'none') ? 'block' : 'none';
-    }
-};
-
-function _buildCharacterInventoryAccordionHTML(char, charItems, allItems) {
+function _buildCharacterInventoryAccordionHTML(char, charItems) {
     const cid = char.id;
     const bodyId = `acc_body_${cid}`;
+    const aberto = _accAbertos.has(bodyId);
     const f = char.fields || {};
     const nomeReal = f.nome || char.nome || 'Sem nome';
     const equipped = charItems.filter(i => i.equipado && !i.parentItemId);
-    const totalPressure = equipped.reduce((sum, it) => sum + _calcItemPressure(it, charItems), 0);
+    const totalPressure = equipped.reduce((sum, it) => sum + pressaoItem(it, charItems), 0);
 
     return `
-    <div class="accordion-item" style="margin-bottom:8px; background:var(--lr-bg-1); border:1px solid var(--border); border-radius:8px;">
+    <div class="accordion-item" data-inv-dono="${escapeHtml(cid)}" style="margin-bottom:8px; background:var(--lr-bg-1); border:1px solid var(--border); border-radius:8px;">
         <div class="accordion-header" style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleAccordion('${bodyId}')">
             <div style="font-weight:bold; color:var(--light);">🎭 ${escapeHtml(nomeReal)}</div>
             <div style="display:flex; gap:12px; align-items:center;">
-                <span style="background:rgba(245,158,11,.15);color:var(--lr-gold);padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700">⚖️ Pressão: ${parseFloat(totalPressure).toFixed(2)}</span>
+                <span style="background:rgba(245,158,11,.15);color:var(--lr-gold);padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:700">⚖️ Pressão: ${totalPressure.toFixed(2)}</span>
                 <span style="font-size:0.8rem; color:var(--muted);">${charItems.length} itens</span>
                 <span style="color:var(--muted);">▼</span>
             </div>
         </div>
-        <div class="accordion-body" id="${bodyId}" style="display:none; padding:16px; border-top:1px solid var(--border);">
-            <div style="margin-bottom:12px; text-align:right;">
+        <div class="accordion-body" id="${bodyId}" style="display:${aberto ? 'block' : 'none'}; padding:16px; border-top:1px solid var(--border);">
+            <div style="margin-bottom:12px; display:flex; gap:8px; justify-content:flex-end;">
+                <button class="btn btn-secondary btn-small" onclick="_transferCharacterLooseItems('${cid}')">Pegar Itens Soltos</button>
                 <button class="btn btn-secondary btn-small" onclick="_openMestreItemFormModal('${S.currentMesaId}', null, '${cid}')">➕ Criar Item p/ Personagem</button>
             </div>
-            ${_buildInventoryListHTML(charItems, allItems, cid, false)}
+            <div data-inv-owner="${escapeHtml(cid)}"></div>
         </div>
     </div>`;
 }
 
-function _buildInventoryListHTML(items, allItems, ownerId, isCaixaMestre = false) {
-    const topLevel = items.filter(i => !i.parentItemId);
-    const equipped = topLevel.filter(i => i.equipado);
-    const loose = topLevel.filter(i => !i.equipado);
+/** Pinta o motor em cada host `[data-inv-owner]` que acabou de entrar na tela.
+ *  Exportado para __check-mesa-inventario.html (pintar a lista sem Firestore). */
+export function _pintarHosts(raizEl, allItems, chars = []) {
+    raizEl.querySelectorAll('[data-inv-owner]').forEach(host => {
+        const ownerId = host.dataset.invOwner;
+        const itens = allItems.filter(i => i.characterId === ownerId);
+        const char = chars.find(c => c.id === ownerId) || null;
+        _donos.set(ownerId, { itens, char });
 
-    let html = '';
+        const st = _estadoDe(ownerId);
+        const ctx = {
+            raiz: host,
+            itens,
+            get sys() { return window._npcSys || window._systemData || null; },
+            abertos: st.abertos,
+            contAbertos: st.contAbertos,
+            dica: 'arraste ⠿: equipar/desequipar entre seções · guardar em contêiner · juntar pilha igual · soltar no cartão de outro dono transfere',
+            // Soltar fora desta lista: se caiu no cartão de OUTRO dono, transfere.
+            // O cartão inteiro vale, então o acordeão nem precisa estar aberto.
+            externo: (sob) => {
+                const cartao = sob.closest?.('[data-inv-dono]');
+                const para = cartao?.dataset.invDono;
+                if (!para || para === ownerId) return null;
+                return { tipo: 'externo', para, el: cartao };
+            },
+            rotuloSlot: (k) => _slotsDoDono(char?.partesDoCorpo)[k]?.label || k,
+            botoes: (i) => `
+                <button type="button" class="lr-inv-btn" title="Editar item" data-mesaitem="editar" data-id="${escapeHtml(i.id)}">✏️</button>
+                <button type="button" class="lr-inv-btn" title="Transferir" data-mesaitem="transferir" data-id="${escapeHtml(i.id)}">🔄</button>
+                <button type="button" class="lr-inv-btn perigo" title="Excluir" data-mesaitem="excluir" data-id="${escapeHtml(i.id)}">🗑️</button>`,
+            repintar: _repintarInventarios,
+            acoes: {
+                equipar: (id) => _equiparMestre(ownerId, id),
+                desequipar: (id) => _desequiparMestre(ownerId, id),
+                mover: (id, alvo) => _moverItemMestre(ownerId, id, alvo),
+                fundir: (id, alvoId) => _fundirPilhasMestre(ownerId, id, alvoId),
+                qtd: (id, delta) => _setQtdMestre(ownerId, id, delta),
+                externo: (id, alvo) => _transferirArrastando(ownerId, id, alvo.para),
+            },
+        };
 
-    if (!isCaixaMestre) {
-        html += `<div class="inv-section">
-            <div class="inv-section-title">🎒 Equipados <span class="inv-section-count">${equipped.length}</span></div>
-            <div class="inv-section-grid">`;
-        if (equipped.length === 0) {
-            html += '<div class="inv-empty-small">Nenhum item equipado</div>';
-        } else {
-            html += equipped.map(i => _renderInvItemRow(i, true, items)).join('');
-        }
-        html += '</div></div>';
-    }
-
-    html += `<div class="inv-section" style="${!isCaixaMestre ? 'margin-top:16px;' : ''}">
-        <div class="inv-section-title" style="display:flex; justify-content:space-between; align-items:center;">
-            <div>📋 Itens Soltos <span class="inv-section-count">${loose.length}</span></div>
-            ${!isCaixaMestre ? `<button onclick="event.stopPropagation(); _transferCharacterLooseItems('${ownerId}')" style="background:rgba(6,182,212,.15);border:1px solid rgba(6,182,212,.35);color:var(--lr-arcane);padding:2px 8px;border-radius:6px;cursor:pointer;font-size:.7rem;font-weight:700;transition:all .2s">Pegar Itens Soltos</button>` : ''}
-        </div>
-        <div class="inv-section-grid">`;
-    if (loose.length === 0) {
-        html += '<div class="inv-empty-small">Nenhum item solto</div>';
-    } else {
-        html += loose.map(i => _renderInvItemRow(i, false, items)).join('');
-    }
-    html += '</div></div>';
-
-    const openContId = window._mestreOpenContainers[ownerId];
-    if (openContId) {
-        const contItem = items.find(i => i.id === openContId);
-        if (contItem) {
-            const inside = items.filter(i => i.parentItemId === openContId);
-            const cap = contItem.capacidadeContainer || 10;
-            const pesoMax = contItem.pesoMaximoContainer || null;
-            const insideWeight = inside.reduce((sum, i) => sum + ((i.peso || 0) * Math.max(1, parseInt(i.quantidade)||1)), 0);
-            const pesoBase = contItem.pressaoBase != null ? contItem.pressaoBase : (contItem.peso || 0);
-            const overWeight = pesoMax != null && insideWeight > pesoMax;
-            const mult = contItem.multiplicadorPressao || 1;
-            const pressaoContainer = pesoBase + (insideWeight * mult);
-            
-            html += `<div class="inv-container-viewer" style="margin-top:16px;">
-                <div class="inv-container-header">
-                    <span class="inv-container-title">📂 ${escapeHtml(contItem.nome || 'Container')}</span>
-                    <span class="inv-container-cap">Itens: ${inside.length} / ${cap}</span>
-                    <button class="inv-btn inv-btn-close" onclick="toggleMestreContainer('${ownerId}', '${openContId}')">✕</button>
-                </div>
-                <div class="inv-container-stats">
-                    <span class="${overWeight ? 'inv-stat-over' : 'inv-stat-ok'}">⚖️ Peso: ${insideWeight.toFixed(2)}${pesoMax ? ' / '+parseFloat(pesoMax).toFixed(2) : ''}</span>
-                    <span class="inv-stat-pressure">📐 Pressão: ${pressaoContainer.toFixed(2)} (${pesoBase.toFixed(2)} + ${insideWeight.toFixed(2)} × ${mult})</span>
-                </div>
-                <div class="inv-container-items">`;
-            
-            if (inside.length === 0) {
-                html += '<div class="inv-empty-small">Container vazio</div>';
-            } else {
-                html += inside.map(i => _renderInvItemRow(i, false, items, true)).join('');
+        host.innerHTML = htmlInventario(ctx);
+        // Propriedade e não addEventListener: o host é redesenhado a cada
+        // repintura e listener acumulado dispararia a ação várias vezes.
+        host.onclick = (e) => {
+            const bt = e.target.closest('[data-mesaitem]');
+            if (bt) {
+                const { mesaitem, id } = bt.dataset;
+                if (mesaitem === 'editar') window._openMestreItemFormModal(S.currentMesaId, id, ownerId);
+                else if (mesaitem === 'transferir') window._openMestreTransferModal(id, S.currentMesaId);
+                else if (mesaitem === 'excluir') window._deleteMestreItem(id);
+                return;
             }
-            
-            html += `</div>
-            </div>`;
+            tratarClique(ctx, e);
+        };
+        host.onpointerdown = (e) => {
+            const grab = e.target.closest?.('[data-grab]');
+            if (grab) iniciarArrasto(ctx, grab, e);
+        };
+    });
+}
+
+/* ---- Ações de arrasto (mesmas do Tabuleiro, com o log do painel) ---- */
+
+const _itemDoDono = (ownerId, itemId) => (_donos.get(ownerId)?.itens || []).find(x => x.id === itemId);
+
+function _logMesaItem(ownerId, acao, changes) {
+    if (!window.addLog) return;
+    window.addLog(S.currentUser?.email, acao, '', 'items', {
+        charId: ownerId, mesaId: S.currentMesaId, category: 'Inventário', changes,
+    });
+}
+
+/** ± na quantidade da pilha. */
+async function _setQtdMestre(ownerId, itemId, delta) {
+    const i = _itemDoDono(ownerId, itemId); if (!i) return;
+    const q = Math.max(1, qtdDe(i) + delta);
+    if (q === qtdDe(i)) return;
+    try { await updateDoc(doc(db, 'items', itemId), { quantidade: q }); }
+    catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
+    _repintarInventarios();
+}
+
+/** Soltar sobre pilha idêntica: soma as quantidades e junta. */
+async function _fundirPilhasMestre(ownerId, origemId, alvoId) {
+    const a = _itemDoDono(ownerId, origemId);
+    const b = _itemDoDono(ownerId, alvoId);
+    if (!a || !b) return;
+    const q = escolherQtd(a, `Juntar quantos "${a.nome || 'item'}" nesta pilha?`);
+    if (q == null) return;
+    const plano = dividirPilha(a, q);
+    const total = qtdDe(b) + plano.qtd;
+    try {
+        const lote = writeBatch(db);
+        lote.update(doc(db, 'items', b.id), { quantidade: total });
+        if (plano.move) lote.delete(doc(db, 'items', a.id));
+        else lote.update(doc(db, 'items', a.id), { quantidade: plano.restante });
+        await lote.commit();
+        _logMesaItem(ownerId, `🧺 ${plano.qtd}× "${a.nome || 'Item'}" juntado na pilha`, [
+            { label: 'Item', from: a.nome || origemId, to: b.nome || alvoId },
+            { label: 'Quantidade', from: String(qtdDe(b)), to: String(total) },
+        ]);
+        _repintarInventarios();
+    } catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
+}
+
+/** Soltar em contêiner ('cont:<id>') ou fora dele ('root'). */
+async function _moverItemMestre(ownerId, itemId, alvo) {
+    const i = _itemDoDono(ownerId, itemId); if (!i) return;
+
+    if (alvo === 'root') {
+        if (!i.parentItemId) return;
+        try {
+            await updateDoc(doc(db, 'items', itemId), { parentItemId: null });
+            _logMesaItem(ownerId, `📤 Item "${i.nome || itemId}" tirado do contêiner`, [
+                { label: 'Item', from: i.nome || itemId, to: i.nome || itemId },
+                { label: 'Contêiner', from: 'dentro', to: '—' },
+            ]);
+            _repintarInventarios();
+        } catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
+        return;
+    }
+
+    const contId = alvo.slice(5);
+    if (contId === itemId || i.parentItemId === contId) return;
+    const c = _itemDoDono(ownerId, contId); if (!c) return;
+    if (ehContainer(i)) { showAlert('⚠️ Contêiner não entra em contêiner', 'warning'); return; }
+
+    const q = escolherQtd(i, `Mover quantos "${i.nome || 'item'}" para ${c.nome || 'o contêiner'}?`);
+    if (q == null) return;
+    const plano = dividirPilha(i, q);
+    const dentro = { parentItemId: contId, equipado: false, estadoEquip: null, slotAnatomico: null, slotsOcupados: [] };
+    try {
+        if (plano.move) {
+            await updateDoc(doc(db, 'items', itemId), dentro);
+        } else {
+            // divide a pilha: o original fica com o resto, o clone entra no contêiner
+            const lote = writeBatch(db);
+            lote.update(doc(db, 'items', itemId), { quantidade: plano.restante });
+            const { id: _id, ...campos } = i;
+            const novoId = 'item-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+            lote.set(doc(db, 'items', novoId), { ...campos, id: novoId, quantidade: plano.qtd, ...dentro });
+            await lote.commit();
         }
-    }
-
-    return html;
+        _estadoDe(ownerId).contAbertos.add(contId);
+        _logMesaItem(ownerId, `📦 ${plano.qtd}× "${i.nome || 'Item'}" guardado em "${c.nome || 'contêiner'}"`, [
+            { label: 'Item', from: i.nome || itemId, to: i.nome || itemId },
+            { label: 'Contêiner', from: '—', to: c.nome || contId },
+            { label: 'Quantidade', from: String(qtdDe(i)), to: String(plano.qtd) },
+        ]);
+        _repintarInventarios();
+    } catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
 }
 
-function _renderInvItemRow(item, isEquipped, contextItems, isInsideContainer=false) {
-    const tipoEmoji = _getTipoEmoji(item.tipo);
-    const img = item.imagem || item.imagemUrl;
-    
-    // Thumbnail rendering: height clamped to line height (approx 1.2em to 1.5em). 
-    const imgHtml = img
-        ? `<img src="${escapeHtml(img)}" alt="" style="max-height:1.5em; width:auto; border-radius:4px; margin-right:6px; object-fit:contain; vertical-align:middle;">`
-        : `<span class="inv-row-img-ph" style="margin-right:4px;">${tipoEmoji}</span>`;
+/**
+ * Soltou no cartão de outro dono: transfere. Pilha pergunta quanto vai —
+ * o 🔄 Transferir continua existindo para destino fora da tela (outro NPC,
+ * personagem de outra mesa).
+ */
+async function _transferirArrastando(deId, itemId, paraId) {
+    const i = _itemDoDono(deId, itemId); if (!i) return;
+    const destino = _donos.get(paraId);
+    const nomeDestino = destino?.char
+        ? (destino.char.fields?.nome || destino.char.nome || 'personagem')
+        : 'Caixa do Mestre';
 
-    let containerBtn = '';
-    if (item.ehContainer) {
-        const isOpen = window._mestreOpenContainers[item.characterId] === item.id;
-        containerBtn = `<button class="inv-btn ${isOpen ? 'inv-btn-open' : 'inv-btn-closed'}" onclick="event.stopPropagation();toggleMestreContainer('${item.characterId}', '${item.id}')" title="${isOpen ? 'Fechar' : 'Abrir'} container">${isOpen ? '📂' : '📁'}</button>`;
-    }
+    const q = escolherQtd(i, `Passar quantos "${i.nome || 'item'}" para ${nomeDestino}?`);
+    if (q == null) return;
+    const plano = dividirPilha(i, q);
 
-    const qty = Math.max(1, parseInt(item.quantidade) || 1);
-    const qtyHtml = `<span class="inv-badge inv-badge-qty" title="Quantidade">×${qty}</span>`;
-    const pressao = isEquipped ? `<span class="inv-badge inv-badge-pressure-sm">⚖️ ${parseFloat(_calcItemPressure(item, contextItems)).toFixed(2)}</span>` : '';
-
-    let stateBadge = '';
-    if (isEquipped && item.estadoEquip) {
-        stateBadge = `<span class="inv-badge inv-badge-state inv-badge-state-${item.estadoEquip}">${item.estadoEquip}</span>`;
-    }
-
-    return `<div class="inv-item-row ${isEquipped ? 'inv-equipped' : ''}" onclick="_openMestreItemInspectionModal('${item.id}')" style="cursor:pointer; display:flex; align-items:center; padding: 8px;">
-        ${!isInsideContainer && img ? imgHtml : (isInsideContainer && img ? `<img src="${escapeHtml(img)}" class="inv-row-img" alt="">` : imgHtml)}
-        <div class="inv-item-info" style="flex:1;">
-            <span class="inv-item-name">${escapeHtml(item.nome || 'Sem nome')}</span>
-            <span class="inv-item-meta">${!img ? '' : tipoEmoji} ${escapeHtml(item.tipo || '')} | Peso: ${parseFloat(item.peso || 0).toFixed(2)} | Tam: ${item.tamanho || 0}</span>
-        </div>
-        ${qtyHtml}
-        ${pressao}
-        ${stateBadge}
-        <div class="inv-item-actions no-print" onclick="event.stopPropagation()">
-            ${containerBtn}
-            <button class="inv-btn" style="background:rgba(6,182,212,.12);color:var(--lr-arcane)" onclick="_openMestreTransferModal('${item.id}', '${S.currentMesaId}')" title="Transferir">🔄</button>
-            <button class="inv-btn" style="background:rgba(139,92,246,.12);color:var(--primary)" onclick="_openMestreItemFormModal('${S.currentMesaId}', '${item.id}', '${item.characterId}')" title="Editar">✏️</button>
-            <button class="inv-btn inv-btn-delete" onclick="_deleteMestreItem('${item.id}')" title="Excluir">🗑️</button>
-        </div>
-    </div>`;
-}
-
-// ===== INSPECTION MODAL =====
-window._openMestreItemInspectionModal = async function(itemId) {
-    let existing = document.getElementById('invDetailModal');
-    if (existing) existing.remove();
+    const ownerUid = destino?.char?.ownerUid || S.currentUser?.uid || '';
+    const dono = {
+        characterId: paraId,
+        ownerType: paraId.startsWith('__caixa_mestre__') ? 'caixa' : 'char',
+        ownerUid, ownerId: ownerUid,
+        equipado: false, slotAnatomico: null, slotsOcupados: [], estadoEquip: null,
+        parentItemId: null,
+        lastModified: new Date().toISOString(),
+    };
 
     try {
-        const snap = await getDoc(doc(db, 'items', itemId));
-        if (!snap.exists()) return;
-        const item = { id: snap.id, ...snap.data() };
-        
-        const modal = document.createElement('div');
-        modal.className = 'inv-modal active';
-        modal.id = 'invDetailModal';
-        
-        const tipoEmoji = _getTipoEmoji(item.tipo);
-        const img = item.imagem || item.imagemUrl;
-        
-        modal.innerHTML = `<div class="inv-modal-content" style="max-width:450px">
-            <div class="inv-modal-header">
-                <span class="inv-modal-title">🔍 Inspeção de Item</span>
-                <button class="inv-modal-close" onclick="this.closest('.inv-modal').remove()">✕</button>
-            </div>
-            <div class="inv-modal-body" style="text-align:center;">
-                ${img ? `<img src="${escapeHtml(img)}" style="max-width:100%; max-height:200px; object-fit:contain; border-radius:8px; margin-bottom:12px;">` : `<div style="font-size:3rem; margin-bottom:12px;">${tipoEmoji}</div>`}
-                <h2 style="margin:0; color:var(--light);">${escapeHtml(item.nome || 'Sem nome')}</h2>
-                <div style="color:var(--muted); font-size:0.9rem; margin-bottom:16px;">${tipoEmoji} ${escapeHtml(item.tipo || '')}</div>
-                
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:left; background:var(--lr-bg-1); padding:12px; border-radius:8px;">
-                    <div><strong>⚖️ Peso:</strong> ${parseFloat(item.peso || 0).toFixed(2)}</div>
-                    <div><strong>📏 Tamanho:</strong> ${item.tamanho || 1}</div>
-                    <div><strong>× Quantidade:</strong> ${item.quantidade || 1}</div>
-                    ${item.categoriaArma ? `<div><strong>⚔️ Categoria:</strong> ${item.categoriaArma}</div>` : ''}
-                </div>
-                
-                ${item.descricao ? `<div style="margin-top:16px; text-align:left; background:var(--lr-bg-1); padding:12px; border-radius:8px; white-space:pre-wrap; color:var(--light); font-size:0.9rem;">${escapeHtml(item.descricao)}</div>` : ''}
-            </div>
-            <div class="inv-modal-footer">
-                <button class="inv-btn-cancel" onclick="this.closest('.inv-modal').remove()">Fechar</button>
-            </div>
-        </div>`;
-        document.body.appendChild(modal);
-    } catch(e) { console.error(e); }
+        const lote = writeBatch(db);
+        if (plano.move) {
+            lote.set(doc(db, 'items', itemId), dono, { merge: true });
+            // Contêiner viaja com o que tem dentro — senão o conteúdo fica
+            // pendurado no dono antigo, invisível e sem como recuperar.
+            for (const filho of _filhosDe(deId, itemId)) {
+                lote.set(doc(db, 'items', filho.id), { ...dono, parentItemId: itemId }, { merge: true });
+            }
+        } else {
+            // Pilha dividida: o original fica com o resto, o clone é que viaja.
+            lote.update(doc(db, 'items', itemId), { quantidade: plano.restante });
+            const { id: _id, ...campos } = i;
+            const novoId = 'item-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+            lote.set(doc(db, 'items', novoId), { ...campos, ...dono, id: novoId, quantidade: plano.qtd });
+        }
+        await lote.commit();
+
+        const changes = [
+            { label: 'Item', from: i.nome || itemId, to: i.nome || itemId },
+            { label: 'Quantidade', from: String(qtdDe(i)), to: String(plano.qtd) },
+            { label: 'Personagem (ID)', from: deId, to: paraId },
+        ];
+        _logMesaItem(paraId, `🔁 ${plano.qtd}× "${i.nome || 'Item'}" recebido (arrastado pelo Mestre)`, changes);
+        _logMesaItem(deId, `🔁 ${plano.qtd}× "${i.nome || 'Item'}" saiu do inventário (arrastado pelo Mestre)`, changes);
+        showAlert(`✅ ${plano.qtd}× "${i.nome || 'Item'}" para ${nomeDestino}`, 'success');
+        _repintarInventarios();
+    } catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
+}
+
+/** Itens guardados DENTRO de um contêiner, em qualquer profundidade. */
+function _filhosDe(ownerId, contId) {
+    const todos = _donos.get(ownerId)?.itens || [];
+    const fila = [contId], saida = [];
+    while (fila.length) {
+        const pai = fila.pop();
+        for (const x of todos) {
+            if (x.parentItemId === pai && !saida.includes(x)) { saida.push(x); fila.push(x.id); }
+        }
+    }
+    return saida;
+}
+
+/** Tirar do corpo. */
+async function _desequiparMestre(ownerId, itemId) {
+    const i = _itemDoDono(ownerId, itemId); if (!i) return;
+    try {
+        await setDoc(doc(db, 'items', itemId), {
+            equipado: false, slotAnatomico: null, slotsOcupados: [], estadoEquip: null,
+            lastModified: new Date().toISOString(),
+        }, { merge: true });
+        _logMesaItem(ownerId, `🎒 Item "${i.nome || itemId}" desequipado pelo Mestre`,
+            [{ label: 'Equipado', from: 'Sim', to: 'Não' }]);
+        _repintarInventarios();
+    } catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
+}
+
+/* ---- EQUIPAR: escolhe slot e estado, igual à Ficha de NPC ---- */
+function _equiparMestre(ownerId, itemId) {
+    const dono = _donos.get(ownerId);
+    const item = _itemDoDono(ownerId, itemId);
+    if (!item) return;
+
+    const slots = _slotsDoDono(dono?.char?.partesDoCorpo);
+    const slotKeys = Object.keys(slots);
+    if (!slotKeys.length) {
+        showAlert('⚠️ Este dono não tem partes do corpo cadastradas — só a ficha pode equipar.', 'warning');
+        return;
+    }
+
+    // Um item de vários slots (armadura completa, arma de duas mãos) bloqueia todos.
+    const ocupados = new Set((dono.itens || []).filter(i => i.equipado && i.id !== itemId)
+        .flatMap(i => window.EquipSlots.slotsDoItem(i)));
+    const permitidas = Array.isArray(item.equipavelEm) && item.equipavelEm.length ? new Set(item.equipavelEm) : null;
+
+    const opts = slotKeys.map(k => {
+        const s = slots[k];
+        const bloqueadoPorParte = permitidas && !permitidas.has(s.part.id);
+        const ocupado = ocupados.has(k);
+        return `<option value="${k}" ${bloqueadoPorParte || ocupado ? 'disabled' : ''}>${s.icon} ${escapeHtml(s.label)}${ocupado ? ' (ocupado)' : ''}${bloqueadoPorParte ? ' (não permitido)' : ''}</option>`;
+    }).join('');
+
+    const forma = item.formaEquipar;
+    const estadoOpts = Object.entries(ESTADO_EQUIP).map(([v, rot]) => {
+        const [icone, formaDoEstado] = FORMA_EQUIP[v];
+        const bloqueado = forma && formaDoEstado !== forma;
+        return `<option value="${v}" ${bloqueado ? 'disabled' : ''} ${!bloqueado && forma ? 'selected' : ''}>${icone} ${rot}</option>`;
+    }).join('');
+
+    document.getElementById('mestreEquipModal')?.remove();
+    const modal = document.createElement('div');
+    modal.className = 'inv-modal active';
+    modal.id = 'mestreEquipModal';
+    modal.innerHTML = `<div class="inv-modal-content" style="max-width:420px">
+        <div class="inv-modal-header">
+            <span class="inv-modal-title">⬆️ Equipar: ${escapeHtml(item.nome || 'Item')}</span>
+            <button class="inv-modal-close" onclick="this.closest('.inv-modal').remove()">✕</button>
+        </div>
+        <div class="inv-modal-body">
+            <div class="inv-form-group"><label class="inv-form-label">Slot anatômico</label>
+                <select id="mestreEquipSlot" class="inv-form-select">${opts}</select></div>
+            <div class="inv-form-group" style="margin-top:10px"><label class="inv-form-label">Estado</label>
+                <select id="mestreEquipEstado" class="inv-form-select">${estadoOpts}</select></div>
+            ${window.EquipSlots.escolheMaos(item) ? `
+            <div class="inv-form-group" style="margin-top:10px"><label class="inv-form-label">✋ Mãos</label>
+                <select id="mestreEquipMaos" class="inv-form-select">
+                    <option value="1" ${Number(item.maosUsadas) === 2 ? '' : 'selected'}>🤚 1 Mão</option>
+                    <option value="2" ${Number(item.maosUsadas) === 2 ? 'selected' : ''}>🤲 2 Mãos</option>
+                </select></div>` : ''}
+        </div>
+        <div class="inv-modal-footer">
+            <button class="inv-btn-cancel" onclick="this.closest('.inv-modal').remove()">Cancelar</button>
+            <button class="inv-btn-save" onclick="window._confirmMestreEquip('${escapeHtml(ownerId)}','${escapeHtml(itemId)}')">✅ Equipar</button>
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+}
+
+window._confirmMestreEquip = async function(ownerId, itemId) {
+    const dono = _donos.get(ownerId);
+    const item = _itemDoDono(ownerId, itemId); if (!item) return;
+    const slot = document.getElementById('mestreEquipSlot')?.value;
+    const estado = document.getElementById('mestreEquipEstado')?.value;
+    if (!slot || !estado) return;
+
+    const bodySlots = _slotsDoDono(dono?.char?.partesDoCorpo);
+    const maos = Number(document.getElementById('mestreEquipMaos')?.value)
+        || window.EquipSlots.maosDoItem(item);
+    const nomeParte = pid => (dono?.char?.partesDoCorpo || []).find(b => b.id === pid)?.nome || pid;
+
+    const plano = window.EquipSlots.planejarEquipar({ ...item, maosUsadas: maos }, slot, dono.itens, bodySlots, {
+        catalog: _catalogoMestre(), labelParte: nomeParte,
+    });
+    if (plano.faltaMao) {
+        showAlert(`⚠️ Falta ${plano.faltaMao} livre para empunhar esta arma. Desequipe algo antes.`, 'warning');
+        return;
+    }
+
+    try {
+        await setDoc(doc(db, 'items', itemId), {
+            equipado: true, slotAnatomico: slot, slotsOcupados: plano.extras,
+            slotAnatomico2: plano.maoExtra, maosUsadas: maos,
+            estadoEquip: estado, parentItemId: null,
+            lastModified: new Date().toISOString(),
+        }, { merge: true });
+        _logMesaItem(ownerId, `🎒 Item "${item.nome}" equipado pelo Mestre`,
+            [{ label: 'Equipado', from: 'Não', to: `Sim (${slot} / ${estado})` }]);
+        document.getElementById('mestreEquipModal')?.remove();
+        _repintarInventarios();
+    } catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
 };
 
-// ===== CRUD MODAL (Identical to Ficha) =====
+// ===== CRUD MODAL =====
+// MESMOS campos do cadastro de Equipamento do Painel do Criador
+// (shared/equip-campos.js), só que gravando em `items/<id>`: mexe nesta peça e
+// em mais nenhuma, o catálogo fica intacto. Campo novo no cadastro aparece
+// sozinho aqui. É o mesmo formulário da Ficha de NPC (npc-inventario.js).
+
+/** Registros que os seletores do formulário consomem. */
+function _cachesDoForm() {
+    const sys = window._npcSys || window._systemData || {};
+    return {
+        derivedValues: sys.derivedValues || [],
+        vitalStats: sys.vitalStats || [],
+        skills: sys.skills || [],
+        mechanics: sys.mechanics || window._systemData?.mechanics || [],
+        conditions: sys.conditions || window._systemData?.conditions || [],
+        bodyParts: sys.bodyParts || window._systemData?.bodyParts || [],
+    };
+}
+
+/** Registros do sistema + as Condições, que não vêm no pacote da ficha de NPC. */
+async function _ensureCachesDoForm() {
+    await ensureNpcSystemData();
+    if (!window._systemData) window._systemData = {};
+    if (!(window._systemData.conditions || []).length) {
+        try {
+            const snap = await getDocs(collection(db, 'system/data/conditions'));
+            const arr = [];
+            snap.forEach(d => { const x = d.data(); if (x.publicado !== false) arr.push({ id: d.id, ...x }); });
+            window._systemData.conditions = arr;
+            if (window._npcSys) window._npcSys.conditions = arr;
+        } catch (e) { console.warn('conditions', e); window._systemData.conditions = []; }
+    }
+}
+
+/** Redesenha os campos do formulário para um item (ou semente de um modelo). */
+function _pintarCamposMestre(item, modelo) {
+    const corpoEl = document.querySelector('#invFormModal .inv-modal-body');
+    const grade = corpoEl?.querySelector('.inv-form-grid');
+    if (!grade) return;
+    const caches = _cachesDoForm();
+    window._mechCache = caches.mechanics;   // os construtores de seletor leem daqui
+    grade.innerHTML = camposDaInstancia()
+        .map(f => htmlCampo(f, valorDoItem(item, f), { sel: SEL, caches, modelo })).join('');
+
+    const nota = corpoEl.querySelector('[data-nota-modelo]');
+    if (nota) nota.innerHTML = modelo
+        ? `<div class="inv-form-nota">📘 Cópia completa de <b>${escapeHtml(modelo.nome || 'modelo do catálogo')}</b> —
+            cadastro inteiro trazido, inclusive vínculos e equações. O que você mudar aqui vale
+            <b>só para este item</b>, e mexer no catálogo depois <b>não altera</b> esta peça.</div>`
+        : '';
+    const mid = corpoEl.querySelector('#mif_modeloId');
+    if (mid) mid.value = modelo?.id || '';
+    const qi = corpoEl.querySelector('#mif_qtdInicial');
+    if (qi) qi.value = item?.quantidade ?? '';
+    aplicarVisibilidade(corpoEl);
+}
+
 window._openMestreItemFormModal = async function(mesaId, editItemId, targetCharId) {
-    let existing = document.getElementById('invFormModal');
-    if (existing) existing.remove();
+    document.getElementById('invFormModal')?.remove();
 
     let item = null;
     if (editItemId) {
         try {
             const snap = await getDoc(doc(db, 'items', editItemId));
             if (snap.exists()) item = { id: snap.id, ...snap.data() };
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
     }
-
     const isEdit = !!item;
 
-    if (!window._systemData) window._systemData = {};
-    if (!window._systemData.mechanics || window._systemData.mechanics.length === 0) {
-        try {
-            const snap = await getDocs(collection(db, 'system/data/mechanics'));
-            window._systemData.mechanics = [];
-            snap.forEach(d => {
-                const data = d.data();
-                if (data.publicado !== false) window._systemData.mechanics.push({ id: d.id, ...data });
-            });
-        } catch(e) {
-            console.error("Erro ao carregar mecânicas do sistema:", e);
-            window._systemData.mechanics = [];
-        }
-    }
+    await _ensureCachesDoForm();
+    const cat = _catalogoMestre();
+    const modelo = item ? modeloDoItem(item, cat) : null;
 
-    if (!window._systemData.bodyParts || window._systemData.bodyParts.length === 0) {
-        try {
-            const snap = await getDocs(collection(db, 'system/data/bodyParts'));
-            window._systemData.bodyParts = [];
-            snap.forEach(d => {
-                const data = d.data();
-                if (data.publicado !== false) window._systemData.bodyParts.push({ id: d.id, ...data });
-            });
-        } catch(e) {
-            console.error("Erro ao carregar partes do corpo do sistema:", e);
-            window._systemData.bodyParts = [];
-        }
-    }
-
-    const bodyParts = window._systemData?.bodyParts || []; 
+    // Buscar no catálogo só ao CRIAR: trocar o modelo de um item que já existe
+    // apagaria o que o Mestre ajustou nele.
+    const buscaHtml = (!isEdit && cat.length) ? `
+        <div class="inv-form-catalogo">
+            <label class="inv-form-label" for="mif_buscaCat">📚 Partir de um equipamento do catálogo</label>
+            <input type="search" id="mif_buscaCat" class="inv-form-input" autocomplete="off"
+                placeholder="🔍 Buscar por nome, tipo ou tag — ou deixe em branco para item personalizado"
+                oninput="window._mestreFiltrarCatalogo()">
+            <select id="mif_listaCat" class="inv-form-select" size="6"
+                onchange="window._mestreUsarModelo(this.value)"></select>
+            <small class="inv-form-hint">O item nasce vinculado ao modelo: o que você não preencher
+                continua seguindo o catálogo.</small>
+        </div>` : '';
 
     const modal = document.createElement('div');
     modal.className = 'inv-modal active';
     modal.id = 'invFormModal';
-
-    modal.innerHTML = `<div class="inv-modal-content" style="max-width:600px">
+    modal.innerHTML = `<div class="inv-modal-content" style="max-width:760px">
         <div class="inv-modal-header">
             <span class="inv-modal-title">${isEdit ? '✏️ Editar Item' : '➕ Criar Item'}</span>
             <button class="inv-modal-close" onclick="this.closest('.inv-modal').remove()">✕</button>
         </div>
         <div class="inv-modal-body">
-            <div class="inv-form-grid">
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">Nome *</label>
-                    <input type="text" id="invFormName" class="inv-form-input" value="${escapeHtml(item?.nome || '')}" placeholder="Nome do item">
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Tipo</label>
-                    <select id="invFormTipo" class="inv-form-select" onchange="window._toggleMestreModalFields()">
-                        <option value="Objeto" ${item?.tipo === 'Objeto' ? 'selected' : ''}>📦 Objeto</option>
-                        <option value="Arma" ${item?.tipo === 'Arma' ? 'selected' : ''}>⚔️ Arma</option>
-                        <option value="Vestimenta" ${item?.tipo === 'Vestimenta' ? 'selected' : ''}>🧥 Vestimenta</option>
-                        <option value="Acessório" ${item?.tipo === 'Acessório' ? 'selected' : ''}>💍 Acessório</option>
-                        <option value="Projétil" ${item?.tipo === 'Projétil' ? 'selected' : ''}>🎯 Projétil</option>
-                        <option value="Container" ${item?.tipo === 'Container' ? 'selected' : ''}>📦 Container</option>
-                        <option value="Consumível" ${item?.tipo === 'Consumível' ? 'selected' : ''}>🧪 Consumível</option>
-                        <option value="Relíquia" ${item?.tipo === 'Relíquia' ? 'selected' : ''}>✨ Relíquia</option>
-                    </select>
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Equipável em</label>
-                    <select id="invFormEquipavelEm" class="inv-form-select" multiple size="4">
-                        ${bodyParts.map(bp => {
-                            const selected = Array.isArray(item?.equipavelEm) && item.equipavelEm.includes(bp.id) ? 'selected' : '';
-                            return `<option value="${bp.id}" ${selected}>${bp.icone || '🦴'} ${bp.nome}</option>`;
-                        }).join('')}
-                    </select>
-                    <small style="color:var(--muted); font-size: 0.8rem;">Segure Ctrl p/ múltiplos. Vazio = Livre.</small>
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Forma de equipar</label>
-                    <select id="invFormFormaEquipar" class="inv-form-select">
-                        <option value="" ${!item?.formaEquipar ? 'selected' : ''}>— Livre —</option>
-                        <option value="segurar" ${item?.formaEquipar === 'segurar' ? 'selected' : ''}>Segurar</option>
-                        <option value="empunhar" ${item?.formaEquipar === 'empunhar' ? 'selected' : ''}>Empunhar</option>
-                        <option value="vestir" ${item?.formaEquipar === 'vestir' ? 'selected' : ''}>Vestir</option>
-                        <option value="fixar" ${item?.formaEquipar === 'fixar' ? 'selected' : ''}>Fixar</option>
-                    </select>
-                </div>
-                <div class="inv-form-group" id="invFormCategoriaArmaGroup" style="display:${item?.tipo === 'Arma' ? 'flex' : 'none'}">
-                    <label class="inv-form-label">Categoria da Arma *</label>
-                    <select id="invFormCategoriaArma" class="inv-form-select">
-                        <option value="" disabled ${!item?.categoriaArma ? 'selected' : ''}>— Selecione —</option>
-                        <option value="uma_mao" ${item?.categoriaArma === 'uma_mao' ? 'selected' : ''}>🗡️ Arma de Uma Mão</option>
-                        <option value="duas_maos" ${item?.categoriaArma === 'duas_maos' ? 'selected' : ''}>⚔️ Arma de Duas Mãos</option>
-                        <option value="versatil" ${item?.categoriaArma === 'versatil' ? 'selected' : ''}>🔄 Arma Versátil</option>
-                        <option value="escudo" ${item?.categoriaArma === 'escudo' ? 'selected' : ''}>🛡️ Escudo</option>
-                        <option value="distancia" ${item?.categoriaArma === 'distancia' ? 'selected' : ''}>🏹 Arma a Distância</option>
-                    </select>
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Peso</label>
-                    <input type="number" id="invFormPeso" class="inv-form-input" value="${item?.peso || 1}" min="0" step="0.1">
-                </div>
-                <div class="inv-form-group">
-                    <label class="inv-form-label">Tamanho</label>
-                    <input type="number" id="invFormTamanho" class="inv-form-input" value="${item?.tamanho || 1}" min="0">
-                </div>
-                <div class="inv-form-group" id="invFormQuantidadeGroup" style="display:${(item?.tipo === 'Container' || item?.tipo === 'Arma' || item?.ehContainer) ? 'none' : 'flex'}">
-                    <label class="inv-form-label">Quantidade</label>
-                    <input type="number" id="invFormQuantidade" class="inv-form-input" value="${(item?.tipo === 'Container' || item?.tipo === 'Arma' || item?.ehContainer) ? 1 : (item?.quantidade || 1)}" min="1">
-                </div>
-                <div id="invContainerFields" class="inv-form-group inv-form-wide" style="display:${(item?.tipo === 'Container' || item?.ehContainer) ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="inv-form-group">
-                        <label class="inv-form-label">⚖️ Peso Máximo</label>
-                        <input type="number" id="invFormPesoMaximo" class="inv-form-input" value="${item?.pesoMaximoContainer || 10}" min="0" step="0.1">
-                    </div>
-                    <div class="inv-form-group">
-                        <label class="inv-form-label">✖️ Mult. Pressão</label>
-                        <input type="number" id="invFormMultPressao" class="inv-form-input" value="${item?.multiplicadorPressao || 1}" min="0" step="0.01">
-                    </div>
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">💥 Fórmula de Dano</label>
-                    <input type="text" id="invFormFormulaDano" class="inv-form-input" value="${escapeHtml(item?.formulaDano || '')}" placeholder="Ex: 1d10 — só o dado; bônus numéricos vêm dos Valores Derivados">
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">💥 Fórmula de Dano (empunhada com 2 mãos)</label>
-                    <input type="text" id="invFormFormulaDano2Maos" class="inv-form-input" value="${escapeHtml(item?.formulaDano2Maos || '')}" placeholder="Ex: 1d12 — vazio = o mesmo dado de 1 mão">
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">Descrição</label>
-                    <textarea id="invFormDesc" class="inv-form-textarea" rows="3" placeholder="Descrição do item">${escapeHtml(item?.descricao || '')}</textarea>
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    <label class="inv-form-label">Imagem</label>
-                    ${CampoImagem.html({ id: 'invFormImagem', classe: 'inv-form-input', valor: item?.imagem || item?.imagemUrl || '', pasta: 'imagens/itens' })}
-                </div>
-                <div class="inv-form-group inv-form-wide">
-                    ${(() => {
-                        window._mechCache = window._systemData?.mechanics || [];
-                        return buildMechanicSelectorHTML('mecanicaIds', 'Mecânicas Vinculadas', item?.mecanicaIdsProprias || [], window._mechCache, 'item');
-                    })()}
-                </div>
-            </div>
-            <input type="hidden" id="mif_mesaId" value="${mesaId}">
-            <input type="hidden" id="mif_targetCharId" value="${targetCharId}">
-            ${isEdit ? `<input type="hidden" id="mif_editId" value="${item.id}">` : ''}
+            ${buscaHtml}
+            <div data-nota-modelo></div>
+            <div class="inv-form-grid"></div>
+            <input type="hidden" id="mif_mesaId" value="${escapeHtml(mesaId || '')}">
+            <input type="hidden" id="mif_targetCharId" value="${escapeHtml(targetCharId || '')}">
+            <input type="hidden" id="mif_modeloId" value="${escapeHtml(item?.modeloId || '')}">
+            <input type="hidden" id="mif_qtdInicial" value="${escapeHtml(String(item?.quantidade ?? ''))}">
+            ${isEdit ? `<input type="hidden" id="mif_editId" value="${escapeHtml(item.id)}">` : ''}
         </div>
         <div class="inv-modal-footer">
-            ${isEdit && modeloDoItem(item, _catalogoMestre()) ? botaoRestaurarHTML('window._restaurarMestreItem()') : ''}
+            ${isEdit && modelo ? botaoRestaurarHTML('window._restaurarMestreItem()') : ''}
             <button class="inv-btn-cancel" onclick="this.closest('.inv-modal').remove()">Cancelar</button>
             <button class="inv-btn-save" onclick="_saveMestreItem()">💾 Salvar</button>
         </div>
     </div>`;
     document.body.appendChild(modal);
-    window._toggleMestreModalFields();
+
+    _pintarCamposMestre(item, modelo);
+    if (!isEdit && cat.length) window._mestreFiltrarCatalogo();
+
+    // Tipo e "É Container?" abrem/fecham os campos dependentes
+    const corpoEl = modal.querySelector('.inv-modal-body');
+    corpoEl.addEventListener('change', e => {
+        if (e.target.id === 'field_tipo' || e.target.id === 'field_ehContainer') aplicarVisibilidade(corpoEl);
+    });
 };
 
-window._toggleMestreModalFields = function() {
-    const tipo = document.getElementById('invFormTipo')?.value;
-    const catGroup = document.getElementById('invFormCategoriaArmaGroup');
-    const qtyGroup = document.getElementById('invFormQuantidadeGroup');
-    const contGroup = document.getElementById('invContainerFields');
-    const qtyInput = document.getElementById('invFormQuantidade');
+/** Filtra o catálogo por nome, tipo ou tag. Sem busca, mostra tudo. */
+window._mestreFiltrarCatalogo = function() {
+    const lista = document.getElementById('mif_listaCat');
+    if (!lista) return;
+    const q = (document.getElementById('mif_buscaCat')?.value || '').trim().toLowerCase();
+    const casa = (t) => !q || [t.nome, t.tipo, ...(t.tags || [])]
+        .some(v => String(v || '').toLowerCase().includes(q));
+    const achados = _catalogoMestre().filter(casa)
+        .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
-    if (catGroup) catGroup.style.display = tipo === 'Arma' ? 'flex' : 'none';
-    if (contGroup) contGroup.style.display = tipo === 'Container' ? 'grid' : 'none';
-    
-    if (qtyGroup) {
-        if (tipo === 'Container' || tipo === 'Arma') {
-            qtyGroup.style.display = 'none';
-            if (qtyInput) qtyInput.value = 1;
-        } else {
-            qtyGroup.style.display = 'flex';
-        }
-    }
+    lista.innerHTML = achados.length
+        ? achados.slice(0, 200).map(t => {
+            const det = [t.tipo, t.liga != null ? 'Liga ' + t.liga : '', t.formulaDano].filter(Boolean).join(' · ');
+            return `<option value="${escapeHtml(t.id)}">${escapeHtml(t.nome || 'Sem nome')}${det ? ' — ' + escapeHtml(det) : ''}</option>`;
+        }).join('')
+        : '<option value="" disabled>Nenhum equipamento encontrado</option>';
+};
+
+/** Escolheu um modelo: semeia os campos e vincula a instância a ele. */
+window._mestreUsarModelo = function(templateId) {
+    const tpl = _catalogoMestre().find(t => t.id === templateId);
+    if (!tpl) return;
+    _pintarCamposMestre(instanciarDoModelo(tpl), tpl);
 };
 
 /** ♻️ Joga o cadastro do catálogo por cima do que foi alterado nesta peça. */
@@ -530,10 +740,7 @@ window._restaurarMestreItem = async function() {
         }
         showAlert('♻️ Item restaurado ao cadastro!', 'success');
         document.getElementById('invFormModal')?.remove();
-        loadMesaInventarios();
-        if (document.getElementById('mesaCharactersInventoryContainer')?.style.display !== 'none') {
-            loadPersonagensInventario();
-        }
+        _repintarInventarios();
     } catch (e) {
         console.error('❌ Erro ao restaurar item:', e);
         showAlert('❌ Erro: ' + e.message, 'danger');
@@ -541,56 +748,61 @@ window._restaurarMestreItem = async function() {
 };
 
 window._saveMestreItem = async function() {
-    const nome = document.getElementById('invFormName')?.value?.trim();
+    const dados = coletarCampos(camposDaInstancia());
+
+    const nome = String(dados.nome || '').trim();
     if (!nome) { showAlert('⚠️ Nome obrigatório', 'warning'); return; }
+    if (dados.tipo === 'Arma' && !dados.categoriaArma) { showAlert('⚠️ Selecione a categoria da arma', 'warning'); return; }
 
     const mesaId = document.getElementById('mif_mesaId')?.value;
     const editId = document.getElementById('mif_editId')?.value || '';
     const targetCharId = document.getElementById('mif_targetCharId')?.value;
-    const tipo = document.getElementById('invFormTipo')?.value || 'Objeto';
-    const isContainer = tipo === 'Container';
+    const isContainer = dados.tipo === 'Container' || !!dados.ehContainer;
 
-    const equipOpts = document.getElementById('invFormEquipavelEm')?.selectedOptions;
-    const equipavelEm = equipOpts ? Array.from(equipOpts).map(o => o.value) : [];
-
-    const mecanicaIdsEl = document.getElementById('field_mecanicaIds');
-    let mecanicaIds = [];
-    if (mecanicaIdsEl) {
-        try { mecanicaIds = JSON.parse(mecanicaIdsEl.value || '[]'); }
-        catch { mecanicaIds = []; }
+    let old = null;
+    if (editId) {
+        try { const snap = await getDoc(doc(db, 'items', editId)); if (snap.exists()) old = snap.data(); }
+        catch (e) { /* segue sem o anterior */ }
     }
 
     const itemData = {
+        ...dados,
         nome,
-        tipo,
-        formaEquipar: document.getElementById('invFormFormaEquipar')?.value || '',
-        equipavelEm,
-        categoriaArma: tipo === 'Arma' ? document.getElementById('invFormCategoriaArma')?.value : null,
-        peso: parseFloat(document.getElementById('invFormPeso')?.value) || 1,
-        tamanho: parseInt(document.getElementById('invFormTamanho')?.value) || 1,
-        quantidade: (isContainer || tipo === 'Arma') ? 1 : Math.max(1, parseInt(document.getElementById('invFormQuantidade')?.value) || 1),
-        descricao: document.getElementById('invFormDesc')?.value?.trim() || '',
-        formulaDano: document.getElementById('invFormFormulaDano')?.value?.trim() || '',
-        formulaDano2Maos: document.getElementById('invFormFormulaDano2Maos')?.value?.trim() || '',
-        imagem: document.getElementById('invFormImagem')?.value?.trim() || '',
-        mecanicaIdsProprias: mecanicaIds,
-        characterId: targetCharId,
-        ownerUid: S.currentUser?.uid || '', // Might update below
+        // A instância guarda a imagem em `imagem`; `imagemUrl` é chave do catálogo
+        imagem: dados.imagemUrl || '',
+        // Mecânicas da instância não se misturam com as do modelo
+        mecanicaIdsProprias: dados.mecanicaIds || [],
         ehContainer: isContainer,
-        pressaoBase: parseFloat(document.getElementById('invFormPeso')?.value) || 1,
-        lastModified: new Date().toISOString()
+        equipavelEm: (dados.equipavelEm || []).length ? dados.equipavelEm : null,
+        formaEquipar: dados.formaEquipar || '',
+        categoriaArma: dados.tipo === 'Arma' ? dados.categoriaArma : null,
+        peso: Number(dados.peso) || 1,
+        // Metros, fracionado: 0,1 = 10 cm.
+        tamanho: Number(dados.tamanho) || 1,
+        pressaoBase: dados.pressaoBase != null ? Number(dados.pressaoBase) : (Number(dados.peso) || 1),
+        // Vínculo com o catálogo: é ele que faz campo em branco herdar do modelo
+        modeloId: document.getElementById('mif_modeloId')?.value || null,
+        characterId: targetCharId,
+        ownerUid: old?.ownerUid || S.currentUser?.uid || '',
+        lastModified: new Date().toISOString(),
     };
-
-    if (isContainer) {
-        itemData.pesoMaximoContainer = parseFloat(document.getElementById('invFormPesoMaximo')?.value) || 10;
-        itemData.multiplicadorPressao = parseFloat(document.getElementById('invFormMultPressao')?.value) || 1;
-    }
+    delete itemData.imagemUrl;
+    delete itemData.mecanicaIds;
+    if (!isContainer) { itemData.pesoMaximoContainer = null; itemData.multiplicadorPressao = null; itemData.capacidadeContainer = null; }
+    // Arma e contêiner nunca empilham. Nos demais: mantém a pilha atual ao
+    // editar; ao criar do catálogo, nasce com o "padrão ao instanciar" do modelo.
+    const qtdSemente = parseInt(document.getElementById('mif_qtdInicial')?.value) || 0;
+    itemData.quantidade = (isContainer || dados.tipo === 'Arma')
+        ? 1
+        : Math.max(1, parseInt(old?.quantidade) || qtdSemente || 1);
 
     try {
         if (editId) {
             await setDoc(doc(db, 'items', editId), itemData, { merge: true });
         } else {
             itemData.equipado = false;
+            itemData.slotAnatomico = null;
+            itemData.estadoEquip = null;
             itemData.parentItemId = null;
             itemData.criadoPor = 'mestre';
             const newId = 'item-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
@@ -605,7 +817,7 @@ window._saveMestreItem = async function() {
                     charId: targetCharId || null, mesaId: mesaId || S.currentMesaId, category: 'Inventário',
                     changes: [
                         { label: 'Item', from: editId ? nome : '—', to: nome },
-                        { label: 'Tipo', from: '', to: tipo },
+                        { label: 'Tipo', from: '', to: String(dados.tipo || '') },
                         { label: 'Quantidade', from: '', to: String(itemData.quantidade) }
                     ]
                 });
@@ -613,11 +825,7 @@ window._saveMestreItem = async function() {
 
         showAlert('✅ Item salvo!', 'success');
         document.getElementById('invFormModal')?.remove();
-        
-        loadMesaInventarios();
-        if (document.getElementById('mesaCharactersInventoryContainer')?.style.display !== 'none') {
-            loadPersonagensInventario();
-        }
+        _repintarInventarios();
     } catch (e) {
         console.error('❌ Erro ao salvar item:', e);
         showAlert('❌ Erro: ' + e.message, 'danger');
@@ -650,10 +858,7 @@ window._deleteMestreItem = async function(itemId) {
         }
 
         showAlert('✅ Item excluído', 'success');
-        loadMesaInventarios();
-        if (document.getElementById('mesaCharactersInventoryContainer')?.style.display !== 'none') {
-            loadPersonagensInventario();
-        }
+        _repintarInventarios();
     } catch (e) {
         console.error('❌ Erro ao excluir:', e);
         showAlert('❌ Erro: ' + e.message, 'danger');
@@ -852,6 +1057,24 @@ window._executeMestreTransfer = async function(itemId, targetCharId, targetOwner
         }
         await setDoc(doc(db, 'items', itemId), updateData, { merge: true });
 
+        /* Contêiner viaja com o que tem dentro. Sem isto o conteúdo continuava
+           com o characterId do dono ANTIGO: some da lista dele (tem
+           parentItemId) e não aparece no destino (characterId errado). */
+        if (itemInfo?.ehContainer || itemInfo?.tipo === 'Container') {
+            const todos = await _fetchAllItems();
+            const fila = [itemId], dentro = [];
+            while (fila.length) {
+                const pai = fila.pop();
+                for (const x of todos) {
+                    if (x.parentItemId === pai && !dentro.includes(x)) { dentro.push(x); fila.push(x.id); }
+                }
+            }
+            for (const filho of dentro) {
+                await setDoc(doc(db, 'items', filho.id),
+                    { ...updateData, parentItemId: filho.parentItemId }, { merge: true });
+            }
+        }
+
         // 📜 Log da transferência (um log para a origem e outro para o destino)
         if (window.addLog) {
             const nomeItem = itemInfo?.nome || itemId;
@@ -873,10 +1096,7 @@ window._executeMestreTransfer = async function(itemId, targetCharId, targetOwner
         showAlert('✅ Item transferido com sucesso!', 'success');
         document.getElementById('mestreTransferModal')?.remove();
         
-        loadMesaInventarios();
-        if (document.getElementById('mesaCharactersInventoryContainer')?.style.display !== 'none') {
-            loadPersonagensInventario();
-        }
+        _repintarInventarios();
     } catch (e) {
         console.error('❌ Erro ao transferir:', e);
         showAlert('❌ Erro: ' + e.message, 'danger');
@@ -906,10 +1126,7 @@ window._transferCharacterLooseItems = async function(charId) {
 
         await Promise.all(promises);
         showAlert('✅ Itens transferidos com sucesso!', 'success');
-        loadMesaInventarios();
-        if (document.getElementById('mesaCharactersInventoryContainer')?.style.display !== 'none') {
-            loadPersonagensInventario();
-        }
+        _repintarInventarios();
     } catch (e) {
         console.error('❌ Erro ao transferir itens soltos:', e);
         showAlert('❌ Erro: ' + e.message, 'danger');
@@ -942,10 +1159,7 @@ window._transferAllLooseItems = async function() {
 
         await Promise.all(promises);
         showAlert('✅ Itens transferidos com sucesso!', 'success');
-        loadMesaInventarios();
-        if (document.getElementById('mesaCharactersInventoryContainer')?.style.display !== 'none') {
-            loadPersonagensInventario();
-        }
+        _repintarInventarios();
     } catch (e) {
         console.error('❌ Erro ao transferir itens soltos:', e);
         showAlert('❌ Erro: ' + e.message, 'danger');

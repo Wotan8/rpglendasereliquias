@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/conhecimento.css?v=4">
     <link rel="stylesheet" href="../shared/texto-mundo.css?v=1">
     <link rel="stylesheet" href="../shared/tokens.css?v=11">
+    <link rel="stylesheet" href="../shared/inventario-motor.css?v=1">
     <link rel="stylesheet" href="css/print.css?v=8">
 <script type="module" src="/js/global-favicon.js"></script>
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
@@ -468,7 +469,16 @@
     <script src="js/runomancia-module.js?v=5"></script>
     <script src="js/item-scope-calc.js?v=3"></script>
     <script src="../shared/equip-slots.js?v=1"></script>
-    <script src="js/inventory.js?v=18"></script>
+    <!-- Motor de arrasto do inventário (mesmo do Tabuleiro e do Painel do Mestre).
+         inventory.js é script clássico, então o módulo entra por window. -->
+    <script type="module">
+        import * as InvMotor from '../shared/inventario-motor.js?v=4';
+        window.InvMotor = InvMotor;
+        // Módulo carrega depois dos scripts clássicos: se o inventário já tiver
+        // sido pintado, repinta uma vez para as alças ⠿ aparecerem.
+        window.renderInventoryTab?.();
+    </script>
+    <script src="js/inventory.js?v=20"></script>
     <script src="js/combat-panel.js?v=5"></script>
     <script src="js/notes.js"></script>
     <script src="js/aura.js"></script>
@@ -477,7 +487,7 @@
     <script src="js/print.js?v=2"></script>
     <script src="js/mesa-tab.js?v=3"></script>
     <script src="js/char-logger.js?v=7"></script>
-    <script src="js/aliado-inventario.js?v=8"></script>
+    <script src="js/aliado-inventario.js?v=10"></script>
     <script type="module" src="js/aliados.js?v=10"></script>
     <script type="module" src="js/conhecimento.js?v=7"></script>
     <script src="js/abas-condicionais.js?v=4"></script>

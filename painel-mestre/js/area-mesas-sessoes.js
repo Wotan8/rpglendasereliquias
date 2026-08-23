@@ -99,7 +99,7 @@ export function logCamposHtml(log, chars) {
         return `<div style="display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
             <input type="checkbox" class="sl-char-cb" value="${c.id}" data-name="${escapeHtml(nomeChar(c))}" data-owner="${c.ownerUid || ''}" ${p ? 'checked' : ''} style="width:18px;height:18px">
             <span style="flex:1;color:var(--light);font-weight:600">${escapeHtml(nomeChar(c))}</span>
-            <input type="number" class="form-input sl-char-exp" data-char-id="${c.id}" placeholder="EXP" value="${Math.abs(parseInt(p?.expAmount, 10) || 0)}" style="width:80px;text-align:center;padding:6px">
+            <input type="number" class="form-input sl-char-exp" data-char-id="${c.id}" placeholder="EXP" value="${Math.abs(parseInt(p?.expAmount, 10) || 0)}" oninput="if(+this.value)this.closest('div').querySelector('.sl-char-cb').checked=true" style="width:80px;text-align:center;padding:6px">
             <select class="form-select sl-char-exp-type" data-char-id="${c.id}" style="width:60px;padding:6px"><option value="add">+</option><option value="sub" ${p?.expType === 'sub' ? 'selected' : ''}>−</option></select>
         </div>`;
     }).join('');
@@ -128,14 +128,18 @@ const val = (id) => document.getElementById('sl_' + id)?.value?.trim() || '';
 export function coletarLogCampos() {
     const summary = val('summary');
     if (!summary) { showAlert('⚠️ Resumo é obrigatório', 'warning'); return null; }
+    // EXP digitado JÁ conta como presença: esquecer de marcar a caixinha fazia
+    // o log salvar sem participante nenhum e o EXP sumir em silêncio.
     const participants = [];
-    document.querySelectorAll('.sl-char-cb:checked').forEach(cb => {
+    document.querySelectorAll('.sl-char-cb').forEach(cb => {
         const id = cb.value;
+        const expAmount = parseInt(document.querySelector(`.sl-char-exp[data-char-id="${id}"]`)?.value) || 0;
+        if (!cb.checked && !expAmount) return;
         participants.push({
             characterId: id,
             characterName: cb.dataset.name || '',
             ownerUid: cb.dataset.owner || '',
-            expAmount: parseInt(document.querySelector(`.sl-char-exp[data-char-id="${id}"]`)?.value) || 0,
+            expAmount,
             expType: document.querySelector(`.sl-char-exp-type[data-char-id="${id}"]`)?.value || 'add',
         });
     });

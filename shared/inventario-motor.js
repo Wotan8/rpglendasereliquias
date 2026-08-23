@@ -20,8 +20,17 @@
 //   semQtd      true esconde os botões ± de quantidade (leitura da pilha só)
 //   botoes      (item) => HTML de ações extras na linha  — opcional
 //   repintar    () => void
-//   acoes       { equipar, desequipar, mover, fundir, mapa, qtd }
+//   externo     (elSob, item) => alvo|null — opcional: reivindica alvo FORA da
+//               raiz (o Painel do Mestre solta item no inventario de outro dono)
+//   acoes       { equipar, desequipar, mover, fundir, mapa, qtd, externo }
 // =============================================================
+
+
+/* Peso e Tamanho do item SEMPRE saem com unidade. Tamanho é em metros e
+   fracionado — 0,1 é 10 cm —, então nada de arredondar para inteiro; as casas
+   mortas caem para "1 m" não virar "1,00 m". */
+const _pesoKg = (v) => `${(parseFloat(v) || 0).toFixed(2)} kg`;
+const _tamanhoM = (v) => `${Math.round((parseFloat(v) || 0) * 100) / 100} m`;
 
 export const EMOJI_TIPO = {
     'Arma': '⚔️', 'Vestimenta': '🧥', 'Acessório': '💍', 'Projétil': '🎯',
@@ -105,7 +114,7 @@ function detalheItem(ctx, i) {
     const l = [];
     const tpl = tplDoItem(i, sys);
     l.push(`<b>Tipo:</b> ${esc(i.tipo || 'Objeto')}${i.categoriaArma ? ' · ' + (CAT_ARMA[i.categoriaArma] || esc(i.categoriaArma)) : ''}`);
-    l.push(`<b>Peso:</b> ${fmtN(i.peso || 0)} · <b>Tamanho:</b> ${fmtN(i.tamanho ?? 1)} · <b>Qtd:</b> ${qtdDe(i)} · <b>Pressão:</b> ${fmtN(pressaoItem(i, ctx.itens))}`);
+    l.push(`<b>Peso:</b> ${_pesoKg(i.peso)} · <b>Tamanho:</b> ${_tamanhoM(i.tamanho ?? 1)} · <b>Qtd:</b> ${qtdDe(i)} · <b>Pressão:</b> ${fmtN(pressaoItem(i, ctx.itens))}`);
     const f = formulaDanoDoItem(i, sys);
     if (f) l.push(`<b>💥 Dano:</b> ${esc(f)}${!i.formulaDano && tpl ? ' <i>(do modelo)</i>' : ''}`);
     l.push(i.equipado
@@ -114,7 +123,7 @@ function detalheItem(ctx, i) {
     if (i.formaEquipar) l.push(`<b>Forma de equipar:</b> ${esc(i.formaEquipar)}`);
     if (ehContainer(i)) {
         const nDentro = (ctx.itens || []).filter(x => x.parentItemId === i.id).length;
-        l.push(`<b>📦 Contêiner:</b> peso máx ${fmtN(i.pesoMaximoContainer || 0)} · pressão ×${fmtN(i.multiplicadorPressao ?? 1)} · ${nDentro} item(ns) dentro`);
+        l.push(`<b>📦 Contêiner:</b> peso máx ${_pesoKg(i.pesoMaximoContainer)} · pressão ×${fmtN(i.multiplicadorPressao ?? 1)} · ${nDentro} item(ns) dentro`);
     }
     // Vínculos com VDs e Status Vitais — instância vence o modelo, como na ficha
     const dvs = (Array.isArray(i.valoresDerivadosVinculados) && i.valoresDerivadosVinculados.length)
@@ -153,7 +162,7 @@ function itemRow(ctx, i, dentro) {
         ${img ? `<img class="lr-inv-item-img" src="${esc(img)}" alt="">` : `<span class="lr-inv-item-ic">${EMOJI_TIPO[i.tipo] || '📦'}</span>`}
         <div class="lr-inv-item-info">
             <span class="lr-inv-item-nome">${esc(i.nome || 'Sem nome')}</span>
-            <span class="lr-inv-item-meta">${esc(i.tipo || '')} · ⚖️ ${fmtN(i.peso || 0)}${extra.length ? ' · ' + esc(extra.join(' · ')) : ''}</span>
+            <span class="lr-inv-item-meta">${esc(i.tipo || '')} · ⚖️ ${_pesoKg(i.peso)}${extra.length ? ' · ' + esc(extra.join(' · ')) : ''}</span>
         </div>
         <span class="lr-inv-qty">${podeQtd ? `<button type="button" data-qdelta="-1" data-item="${esc(i.id)}">−</button>` : ''}<b>×${qtdDe(i)}</b>${podeQtd ? `<button type="button" data-qdelta="1" data-item="${esc(i.id)}">+</button>` : ''}</span>
         ${ctx.botoes ? `<span class="lr-inv-acoes" data-acoes>${ctx.botoes(i)}</span>` : ''}
@@ -244,7 +253,10 @@ export function alvoSob(ctx, item, x, y) {
     }
     const raiz = sob.closest?.('[data-drop="root"]');
     if (raiz && ctx.raiz.contains(raiz) && item.parentItemId) return { tipo: 'drop', drop: 'root', el: raiz };
-    return null;
+    // Nada nesta lista respondeu. Quem instanciou pode reivindicar o que esta
+    // FORA dela — e o Painel do Mestre usa isso para soltar o item no
+    // inventario de OUTRO dono. Sem o gancho, o arrasto morre aqui.
+    return ctx.externo?.(sob, item) || null;
 }
 
 /**
@@ -290,6 +302,7 @@ export function iniciarArrasto(ctx, grab, e) {
         else if (alvo.tipo === 'merge') ctx.acoes.fundir?.(id, alvo.id);
         else if (alvo.tipo === 'equipar') ctx.acoes.equipar?.(id);
         else if (alvo.tipo === 'desequipar') ctx.acoes.desequipar?.(id);
+        else if (alvo.tipo === 'externo') ctx.acoes.externo?.(id, alvo);
         else ctx.acoes.mover?.(id, alvo.drop);
     };
     grab.addEventListener('pointermove', pintar);

@@ -1,4 +1,5 @@
 /* =====================================================================
+
    ALIADO INVENTÁRIO — Ficha de Personagem > Aliados > Ficha do Aliado
    =====================================================================
    Dá ao jogador as MESMAS permissões de criação/gerenciamento de itens
@@ -13,8 +14,18 @@
      personagens/Caixa do Mestre da sua mesa e para aliados permitidos
      (seus próprios aliados ou aliados de personagens da mesma mesa).
 ===================================================================== */
+
+/* Peso e Tamanho do item SEMPRE saem com unidade. Tamanho é em metros e
+   fracionado — 0,1 é 10 cm —, então nada de arredondar para inteiro; as casas
+   mortas caem para "1 m" não virar "1,00 m". */
 (function () {
     'use strict';
+
+    /* Dentro da IIFE de proposito: inventory.js ja declara estes dois nomes no
+       escopo global, e const repetido em script classico e SyntaxError — o
+       arquivo inteiro deixava de carregar. */
+    const _pesoKg = (v) => `${(parseFloat(v) || 0).toFixed(2)} kg`;
+    const _tamanhoM = (v) => `${Math.round((parseFloat(v) || 0) * 100) / 100} m`;
 
     const FIRESTORE_URL = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
@@ -154,7 +165,7 @@
                 ${img ? `<img src="${esc(img)}" style="max-height:1.5em;border-radius:4px;object-fit:contain">` : `<span>${_emoji(item.tipo)}</span>`}
                 <div class="inv-item-info" style="flex:1">
                     <span class="inv-item-name">${esc(item.nome || 'Sem nome')}</span>
-                    <span class="inv-item-meta">${esc(item.tipo || '')} | Peso: ${parseFloat(item.peso || 0).toFixed(2)}${slotLbl ? ' | ' + esc(slotLbl) : ''}${estado ? ' | ' + estado : ''}</span>
+                    <span class="inv-item-meta">${esc(item.tipo || '')} | Peso: ${_pesoKg(item.peso)}${slotLbl ? ' | ' + esc(slotLbl) : ''}${estado ? ' | ' + estado : ''}</span>
                 </div>
                 <span class="inv-badge inv-badge-qty">×${Math.max(1, parseInt(item.quantidade) || 1)}</span>
                 <div class="inv-item-actions" onclick="event.stopPropagation()" style="display:flex;gap:4px">
@@ -244,8 +255,8 @@
             _grupo('Categoria da Arma *', _select('aif_categoriaArma',
                 _opt('', '— Selecione —', !item?.categoriaArma, ' disabled') + _opts(CATEGORIAS_ARMA, item?.categoriaArma)),
                 ` id="aif_catArmaGroup" style="display:${item?.tipo === 'Arma' ? 'flex' : 'none'}"`),
-            _grupo('Peso', _numero('aif_peso', item?.peso ?? 1, ' min="0" step="0.1"')),
-            _grupo('Tamanho', _numero('aif_tamanho', item?.tamanho ?? 1, ' min="0"')),
+            _grupo('Peso (kg)', _numero('aif_peso', item?.peso ?? 1, ' min="0" step="0.01" placeholder="kg"')),
+            _grupo('Tamanho (m)', _numero('aif_tamanho', item?.tamanho ?? 1, ' min="0" step="0.01" placeholder="m"')),
             _grupo('Quantidade', _numero('aif_quantidade', semQtd ? 1 : (item?.quantidade || 1), ' min="1"'),
                 ` id="aif_qtyGroup" style="display:${semQtd ? 'none' : 'flex'}"`),
             `<div id="aif_containerFields" class="inv-form-group inv-form-wide" style="display:${container ? 'grid' : 'none'};grid-template-columns:1fr 1fr;gap:12px">`
@@ -339,7 +350,8 @@
             nome, tipo,
             categoriaArma: tipo === 'Arma' ? categoriaArma : null,
             peso: parseFloat(document.getElementById('aif_peso')?.value) || 1,
-            tamanho: parseInt(document.getElementById('aif_tamanho')?.value) || 1,
+            // Metros, fracionado: 0,1 = 10 cm.
+            tamanho: parseFloat(document.getElementById('aif_tamanho')?.value) || 1,
             quantidade: (isContainer || tipo === 'Arma') ? 1 : Math.max(1, parseInt(document.getElementById('aif_quantidade')?.value) || 1),
             descricao: document.getElementById('aif_desc')?.value?.trim() || '',
             imagem: document.getElementById('aif_imagem')?.value?.trim() || '',

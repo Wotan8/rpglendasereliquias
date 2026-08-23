@@ -4,7 +4,7 @@
 // =============================================
 
 import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=16';
-import { CAMPOS_EQUIPAMENTO, normalizaFormaEquipar } from '../../shared/equip-campos.js?v=6';
+import { CAMPOS_EQUIPAMENTO, normalizaFormaEquipar } from '../../shared/equip-campos.js?v=8';
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 import { versaoDoLivro } from '../../shared/livros-pub.js';
 
@@ -1502,8 +1502,9 @@ function _buildCardMetaChips(item) {
             break;
         case 'equipment':
             add(item.tipo ? escapeHtml(item.tipo) : '', 'chip-accent');
-            if (item.peso != null) add(`⚖️ ${escapeHtml(item.peso)}`);
-            if (item.tamanho != null) add(`📐 ${escapeHtml(item.tamanho)}`);
+            // Peso em kg, Tamanho em metros (fracionado: 0,1 = 10 cm).
+            if (item.peso != null) add(`⚖️ ${escapeHtml(item.peso)} kg`);
+            if (item.tamanho != null) add(`📐 ${escapeHtml(item.tamanho)} m`);
             if (item.ehContainer) add(`📦 Container${item.capacidadeContainer ? ' ×' + escapeHtml(item.capacidadeContainer) : ''}`, 'chip-gold');
             if (mechCount) add(`🔧 ${mechCount}`);
             break;

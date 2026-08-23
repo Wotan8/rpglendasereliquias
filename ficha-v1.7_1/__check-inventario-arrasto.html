@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Arrasto do inventário da Ficha</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="css/inventory.css">
+<link rel="stylesheet" href="../shared/inventario-motor.css">
+<style>
+  body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; background: var(--lr-bg-0); color: var(--lr-text-1); }
+  .col { display: grid; grid-template-columns: 460px 1fr; gap: 16px; align-items: start; }
+  table { border-collapse: collapse; font: 11px ui-monospace, monospace; width: 100%; }
+  td { border: 1px solid var(--lr-border); padding: 2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight: 700; }
+  #placar { font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--lr-border); }
+  h1 { font-size: 1rem; margin: 0 0 4px; } p { margin: 0 0 10px; color: var(--lr-text-2); font-size: .8rem; }
+</style></head>
+<body>
+<div class="col">
+  <div>
+    <h1>🎒 Arrasto do inventário da Ficha</h1>
+    <p>A lista continua sendo a da ficha (cartas de slot, estados de equipar);
+       só o ARRASTO vem do motor compartilhado do Tabuleiro. Sem Firestore:
+       os itens são semeados e só a pintura e a mira do arrasto são exercitadas.</p>
+    <table id="saida"></table>
+    <div id="placar"></div>
+  </div>
+  <div id="abaInventario">
+    <div id="inventoryItemsGrid"></div>
+    <div id="containerViewer"></div>
+  </div>
+</div>
+
+<script src="../shared/equip-slots.js"></script>
+<script src="js/inventory.js?c=1"></script>
+<script type="module">
+import * as InvMotor from '../shared/inventario-motor.js?v=4';
+window.InvMotor = InvMotor;
+
+await new Promise(r => setTimeout(r, 0));
+
+const linhas = [];
+let ok = 0;
+const teste = (nome, passou) => { linhas.push([nome, passou]); if (passou) ok++; };
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+// ---- semeadura ----
+window.isMestre = true;                     // libera podeEditarItens()
+window.state = { partesDoCorpo: [{ id: 'bp-mao', nome: 'Mão', icone: '🤚', slots: 2, podeEmpunhar: true }] };
+const itens = [
+    { id: 'i1', nome: 'Espada Longa', tipo: 'Arma', peso: 2, tamanho: 1.1, quantidade: 1, equipado: true, slotAnatomico: 'bp-mao_1', estadoEquip: 'empunhado' },
+    { id: 'i2', nome: 'Mochila', tipo: 'Container', ehContainer: true, peso: 1, tamanho: .6, quantidade: 1 },
+    { id: 'i3', nome: 'Flecha', tipo: 'Projétil', peso: .05, tamanho: .7, quantidade: 12 },
+    { id: 'i4', nome: 'Flecha', tipo: 'Projétil', peso: .05, tamanho: .7, quantidade: 5 },
+    { id: 'i5', nome: 'Corda', tipo: 'Objeto', peso: 3, tamanho: .3, quantidade: 1, parentItemId: 'i2' },
+];
+window._inventoryState = { items: itens, catalog: [] };
+window._openContainerId = 'i2';             // contêiner aberto, para testar sair de dentro
+window.renderInventoryTab();
+
+const grid = $('#inventoryItemsGrid');
+
+// ---- pintura ----
+teste('T1 · alça ⠿ em cada item de topo', $$('[data-grab]', grid).length === 4);
+teste('T2 · linha do item é alvo de soltura', $$('[data-toggleitem]', grid).length === 4);
+teste('T3 · seções Equipados/Soltos marcadas',
+    !!$('[data-sec="eq"]', grid) && !!$('[data-sec="soltos"]', grid));
+teste('T4 · a grade inteira aceita soltura na raiz', grid.dataset.drop === 'root');
+teste('T5 · item dentro do contêiner também arrasta',
+    $$('#containerViewer [data-grab]').length === 1);
+
+// ---- mira do arrasto ----
+const raiz = grid.parentElement;
+const ctx = { raiz, itens, abertos: new Set(), contAbertos: new Set() };
+const centro = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + Math.min(8, r.height / 2)]; };
+const solta = (item, el) => InvMotor.alvoSob(ctx, item, ...centro(el));
+const it = (id) => itens.find(x => x.id === id);
+const linha = (id, r = grid) => $(`[data-toggleitem="${id}"]`, r);
+
+teste('T6 · soltar solto em Equipados = equipar',
+    solta(it('i3'), $('[data-sec="eq"]', grid))?.tipo === 'equipar');
+teste('T7 · soltar equipado em Soltos = desequipar',
+    solta(it('i1'), $('[data-sec="soltos"]', grid))?.tipo === 'desequipar');
+teste('T8 · soltar sobre pilha idêntica = juntar',
+    solta(it('i3'), linha('i4'))?.tipo === 'merge');
+const dentro = solta(it('i3'), linha('i2'));
+teste('T9 · soltar sobre contêiner = guardar',
+    dentro?.tipo === 'drop' && dentro?.drop === 'cont:i2');
+teste('T10 · item de dentro solto em Soltos = tirar do contêiner',
+    solta(it('i5'), $('[data-sec="soltos"]', grid))?.tipo === 'drop');
+
+// ---- as ações existem e apontam para as funções da ficha ----
+teste('T11 · moveToContainer aceita destino explícito',
+    window.moveToContainer.length === 2);
+teste('T12 · quem não pode editar não ganha alça',
+    (() => {
+        window.isMestre = false;
+        window.renderInventoryTab();
+        const n = $$('[data-grab]', $('#inventoryItemsGrid')).length;
+        window.isMestre = true;
+        window.renderInventoryTab();
+        return n === 0;
+    })());
+
+// ---- saída ----
+$('#saida').innerHTML = linhas.map(([n, p]) =>
+    `<tr><td>${n}</td><td class="${p ? 'ok' : 'fail'}">${p ? 'OK' : 'FALHOU'}</td></tr>`).join('');
+$('#placar').innerHTML = `<span class="${ok === linhas.length ? 'ok' : 'fail'}">${ok}/${linhas.length} passaram</span>`;
+document.title = `__check ficha-arrasto ${ok}/${linhas.length}`;
+</script>
+</body></html>

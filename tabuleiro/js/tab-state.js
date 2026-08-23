@@ -536,7 +536,7 @@ const ATRIBUTOS_SIGLA = {
     PRE: 'pre', PRESENCA: 'pre', MAN: 'man', MANIPULACAO: 'man', AUT: 'aut', AUTOCONTROLE: 'aut',
 };
 // Siglas legadas do espelho do NPC (valoresDer)
-const VD_ALIAS_NPC = { PERCEPCAO: 'PERC', INICIATIVA: 'INI', REACAO: 'REA', BLINDAGEM: 'BLD', VITALIDADE: 'VIT', ENERGIA: 'ENER', SANIDADE: 'SAN', DETERMINACAO: 'DET' };
+const VD_ALIAS_NPC = { PERCEPCAO: 'PERC', INICIATIVA: 'INI', DEFESA: 'REA', BLINDAGEM: 'BLD', VITALIDADE: 'VIT', ENERGIA: 'ENER', SANIDADE: 'SAN', DETERMINACAO: 'DET' };
 
 /**
  * Valor de UM componente de teste na ficha. Ordem: VD → atributo → perícia.
@@ -725,7 +725,7 @@ export function espelhosDoVital(stat, derivedValues) {
  * Clampa em [1, total] — pedir 99 de 12 move os 12, pedir 0 move 1.
  * Mora no motor de inventário: o Painel do Mestre divide pilha do mesmo jeito.
  */
-export { dividirPilha } from '../../shared/inventario-motor.js?v=2';
+export { dividirPilha } from '../../shared/inventario-motor.js?v=4';
 
 // ===== 💀 CONDIÇÕES EM CIMA DO TOKEN =====
 /**

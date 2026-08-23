@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Inventário da Mesa (Painel do Mestre)</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="../shared/inventario-motor.css">
+<link rel="stylesheet" href="../ficha-v1.7_1/css/inventory.css">
+<style>
+  body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; }
+  .col { display: grid; grid-template-columns: 460px 1fr; gap: 16px; align-items: start; }
+  table { border-collapse: collapse; font: 11px ui-monospace, monospace; width: 100%; }
+  td { border: 1px solid var(--lr-border); padding: 2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight: 700; }
+  #placar { font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--lr-border); }
+  h1 { font-size: 1rem; margin: 0 0 4px; } p { margin: 0 0 10px; color: var(--lr-text-2); font-size: .8rem; }
+</style></head>
+<body>
+<div class="col">
+  <div>
+    <h1>🎒 Inventário da Mesa — motor compartilhado</h1>
+    <p>Caixa do Mestre e personagens usam o MESMO motor do Tabuleiro
+       (shared/inventario-motor.js). Sem Firestore: os itens são semeados na mão
+       e só a pintura e a mira do arrasto são exercitadas.</p>
+    <table id="saida"></table>
+    <div id="placar"></div>
+  </div>
+  <div id="tela" style="max-height:420px;overflow-y:auto"></div>
+</div>
+
+<script src="../shared/equip-slots.js"></script>
+<script type="module">
+import { _pintarHosts } from './js/area-mesas-inventario.js?c=1';
+import { alvoSob } from '../shared/inventario-motor.js?v=4';
+
+// Cede um turno: o módulo roda com o documento ainda aberto e metade dos
+// testes daqui mede geometria (elementFromPoint no arrasto).
+await new Promise(r => setTimeout(r, 0));
+
+const linhas = [];
+let ok = 0;
+const teste = (nome, passou) => { linhas.push([nome, passou]); if (passou) ok++; };
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+// ---- semeadura ----
+const CAIXA = '__caixa_mestre__mesa-teste';
+const CHAR = 'char-sona';
+const itens = [
+    { id: 'i1', characterId: CHAR, nome: 'Espada Longa', tipo: 'Arma', peso: 2, tamanho: 1.1, equipado: true, slotAnatomico: 'bp-mao_1', estadoEquip: 'empunhado', quantidade: 1 },
+    { id: 'i2', characterId: CHAR, nome: 'Mochila', tipo: 'Container', ehContainer: true, peso: 1, tamanho: .6, quantidade: 1, multiplicadorPressao: 1 },
+    { id: 'i3', characterId: CHAR, nome: 'Flecha', tipo: 'Projétil', peso: .05, tamanho: .7, quantidade: 12 },
+    { id: 'i4', characterId: CHAR, nome: 'Flecha', tipo: 'Projétil', peso: .05, tamanho: .7, quantidade: 5 },
+    { id: 'i5', characterId: CHAR, nome: 'Corda', tipo: 'Objeto', peso: 3, tamanho: .3, quantidade: 1, parentItemId: 'i2' },
+    { id: 'c1', characterId: CAIXA, nome: 'Poção Rubra', tipo: 'Consumível', peso: .3, tamanho: .1, quantidade: 3 },
+];
+const chars = [{ id: CHAR, nome: 'Sona', partesDoCorpo: [
+    { id: 'bp-mao', nome: 'Mão', icone: '🤚', slots: 2, podeEmpunhar: true },
+    { id: 'bp-torso', nome: 'Torso', icone: '🎽', slots: 1, podeVestir: true },
+] }];
+
+// Mesmo aninhamento do painel: o CARTAO carrega data-inv-dono (e e ele o alvo
+// da transferencia por arrasto), a lista mora no data-inv-owner de dentro.
+$('#tela').innerHTML = `
+    <div class="cartao" data-inv-dono="${CAIXA}"><div data-inv-owner="${CAIXA}"></div></div>
+    <hr>
+    <div class="cartao" data-inv-dono="${CHAR}"><div data-inv-owner="${CHAR}"></div></div>`;
+_pintarHosts($('#tela'), itens, chars);
+
+const hostCaixa = $(`[data-inv-owner="${CAIXA}"]`);
+const hostChar = $(`[data-inv-owner="${CHAR}"]`);
+
+// ---- T1..T5 pintura ----
+teste('T1 · Caixa do Mestre pintou a lista do motor', !!$('.lr-inv', hostCaixa));
+teste('T2 · personagem pintou a lista do motor', !!$('.lr-inv', hostChar));
+teste('T3 · cada item de topo tem alça de arrasto ⠿',
+    $$('[data-grab]', hostChar).length === 4);   // i1..i4 (i5 está dentro do contêiner, fechado)
+teste('T4 · seções Equipados/Soltos são alvo de soltura',
+    !!$('[data-sec="eq"]', hostChar) && !!$('[data-sec="soltos"]', hostChar));
+teste('T5 · botões do Mestre na linha (editar/transferir/excluir)',
+    $$('[data-mesaitem]', hostChar).length === 4 * 3);
+
+// ---- T6 pressão do equipado ----
+teste('T6 · pressão dos equipados sai no cabeçalho',
+    /\(equipados\): 2\s/.test($('.lr-inv-pressao', hostChar)?.textContent || ''));
+teste('T6b · slot equipado sai com o nome da parte, não a chave',
+    /Mão 1/.test($('[data-toggleitem="i1"]', hostChar)?.textContent || ''));
+
+// ---- T7..T11 mira do arrasto ----
+const ctxFake = { raiz: hostChar, itens, abertos: new Set(), contAbertos: new Set() };
+const centro = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + Math.min(8, r.height / 2)]; };
+
+const linhaDe = (id) => $(`[data-toggleitem="${id}"]`, hostChar);
+const solta = (item, el) => alvoSob(ctxFake, item, ...centro(el));
+
+const it = (id) => itens.find(x => x.id === id);
+
+teste('T7 · soltar item solto na seção Equipados = equipar',
+    solta(it('i3'), $('[data-sec="eq"]', hostChar))?.tipo === 'equipar');
+teste('T8 · soltar item equipado na seção Soltos = desequipar',
+    solta(it('i1'), $('[data-sec="soltos"]', hostChar))?.tipo === 'desequipar');
+teste('T9 · soltar sobre pilha idêntica = juntar',
+    solta(it('i3'), linhaDe('i4'))?.tipo === 'merge');
+const noCont = solta(it('i3'), linhaDe('i2'));
+teste('T10 · soltar sobre contêiner = guardar dentro',
+    noCont?.tipo === 'drop' && noCont?.drop === 'cont:i2');
+teste('T11 · fora da raiz não é alvo',
+    alvoSob(ctxFake, it('i3'), -50, -50) === null);
+
+// ---- T13..T15 soltar no cartao de OUTRO dono = transferir ----
+// O ctx real e o do dono; aqui o fake reproduz o gancho `externo` que o painel
+// instala, para provar que a mira acha o cartao vizinho.
+ctxFake.externo = (sob) => {
+    const cartao = sob.closest?.('[data-inv-dono]');
+    const para = cartao?.dataset.invDono;
+    if (!para || para === CHAR) return null;
+    return { tipo: 'externo', para, el: cartao };
+};
+const cartaoCaixa = $(`[data-inv-dono="${CAIXA}"]`);
+const alvoExterno = solta(it('i3'), cartaoCaixa);
+teste('T13 · soltar no cartão de outro dono = transferir',
+    alvoExterno?.tipo === 'externo' && alvoExterno?.para === CAIXA);
+teste('T14 · soltar no próprio cartão NÃO transfere',
+    solta(it('i3'), $(`[data-inv-dono="${CHAR}"]`))?.tipo !== 'externo');
+teste('T15 · sem o gancho externo, alvo de fora continua nulo',
+    (() => { const { externo, ...limpo } = ctxFake;
+             return alvoSob(limpo, it('i3'), ...centro(cartaoCaixa)) === null; })());
+
+// ---- T12 estado por dono não vaza ----
+teste('T12 · Caixa e personagem têm listas independentes',
+    $$('[data-grab]', hostCaixa).length === 1);
+
+// ---- saída ----
+$('#saida').innerHTML = linhas.map(([n, p]) =>
+    `<tr><td>${n}</td><td class="${p ? 'ok' : 'fail'}">${p ? 'OK' : 'FALHOU'}</td></tr>`).join('');
+$('#placar').innerHTML = `<span class="${ok === linhas.length ? 'ok' : 'fail'}">${ok}/${linhas.length} passaram</span>`;
+document.title = `__check mesa-inventario ${ok}/${linhas.length}`;
+</script>
+</body></html>

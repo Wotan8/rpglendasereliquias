@@ -33,7 +33,7 @@ import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, itensIdenticos, escolherQtd,
     tplDoItem as tplDoItemMotor, formulaDanoDoItem as formulaDanoMotor, fmtN,
     htmlInventario as htmlInvMotor, tratarClique as tratarCliqueInv, iniciarArrasto,
-} from '../../shared/inventario-motor.js?v=2';
+} from '../../shared/inventario-motor.js?v=4';
 
 // Mesmo ritmo do painel de combate (ver CUSTOS-FIRESTORE.md): cliques rápidos
 // em ± não viram um write por clique.
@@ -837,7 +837,7 @@ function blocosNpc(n) {
     const { porChave, vitais } = idx();
     const { add, ordenados } = agrupadorDeBlocos();
     const vistos = new Set(['VITALIDADE', 'ENERGIA', 'SANIDADE']);
-    for (const [sig, rot, icone] of [['PERC', 'Percepção', '👁️'], ['INI', 'Iniciativa', '⚡'], ['REA', 'Reação', '🌀'], ['BLD', 'Blindagem', '🛡️']]) {
+    for (const [sig, rot, icone] of [['PERC', 'Percepção', '👁️'], ['INI', 'Iniciativa', '⚡'], ['REA', 'Defesa', '🌀'], ['BLD', 'Blindagem', '🛡️']]) {
         if (vd[sig] == null || vd[sig] === '') continue;
         const dv = porChave.get(normChave(rot));
         vistos.add(normChave(rot));
@@ -1177,6 +1177,10 @@ export async function linhasDeAtaque(tipo, id) {
         // 🏹 Besta e afins: o alcance delas não passa pelo braço (ver
         // shared/alcance-disparo.js).
         l.ignoraLimiteForDisparo = !!(i?.ignoraLimiteForDisparo ?? tpl?.ignoraLimiteForDisparo);
+        // 🤾 Peça arremessável: o inverso da besta. Não tem alcance próprio —
+        // chega a (FOR + Atletismo + Arremessar) × este fator. A linha continua
+        // corpo a corpo (`distancia` false): a adaga ainda é uma adaga na mão.
+        l.alcanceFator = Number(i?.alcanceFator ?? tpl?.alcanceFator) || 0;
         // 🎯 Alvo do ataque. Existem CINCO VDs de acerto (Corpo a Corpo, à
         // Distância, Mágico, Desarmado e o genérico) e todos chegam como
         // coluna — pegar o primeiro que casasse com /acerto/ dava "Corpo a

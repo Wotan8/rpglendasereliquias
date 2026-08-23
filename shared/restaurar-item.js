@@ -14,7 +14,7 @@
 // modelo não define vira `null` explícito: sem isso o merge deixaria viva
 // justamente a alteração que o Mestre mandou apagar.
 // =============================================================
-import { CAMPOS_EQUIPAMENTO, instanciarDoModelo, normalizaFormaEquipar } from './equip-campos.js?v=6';
+import { CAMPOS_EQUIPAMENTO, instanciarDoModelo, normalizaFormaEquipar } from './equip-campos.js?v=8';
 
 /** Campos que a instância guarda com OUTRO nome que o catálogo. */
 const RENOME = { imagemUrl: 'imagem', mecanicaIds: 'mecanicaIdsProprias' };

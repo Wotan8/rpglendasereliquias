@@ -1,5 +1,6 @@
 /* ===== INVENTORY MODULE — Sistema de Inventário (Ficha v1.7) ===== */
 /* Substitui equipment.js para as abas Combate (Equipamentos) e Inventário.
+
    Itens ficam na coleção Firestore 'items', não no gatherData().
    Pressão = peso efetivo de itens equipados, alimenta o DV "Carga" via mechanicBonuses. */
 
@@ -7,6 +8,13 @@
    arquivo é script clássico, então entra por import dinâmico e fica em cache
    aqui. Carrega junto com a página; se por algum motivo falhar, o botão
    simplesmente não aparece — nada quebra. */
+
+/* Peso e Tamanho do item SEMPRE saem com unidade. Tamanho é em metros e
+   fracionado — 0,1 é 10 cm —, então nada de arredondar para inteiro; as casas
+   mortas caem para "1 m" não virar "1,00 m". */
+const _pesoKg = (v) => `${(parseFloat(v) || 0).toFixed(2)} kg`;
+const _tamanhoM = (v) => `${Math.round((parseFloat(v) || 0) * 100) / 100} m`;
+
 let _RestaurarItem = null;
 import('../../shared/restaurar-item.js?v=1')
     .then(m => { _RestaurarItem = m; })
@@ -910,7 +918,7 @@ function renderInventoryTab() {
     let html = '';
 
     // Seção: Equipados
-    html += `<div class="inv-section">
+    html += `<div class="inv-section" data-sec="eq">
         <div class="inv-section-title">🎒 Equipados <span class="inv-section-count">${equipped.length}</span></div>
         <div class="inv-section-grid">`;
     if (equipped.length === 0) {
@@ -921,7 +929,7 @@ function renderInventoryTab() {
     html += '</div></div>';
 
     // Seção: Inventário Solto
-    html += `<div class="inv-section">
+    html += `<div class="inv-section" data-sec="soltos">
         <div class="inv-section-title">📋 Itens Soltos <span class="inv-section-count">${loose.length}</span></div>
         <div class="inv-section-grid">`;
     if (loose.length === 0) {
@@ -932,9 +940,11 @@ function renderInventoryTab() {
     html += '</div></div>';
 
     container.innerHTML = html;
+    container.dataset.drop = 'root';
 
     // Render container viewers
     _renderOpenContainers();
+    _ligarArrasto();
 }
 
 function _renderInvItemRow(item, isEquipped) {
@@ -978,11 +988,12 @@ function _renderInvItemRow(item, isEquipped) {
 
     const pressao = isEquipped ? `<span class="inv-badge inv-badge-pressure-sm">⚖️ ${parseFloat(_getItemPressure(item)).toFixed(2)}</span>` : '';
 
-    return `<div class="inv-item-row ${isEquipped ? 'inv-equipped' : ''}" onclick="openItemDetail('${item.id}')">
+    return `<div class="inv-item-row ${isEquipped ? 'inv-equipped' : ''}" data-toggleitem="${item.id}" onclick="openItemDetail('${item.id}')">
+        ${_grabHtml(item)}
         ${imgHtml}
         <div class="inv-item-info">
             <span class="inv-item-name">${_escHtml(item.nome || 'Sem nome')}</span>
-            <span class="inv-item-meta">${tipoEmoji} ${_escHtml(item.tipo || '')} | Peso: ${parseFloat(item.peso || 0).toFixed(2)} | Tam: ${item.tamanho || 0}</span>
+            <span class="inv-item-meta">${tipoEmoji} ${_escHtml(item.tipo || '')} | Peso: ${_pesoKg(item.peso)} | Tam: ${_tamanhoM(item.tamanho)}</span>
         </div>
         ${qtyHtml}
         ${pressao}
@@ -995,6 +1006,76 @@ function _renderInvItemRow(item, isEquipped) {
             <button class="inv-btn inv-btn-delete" onclick="event.stopPropagation();deleteInventoryItem('${item.id}')" title="Excluir">🗑️</button>
         </div>
     </div>`;
+}
+
+
+/* ===== ARRASTAR E SOLTAR =====
+   O MESMO motor da Ficha de Combate do Tabuleiro e do Painel do Mestre
+   (shared/inventario-motor.js, exposto em window.InvMotor pelo HTML): pega o
+   item pela alça ⠿ e solta em "Equipados" para equipar, em "Itens Soltos" para
+   tirar do corpo, sobre um contêiner para guardar, ou sobre uma pilha igual
+   para juntar. Ponteiro e não HTML5 DnD — funciona igual no dedo e no mouse.
+
+   Aqui só o ARRASTO é do motor: a lista continua sendo a desta ficha (cartas de
+   slot, efeitos ativos, estados de equipar), então nada de htmlInventario. */
+
+/** Alça de arrasto. Quem não pode editar itens não arrasta. */
+function _grabHtml(item) {
+    if (!window.podeEditarItens() || !window.InvMotor) return '';
+    return `<span class="lr-inv-grab" data-grab="${_escHtml(item.id)}" title="Arraste: equipar, contêiner ou pilha igual">⠿</span>`;
+}
+
+let _invCtx = null;
+function _ligarArrasto() {
+    const raiz = document.getElementById('inventoryItemsGrid')?.parentElement;
+    if (!raiz || !window.InvMotor) return;
+    if (_invCtx && _invCtx.raiz === raiz) return;
+
+    _invCtx = {
+        raiz,
+        get itens() { return window._inventoryState.items; },
+        // O motor pede os dois conjuntos, mas quem desenha a lista aqui é a
+        // ficha: eles ficam vazios só para o contrato bater.
+        abertos: new Set(), contAbertos: new Set(),
+        repintar: () => renderInventoryTab(),
+        acoes: {
+            equipar: (id) => window.openEquipModal(id),
+            desequipar: (id) => window.unequipItem(id),
+            mover: (id, alvo) => alvo === 'root'
+                ? window.removeFromContainer(id)
+                : window.moveToContainer(id, alvo.slice(5)),
+            fundir: _fundirPilhas,
+            qtd: (id, delta) => {
+                const i = window._inventoryState.items.find(x => x.id === id);
+                if (i) window.updateItemQuantity(id, (parseInt(i.quantidade) || 1) + delta);
+            },
+        },
+    };
+    raiz.addEventListener('pointerdown', (e) => {
+        const grab = e.target.closest?.('[data-grab]');
+        if (grab) window.InvMotor.iniciarArrasto(_invCtx, grab, e);
+    });
+}
+
+/** Soltar sobre pilha idêntica: a origem inteira entra no alvo. */
+async function _fundirPilhas(origemId, alvoId) {
+    if (!window.podeEditarItens()) return;
+    const its = window._inventoryState.items;
+    const a = its.find(x => x.id === origemId);
+    const b = its.find(x => x.id === alvoId);
+    if (!a || !b) return;
+    const total = (Math.max(1, parseInt(a.quantidade) || 1)) + (Math.max(1, parseInt(b.quantidade) || 1));
+    try {
+        await _firestoreSetDoc('items', alvoId, { quantidade: total, lastModified: new Date().toISOString() });
+        await _firestoreDeleteDoc('items', origemId);
+        b.quantidade = total;
+        window._inventoryState.items = its.filter(x => x.id !== origemId);
+        renderEquippedItems();
+        renderInventoryTab();
+        recalcInventoryPressure();
+    } catch (e) {
+        console.error('❌ Erro ao juntar pilhas:', e);
+    }
 }
 
 // ===== CONTAINER VIEWER =====
@@ -1049,11 +1130,12 @@ function _renderOpenContainers() {
                 ? `<input type="number" class="inv-qty-input" value="${iQty}" min="1" onclick="event.stopPropagation()" onchange="updateItemQuantity('${i.id}', this.value)" title="Quantidade">`
                 : `<span class="inv-badge inv-badge-qty" title="Quantidade">×${iQty}</span>`;
 
-            return `<div class="inv-container-item inv-item-row" onclick="openItemDetail('${i.id}')">
+            return `<div class="inv-container-item inv-item-row" data-toggleitem="${i.id}" onclick="openItemDetail('${i.id}')">
+                ${_grabHtml(i)}
                 ${iImgHtml}
                 <div class="inv-item-info">
                     <span class="inv-item-name">${_escHtml(i.nome || 'Sem nome')}</span>
-                    <span class="inv-item-meta">${tipoEmoji} ${_escHtml(i.tipo || '')} | Peso: ${iWeightTotal}${iQty > 1 ? ` (${parseFloat(i.peso || 0).toFixed(2)} × ${iQty})` : ''} | Tam: ${i.tamanho || 0}</span>
+                    <span class="inv-item-meta">${tipoEmoji} ${_escHtml(i.tipo || '')} | Peso: ${iWeightTotal} kg${iQty > 1 ? ` (${_pesoKg(i.peso)} × ${iQty})` : ''} | Tam: ${_tamanhoM(i.tamanho)}</span>
                 </div>
                 ${qtyHtml}
                 <div class="inv-item-actions no-print" onclick="event.stopPropagation()">
@@ -1066,8 +1148,8 @@ function _renderOpenContainers() {
     }
 
     const weightDisplay = pesoMax != null
-        ? `⚖️ Peso: ${insideWeight.toFixed(2)} / ${parseFloat(pesoMax).toFixed(2)}${overWeight ? ' ⚠️' : ''}`
-        : `⚖️ Peso: ${insideWeight.toFixed(2)}`;
+        ? `⚖️ Peso: ${insideWeight.toFixed(2)} / ${_pesoKg(pesoMax)}${overWeight ? ' ⚠️' : ''}`
+        : `⚖️ Peso: ${_pesoKg(insideWeight)}`;
 
     viewer.innerHTML = `<div class="inv-container-viewer">
         <div class="inv-container-header">
@@ -1798,8 +1880,9 @@ window.deleteInventoryItem = async function(itemId) {
     }
 };
 
-window.moveToContainer = async function(itemId) {
-    const containerId = window._openContainerId;
+/** @param destinoId contêiner de destino; sem ele, o que estiver aberto na tela. */
+window.moveToContainer = async function(itemId, destinoId) {
+    const containerId = destinoId || window._openContainerId;
     if (!containerId || containerId === itemId) return;
     const contItem = window._inventoryState.items.find(i => i.id === containerId);
     if (!contItem) return;
@@ -1950,9 +2033,9 @@ window.openItemDetail = function(itemId) {
             <div class="inv-detail-grid">
                 <div class="inv-detail-field"><span class="inv-detail-label">Tipo</span><span>${tipoEmoji} ${_escHtml(item.tipo || '-')}</span></div>
                 ${item.tipo === 'Arma' && item.categoriaArma ? `<div class="inv-detail-field"><span class="inv-detail-label">Categoria</span><span>${WEAPON_CATEGORIES.find(c=>c.value===item.categoriaArma)?.label || item.categoriaArma}</span></div>` : ''}
-                <div class="inv-detail-field"><span class="inv-detail-label">Peso (un.)</span><span>${parseFloat(item.peso || 0).toFixed(2)}</span></div>
+                <div class="inv-detail-field"><span class="inv-detail-label">Peso (un.)</span><span>${_pesoKg(item.peso)}</span></div>
                 <div class="inv-detail-field"><span class="inv-detail-label">Quantidade</span><span>×${qty}</span></div>
-                <div class="inv-detail-field"><span class="inv-detail-label">Tamanho</span><span>${item.tamanho || 0}</span></div>
+                <div class="inv-detail-field"><span class="inv-detail-label">Tamanho</span><span>${_tamanhoM(item.tamanho)}</span></div>
                 <div class="inv-detail-field"><span class="inv-detail-label">Pressão</span><span>⚖️ ${parseFloat(pressao).toFixed(2)}</span></div>
                 ${item.equipado ? (() => {
                     const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : {};
@@ -1960,7 +2043,7 @@ window.openItemDetail = function(itemId) {
                     return `<div class="inv-detail-field"><span class="inv-detail-label">Slot</span><span>${slotLabel}</span></div>`;
                 })() : ''}
                 ${item.equipado && item.estadoEquip ? `<div class="inv-detail-field"><span class="inv-detail-label">Estado</span><span>${EQUIP_STATES[item.estadoEquip]?.label || item.estadoEquip}</span></div>` : ''}
-                ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Peso Máximo</span><span>⚖️ ${item.pesoMaximoContainer || '∞'}</span></div>` : ''}
+                ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Peso Máximo</span><span>⚖️ ${item.pesoMaximoContainer ? _pesoKg(item.pesoMaximoContainer) : '∞'}</span></div>` : ''}
                 ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Multiplicador</span><span>×${item.multiplicadorPressao || 1}</span></div>` : ''}
             </div>
             ${projetilHtml}
@@ -2483,11 +2566,11 @@ window.openItemFormModal = function(title, item, containerId) {
                 </div>
                 <div class="inv-form-group">
                     <label class="inv-form-label">Peso</label>
-                    <input type="number" id="invFormPeso" class="inv-form-input" value="${item?.peso || 1}" min="0" step="0.1">
+                    <input type="number" id="invFormPeso" class="inv-form-input" value="${item?.peso || 1}" min="0" step="0.01" placeholder="kg">
                 </div>
                 <div class="inv-form-group">
-                    <label class="inv-form-label">Tamanho</label>
-                    <input type="number" id="invFormTamanho" class="inv-form-input" value="${item?.tamanho || 1}" min="0">
+                    <label class="inv-form-label">Tamanho (m)</label>
+                    <input type="number" id="invFormTamanho" class="inv-form-input" value="${item?.tamanho || 1}" min="0" step="0.01" placeholder="m">
                 </div>
                 <div class="inv-form-group" id="invFormQuantidadeGroup" style="display:${(item?.tipo === 'Container' || item?.tipo === 'Arma' || item?.ehContainer) ? 'none' : 'flex'}">
                     <label class="inv-form-label">Quantidade</label>
@@ -2715,7 +2798,8 @@ window.saveInventoryItemForm = async function() {
             tipo,
             categoriaArma: tipo === 'Arma' ? categoriaArma : null,
             peso: parseFloat(document.getElementById('invFormPeso')?.value) || 1,
-            tamanho: parseInt(document.getElementById('invFormTamanho')?.value) || 1,
+            // Metros, fracionado: 0,1 = 10 cm. parseInt zerava a fração.
+            tamanho: parseFloat(document.getElementById('invFormTamanho')?.value) || 1,
             // Containers e Armas NÃO podem ser "stacados" — quantidade sempre 1
             quantidade: (isContainer || tipo === 'Arma') ? 1 : Math.max(1, parseInt(document.getElementById('invFormQuantidade')?.value) || 1),
             descricao: document.getElementById('invFormDesc')?.value?.trim() || '',
@@ -3239,7 +3323,7 @@ window.mergeInventoryItems = async function() {
             (item.tipo || '').toLowerCase(),
             item.modeloId || '',
             parseFloat(item.peso || 0),
-            parseInt(item.tamanho || 0),
+            parseFloat(item.tamanho || 0),
             (item.descricao || '').trim().toLowerCase(),
             (item.imagem || item.imagemUrl || '').trim(),
             item.parentItemId || '__root__',

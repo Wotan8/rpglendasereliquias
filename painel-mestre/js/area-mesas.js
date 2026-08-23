@@ -160,6 +160,7 @@ window.openTabuleiro = function() {
 window.closeMesa = function() {
     lembrarMesa(null);
     if (window._stopMesaLogs) window._stopMesaLogs();
+    if (window._pararDeOuvirItens) window._pararDeOuvirItens();
     S.setCurrentMesaId(null);
     S.setCurrentMesaData(null);
     S.setMesaCharacters([]);

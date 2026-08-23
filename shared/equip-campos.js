@@ -93,8 +93,9 @@ export const CAMPOS_EQUIPAMENTO = [
     { key: 'preco', label: '💰 Preço base (L$)', type: 'number', placeholder: 'Ex: 1100' },
     { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
     { key: 'imagemUrl', label: 'Imagem (URL)', type: 'text', placeholder: 'https://...' },
-    { key: 'peso', label: 'Peso', type: 'number', required: true, placeholder: '1' },
-    { key: 'tamanho', label: 'Tamanho', type: 'number', required: true, placeholder: '1' },
+    { key: 'peso', label: 'Peso (kg)', type: 'number', required: true, placeholder: 'kg — ex: 0,5' },
+    // Metros, fracionado: 0,1 = 10 cm. Nunca arredondar para inteiro.
+    { key: 'tamanho', label: 'Tamanho (m)', type: 'number', required: true, placeholder: 'm — ex: 0,1 (10 cm) · 1,2' },
     { key: 'pressaoBase', label: 'Pressão Base (peso efetivo ao equipar)', type: 'number', placeholder: '0 = mesmo que Peso' },
     { key: 'quantidade', label: 'Quantidade (Padrão ao instanciar)', type: 'number', placeholder: '1', soCatalogo: true },
     { key: 'ehContainer', label: '📦 É Container?', type: 'boolean' },
@@ -115,6 +116,13 @@ export const CAMPOS_EQUIPAMENTO = [
     // braço no momento do disparo não entra — é o que a torna a arma de tiro
     // de quem não tem Força. Ver shared/alcance-disparo.js.
     { key: 'ignoraLimiteForDisparo', label: '🎯 Alcance NÃO é limitado pela FOR (besta, arma de manivela)', type: 'boolean', showWhen: { field: 'tipo', value: 'Arma' } },
+    // 🤾 ARREMESSO — o inverso da besta. A peça não tem alcance próprio: ela
+    // chega a (FOR + Atletismo + Arremessar) × este fator. Preenchido = a peça
+    // é arremessável, e ganha a coluna de Acerto à Distância na aba Combate
+    // SEM perder a de Corpo a Corpo: a adaga continua sendo adaga na mão.
+    // Sem showWhen de propósito: frasco e pó também se arremessam, e eles são
+    // tipo Consumível. Ver shared/alcance-disparo.js.
+    { key: 'alcanceFator', label: '🤾 Fator de Arremesso — alcance = (FOR + Atletismo + Arremessar) × este fator · vazio = não arremessável', type: 'number', placeholder: 'Ex: 0,75 machadinha · 1 adaga · 1,5 lança' },
     // 🏹 Munição: a arma gasta projétil, e SÓ do tipo certo. As tags são as que
     // o próprio projétil já carrega (Flecha, Virote, Zarabatana), então nada
     // precisa ser recadastrado do lado dele. Vazio = arma que não gasta munição.
@@ -179,8 +187,14 @@ export function normalizaFormaEquipar(dados) {
 /** Os campos que a edição de UMA instância mostra (tira os de catálogo). */
 export const camposDaInstancia = () => CAMPOS_EQUIPAMENTO.filter(f => !f.soCatalogo);
 
-/** Chave onde a instância guarda o valor — a instância usa `imagem`, o modelo `imagemUrl`. */
-export const valorDoItem = (item, f) => (f.key === 'imagemUrl' ? (item?.imagem ?? item?.imagemUrl) : item?.[f.key]);
+/** Chave onde a instância guarda o valor — a instância renomeia duas: `imagem`
+ *  (o modelo diz `imagemUrl`) e `mecanicaIdsProprias` (o modelo diz `mecanicaIds`).
+ *  Sem este de-para o formulário abria vazio e a gravação apagava o que existia. */
+export const valorDoItem = (item, f) => {
+    if (f.key === 'imagemUrl') return item?.imagem ?? item?.imagemUrl;
+    if (f.key === 'mecanicaIds') return item?.mecanicaIds ?? item?.mecanicaIdsProprias;
+    return item?.[f.key];
+};
 
 /** Campo cujo valor VAZIO na instância cai no modelo do catálogo. */
 const HERDA_DO_MODELO = new Set([
@@ -243,7 +257,8 @@ export function htmlCampo(f, valor, { sel, caches, modelo, prefixo = '' } = {}) 
         ? `herda do modelo: ${esc(Array.isArray(herdado) ? herdado.join(', ') : (typeof herdado === 'object' ? '(definido)' : herdado))}`
         : (f.placeholder || '');
     const rot = `<label class="inv-form-label" for="${id}">${esc(f.label)}${req}</label>`;
-    const larga = ['textarea', 'tags', 'mechanic_selector', 'body_parts_selector'].includes(f.type);
+    const larga = ['textarea', 'tags', 'mechanic_selector', 'body_parts_selector'].includes(f.type)
+        || f.key === 'imagemUrl';
     const abre = `<div class="inv-form-group${larga ? ' inv-form-wide' : ''}" data-campo="${esc(f.key)}">`;
 
     if (f.type === 'mechanic_selector') {
@@ -298,6 +313,12 @@ export function htmlCampo(f, valor, { sel, caches, modelo, prefixo = '' } = {}) 
 
     if (f.type === 'textarea') {
         return `${abre}${rot}<textarea id="${id}" class="inv-form-textarea" rows="3" placeholder="${esc(dica)}">${esc(valor || '')}</textarea></div>`;
+    }
+
+    // Imagem: mesmo campo do Criador — cola URL OU envia arquivo do aparelho.
+    // O input de texto de dentro mantém o `id`, então coletarCampo não muda.
+    if (f.key === 'imagemUrl' && typeof CampoImagem !== 'undefined') {
+        return `${abre}${rot}${CampoImagem.html({ id, classe: 'inv-form-input', valor: valor || '', pasta: 'imagens/itens' })}</div>`;
     }
 
     const tipo = f.type === 'number' ? 'number' : 'text';
