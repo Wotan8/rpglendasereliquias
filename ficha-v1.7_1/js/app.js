@@ -64,6 +64,7 @@ window.initApp = function () {
         onTriboChange();
     }
     if (typeof initDerivedListeners === 'function') initDerivedListeners();
+    if (typeof initVigiaExpRestante === 'function') initVigiaExpRestante();
     if (typeof initVitalStatsTooltips === 'function') initVitalStatsTooltips();
     if (typeof initSkillTooltips === 'function') initSkillTooltips();
     if (typeof recalcAll === 'function') recalcAll();

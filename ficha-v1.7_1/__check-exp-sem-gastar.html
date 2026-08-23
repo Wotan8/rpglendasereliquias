@@ -31,7 +31,9 @@
     window.state = { dots: {} };
     function scheduleAutosave() {}
 </script>
-<script src="js/exp-upgrade.js"></script>
+<script>
+    document.write('<scr' + 'ipt src="js/exp-upgrade.js?t=' + T + '"></scr' + 'ipt>');
+</script>
 <script>
     const linhas = [];
     const campo = (k) => document.querySelector(`[data-key="${k}"]`);
@@ -78,6 +80,34 @@
             { mestre: true, custo: 30, escolha: '🛡️ Sem gastar' });
         if (concedendo.restante !== '100') linhas.push('  ⚠️ conceder não pode tirar de Restante');
         if (String(concedendo.total) !== '280') linhas.push('  ⚠️ o custo tinha de entrar no Total (250 + 30)');
+
+        // ===== Vigia do EXP Restante: edição manual do mestre =====
+        window.isMestre = true;
+        initVigiaExpRestante();
+        campo('exp').value = '4';
+        campo('exp_total').value = '358';
+        document.getElementById('expToastContainer').innerHTML = '';
+
+        const editar = (novo) => {
+            campo('exp').dispatchEvent(new Event('focus'));
+            campo('exp').value = String(novo);
+            campo('exp').dispatchEvent(new Event('change'));
+        };
+
+        editar(34);
+        linhas.push('MESTRE digita 4 → 34 no EXP Restante');
+        linhas.push(`  toast: ${document.querySelector('.exp-toast-msg')?.textContent || '(nenhum)'}`);
+        clicar('✓ Somar no Total');
+        linhas.push(`  após somar: Restante ${ler().restante} · Total ${ler().total}`);
+        if (ler().total !== '388') linhas.push('  ⚠️ o Total deveria ir para 388');
+
+        // Compra normal NÃO pode disparar a pergunta: spendExp escreve no
+        // mesmo campo, mas por atribuição — e atribuição não dispara change.
+        document.getElementById('expToastContainer').innerHTML = '';
+        spendExp(10);
+        const perguntou = !!document.querySelector('.exp-toast');
+        linhas.push(`spendExp(10) disparou a pergunta? ${perguntou ? 'SIM ⚠️' : 'não'} · `
+            + `Restante ${ler().restante} · Total ${ler().total}`);
 
         // Três botões numa tela estreita não podem estourar o toast.
         const toast = document.querySelector('.exp-toast');

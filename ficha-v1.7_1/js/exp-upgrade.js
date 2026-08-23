@@ -256,6 +256,72 @@ function canUpgrade(dotKey, newLevel, type, specName, floorBonus, fromLevel) {
     return { allowed: true, reason: '', cost, semExp };
 }
 
+/* ===== MESTRE MEXENDO NO EXP RESTANTE À MÃO =====
+ * Dar EXP à mesa mexe nos DOIS campos: o Restante, que o jogador gasta, e o
+ * Total, que é o histórico do que o personagem já ganhou. Só mestre/criador
+ * consegue editar esses campos (detail-modal.js os deixa readOnly para o
+ * jogador), então digitar aqui quase sempre significa "concedi EXP" — mas às
+ * vezes é só corrigir um erro de digitação. Por isso perguntamos em vez de
+ * espelhar sozinho. */
+
+let _expRestanteAntes = null;
+
+/** Aplica no Total a mesma diferença que acabou de entrar no Restante. */
+function _refletirNoTotal(delta) {
+    const totalEl = document.querySelector('[data-key="exp_total"]');
+    if (!totalEl) return;
+    const atual = parseInt(totalEl.value || '0', 10) || 0;
+    totalEl.value = Math.max(0, atual + delta);   // o Total nunca é negativo
+    scheduleAutosave();
+}
+
+function _perguntarSobreOTotal(antes, agora) {
+    const delta = agora - antes;
+    const somando = delta > 0;
+    const totalEl = document.querySelector('[data-key="exp_total"]');
+    const total = parseInt(totalEl?.value || '0', 10) || 0;
+
+    showExpToast(
+        `⭐ EXP Restante: ${antes} → ${agora} (${somando ? '+' : ''}${delta}). `
+        + `${somando ? 'Somar' : 'Subtrair'} ${Math.abs(delta)} no EXP Total também? `
+        + `(${total} → ${Math.max(0, total + delta)})`,
+        'confirm',
+        [
+            { label: somando ? `✓ Somar no Total` : `✓ Subtrair do Total`,
+              cls: 'exp-btn-ok', action: () => _refletirNoTotal(delta) },
+            { label: '✕ Só o Restante', cls: 'exp-btn-cancel' }
+        ]
+    );
+}
+
+/**
+ * Liga o vigia no campo de EXP Restante. Idempotente: pode ser chamada de novo
+ * sem duplicar o listener.
+ *
+ * O valor de partida é lido no `focus` porque só a edição manual passa por ele
+ * — spendExp(), refundExp() e concederSemGastar() escrevem em `.value` direto,
+ * e atribuição programática não dispara `change`. É o que impede a pergunta de
+ * aparecer a cada upgrade comprado.
+ */
+function initVigiaExpRestante() {
+    const el = document.querySelector('[data-key="exp"]');
+    if (!el || el.dataset.vigiaExp) return;
+    el.dataset.vigiaExp = '1';
+
+    el.addEventListener('focus', () => {
+        _expRestanteAntes = parseInt(el.value || '0', 10) || 0;
+    });
+
+    el.addEventListener('change', () => {
+        const antes = _expRestanteAntes;
+        const agora = parseInt(el.value || '0', 10) || 0;
+        _expRestanteAntes = agora;
+        if (antes === null || antes === agora) return;
+        if (!podeGastarDeGraca()) return;   // jogador nem edita o campo
+        _perguntarSobreOTotal(antes, agora);
+    });
+}
+
 /* ===== UI DE CONFIRMAÇÃO ===== */
 
 let _activeToast = null;
@@ -319,8 +385,9 @@ function dismissExpToast() {
  * @param {function(boolean)} onConfirm recebe `true` se o EXP deve ser cobrado
  *        e `false` na concessão gratuita do mestre. Todo chamador precisa
  *        respeitar a flag — é ela que decide se spendExp() roda.
- * @param {{semExp?: boolean}} [opcoes] semExp = o personagem não tem o custo,
- *        então só a concessão gratuita é oferecida.
+ * @param {{semExp?: boolean, mensagem?: string}} [opcoes] semExp = o personagem
+ *        não tem o custo, então só a concessão gratuita é oferecida. mensagem =
+ *        texto próprio, para o que não é "→ Nível N" (acelerar estudo, por ex.).
  */
 function showUpgradeConfirm(label, newLevel, cost, onConfirm, opcoes) {
     const gratis = podeGastarDeGraca();
@@ -346,8 +413,9 @@ function showUpgradeConfirm(label, newLevel, cost, onConfirm, opcoes) {
     const custoTexto = semExp
         ? `Custo: ${cost} EXP — o personagem não tem esse EXP`
         : `Custo: ${cost} EXP`;
+    const pergunta = (opcoes && opcoes.mensagem) || `⬆️ ${label} → Nível ${newLevel}?`;
 
-    showExpToast(`⬆️ ${label} → Nível ${newLevel}? ${custoTexto}`, 'confirm', botoes);
+    showExpToast(`${pergunta} ${custoTexto}`, 'confirm', botoes);
 }
 
 /**

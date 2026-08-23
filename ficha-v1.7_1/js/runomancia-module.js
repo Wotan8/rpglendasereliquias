@@ -427,6 +427,17 @@
      * decide, ao fechar a sessão, quem estudou. O jogador não avança sozinho.
      * Exceção: personagem avulso (sem mesa) não tem mestre para marcar.
      */
+    /** Mestre/Criador concede sem cobrar, igual ao resto da ficha. */
+    function _podeConcederDeGraca() {
+        return typeof podeGastarDeGraca === 'function' && podeGastarDeGraca();
+    }
+
+    /** Cobra do Restante, ou registra a concessão do mestre no Total. */
+    function _cobrar(custo, comExp) {
+        if (comExp) { if (typeof spendExp === 'function') spendExp(custo); }
+        else if (typeof concederSemGastar === 'function') concederSemGastar(custo);
+    }
+
     function _podeSomarSessao() {
         if (window.isMestre || window.isCreator) return true;
         const semMesa = !(window.state?.mesaId || window.currentMesaId);
@@ -452,21 +463,35 @@
         const done = es.sessoesFeitas || 0;
         const real = Math.min(sessoes, Math.max(0, need - done));
         if (real < 1) return;
-        const atual = typeof getCurrentExp === 'function' ? getCurrentExp() : 0;
-        if (atual < custo) {
-            alert(`EXP insuficiente: acelerar ${real} sessão(ões) custa ${custo} EXP (você tem ${atual}).`);
-            return;
-        }
         const sobra = Math.max(0, need - done - real);
         const plural = n => `${n} sess${n === 1 ? 'ão' : 'ões'}`;
-        if (!confirm(`Acelerar o estudo de ${el.nome} Nv${es.nivelAlvo} em ${plural(real)}?\n`
-            + `Custo: ${custo} EXP.\n`
-            + `Depois de acelerar, ${sobra === 0 ? 'o estudo fica pronto para concluir' : `ainda ${sobra === 1 ? 'falta' : 'faltam'} ${plural(sobra)}`}.\n\n`
-            + `O custo de aprender (${_custoExp(el, es.nivelAlvo, cfg)} EXP) continua sendo cobrado ao concluir.`)) return;
-        if (typeof spendExp === 'function') spendExp(custo);
-        es.sessoesFeitas = done + real;
-        es.aceleradas = (es.aceleradas || 0) + real;
-        _refresh(cfg); _save();
+
+        // Mesmo toast do resto da ficha: mestre/criador escolhe se paga, e o
+        // custo concedido entra no EXP Total em vez de sair do Restante.
+        const atual = typeof getCurrentExp === 'function' ? getCurrentExp() : 0;
+        const semExp = custo > atual;
+        if (semExp && !_podeConcederDeGraca()) {
+            showUpgradeBlocked(`EXP insuficiente: adiantar ${plural(real)} custa ${custo} EXP (você tem ${atual}).`);
+            return;
+        }
+
+        const restante = sobra === 0
+            ? 'depois disso o estudo fica pronto para concluir'
+            : `depois disso ainda ${sobra === 1 ? 'falta' : 'faltam'} ${plural(sobra)}`;
+
+        showUpgradeConfirm(el.nome, es.nivelAlvo, custo, (comExp) => {
+            _cobrar(custo, comExp);
+            es.sessoesFeitas = done + real;
+            es.aceleradas = (es.aceleradas || 0) + real;
+            _refresh(cfg); _save();
+            const efeito = comExp ? `-${custo} EXP` : `🛡️ concedido pelo mestre · +${custo} no EXP Total`;
+            showExpToast(`⏩ ${el.nome} Nv${es.nivelAlvo}: ${plural(real)} adiantada(s)! (${efeito})`, 'success');
+            setTimeout(dismissExpToast, 2000);
+        }, {
+            semExp,
+            mensagem: `⏩ Adiantar ${plural(real)} de ${el.nome} Nv${es.nivelAlvo} — ${restante}.`
+                + ` Aprender ainda custará ${_custoExp(el, es.nivelAlvo, cfg)} EXP ao concluir.`
+        });
     }
 
     function _concluirEstudo(idx, cfg) {
@@ -476,17 +501,21 @@
         if (!el) return;
         const exp = _custoExp(el, es.nivelAlvo, cfg);
         const atual = typeof getCurrentExp === 'function' ? getCurrentExp() : 0;
-        if (atual < exp) {
-            alert(`EXP insuficiente: aprender ${el.nome} Nv${es.nivelAlvo} custa ${exp} EXP (você tem ${atual}).`);
+        const semExp = exp > atual;
+        if (semExp && !_podeConcederDeGraca()) {
+            showUpgradeBlocked(`EXP insuficiente: aprender ${el.nome} Nv${es.nivelAlvo} custa ${exp} EXP (você tem ${atual}).`);
             return;
         }
-        if (!confirm(`Concluir o estudo de ${el.nome} Nv${es.nivelAlvo}?\nCusto: ${exp} EXP.`)) return;
-        if (typeof spendExp === 'function') spendExp(exp);
-        // Incrementa o nível ESTUDADO em 1. O nível efetivo (estudado +
-        // concedido por mecânicas) sobe junto, sem sobrescrever concessões.
-        runo.aprendidos[es.elementId] = _nivelEstudado(es.elementId) + 1;
-        runo.estudos.splice(idx, 1);
-        _refresh(cfg); _save();
+
+        showUpgradeConfirm(el.nome, es.nivelAlvo, exp, (comExp) => {
+            _cobrar(exp, comExp);
+            // Incrementa o nível ESTUDADO em 1. O nível efetivo (estudado +
+            // concedido por mecânicas) sobe junto, sem sobrescrever concessões.
+            runo.aprendidos[es.elementId] = _nivelEstudado(es.elementId) + 1;
+            runo.estudos.splice(idx, 1);
+            _refresh(cfg); _save();
+            showUpgradeSuccess(el.nome, es.nivelAlvo, exp, comExp);
+        }, { semExp, mensagem: `📖 Concluir o estudo de ${el.nome} → Nível ${es.nivelAlvo}?` });
     }
 
     function _refresh(cfg) {
