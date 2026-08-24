@@ -445,6 +445,40 @@ export function alvoSob(ctx, item, x, y) {
 }
 
 /**
+ * O navegador dispara um `click` sintetico logo depois do `pointerup`, e ele
+ * sobe pela linha do item. Na Ficha a linha tem `onclick` de abrir o detalhe —
+ * entao terminar um arrasto abria a janela do item por cima do que acabou de
+ * acontecer. Arrastar nao e clicar.
+ *
+ * Engole UM clique, na fase de captura, e so DENTRO da propria lista: o clique
+ * que nasce do gesto cai ali, e um clique em qualquer outra coisa da tela
+ * (fechar a janela, outro botao) nao e assunto do arrasto. Sem esse recorte a
+ * armadilha comia clique legitimo de quem age rapido.
+ *
+ * Desiste sozinha depois de um quarto de segundo: arrasto que nao gera clique
+ * — soltar fora da janela, gesto cancelado pelo sistema — deixaria a armadilha
+ * montada para sempre.
+ *
+ * Vale para os quatro inventarios de uma vez, inclusive os que tratam o clique
+ * por delegacao — la o guard de `tratarClique` ja cobria, aqui cobre tambem
+ * quem usa `onclick` no atributo, que e o caso da Ficha.
+ */
+function engolirProximoClique(raiz) {
+    const engolir = (ev) => {
+        if (raiz && !raiz.contains(ev.target)) return;
+        ev.stopPropagation();
+        ev.preventDefault();
+        limpar();
+    };
+    const limpar = () => {
+        clearTimeout(timer);
+        document.removeEventListener('click', engolir, true);
+    };
+    const timer = setTimeout(limpar, 250);
+    document.addEventListener('click', engolir, true);
+}
+
+/**
  * Arrasto por ponteiro: fantasma segue o dedo, alvo acende, soltar executa.
  * Pointer events, não HTML5 DnD: funciona igual no mouse e no TOQUE (o celular
  * é o hardware-alvo). A alça ⠿ tem touch-action:none — arrastar por ela não
@@ -482,6 +516,7 @@ export function iniciarArrasto(ctx, grab, e) {
     const soltar = (ev) => {
         const alvo = alvoSob(ctx, item, ev.clientX, ev.clientY);
         limpar();
+        engolirProximoClique(ctx.raiz);
         if (!alvo) return;
         if (alvo.tipo === 'mapa') ctx.acoes.mapa?.(id, { x: ev.clientX, y: ev.clientY });
         else if (alvo.tipo === 'merge') ctx.acoes.fundir?.(id, alvo.id);

@@ -34,7 +34,7 @@
 <script>document.write('<script src="../shared/equip-slots.js?t=' + Date.now() + '"><\/script>');</script>
 <script src="js/inventory.js?c=1"></script>
 <script type="module">
-import * as InvMotor from '../shared/inventario-motor.js?v=6';
+import * as InvMotor from '../shared/inventario-motor.js?v=7';
 window.InvMotor = InvMotor;
 
 /* O CSS pode chegar DEPOIS deste módulo quando a folha vem da rede (foi o que
@@ -138,6 +138,42 @@ teste('T17 · contêiner cheio recusa a soltura',
     })());
 teste('T18 · contêiner não entra em contêiner',
     solta(it('i2'), painel) === null);
+
+// ---- o clique que o navegador dispara DEPOIS do arrasto ----
+// Era o bug: soltar o item abria a janela de detalhes por cima do que acabou
+// de acontecer, porque a linha tem onclick e o click sintetico sobe por ela.
+teste('T19 · terminar um arrasto NAO abre a janela de detalhes',
+    (() => {
+        let abriu = 0;
+        const orig = window.openItemDetail;
+        window.openItemDetail = () => { abriu++; };
+
+        const grab = $('[data-grab="i3"]', grid);
+        const r = grab.getBoundingClientRect();
+        const pev = (t, x, y) => new PointerEvent(t, { pointerId: 9, clientX: x, clientY: y, bubbles: true });
+        const alvo = centro($('[data-sec="eq"]', grid));
+        grab.dispatchEvent(pev('pointerdown', r.left + 2, r.top + 2));
+        grab.dispatchEvent(pev('pointermove', alvo[0], alvo[1]));
+        grab.dispatchEvent(pev('pointerup', alvo[0], alvo[1]));
+        // o navegador manda o click logo depois; aqui ele e disparado a mao
+        grab.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        window.openItemDetail = orig;
+        document.querySelector('.lr-inv-ghost')?.remove();
+        return abriu === 0;
+    })());
+
+teste('T20 · clique SEM arrasto continua abrindo o detalhe',
+    (() => {
+        let abriu = 0;
+        const orig = window.openItemDetail;
+        window.openItemDetail = () => { abriu++; };
+        // fora da janela de 250ms que o arrasto acima montou
+        const linha = $('[data-toggleitem=\"i3\"]', grid);
+        linha.getAttribute('onclick') && new Function('openItemDetail', linha.getAttribute('onclick'))(window.openItemDetail);
+        window.openItemDetail = orig;
+        return abriu === 1;
+    })());
 
 // ---- saída ----
 $('#saida').innerHTML = linhas.map(([n, p]) =>
