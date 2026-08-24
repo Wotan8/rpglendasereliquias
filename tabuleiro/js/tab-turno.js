@@ -564,11 +564,21 @@ function render() {
         // 🛡️ Guardar = delay: só faz sentido com o turno INTEIRO (as duas ações)
         // e nunca no meio de uma interrupção (não se encadeia guardado).
         const podeGuardar = acoes.padrao && acoes.movimento && !c.retomar;
+        // 😮‍💨 Recuperar Fôlego (Livro §6.2): o turno INTEIRO parado devolve
+        // 1 Energia. Ação base de todo mundo, só existe dentro do combate.
+        const recFolego = recursosDe(p);
+        const folegoCheio = recFolego?.ener != null && recFolego?.enerMax != null && Number(recFolego.ener) >= Number(recFolego.enerMax);
+        const travaFolego = porqueCondicao(efCond, 'bloqueia_completa');
+        const folegoHtml = (acoes.padrao && acoes.movimento)
+            ? `<button class="tb-btn tb-turno-btn ${travaFolego ? 'tb-turno-travado' : ''}" onclick="tbTurnoFolego()"
+                ${folegoCheio || travaFolego ? 'disabled' : ''}
+                title="${esc(travaFolego ? 'Bloqueado por: ' + travaFolego : folegoCheio ? 'Energia já está no máximo' : 'Gasta o turno INTEIRO (as duas ações) parado para recuperar 1 Energia')}">${travaFolego ? '🚫 ' : ''}😮‍💨 ${L('', 'Recuperar ')}Fôlego</button>` : '';
         body = `<div class="tb-turno-acoes">
             ${semAcoes ? '' : btn('padrao', ROTULO_ACAO.padrao, acoes.padrao, 'Atacar, usar habilidade, magia ou item')}
             ${semAcoes ? '' : btn('movimento', ROTULO_ACAO.movimento, acoes.movimento, 'Mover pelo deslocamento da ficha')}
             ${temLivre ? btn('livre', ROTULO_ACAO.livre, true, 'Incidental — não consome ação') : ''}
             ${temCompleta && !semAcoes ? btn('completa', ROTULO_ACAO.completa, acoes.padrao && acoes.movimento, 'Habilidades que consomem o turno inteiro') : ''}
+            ${folegoHtml}
             <!-- 🕯️ Ritual "Fora de combate" NÃO tem botão aqui, de propósito. O
                  painel do turno só é desenhado com o combate INICIADO e na sua
                  vez — então um botão "fora de combate" só apareceria dentro do
@@ -727,6 +737,33 @@ window.tbTurnoGuardar = async () => {
     T.combate = { ...comCenaAtivaPatch(T.combate, { participantes: parts }) };
     logChat(`🛡️ ${p.name || '?'} guardou o turno (pode agir até o fim da rodada)`);
     await window.tbCombTurno(1);
+};
+
+/**
+ * 😮‍💨 Recuperar Fôlego (Livro §6.2): passa o turno INTEIRO parado — sem mover,
+ * sem atacar — e recupera 1 Energia. Só dentro do combate (fora dele quem
+ * devolve Energia são os descansos). O crédito respeita o máximo da ficha;
+ * token sem Energia rastreada só registra no chat para a mesa anotar.
+ */
+window.tbTurnoFolego = async () => {
+    const c = cena();
+    const p = participanteDaVez(c);
+    if (!p || !podeGastar(c.acoesTurno, 'completa')) return;
+    const r = temDoRecurso(p, 'Energia');
+    if (r?.tem != null && r?.max != null && Number(r.tem) >= Number(r.max)) {
+        toast('⚡ Energia já está no máximo', 'warning'); return;
+    }
+    sub = null;
+    await gastar('completa');
+    if (r?.tem != null) {
+        const novo = r.max != null ? Math.min(Number(r.max), Number(r.tem) + 1) : Number(r.tem) + 1;
+        await creditarRecurso(p, 'Energia', novo);
+        logChat(`😮‍💨 ${p.name || '?'} gasta o turno inteiro recuperando o fôlego: +1 Energia (${r.tem} → ${novo})`);
+        toast('😮‍💨 Fôlego recuperado: +1 Energia');
+    } else {
+        logChat(`😮‍💨 ${p.name || '?'} gasta o turno inteiro recuperando o fôlego (+1 Energia — anote na ficha)`);
+        toast('😮‍💨 Fôlego recuperado — anote a Energia na ficha');
+    }
 };
 
 /** ⚡ Usa o turno guardado AGORA: interrompe a ordem; ao encerrar, volta. */
