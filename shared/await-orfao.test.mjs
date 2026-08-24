@@ -1,24 +1,33 @@
 /**
  * `await` fora de função `async` — a classe de erro que `node --check` deixa passar.
  *
- * O `--check` decide sozinho se o arquivo é módulo ou script, e quando decide
- * "módulo" ele aceita `await` no topo. Só que um `await` dentro de uma função
- * NORMAL continua sendo erro de sintaxe, e essa combinação escapou: na
- * migração dos 176 diálogos nativos, cinco arquivos passaram no `--check` e
- * quebravam no navegador com "Unexpected reserved word" — a página inteira
- * morria em silêncio, porque módulo que não parseia não roda nada.
+ * O `--check` decide sozinho se o arquivo é módulo ou script pelo conteúdo, e
+ * quando decide "script" ele aceita `await` no meio de qualquer função: em
+ * código sloppy, `await` é um IDENTIFICADOR, e `await confirmar(x)` passa a
+ * ser lido como uma chamada à função `await`. Sintaxe válida, semântica
+ * nenhuma. No navegador o mesmo arquivo é módulo, `await` é palavra reservada,
+ * e o parse morre com "Unexpected reserved word" — que derruba o módulo
+ * INTEIRO, não só a função. A página fica em branco sem dizer por quê.
  *
- * O truque aqui é tirar as linhas de `import`/`export` e parsear o resto como
- * SCRIPT: em script, `await` fora de async é erro sempre, sem exceção de topo.
+ * A cura é forçar o modo módulo: copiar cada `.js` para um `.mjs` temporário e
+ * mandar o `node --check` nele. Extensão `.mjs` não deixa margem para o Node
+ * adivinhar.
  *
- * Vale para todo `.js` do repositório, não só para os diálogos — qualquer
- * `await` acrescentado sem marcar a função cai aqui.
+ * ⚠️ Duas versões anteriores deste teste erraram, e as duas custaram uma tela:
+ *   1ª — regex de import exigia que a linha acabasse no `;`, então
+ *        `import './x.js'; // comentário` sobrava, o parse falhava por causa do
+ *        import e o arquivo era PULADO em silêncio.
+ *   2ª — parseava com `new Function`, que é sloppy, e por isso engolia
+ *        exatamente o `await orfao(...)` que devia pegar.
+ * Daí a regra: arquivo que não dá para analisar é FALHA, nunca silêncio.
  *
  *   node shared/await-orfao.test.mjs
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { join, dirname, sep } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PULAR = new Set(['node_modules', '.git', '.claude', 'graphify-out', 'functions']);
@@ -33,30 +42,32 @@ function varrer(dir, achados = []) {
     return achados;
 }
 
-/** Tira o que só existe em módulo, para o resto poder ser lido como script. */
-const semModulo = (s) => s
-    .replace(/^\s*import\s+[^;]*?;\s*$/gm, '')
-    .replace(/^\s*import\s*\{[\s\S]*?\}\s*from\s*[^;]*?;\s*$/gm, '')
-    .replace(/^\s*export\s+(default\s+)?/gm, '')
-    .replace(/^\s*export\s*\{[^}]*\}\s*;?\s*$/gm, '');
+const pasta = mkdtempSync(join(tmpdir(), 'lr-await-'));
+const alvo = join(pasta, 'alvo.mjs');
 
 const orfaos = [];
+const naoAnalisados = [];
 const arquivos = varrer(RAIZ);
+
 for (const caminho of arquivos) {
-    let fonte;
-    try { fonte = semModulo(readFileSync(caminho, 'utf8')); }
-    catch { continue; }
-    try {
-        // eslint-disable-next-line no-new-func
-        new Function(fonte);
-    } catch (e) {
-        // Só interessa o await órfão. Erro de sintaxe de verdade o `node
-        // --check` já pega, e sintaxe só-de-módulo aqui seria falso positivo.
-        if (/await is only valid|Unexpected reserved word/.test(e.message)) {
-            orfaos.push(`${caminho.replace(RAIZ + sep, '')} :: ${e.message}`);
-        }
+    const curto = caminho.replace(RAIZ + sep, '');
+    writeFileSync(alvo, readFileSync(caminho));
+    const r = spawnSync(process.execPath, ['--check', alvo], { encoding: 'utf8' });
+    if (r.status === 0) continue;
+
+    const erro = (r.stderr || '').split('\n').find(l => /Error:|SyntaxError/.test(l)) || r.stderr.trim();
+    if (/await is only valid|Unexpected reserved word/.test(erro)) {
+        // a linha do erro vem no cabeçalho do stderr: "…/alvo.mjs:1213"
+        const linha = (r.stderr.match(/alvo\.mjs:(\d+)/) || [])[1];
+        orfaos.push(`${curto}${linha ? ':' + linha : ''} :: await fora de função async`);
+    } else {
+        /* Script clássico costuma cair aqui por motivo legítimo (o Node exige
+           módulo e o arquivo não é um). Guardo para conferência humana em vez
+           de engolir — foi engolir que deixou o Painel do Mestre quebrar. */
+        naoAnalisados.push(`${curto} :: ${erro.trim().slice(0, 110)}`);
     }
 }
+rmSync(pasta, { recursive: true, force: true });
 
 if (orfaos.length) {
     console.error('❌ await fora de função async:\n  ' + orfaos.join('\n  '));
@@ -64,4 +75,11 @@ if (orfaos.length) {
         + 'lê o retorno: virar promessa muda o valor para quem lia.');
     process.exit(1);
 }
-console.log(`✅ await-orfao: ${arquivos.length} arquivos, nenhum await fora de função async`);
+
+if (naoAnalisados.length) {
+    console.log(`⚠️  ${naoAnalisados.length} arquivo(s) não parseiam como módulo `
+        + '(esperado em script clássico; erro de sintaxe de verdade o node --check pega):');
+    for (const a of naoAnalisados) console.log('   ' + a);
+}
+console.log(`✅ await-orfao: ${arquivos.length - naoAnalisados.length} de ${arquivos.length} arquivos `
+    + 'analisados em modo módulo, nenhum await fora de função async');

@@ -1210,7 +1210,7 @@ window.addPecFromRegistry = function() {
     renderPecs(); renderPecPicker(); recalcStats();
 };
 
-window.addPecCustom = function() {
+window.addPecCustom = async function() {
     const nome = await perguntar('Nome da peculiaridade personalizada:');
     if (!nome || !nome.trim()) return;
     const efeito = await perguntar('Efeito (texto livre, opcional):') || '';
@@ -1370,7 +1370,7 @@ window.addNpcClassModule = function() {
     renderNpcClassModules();
 };
 
-window.removeNpcClassModule = function(mi) {
+window.removeNpcClassModule = async function(mi) {
     const vinc = F.npc.modulosClasse?.[mi]; if (!vinc) return;
     if ((vinc.itens || []).length && !await confirmar('Este módulo possui itens preenchidos. Desvincular mesmo assim?')) return;
     F.npc.modulosClasse.splice(mi, 1);
@@ -2051,7 +2051,7 @@ window.renderStructuredSkills = function() {
     grid.innerHTML = html;
 };
 
-window.toggleDefaultSkills = function(checked) {
+window.toggleDefaultSkills = async function(checked) {
     const defaultSkills = F.sys.skills.filter(s => s.todoPersonagem);
     if (!defaultSkills.length) return;
 
@@ -2121,7 +2121,7 @@ window.addSkillByCategory = function() {
     }
 };
 
-window.removeSkill = function(idx) {
+window.removeSkill = async function(idx) {
     if (!await confirmar('Remover esta perícia? Os níveis aplicados a ela serão perdidos.', { perigo: true })) return;
     F.npc.periciasEstruturadas.splice(idx, 1);
     renderStructuredSkills();

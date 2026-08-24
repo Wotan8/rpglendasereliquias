@@ -91,7 +91,7 @@ export const Mural = (() => {
             persist(); render();
         };
         const root = document.getElementById('muralRoot');
-        root.addEventListener('click', (e) => {
+        root.addEventListener('click', async (e) => {
             const add = e.target.closest('[data-addcard]'), delC = e.target.closest('[data-delcard]');
             const delCol = e.target.closest('[data-delcol]'), cor = e.target.closest('[data-cor]');
             if (add) { findCol(add.dataset.addcard)?.cards.push({ id: uid('card'), text: 'Nova ideia…', color: CORES[Math.floor(Math.random() * CORES.length)] }); persist(); render(); }
