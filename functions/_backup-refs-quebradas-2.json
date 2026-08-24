@@ -1,0 +1,48 @@
+[
+  {
+    "id": "7YfbltDOjUjBfKM9GviG",
+    "nome": "Atletismo",
+    "config": {
+      "calculos": [
+        {
+          "alvo": "Deslocamento Aquático",
+          "operacao": "+",
+          "equacao": [
+            {
+              "tipo": "ficha",
+              "ref": "Perícia: Atletismo"
+            },
+            {
+              "tipo": "fixo",
+              "op": "÷",
+              "valor": 3
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "BITMuWSaENXYrd2Nv7qV",
+    "nome": "Desl. Vertical",
+    "config": {
+      "calculos": [
+        {
+          "alvo": "Deslocamento Vertical",
+          "operacao": "=",
+          "equacao": [
+            {
+              "tipo": "ficha",
+              "ref": "FOR"
+            },
+            {
+              "tipo": "ficha",
+              "op": "min",
+              "ref": "Perícia: Atletismo"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
