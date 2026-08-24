@@ -1453,11 +1453,16 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
     const fieldsDiv = document.createElement('div');
     fieldsDiv.className = 'class-module-fields';
 
+    /* O 🔒 do cadastro protege o que o cadastro manda. Item que o JOGADOR
+       inventou (sem _predefId) não tem cadastro para proteger — travar os
+       campos dele deixaria a criação livre do módulo impossível de preencher.
+       O travamento por custo de edição (isLocked) continua valendo para todos. */
+    const doPreCadastro = !!data._predefId;
+
     (mod.schema || []).forEach(originalField => {
         const field = { ...originalField };
-        if (isLocked) {
-            field.somenteLeitura = true;
-        }
+        if (isLocked) field.somenteLeitura = true;
+        else if (!doPreCadastro) field.somenteLeitura = false;
         // Check "Hide if empty" (👁️) logic
         if (field.ocultarSeVazio) {
             let isEmpty = false;
