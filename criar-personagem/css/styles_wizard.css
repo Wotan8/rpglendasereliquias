@@ -518,17 +518,8 @@ html.dark .memory-box-label { background: var(--paper); }
     user-select: none;
 }
 
-.detail-collapse-summary::-webkit-details-marker { display: none; }
-
-.detail-collapse-summary::before {
-    content: '▸';
-    flex: none;
-    color: var(--accent);
-    font-size: .8rem;
-    transition: transform .15s;
-}
-
-.detail-collapse[open] > .detail-collapse-summary::before { transform: rotate(90deg); }
+/* Seta em shared/sanfona.css. So o acento fica aqui. */
+.detail-collapse-summary::before { color: var(--accent); font-size: .8rem; }
 .detail-collapse-summary:hover { background: var(--chip); }
 
 .detail-collapse-title {

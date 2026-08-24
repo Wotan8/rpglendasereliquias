@@ -192,6 +192,8 @@ const PRECACHE_URLS = [
   '/shared/runa-em-jogo.js',
   '/shared/dialogo.js',
   '/shared/dialogo.css',
+  '/shared/sanfona.js',
+  '/shared/sanfona.css',
   '/shared/sanidade.js',
   '/shared/parse-custo.js',
   '/shared/detalhe.js',

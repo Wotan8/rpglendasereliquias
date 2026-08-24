@@ -303,17 +303,6 @@
     gap: 6px;
 }
 
-.cbt-block > summary::-webkit-details-marker { display: none; }
-
-.cbt-block > summary::before {
-    content: '▸';
-    color: var(--muted);
-    font-size: 11px;
-    transition: transform .15s;
-}
-
-.cbt-block[open] > summary::before { transform: rotate(90deg); }
-
 .cbt-block-n {
     margin-left: auto;
     font-size: 9px;

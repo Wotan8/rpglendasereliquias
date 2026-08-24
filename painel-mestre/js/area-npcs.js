@@ -701,7 +701,7 @@ function _npcSecaoMecanica() {
          uma vez e depois só se conferem (Peculiaridades, Atributos) e o de
          avisos, que é diagnóstico e não conteúdo de mesa. -->
     <div class="npcv2-section" id="npcSec_mecanica">
-        <details id="npcPecsWrap" class="npcv2-card npcv2-dobra">
+        <details id="npcPecsWrap" class="npcv2-card npcv2-dobra lr-sanfona">
             <summary class="npcv2-block-title">🧬 Peculiaridades <span class="npcv2-hint" id="npcPecsCount"></span></summary>
             <div id="npcPecsList"></div>
             <div class="npcv2-pec-add npcv2-only-mecanico">
@@ -712,14 +712,14 @@ function _npcSecaoMecanica() {
             </div>
         </details>
 
-        <details class="npcv2-card npcv2-dobra" open>
+        <details class="npcv2-card npcv2-dobra lr-sanfona" open>
             <summary class="npcv2-block-title">⚔️ Status de Combate
                 <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
             </summary>
             <div class="npcv2-dv-grid" id="npcVitalStatsGrid"></div>
         </details>
 
-        <details class="npcv2-card npcv2-dobra">
+        <details class="npcv2-card npcv2-dobra lr-sanfona">
             <summary class="npcv2-block-title">💪 Atributos <span class="npcv2-hint" id="attrHint"></span></summary>
             <div class="npcv2-attrs-grid" id="npcAttrsGrid">
                 ${ATTR_SIGLAS.map(a => `
@@ -737,7 +737,7 @@ function _npcSecaoMecanica() {
             </div>
         </details>
 
-        <details class="npcv2-card npcv2-dobra" open>
+        <details class="npcv2-card npcv2-dobra lr-sanfona" open>
             <summary class="npcv2-block-title">📊 Valores Derivados
                 <span class="npcv2-hint npcv2-only-mecanico">calculados pelas mecânicas — clique em um valor para travar um override 🔒</span>
             </summary>
@@ -749,14 +749,14 @@ function _npcSecaoMecanica() {
             </div>
         </details>
 
-        <details id="npcAtaquesWrap" class="npcv2-card npcv2-dobra npcv2-only-mecanico" style="display:none" open>
+        <details id="npcAtaquesWrap" class="npcv2-card npcv2-dobra lr-sanfona npcv2-only-mecanico" style="display:none" open>
             <summary class="npcv2-block-title">⚔️ Ataques e Efeitos Ativos
                 <span class="npcv2-hint">totais por item equipado (base do NPC + o que o item acrescenta)</span>
             </summary>
             <div class="atk-table-wrap"><table class="atk-table" id="npcAtaquesTable"></table></div>
         </details>
 
-        <details id="npcClassModulesWrap" class="npcv2-card npcv2-dobra npcv2-only-mecanico" open>
+        <details id="npcClassModulesWrap" class="npcv2-card npcv2-dobra lr-sanfona npcv2-only-mecanico" data-sanfona open>
             <summary class="npcv2-block-title">🧩 Módulos de Classe
                 <span class="npcv2-hint">herdados da classe selecionada ou vinculados manualmente</span>
             </summary>
@@ -767,30 +767,30 @@ function _npcSecaoMecanica() {
             </div>
         </details>
 
-        <details class="npcv2-card npcv2-dobra" open>
+        <details class="npcv2-card npcv2-dobra lr-sanfona" open>
             <summary class="npcv2-block-title">➕ Valores extras <span class="npcv2-hint">informações fora dos registros</span></summary>
             <div id="npcExtrasList"></div>
             <button class="btn btn-secondary btn-small" onclick="addExtraDv()">➕ Adicionar valor extra</button>
         </details>
 
-        <details id="npcInfosWrap" class="npcv2-card npcv2-dobra" style="display:none" open>
+        <details id="npcInfosWrap" class="npcv2-card npcv2-dobra lr-sanfona" style="display:none" open>
             <summary class="npcv2-block-title">📜 Efeitos e capacidades (das peculiaridades)</summary>
             <div id="npcInfosList"></div>
         </details>
 
-        <details id="npcAvisosWrap" class="npcv2-card npcv2-dobra" style="display:none">
+        <details id="npcAvisosWrap" class="npcv2-card npcv2-dobra lr-sanfona" style="display:none">
             <summary class="npcv2-block-title">⚠️ Avisos do cálculo <span class="npcv2-hint" id="npcAvisosCount"></span></summary>
             <div id="npcAvisosList" class="npcv2-avisos"></div>
         </details>
 
-        <details class="npcv2-card npcv2-dobra" open>
+        <details class="npcv2-card npcv2-dobra lr-sanfona" open>
             <summary class="npcv2-block-title">⚔️ Combate e perícias em texto livre</summary>
             <div class="form-group"><label class="form-label">Ataques</label><textarea class="form-textarea" id="npcAtaques" rows="3" placeholder="Ataques e danos..."></textarea></div>
             <div class="form-group"><label class="form-label">📚 Perícias</label><textarea class="form-textarea" id="npcSkills" rows="2" placeholder="Perícias relevantes... (Texto Livre)"></textarea></div>
         </details>
 
         <!-- ============ SEÇÃO: PERÍCIAS ESTRUTURADAS ============ -->
-        <details id="npcStructuredSkillsWrap" class="npcv2-card npcv2-dobra" open>
+        <details id="npcStructuredSkillsWrap" class="npcv2-card npcv2-dobra lr-sanfona" open>
             <summary class="npcv2-block-title">🎯 Perícias Estruturadas</summary>
 
             <div class="npcv2-only-mecanico" style="margin-bottom:12px">
@@ -827,7 +827,7 @@ function _npcSecaoInventario() {
     <div class="npcv2-section" id="npcSec_inventario">
         <!-- Anatomia: mexe-se nela uma vez e pronto — fica recolhida para o
              inventário, que é o trabalho do dia a dia, ficar em primeiro. -->
-        <details class="npcv2-card npcv2-dobra">
+        <details class="npcv2-card npcv2-dobra lr-sanfona">
             <summary class="npcv2-block-title">🦴 Partes do Corpo &amp; Slots
                 <span class="npcv2-hint">NPCs comuns usam a anatomia padrão (humanoide); criaturas podem ter anatomias personalizadas</span>
             </summary>
@@ -1382,10 +1382,10 @@ function renderNpcClassModules() {
         list.innerHTML = mods.map((vinc, mi) => {
             const def = _npcModDef(vinc);
             if (!def) {
-                return `<div class="npcv2-mod-box"><div class="npcv2-mod-head">
+                return `<details class="npcv2-mod-box lr-sanfona" open><summary class="npcv2-mod-head">
                     <span>⚠️ Módulo não encontrado no registro</span>
                     <button class="npcv2-pec-del" onclick="removeNpcClassModule(${mi})" title="Desvincular">✕</button>
-                </div></div>`;
+                </summary></details>`;
             }
             // Campos 🔒 seguem o pré-cadastro (shared/predef-campos.js)
             window.PredefCampos?.sincronizarItens(def, vinc.itens);
@@ -1406,20 +1406,29 @@ function renderNpcClassModules() {
                     ${predefs.map((p, pi) => `<option value="${pi}">${escapeHtml(p.nome || 'Item')}</option>`).join('')}
                 </select>
                 <button class="btn btn-secondary btn-small" onclick="addNpcModuleItem(${mi}, parseInt(document.getElementById('npcModPredef_${mi}').value))">➕ Pré-cadastrado</button>` : '';
-            return `<div class="npcv2-mod-box">
-                <div class="npcv2-mod-head">
+            /* Cada módulo é uma dobra: um NPC de classe traz cinco ou seis,
+               cada um com todos os campos abertos, e a ficha virava um rolo.
+               Nasce ABERTO — quem chega aqui veio editar. O botão do bloco
+               fecha os seis de uma vez. */
+            const aberto = (vinc.recolhido === true) ? '' : ' open';
+            return `<details class="npcv2-mod-box lr-sanfona"${aberto}>
+                <summary class="npcv2-mod-head">
                     <span>${def.icone || '📦'} ${escapeHtml(def.titulo)} ${fonte}</span>
-                    <button class="npcv2-pec-del" onclick="removeNpcClassModule(${mi})" title="Desvincular módulo">✕</button>
-                </div>
+                    <span class="npcv2-mod-conta">${(vinc.itens || []).length} ${(vinc.itens || []).length === 1 ? 'item' : 'itens'}</span>
+                    <button class="npcv2-pec-del" onclick="event.preventDefault();event.stopPropagation();removeNpcClassModule(${mi})" title="Desvincular módulo">✕</button>
+                </summary>
                 <div class="npcv2-mod-items">${itens || '<div class="npcv2-empty">Nenhum item.</div>'}</div>
                 <div class="npcv2-mod-actions">
                     <button class="btn btn-secondary btn-small" onclick="addNpcModuleItem(${mi})">➕ Novo item</button>
                     ${predefSel}
                 </div>
-            </div>`;
+            </details>`;
         }).join('');
     }
     renderNpcModPicker();
+    // A lista é reconstruída a cada edição de campo: o botão "tudo" precisa
+    // reencontrar as dobras novas. `ligarSanfona` é idempotente.
+    window.LRSanfona?.ligarSanfona(document.getElementById('npcClassModulesWrap'));
 }
 window.renderNpcClassModules = renderNpcClassModules;
 

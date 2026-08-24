@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — sanfona (recolher/expandir)</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/sanfona.css">
+<script>
+  for (const l of document.querySelectorAll('link[href*="sanfona.css"]')) l.href += '?cb=' + Date.now();
+</script>
+<style>
+  body { margin:0; padding:16px; font:14px/1.6 Inter, system-ui, sans-serif;
+         background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table#saida { border-collapse:collapse; font:11px ui-monospace, monospace; width:100%; margin-bottom:14px; }
+  table#saida td { border:1px solid var(--lr-border); padding:2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight:700; }
+  #placar { font-weight:800; margin:8px 0 16px; padding-top:8px; border-top:1px solid var(--lr-border); }
+  h1 { font-size:1rem; margin:0 0 4px; } h2 { font-size:.85rem; margin:16px 0 6px; }
+  p.nota { margin:0 0 10px; color:var(--lr-text-2); font-size:.8rem; }
+  .palco { border:1px dashed var(--lr-border); border-radius:8px; padding:10px; margin-bottom:10px; }
+  .larga { max-width: 720px; } .estreita { max-width: 300px; }
+  summary, .cab { font-weight:700; }
+  .cab { display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .caixa { border:1px solid var(--lr-border); border-radius:6px; padding:6px 8px; margin:4px 0; }
+  .fechadinha > .corpo { display:none; }
+  .barra { display:flex; gap:8px; margin-bottom:12px; }
+</style></head>
+<body>
+<h1>▸ Sanfona — uma gramática só para recolher e expandir</h1>
+<p class="nota">O projeto tinha nove desenhos para a mesma ação: ▸/▾ trocando o glifo, ▸ girando
+   90°, ▾ girando 180°, ▼ girando −90°, ▶ com classe. Aqui se confere a gramática única e o botão
+   de "tudo" — que se mede pelo <strong>bloco</strong>, não pela janela, porque o mesmo grupo
+   aparece numa coluna estreita do Painel do Mestre e num modal largo.</p>
+
+<div class="barra">
+  <button type="button" onclick="document.documentElement.classList.toggle('dark')">🌗 Trocar tema</button>
+</div>
+
+<table id="saida"></table>
+<div id="placar"></div>
+
+<h2>Bloco largo — dobras &lt;details&gt;</h2>
+<div class="palco larga">
+  <details class="lr-sanfona" data-sanfona id="blocoA" open>
+    <summary>🧩 Módulos de Classe</summary>
+    <details class="lr-sanfona" open><summary>Custo 1 — Abertura</summary><div>corpo 1</div></details>
+    <details class="lr-sanfona" open><summary>Custo 2 — Clímax</summary><div>corpo 2</div></details>
+    <details class="lr-sanfona"><summary>Custo 3 — Coda</summary><div>corpo 3</div></details>
+  </details>
+</div>
+
+<h2>Bloco estreito — o mesmo botão, sem espaço para o rótulo</h2>
+<div class="palco estreita">
+  <details class="lr-sanfona" data-sanfona id="blocoB" open>
+    <summary>🧩 Módulos</summary>
+    <details class="lr-sanfona" open><summary>Custo 1</summary><div>corpo</div></details>
+    <details class="lr-sanfona" open><summary>Custo 2</summary><div>corpo</div></details>
+  </details>
+</div>
+
+<h2>Dobra por classe — os blocos que não são &lt;details&gt;</h2>
+<div class="palco larga">
+  <div data-sanfona data-sanfona-classe="fechadinha" id="blocoC">
+    <div class="cab" data-sanfona-barra><span class="lr-seta aberta"></span> 🎓 Módulos de Classe</div>
+    <div class="caixa" data-sanfona-item><div class="corpo">um</div></div>
+    <div class="caixa" data-sanfona-item><div class="corpo">dois</div></div>
+    <div class="caixa fechadinha" data-sanfona-item><div class="corpo">três</div></div>
+  </div>
+</div>
+
+<h2>Uma dobra só — não há "tudo" a comandar</h2>
+<div class="palco larga">
+  <details class="lr-sanfona" data-sanfona id="blocoD" open>
+    <summary>Sozinho</summary>
+    <details class="lr-sanfona"><summary>única</summary><div>corpo</div></details>
+  </details>
+</div>
+
+<script type="module">
+import { ligarSanfona } from './shared/sanfona.js';
+
+/* Espera o CSS: o cachebuster troca o href do <link> e o navegador refaz o
+   pedido. Sem isto, a primeira leva de asserções media a página SEM a folha e
+   acusava "a seta não é ▸" — falha do relógio, não do desenho. */
+if (document.readyState !== 'complete') {
+    await new Promise(r => window.addEventListener('load', r, { once: true }));
+}
+
+ligarSanfona();
+
+const linhas = [];
+const t = (nome, cond) => linhas.push(
+    `<tr><td>${nome}</td><td class="${cond ? 'ok' : 'fail'}">${cond ? 'OK' : 'FALHOU'}</td></tr>`);
+const $ = (s) => document.querySelector(s);
+const botaoDe = (id) => $(`#${id}`).querySelector(':scope > summary > .lr-sanf-tudo, :scope > .cab > .lr-sanf-tudo');
+const A = $('#blocoA'), B = $('#blocoB'), C = $('#blocoC'), D = $('#blocoD');
+const dobrasA = () => [...A.querySelectorAll(':scope > details')];
+const caixasC = () => [...C.querySelectorAll('.caixa')];
+
+// ===== a seta =====
+{
+    const seta = getComputedStyle(dobrasA()[0].querySelector('summary'), '::before');
+    t('T01 · a seta é ▸ em toda dobra', seta.content.includes('▸'));
+    t('T02 · e gira quando abre, em vez de trocar de glifo',
+        seta.transform !== 'none' && seta.transform !== '');
+    const fechada = getComputedStyle(dobrasA()[2].querySelector('summary'), '::before');
+    t('T03 · fechada, a seta não está girada',
+        fechada.transform === 'none' || fechada.transform === 'matrix(1, 0, 0, 1, 0, 0)');
+    t('T04 · o triângulo nativo do <summary> não aparece junto',
+        getComputedStyle(dobrasA()[0].querySelector('summary')).listStyleType === 'none');
+    t('T05 · a seta dos blocos que não são <details> usa o mesmo glifo',
+        getComputedStyle($('#blocoC .lr-seta'), '::before').content.includes('▸'));
+}
+
+// ===== o botão =====
+{
+    const b = botaoDe('blocoA');
+    t('T06 · o bloco ganha o botão de tudo', !!b && !b.hidden);
+    t('T07 · com uma dobra fechada, o botão oferece EXPANDIR',
+        b.dataset.acao === 'abrir' && /Expandir/.test(b.textContent));
+    t('T08 · e diz quantas estão abertas', /2\/3/.test(b.title));
+
+    b.click();
+    t('T09 · o clique abre todas', dobrasA().every(d => d.open));
+    t('T10 · e o botão vira RECOLHER',
+        b.dataset.acao === 'fechar' && /Recolher/.test(b.textContent));
+
+    b.click();
+    t('T11 · o clique de novo fecha todas', dobrasA().every(d => !d.open));
+    t('T12 · o bloco de fora continua aberto — o botão não é o do bloco', A.open);
+
+    // Quem abre uma dobra na mão: o rótulo tem de acompanhar.
+    dobrasA()[0].open = true;
+    await new Promise(r => setTimeout(r, 10));
+    t('T13 · abrir uma dobra na mão volta o rótulo para EXPANDIR',
+        b.dataset.acao === 'abrir' && /1\/3/.test(b.title));
+}
+
+// ===== dobra por classe =====
+{
+    const b = botaoDe('blocoC');
+    t('T14 · bloco que dobra por classe também ganha o botão', !!b && !b.hidden);
+    t('T15 · e conta certo o que está aberto', /2\/3/.test(b.title));
+    b.click();
+    t('T16 · o clique abre todas as caixas',
+        caixasC().every(c => !c.classList.contains('fechadinha')));
+    b.click();
+    t('T17 · e fecha todas',
+        caixasC().every(c => c.classList.contains('fechadinha')));
+
+    // Sem evento `toggle` numa dobra por classe: o rótulo se atualiza pelo clique.
+    caixasC()[0].classList.remove('fechadinha');
+    C.dispatchEvent(new Event('click', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 20));
+    t('T18 · classe mexida na mão também repinta o rótulo', /1\/3/.test(b.title));
+}
+
+// ===== o botão some quando não há "tudo" =====
+t('T19 · com uma dobra só, o botão some em vez de mentir', botaoDe('blocoD').hidden);
+
+// ===== responsivo: mede o BLOCO, não a janela =====
+{
+    const largo = botaoDe('blocoA').querySelector('.lr-sanf-txt');
+    const estreito = botaoDe('blocoB').querySelector('.lr-sanf-txt');
+    t('T20 · no bloco largo o rótulo aparece', getComputedStyle(largo).display !== 'none');
+    // Os dois blocos estão na MESMA janela: se o critério fosse @media, os dois
+    // teriam o mesmo resultado e este teste passaria por acidente nos dois lados.
+    t('T21 · no bloco estreito, na mesma janela, o rótulo sai',
+        getComputedStyle(estreito).display === 'none');
+    t('T22 · mas o ícone fica',
+        getComputedStyle(botaoDe('blocoB').querySelector('.lr-sanf-ico')).display !== 'none');
+    t('T23 · e o nome continua no title e no aria-label',
+        /Expandir|Recolher/.test(botaoDe('blocoB').title)
+        && /Expandir|Recolher/.test(botaoDe('blocoB').getAttribute('aria-label')));
+
+    // Estreitar o bloco largo prova que é o bloco, não a janela.
+    const palco = A.closest('.palco');
+    palco.style.maxWidth = '260px';
+    await new Promise(r => setTimeout(r, 30));
+    t('T24 · estreitar só o bloco já esconde o rótulo dele',
+        getComputedStyle(largo).display === 'none');
+    palco.style.maxWidth = '';
+}
+
+// ===== idempotência =====
+{
+    const antes = A.querySelectorAll('.lr-sanf-tudo').length;
+    ligarSanfona();
+    ligarSanfona(A);
+    t('T25 · religar não duplica botão',
+        A.querySelectorAll('.lr-sanf-tudo').length === antes && antes === 1);
+    t('T26 · religar com o próprio bloco como raiz funciona',
+        !!botaoDe('blocoA'));
+}
+
+// ===== contraste nos dois temas =====
+const corDe = (e, p) => getComputedStyle(e)[p];
+const lum = (c) => {
+    const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => {
+        v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+    });
+    return .2126 * r + .7152 * g + .0722 * b;
+};
+const contraste = (a, b) => {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + .05) / (y + .05);
+};
+const fundoReal = (e) => {
+    for (let n = e; n; n = n.parentElement) {
+        const c = corDe(n, 'backgroundColor');
+        if (Number((c.match(/[\d.]+/g) || [])[3] ?? 1) >= .95) return c;
+    }
+    return 'rgb(255,255,255)';
+};
+const bt = botaoDe('blocoA');
+const medir = (nome) => {
+    t(`${nome}: o botão é legível (≥4,5:1)`, contraste(corDe(bt, 'color'), fundoReal(bt)) >= 4.5);
+};
+medir('T27 · claro');
+document.documentElement.classList.add('dark');
+/* 220ms, não 30: o botão tem `transition: color .15s`, e trocar de tema dispara
+   a transição. Medindo a 30ms pega a cor a meio caminho — o teste acusava 2,5:1
+   num botão que termina em 6,9:1. Erro do termômetro, não do botão. */
+await new Promise(r => setTimeout(r, 220));
+medir('T28 · escuro');
+document.documentElement.classList.remove('dark');
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const falhas = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML =
+    `<span class="${falhas ? 'fail' : 'ok'}">${linhas.length - falhas}/${linhas.length}</span>`
+    + (falhas ? ` — ${falhas} falha(s)` : ' — tudo certo');
+</script>
+</body></html>

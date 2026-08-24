@@ -270,7 +270,7 @@ function openClassModal(className, event) {
             if (lim !== null && lim !== undefined && lim !== '') meta.push(`${lim} ${Number(lim) === 1 ? 'slot' : 'slots'}`);
             if (mod.custoExpLabel) meta.push(mod.custoExpLabel);
             else if (mod.custoExpPorItem) meta.push(`${mod.custoExpPorItem} EXP/item`);
-            html += `<details class="detail-collapse">
+            html += `<details class="detail-collapse lr-sanfona">
                 <summary class="detail-collapse-summary">
                     <span class="detail-collapse-title">${escHtml(mod.icone || '📦')} ${escHtml(mod.titulo || mod.id)}</span>
                     <span class="detail-collapse-meta">${escHtml(meta.join(' · '))}</span>
@@ -334,7 +334,7 @@ function renderPecCollapse(pec) {
     const meta = nNiveis
         ? `${nNiveis} ${nNiveis === 1 ? 'nível' : 'níveis'}`
         : (pec.negativo ? 'Desvantagem' : '');
-    return `<details class="detail-collapse">
+    return `<details class="detail-collapse lr-sanfona">
         <summary class="detail-collapse-summary">
             <span class="detail-collapse-title">${escHtml(pec.icone || '📋')} ${escHtml(pec.nome)}</span>
             ${meta ? `<span class="detail-collapse-meta">${escHtml(meta)}</span>` : ''}
@@ -478,7 +478,7 @@ function renderDerivedValue(dv, valorInicial) {
 
     const meta = [dv.blocoNome, unidade].filter(Boolean).join(' · ');
 
-    let html = `<details class="detail-collapse">
+    let html = `<details class="detail-collapse lr-sanfona">
         <summary class="detail-collapse-summary">
             <span class="detail-collapse-title">${escHtml(dv.icone || '🧮')} ${escHtml(nome)}</span>
             ${meta ? `<span class="detail-collapse-meta">${escHtml(meta)}</span>` : ''}

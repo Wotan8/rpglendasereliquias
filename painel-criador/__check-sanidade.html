@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__check — aba Sanidade</title>
 <link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/sanfona.css">
 <link rel="stylesheet" href="css/painel-criador.css">
 <script>
   // O CSS é editado durante o trabalho; o cache do navegador devolvia a versão
@@ -147,8 +148,10 @@ const sumAviso = gav('Condicao declarada duas vezes na mesma habilidade')
     || document.querySelector('.san-aviso > summary')?.parentElement;
 t('T18b · titulo de aviso legivel (>=4,5:1)',
     contraste(corDe(sumAviso.querySelector('summary'), 'color'), fundoReal(sumAviso)) >= 4.5);
+// A seta e ::before desde que virou padrao (shared/sanfona.css): era ▾ girando
+// 180° a direita, virou ▸ girando 90° a esquerda, igual ao resto do projeto.
 t('T20 · a seta da gaveta gira quando abre',
-    getComputedStyle(sumGrave, '::after').transform !== 'none');
+    getComputedStyle(sumGrave, '::before').transform !== 'none');
 
 // A tabela de achados é o que estoura primeiro em tela estreita.
 document.getElementById('alvo').style.maxWidth = '360px';

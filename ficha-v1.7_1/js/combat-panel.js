@@ -230,7 +230,7 @@
             <b class="cbt-chip-vl">${_esc(x.valor)}</b>
         </button>`).join('');
 
-        return `<details class="cbt-block"${open ? ' open' : ''}>
+        return `<details class="cbt-block lr-sanfona"${open ? ' open' : ''}>
             <summary>${_esc(b.nome)}<span class="cbt-block-n">${b.dvs.length + (b.extras || []).length}</span></summary>
             <div class="cbt-chips">${chips}${extras}</div>
         </details>`;
@@ -263,6 +263,8 @@
                 ? blocks.map(b => blockHTML(b, b.ordem < BLOCO_ABERTO_ATE)).join('')
                 : '<div class="cbt-empty">Nenhum valor derivado aplicável.</div>';
             bindChipTooltips();
+            // O botão "Expandir/Recolher tudo" acha os blocos novos.
+            window.LRSanfona?.ligarSanfona(blocksEl.closest('[data-sanfona]'));
         }
 
         renderCombatConditionTags();

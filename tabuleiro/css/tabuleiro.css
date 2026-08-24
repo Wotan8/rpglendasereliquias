@@ -622,7 +622,6 @@ html, body {
 /* skill com mais de uma forma de pagar */
 .tb-turno-multi { color: var(--lr-gold-3, #eab308); font-weight: 700; }
 
-
 /* ===== ⚔️ Janela de Conflito (acerto → defesa → dano) ===== */
 /* Fica no ALTO do centro: o Painel do Turno mora embaixo e os dois aparecem
    juntos durante a troca de golpes. Rola por dentro quando há muitos alvos. */
@@ -869,8 +868,6 @@ html, body {
     font-size: var(--lr-fs-xs); font-weight: 700; color: var(--lr-text-1);
     text-transform: uppercase; letter-spacing: .05em; user-select: none; list-style: none;
 }
-.tb-fwin-sec > summary::before { content: '▸ '; color: var(--lr-text-2); }
-.tb-fwin-sec[open] > summary::before { content: '▾ '; }
 .tb-fwin-sec-body { padding: 0 var(--lr-space-3) var(--lr-space-3); }
 .tb-fwin-chips { display: flex; flex-wrap: wrap; gap: var(--lr-space-1); }
 .tb-fwin-chip {
@@ -961,8 +958,6 @@ html, body {
     padding: 2px var(--lr-space-2);
     font-size: var(--lr-fs-xs); font-weight: 700; color: var(--lr-gold-2);
 }
-.tb-fwin-bloco > summary::before { content: '▸ '; color: var(--lr-text-2); }
-.tb-fwin-bloco[open] > summary::before { content: '▾ '; }
 .tb-fwin-bloco-n { opacity: .55; margin-left: 6px; font-weight: 400; }
 .tb-fwin-bloco > .tb-fwin-chips { padding: 2px var(--lr-space-2) var(--lr-space-1); }
 
@@ -1139,7 +1134,6 @@ body .lr-avisos {
     .tb-musica { width: 190px; }
 }
 
-
 /* ============ FASES 2–7 ============ */
 
 /* Menu radial de token (F5.5) */
@@ -1245,7 +1239,6 @@ body .lr-avisos {
     backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
 }
 .detail-modal:not(#aliadoNpcModal).hidden { display: none; }
-
 
 /* ── Botões de girar o token (tab-girar.js) ──────────────────
    Ancorados ao token selecionado. Existem principalmente pelo

@@ -827,9 +827,9 @@ function renderEquippedItems() {
             }
         }
         
-        const groupHtml = `<div class="inv-slot-group ${groupHasAnyItems ? '' : 'collapsed is-vazio'}">
+        const groupHtml = `<div data-sanfona-item class="inv-slot-group ${groupHasAnyItems ? '' : 'collapsed is-vazio'}">
             <h4 class="inv-slot-group-title" onclick="this.parentElement.classList.toggle('collapsed')">
-                <span class="group-toggle-icon">▶</span>
+                <span class="group-toggle-icon lr-seta"></span>
                 ${_escHtml(bp.nome)}
                 ${groupHasAnyItems ? `<span class="group-has-items-dot"></span>` : ''}
             </h4>
@@ -853,9 +853,9 @@ function renderEquippedItems() {
     // Mas se houver um item com equipado=true e slot=null, mostramos num grupo "Sem Slot"
     const noSlotItems = equipped.filter(i => !i.slotAnatomico);
     if (noSlotItems.length > 0) {
-        html += `<div class="inv-slot-group">
+        html += `<div data-sanfona-item class="inv-slot-group">
             <h4 class="inv-slot-group-title" onclick="this.parentElement.classList.toggle('collapsed')">
-                <span class="group-toggle-icon">▶</span>
+                <span class="group-toggle-icon lr-seta"></span>
                 Sem Slot (Legado)
                 <span class="group-has-items-dot"></span>
             </h4>
@@ -870,6 +870,8 @@ function renderEquippedItems() {
     }
 
     container.innerHTML = html;
+    // O botão "Expandir/Recolher tudo" precisa reencontrar os grupos novos.
+    window.LRSanfona?.ligarSanfona(document.getElementById('equipSection'));
 }
 
 function _renderEquipCard(item, slotDef) {

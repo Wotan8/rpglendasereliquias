@@ -371,7 +371,7 @@ function _renderSingleSourceBlock(pecList, sourceKey, container, fonte) {
     const header = document.createElement('div');
     header.className = 'pec-source-header';
     header.innerHTML = `
-        <span class="pec-source-chevron">▼</span>
+        <span class="pec-source-chevron lr-seta"></span>
         <span class="pec-source-title">${config.label}</span>
         <span class="pec-source-count">${pecList.length}</span>
     `;

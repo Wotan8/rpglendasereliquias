@@ -187,7 +187,7 @@ function renderDerivedValuesGrid() {
         // É a mesma peça que a aba Combate usa (.cbt-block); aqui todos nascem
         // fechados, porque a Principal tem bloco demais para caber de uma vez.
         const blockContainer = document.createElement('details');
-        blockContainer.className = 'dv-block-container';
+        blockContainer.className = 'dv-block-container lr-sanfona';
         // A aba Combate usa a ordem para decidir quais blocos nascem abertos.
         blockContainer.dataset.blocoOrdem = block.ordem;
 
@@ -213,6 +213,8 @@ function renderDerivedValuesGrid() {
         blockContainer.appendChild(blockGrid);
         grid.appendChild(blockContainer);
     });
+    // O botão "Expandir/Recolher tudo" acha os blocos novos.
+    window.LRSanfona?.ligarSanfona(grid.closest('[data-sanfona]'));
 
     // Limpar cache de bônus para campos "Atual" recriados, forçando
     // _applyFieldBonuses() a re-aplicar os bônus de mecânica.

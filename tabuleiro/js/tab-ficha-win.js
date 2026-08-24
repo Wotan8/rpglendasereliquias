@@ -794,7 +794,7 @@ function htmlCombate(win, fonte) {
 }
 
 const detalhe = (titulo, html, aberto) => html
-    ? `<details class="tb-fwin-sec"${aberto ? ' open' : ''}><summary>${titulo}</summary><div class="tb-fwin-sec-body">${html}</div></details>`
+    ? `<details class="tb-fwin-sec lr-sanfona"${aberto ? ' open' : ''}><summary>${titulo}</summary><div class="tb-fwin-sec-body">${html}</div></details>`
     : '';
 
 /* `title=` virou a janelinha compartilhada (shared/detalhe.js): a caixinha do
@@ -809,7 +809,7 @@ const ATRIBUTOS = [['INT', 'Inteligência'], ['RAC', 'Raciocínio'], ['PRS', 'Pe
 /* ---- 📊 Valores de Combate: blocos aninhados, 2 primeiros abertos ---- */
 function secaoValores(blocos) {
     if (!blocos.length) return '';
-    const inner = blocos.map((b, ix) => `<details class="tb-fwin-bloco"${ix < 2 ? ' open' : ''}>
+    const inner = blocos.map((b, ix) => `<details class="tb-fwin-bloco lr-sanfona"${ix < 2 ? ' open' : ''}>
         <summary>${esc(b.nome)}<span class="tb-fwin-bloco-n">${b.chips.length}</span></summary>
         <div class="tb-fwin-chips">${b.chips.join('')}</div>
     </details>`).join('');

@@ -500,8 +500,6 @@ export function htmlBarraFerramentas() {
     return `<div class="ef-barra">
         <input type="search" class="ef-busca" data-ef-busca autocomplete="off"
             placeholder="🔍 Buscar campo (ex: dano, peso, alcance)" aria-label="Buscar campo do formulário">
-        <button type="button" class="ef-barra-btn" data-ef-toggle="abrir">Abrir tudo</button>
-        <button type="button" class="ef-barra-btn" data-ef-toggle="fechar">Recolher</button>
     </div>`;
 }
 
@@ -647,12 +645,21 @@ export function ligarFormulario(raiz, prefixo = '', { visibilidade = true } = {}
         else atualizarResumo(raiz);
     });
     raiz.addEventListener('change', repintar);
-    raiz.addEventListener('click', e => {
-        const btn = e.target.closest('[data-ef-toggle]');
-        if (!btn) return;
-        const abrir = btn.dataset.efToggle === 'abrir';
-        raiz.querySelectorAll('details.ef-sec').forEach(s => { s.open = abrir; });
-    });
+
+    /* "Abrir tudo" e "Recolher" eram dois botões próprios desta barra. Viraram
+       o botão único de shared/sanfona.js — o mesmo de todo bloco retrátil do
+       projeto, que diz o que VAI fazer em vez de oferecer as duas opções, e que
+       encolhe para só o ícone quando a janela é estreita.
+
+       A gaveta continua sendo `.ef-sec` com a seta própria dela (um chevron,
+       não a setinha): quem muda aqui é o comando, não o desenho da gaveta. */
+    const barra = raiz.querySelector('.ef-barra');
+    if (barra) {
+        raiz.dataset.sanfona = '';
+        barra.dataset.sanfonaBarra = '';
+        raiz.querySelectorAll('details.ef-sec').forEach(s => { s.dataset.sanfonaItem = ''; });
+        window.LRSanfona?.ligarSanfona(raiz);
+    }
     // o wiring do Criador se resolve num setTimeout(0); recontar antes disso
     // marcaria como visível o campo que ele ainda vai esconder.
     if (visibilidade) aplicarVisibilidade(raiz, prefixo);

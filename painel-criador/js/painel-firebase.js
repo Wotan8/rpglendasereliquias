@@ -1294,7 +1294,7 @@ function _sanRegraHTML(r) {
         </tr>`).join('');
 
     return `
-    <details class="san-regra san-${r.gravidade}" ${r.gravidade === 'grave' ? 'open' : ''}>
+    <details class="san-regra lr-sanfona san-${r.gravidade}" ${r.gravidade === 'grave' ? 'open' : ''}>
         <summary>
             <span class="san-icone">${_SAN_ICONE[r.gravidade] || 'ℹ️'}</span>
             <span class="san-titulo">${escapeHtml(r.titulo)}</span>

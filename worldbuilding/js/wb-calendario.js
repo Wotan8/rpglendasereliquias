@@ -77,7 +77,7 @@ export const Calendario = (() => {
             `<p class="wbt-muted">Nenhuma Era cadastrada. Crie entradas do tipo "Era" na categoria 📜 História — elas aparecem aqui automaticamente.</p>`;
 
         return `
-        <details class="wbt-panel" id="calPanel">
+        <details class="wbt-panel lr-sanfona" id="calPanel">
             <summary class="wbt-panel__head"><h3>⚙️ Regras do Calendário</h3>
                 <span class="wbt-muted">semana, meses, luas e eras do mundo</span></summary>
             <div class="wbt-panel__body wbt-cal-grid">

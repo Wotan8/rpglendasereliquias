@@ -256,15 +256,6 @@
     cursor: pointer;
     list-style: none;
 }
-#aliadoNpcModal .al-dobra > summary::-webkit-details-marker,
-#aliadoNpcModal .al-dv-bloco > summary::-webkit-details-marker { display: none; }
-#aliadoNpcModal .al-dobra > summary::before,
-#aliadoNpcModal .al-dv-bloco > summary::before {
-    content: '▸ ';
-    color: var(--lr-text-2);
-}
-#aliadoNpcModal .al-dobra[open] > summary::before,
-#aliadoNpcModal .al-dv-bloco[open] > summary::before { content: '▾ '; }
 #aliadoNpcModal .al-dobra:not([open]) > summary {
     margin: 0; padding-bottom: 0; border-bottom: none;
 }

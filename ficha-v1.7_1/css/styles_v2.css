@@ -757,9 +757,6 @@ body {
     margin-left: auto
 }
 
-
-
-
 /* TESTS */
 .test-head {
     display: flex;
@@ -949,7 +946,6 @@ html.dark .test-total-field {
     outline: 3px solid rgba(58, 166, 255, .35);
     outline-offset: 2px
 }
-
 
 /* NOTES */
 .note-card {
@@ -1877,7 +1873,6 @@ button:hover {
         grid-template-columns: 1fr
     }
 
-
     .equip-head.conditions,
     .equip-row.conditions {
         grid-template-columns: 1fr
@@ -1962,16 +1957,9 @@ button:hover {
     background: var(--soft);
 }
 
-.pec-source-chevron {
-    font-size: 10px;
-    transition: transform .2s ease;
-    color: var(--muted);
-    flex-shrink: 0;
-}
-
-.pec-source-block.collapsed .pec-source-chevron {
-    transform: rotate(-90deg);
-}
+/* Glifo e giro em shared/sanfona.css (.lr-seta): era ▼ aqui e ▸ no resto. */
+.pec-source-chevron { font-size: 10px; }
+.pec-source-block:not(.collapsed) .pec-source-chevron { transform: rotate(90deg); }
 
 .pec-source-title {
     font-size: 12px;
@@ -2909,17 +2897,6 @@ html.dark .pec-capacidade {
     align-items: center;
     gap: var(--lr-space-2);
 }
-
-.dv-block-container > summary::-webkit-details-marker { display: none; }
-
-.dv-block-container > summary::before {
-    content: '▸';
-    color: var(--muted);
-    font-size: 11px;
-    transition: transform var(--lr-t-fast) var(--lr-ease);
-}
-
-.dv-block-container[open] > summary::before { transform: rotate(90deg); }
 
 /* Dentro do resumo o título perde a centralização e a margem: ele divide a
    linha com a seta e o contador. */

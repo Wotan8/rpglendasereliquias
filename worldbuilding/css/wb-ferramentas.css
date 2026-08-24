@@ -60,9 +60,8 @@
 /* ── Painel colapsável (regras do calendário) ──────────── */
 .wbt-panel { background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius); margin-bottom: var(--lr-space-4); overflow: hidden; }
 .wbt-panel__head { display: flex; align-items: baseline; gap: var(--lr-space-4); flex-wrap: wrap; padding: var(--lr-space-3) var(--lr-space-4); cursor: pointer; list-style: none; user-select: none; }
-.wbt-panel__head::-webkit-details-marker { display: none; }
-.wbt-panel__head::before { content: "▸"; color: var(--lr-gold); transition: transform var(--lr-t-base); }
-.wbt-panel[open] > .wbt-panel__head::before { transform: rotate(90deg); }
+/* Seta em shared/sanfona.css; aqui so o dourado do Escritorio. */
+.wbt-panel__head::before { color: var(--lr-gold); }
 .wbt-panel__head h3 { margin: 0; font-family: var(--lr-font-title); font-size: var(--lr-fs-md); color: var(--lr-text-1); }
 .wbt-panel__body { padding: var(--lr-space-4) var(--lr-space-4) var(--lr-space-4); border-top: var(--lr-border-w) solid var(--lr-border); }
 .wbt-cal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--lr-space-5); }

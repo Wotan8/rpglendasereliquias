@@ -1,0 +1,116 @@
+/* =====================================================================
+   SANFONA — o jeito único de recolher e expandir no projeto
+
+   Havia nove desenhos diferentes para a mesma coisa. `.npcv2-dobra` usava
+   ▸/▾ trocando o `content`; `.cbt-block` e `.dv-block-container` usavam ▸ com
+   `rotate(90deg)`; `.san-regra` usava ▾ com `rotate(180deg)`; o inventário
+   usava um `<span>` ▶ com rotação por classe. Mesma ação, quatro gramáticas —
+   e o leitor tinha de reaprender a cada tela qual seta significava o quê.
+
+   Aqui é uma só: ▸ fechado, ▾ aberto, girando 90°.
+
+   O botão de EXPANDIR/RECOLHER TUDO se mede pelo bloco, não pela janela
+   (`@container`): o mesmo grupo aparece numa coluna estreita do Painel do
+   Mestre e num modal largo, e um `@media` do viewport erraria nos dois. Sem
+   espaço, o rótulo sai e fica só o ícone — que continua tendo `title` e
+   `aria-label`.
+   ===================================================================== */
+
+/* ---------- a seta de cada bloco ---------- */
+.lr-sanfona > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-2, 8px);
+}
+
+.lr-sanfona > summary::-webkit-details-marker { display: none; }
+
+.lr-sanfona > summary::before {
+    content: '▸';
+    flex: none;
+    color: var(--lr-text-2);
+    font-size: .9em;
+    line-height: 1;
+    transition: transform .15s ease;
+}
+
+.lr-sanfona[open] > summary::before { transform: rotate(90deg); }
+
+.lr-sanfona > summary:focus-visible {
+    outline: none;
+    box-shadow: var(--lr-glow-gold, 0 0 0 2px rgba(212, 175, 55, .5));
+    border-radius: var(--lr-radius-sm, 6px);
+}
+
+/* Quem não quiser a seta (o bloco já tem outro affordance) marca o summary. */
+.lr-sanfona > summary.lr-sem-seta::before { content: none; }
+
+/* ---------- a seta dos blocos que NÃO são <details> ---------- */
+/* Alguns blocos dobram por classe no JS (os Módulos de Classe da ficha, os
+   grupos de Equipamentos) e não dá para trocá-los por <details> sem mexer em
+   impressão, arrasto e teste. O GLIFO e o giro vêm daqui mesmo assim; cada
+   tela só declara quando está aberta, numa linha. */
+.lr-seta {
+    display: inline-block;
+    flex: none;
+    color: var(--lr-text-2);
+    font-size: .9em;
+    line-height: 1;
+    transition: transform .15s ease;
+}
+
+.lr-seta::before { content: '▸'; }
+.lr-seta.aberta { transform: rotate(90deg); }
+
+/* ---------- o botão de tudo ---------- */
+/* O container medido é o BLOCO, não a janela. */
+[data-sanfona] { container-type: inline-size; }
+
+.lr-sanf-tudo {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+    flex: none;
+    padding: 2px 8px;
+    border: 1px solid var(--lr-border, rgba(128, 128, 128, .35));
+    border-radius: 999px;
+    background: var(--lr-surface, transparent);
+    color: var(--lr-text-2);
+    font: inherit;
+    font-size: var(--lr-fs-xs, .72rem);
+    font-weight: 700;
+    letter-spacing: .02em;
+    line-height: 1.6;
+    white-space: nowrap;
+    cursor: pointer;
+    /* Sem `color` na transição: dentro de um contêiner de @container, trocar de
+       tema deixava a cor presa no valor claro — 2,5:1 no tema escuro, e o
+       teste de contraste pegou. A borda basta para o retorno do hover. */
+    transition: border-color .15s;
+}
+
+.lr-sanf-tudo:hover,
+.lr-sanf-tudo:focus-visible {
+    color: var(--lr-gold);
+    border-color: var(--lr-gold);
+}
+
+.lr-sanf-ico { font-size: .95em; line-height: 1; }
+
+/* Bloco estreito: o rótulo sai, o ícone fica. O nome continua no `title` e no
+   `aria-label`, então quem usa leitor de tela não perde nada. */
+@container (max-width: 340px) {
+    .lr-sanf-txt { display: none; }
+    .lr-sanf-tudo { padding: 2px 6px; }
+}
+
+/* Navegador sem @container: o viewport é a melhor aproximação que resta. */
+@supports not (container-type: inline-size) {
+    @media (max-width: 480px) {
+        .lr-sanf-txt { display: none; }
+    }
+}

@@ -378,14 +378,9 @@
 
 /* Card dobrável: o próprio título é o botão de abrir. Fechado, não gasta
    régua nem borda — o card vira uma linha só. */
-.npcv2-dobra > summary { cursor: pointer; list-style: none; }
-.npcv2-dobra > summary::-webkit-details-marker { display: none; }
-.npcv2-dobra > summary::before { content: '▸'; color: var(--lr-text-2); }
-.npcv2-dobra[open] > summary::before { content: '▾'; }
+/* A seta, o cursor e o anel de foco vêm de shared/sanfona.css — o projeto
+   tinha nove desenhos para a mesma ação. Aqui fica só o ajuste local. */
 .npcv2-dobra:not([open]) > summary { margin: 0; padding-bottom: 0; border-bottom: none; }
-.npcv2-dobra > summary:focus-visible {
-    outline: none; box-shadow: var(--lr-glow-gold); border-radius: var(--lr-radius-sm);
-}
 
 /* Modo rápido esconde tudo que depende dos registros */
 /* Vale também para o .npcv2-card inteiro que só tem conteúdo mecânico. */
@@ -615,15 +610,31 @@
     margin-bottom: var(--lr-space-2);
     overflow: hidden;
 }
+/* Cabeçalho do módulo — agora é o <summary> da dobra. A seta e o
+   `display:flex` vêm de shared/sanfona.css; aqui fica só o que é deste bloco.
+   Sem `space-between`: com a seta na frente ele empurraria o título para o
+   meio. Quem vai à direita diz isso por conta própria (margin-left:auto). */
 .npcv2-mod-head {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center;
     gap: var(--lr-space-2);
     padding: var(--lr-space-2) var(--lr-space-3);
     font-weight: 700; font-size: var(--lr-fs-sm);
     background: var(--lr-bg-1);
+}
+.npcv2-mod-box[open] > .npcv2-mod-head {
     border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
 }
 .npcv2-mod-head .npcv2-pec-fonte { margin-left: var(--lr-space-2); }
+.npcv2-mod-head > .npcv2-pec-del { margin-left: var(--lr-space-2); }
+
+/* Com o módulo fechado, a contagem é a única pista do que tem lá dentro. */
+.npcv2-mod-conta {
+    margin-left: auto;
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    color: var(--lr-text-2);
+    white-space: nowrap;
+}
 .npcv2-mod-items { padding: var(--lr-space-2); }
 .npcv2-mod-item {
     border: var(--lr-border-w) solid var(--lr-border-soft);

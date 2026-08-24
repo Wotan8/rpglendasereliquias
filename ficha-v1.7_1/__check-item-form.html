@@ -5,6 +5,8 @@
 <link rel="stylesheet" href="../shared/dialogo.css?v=2">
 <script type="module">import '../shared/dialogo.js?v=2';</script>
 <link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/sanfona.css">
+<script type="module">import '../shared/sanfona.js';</script>
 <!-- sem cache: arnês tem de ler o CSS do disco, senão mede o de ontem -->
 <script>document.write('<link rel="stylesheet" href="css/inventory.css?t=' + Date.now() + '">');</script>
 <!-- sem cache: arnes tem de ler o CSS do disco, senao mede o de ontem -->
@@ -190,13 +192,24 @@ teste('T23 · ao EDITAR, o botão Restaurar aparece',
     teste('T26 · nenhum campo ficou fora das gavetas' + (orfaos.length ? ' — ' + orfaos.join(', ') : ''),
         orfaos.length === 0);
 
-    // recolhido continua no DOM: a coleta lê por id, não por pixel
-    $('[data-ef-toggle="fechar"]', md).click();
+    /* "Abrir tudo" e "Recolher" eram dois botões desta barra; viraram o botão
+       único de shared/sanfona.js, o mesmo de todo bloco retrátil do projeto.
+       Ele diz o que VAI fazer, então o teste pede a ação em vez de escolher
+       o botão. */
+    const btnTudo = $('.lr-sanf-tudo', md);
+    teste('T27a · a barra tem o botão padrão de recolher/expandir', !!btnTudo && !btnTudo.hidden);
+    if (btnTudo.dataset.acao !== 'fechar') btnTudo.click();   // abre tudo primeiro
+    btnTudo.click();                                          // e recolhe tudo
+    teste('T27b · o botão recolhe TODAS as gavetas',
+        $$('details.ef-sec', md).every(d => !d.open));
+
     const comFechado = EquipCampos.coletarCampos(EquipCampos.camposDaInstancia());
     teste('T27 · com tudo recolhido a coleta ainda devolve os campos',
         Object.keys(comFechado).length === EquipCampos.camposDaInstancia().length
         && comFechado.nome === 'Colar');
-    $('[data-ef-toggle="abrir"]', md).click();
+
+    btnTudo.click();
+    teste('T27c · e abre TODAS de volta', $$('details.ef-sec', md).every(d => d.open));
 
     // busca por nome de campo
     const busca = $('[data-ef-busca]', md);

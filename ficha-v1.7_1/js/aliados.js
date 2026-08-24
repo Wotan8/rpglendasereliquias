@@ -260,7 +260,7 @@ const _alSecao = (titulo, corpo, attrs = '') => `<div class="section"${attrs}><d
 /** Seção dobrável — mesma casca da seção normal, com o título virando botão.
  *  A aba Mecânica é longa; quem consulta na mesa quer um bloco por vez. */
 const _alDobra = (titulo, corpo, aberto = true, attrs = '') =>
-    `<details class="section al-dobra"${aberto ? ' open' : ''}${attrs}><summary class="section-title">${titulo}</summary>${corpo}</details>`;
+    `<details class="section al-dobra lr-sanfona"${aberto ? ' open' : ''}${attrs}><summary class="section-title">${titulo}</summary>${corpo}</details>`;
 /** Painel de uma aba. `ativa` marca a que nasce aberta. */
 const _alAba = (sec, corpo, ativa = false) => `<div class="tab-content${ativa ? ' active' : ''}" id="alSec_${sec}">${corpo}</div>`;
 /** Caixa vazia que o JS preenche depois (VDs, módulos, inventário). */
@@ -660,7 +660,7 @@ async function renderAliadoDerivedValues(npc) {
             blocos.get(id).dvs.push(dv);
         }
         box.innerHTML = [...blocos.values()].map(b =>
-            `<details class="al-dv-bloco"${b.ordem < AL_BLOCO_ABERTO_ATE ? ' open' : ''}>
+            `<details class="al-dv-bloco lr-sanfona"${b.ordem < AL_BLOCO_ABERTO_ATE ? ' open' : ''}>
                 <summary class="al-group-title">${escapeHtml(b.nome)} <span class="al-bloco-count">${b.dvs.length}</span></summary>
                 <div class="al-stat-grid">${b.dvs.map(statHtml).join('')}</div>
             </details>`).join('');

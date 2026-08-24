@@ -89,14 +89,9 @@
 .inv-slot-group-title:hover {
     color: var(--primary, var(--lr-abyssal));
 }
-.group-toggle-icon {
-    display: inline-block;
-    transition: transform 0.2s;
-    font-size: 0.85em;
-}
-.inv-slot-group:not(.collapsed) .group-toggle-icon {
-    transform: rotate(90deg);
-}
+/* O glifo e o giro vêm de shared/sanfona.css (.lr-seta): era ▶ aqui e ▸ nas
+   outras telas. Só o estado aberto é desta. */
+.inv-slot-group:not(.collapsed) .group-toggle-icon { transform: rotate(90deg); }
 .group-has-items-dot {
     display: inline-block;
     width: 6px;

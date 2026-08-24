@@ -318,7 +318,7 @@
             secs = (window.RUNO_COMPENDIO || []).map(s => ({ title: `${s.icone} ${s.titulo}`, contentHTML: s.html }));
         }
         host.innerHTML = secs.map(s => `
-            <details class="lab-comp-sec"><summary>${esc(s.title)}</summary>
+            <details class="lab-comp-sec lr-sanfona"><summary>${esc(s.title)}</summary>
             <div class="lab-comp-body texto-mundo">${s.contentHTML}</div></details>`).join('');
     }
 

@@ -2249,7 +2249,6 @@ html.dark .multi-select-container {
    shared/equip-campos.css — a Ficha de NPC do Painel do Mestre e do
    Tabuleiro edita os mesmos campos e precisa do mesmo editor. */
 
-
 html.dark .calc-row {
     background: var(--lr-bg-0);
     border-color: var(--line);
@@ -3875,17 +3874,8 @@ html.dark .meta-chip.chip-tag {
     list-style: none;
 }
 
-.san-regra > summary::-webkit-details-marker { display: none; }
-
-/* A seta é desenhada aqui para virar junto com o estado da gaveta. */
-.san-regra > summary::after {
-    content: '▾';
-    margin-left: auto;
-    color: var(--muted, #94a3b8);
-    transition: transform .15s ease;
-}
-
-.san-regra[open] > summary::after { transform: rotate(180deg); }
+/* A seta vem de shared/sanfona.css: era ▾ girando 180° aqui e ▸ girando 90°
+   nas outras telas — mesma ação, duas gramáticas. */
 
 .san-regra.san-grave { border-color: var(--lr-blood-soft, rgba(139, 30, 45, .22)); }
 /* blood-3 e nao blood-2: no tema escuro o -2 (#C94F5C) da 3,3:1 sobre a

@@ -26,17 +26,15 @@
             gap: 8px;
         }
         /* Recolher: seta no header, conteúdo some. A impressão ignora — ficha
-           impressa com bloco fechado seria ficha incompleta. */
+           impressa com bloco fechado seria ficha incompleta.
+           O glifo e o giro vêm de shared/sanfona.css (.lr-seta); aqui fica só
+           QUANDO está aberto, que é o que só esta tela sabe. Era ▼ aqui e ▸ no
+           resto do projeto — mesma ação, duas gramáticas. */
         .class-module-header .cm-caret,
-        .class-module-item-header .cm-caret {
-            font-size: .7rem;
-            color: var(--muted, #94a3b8);
-            transition: transform .15s;
-            flex-shrink: 0;
-        }
-        .cm-collapsed > .class-module-header .cm-caret,
-        .cm-collapsed > .class-module-item-header .cm-caret {
-            transform: rotate(-90deg);
+        .class-module-item-header .cm-caret { font-size: .7rem; }
+        .class-module-section:not(.cm-collapsed) > .class-module-header .cm-caret,
+        .class-module-item:not(.cm-collapsed) > .class-module-item-header .cm-caret {
+            transform: rotate(90deg);
         }
         .class-module-section.cm-collapsed > .class-module-items,
         .class-module-section.cm-collapsed > .class-module-add-btn,
@@ -501,6 +499,8 @@ function renderClassModules(classeNome) {
         const section = _buildModuleSection(mod);
         container.appendChild(section);
     });
+    // O botão "Expandir/Recolher tudo" precisa reencontrar os módulos novos.
+    window.LRSanfona?.ligarSanfona(document.getElementById('classModulesSection'));
 }
 
 /**
@@ -510,14 +510,17 @@ function _buildModuleSection(mod) {
     const section = document.createElement('div');
     section.className = 'class-module-section';
     section.dataset.moduleId = mod.id;
+    // Dobra comandada pelo botão "Expandir/Recolher tudo" da seção.
+    section.dataset.sanfonaItem = '';
 
     // Header
     const header = document.createElement('div');
     header.className = 'class-module-header';
 
+    /* A seta vem de shared/sanfona.css: era ▼ aqui e ▸ em todo o resto.
+       O glifo e o giro sao de la; o estado aberto e a linha de cm-collapsed. */
     const caret = document.createElement('span');
-    caret.className = 'cm-caret';
-    caret.textContent = '▼';
+    caret.className = 'cm-caret lr-seta';
     header.appendChild(caret);
 
     const title = document.createElement('h4');
@@ -1334,8 +1337,7 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
     });
 
     const caret = document.createElement('span');
-    caret.className = 'cm-caret';
-    caret.textContent = '▼';
+    caret.className = 'cm-caret lr-seta';
     header.appendChild(caret);
 
     const numSpan = document.createElement('span');
