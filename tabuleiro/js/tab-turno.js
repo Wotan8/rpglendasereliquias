@@ -302,7 +302,7 @@ async function runasDe(p) {
     if (!id) return [];
     let itens = [];
     try {
-        const m = await import('./tab-ficha-win.js?v=13');
+        const m = await import('./tab-ficha-win.js?v=14');
         itens = m.itensCarregados(tipo, id) || [];
     } catch (e) { console.warn('itens para runas', e); return []; }
 
@@ -344,7 +344,7 @@ async function carregarSkills(chave, p, tentativas = 0) {
     let idx = indexarPredefs([]);
     let registroOk = false;
     try {
-        const m = await import('./tab-ficha-win.js?v=13');
+        const m = await import('./tab-ficha-win.js?v=14');
         const sys = await m.registroSistema();
         mechsById = sys.mechsById || {};
         sysDVs = sys.derivedValues || [];
@@ -1330,7 +1330,7 @@ async function aplicarIncorporacao(m, p, tok, tokAlvo) {
     // CADASTRO, não este arquivo.
     let cat = { derivedValues: [], pericias: [], auras: [] };
     try {
-        const sys = await (await import('./tab-ficha-win.js?v=13')).registroSistema();
+        const sys = await (await import('./tab-ficha-win.js?v=14')).registroSistema();
         cat = { derivedValues: sys.derivedValues || [], pericias: sys.skills || [], auras: sys.auras || [] };
     } catch (e) {
         console.warn('registro do sistema p/ Dádiva', e);
@@ -1712,7 +1712,7 @@ async function manifestarNoMapa(m, meta, p) {
  */
 async function gastarUsoDaRuna(itemId) {
     try {
-        const m = await import('./tab-ficha-win.js?v=13');
+        const m = await import('./tab-ficha-win.js?v=14');
         const p = participanteDaVez(cena());
         const itens = m.itensCarregados(p?.npcId ? 'npc' : 'char', p?.npcId || p?.characterId) || [];
         const item = itens.find(i => i.id === itemId);

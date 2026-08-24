@@ -19,7 +19,7 @@ let janelaAberta = false;
 // Janela flutuante de ficha de combate (NPC/personagem) — módulo carregado só
 // quando alguém abre a primeira janela.
 window.tbFichaWin = async function(tipo, id) {
-    try { (await import('./tab-ficha-win.js?v=13')).abrirFichaWin(tipo, id); }
+    try { (await import('./tab-ficha-win.js?v=14')).abrirFichaWin(tipo, id); }
     catch (e) { console.error(e); toast('❌ Erro ao abrir a janela de combate', 'danger'); }
 };
 
@@ -355,7 +355,7 @@ window.tbCombIniciarCena = async function() {
 async function aplicarRunasPassivas(parts) {
     let sys = null;
     try {
-        const m = await import('./tab-ficha-win.js?v=13');
+        const m = await import('./tab-ficha-win.js?v=14');
         sys = await m.registroSistema();
     } catch (e) { console.warn('registro p/ runas passivas', e); return; }
     const pecs = sys?.pecsById || {};

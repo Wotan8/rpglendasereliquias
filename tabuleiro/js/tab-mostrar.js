@@ -655,7 +655,7 @@ function dropClique(ev) {
             await addObj(obj);
             // O item saiu do inventário: o Painel do Turno não pode continuar
             // oferecendo (nem gastando) o que já está no chão.
-            try { (await import('./tab-ficha-win.js?v=13')).invalidarItens(); } catch (e2) {}
+            try { (await import('./tab-ficha-win.js?v=14')).invalidarItens(); } catch (e2) {}
             toast(`🗺️ ${item.nome || 'Item'} dropado no mapa`);
         } catch (e) { console.error(e); toast('❌ Erro ao dropar o item', 'danger'); }
     })();

@@ -79,6 +79,10 @@ async function carregarSys() {
     // sessão inteira sem os módulos de classe — e portanto sem custo nem mira
     // nas habilidades — até recarregar a página.
     if (sys?.loaded !== false) _sys = sys;
+    /* Uma vez por sessão: a janelinha de detalhe passa a valer para todo
+       rótulo com `data-det-nome` desta janela. `_sys` vai por função porque
+       ele só existe depois desta carga. */
+    if (window.LRDetalhe) window.LRDetalhe.ligarDetalhe(document.body, () => _sys);
     return sys;
 }
 
@@ -793,8 +797,12 @@ const detalhe = (titulo, html, aberto) => html
     ? `<details class="tb-fwin-sec"${aberto ? ' open' : ''}><summary>${titulo}</summary><div class="tb-fwin-sec-body">${html}</div></details>`
     : '';
 
+/* `title=` virou a janelinha compartilhada (shared/detalhe.js): a caixinha do
+   sistema operacional não aparece no celular — que é onde a mesa lê a ficha —
+   e não cabe fórmula nenhuma nela. A fórmula e o "usado em" saem do registro. */
 const chip = (icone, nome, valor, title) =>
-    `<span class="tb-fwin-chip" title="${esc(title || nome)}">${icone ? esc(icone) + ' ' : ''}${esc(nome)} <b>${esc(String(valor))}</b></span>`;
+    `<span class="tb-fwin-chip" data-det-nome="${esc(nome)}" data-det-icone="${esc(icone || '')}"
+        data-det-desc="${esc(title || '')}">${icone ? esc(icone) + ' ' : ''}${esc(nome)} <b>${esc(String(valor))}</b></span>`;
 
 const ATRIBUTOS = [['INT', 'Inteligência'], ['RAC', 'Raciocínio'], ['PRS', 'Perseverança'], ['FOR', 'Força'], ['DES', 'Destreza'], ['VIG', 'Vigor'], ['PRE', 'Presença'], ['MAN', 'Manipulação'], ['AUT', 'Autocontrole']];
 
@@ -1356,7 +1364,7 @@ function htmlModulos(win, fonte) {
 /** Grade dos 9 atributos. `ler(sig)` diz de onde sai o número em cada fonte:
  *  o NPC guarda por sigla, o personagem guarda em dots.attr_xxx. */
 const htmlAtributos = (ler) => ATRIBUTOS.map(([sig, rot]) =>
-    `<div class="tb-fwin-atr" title="${rot}"><span>${sig}</span><b>${fmtN(ler(sig))}</b></div>`).join('');
+    `<div class="tb-fwin-atr" data-det-nome="${esc(rot)}"><span>${sig}</span><b>${fmtN(ler(sig))}</b></div>`).join('');
 
 /**
  * Espinha da aba Combate. Personagem e NPC mostram as MESMAS seções, na mesma
@@ -1380,7 +1388,7 @@ function htmlCombateNpc(win, n) {
         const s = _sys.skills.find(x => x.id === ps.refId);
         return s ? { idx: i, nome: s.nome, desc: s.descricao, nivel: ps.nivel || 0 } : null;
     }).filter(Boolean).sort((a, b) => a.nome.localeCompare(b.nome));
-    let periciasHtml = pers.map(p => `<div class="tb-fwin-per" title="${esc(p.desc || p.nome)}">
+    let periciasHtml = pers.map(p => `<div class="tb-fwin-per" data-det-nome="${esc(p.nome)}" data-det-desc="${esc(p.desc || '')}">
             <span>${esc(p.nome)}</span>
             <input type="number" data-pernivel="${p.idx}" value="${p.nivel}" min="0" max="10">
         </div>`).join('');

@@ -246,39 +246,47 @@ function generatePecLevelTable(pec, currentLevel) {
     </div>`;
 }
 
+/**
+ * O detalhe da peculiaridade, no MESMO conteúdo das fichas
+ * (shared/detalhe.js): nome em ouro, descrição, fórmula e onde é usado.
+ *
+ * O gatilho aqui continua sendo CLIQUE, de propósito: a explicação abre embaixo
+ * do card e fica aberta enquanto o jogador compara custo — e no celular, onde
+ * este wizard é usado, hover não existe.
+ *
+ * A tabela de níveis vem DEPOIS do miolo: ela é a escada de preço, não a conta
+ * do valor.
+ */
 function generatePecDetailsHtml(pec, level = 1) {
-    let mecsHtml = '';
-    if (pec.mecanicas && pec.mecanicas.length > 0) {
-        mecsHtml = `<div style="margin-top:12px; border-top:1px solid var(--line); padding-top:8px;">
-            <strong style="color:var(--accent); font-size:0.8rem; text-transform:uppercase;">⚙️ Efeitos Vinculados (Nv. ${level}):</strong>
-            <ul style="margin:4px 0 0 16px; padding:0; color:var(--text); font-size:0.8rem; list-style-type:circle;">`;
-            
-        const niveisData = pec.niveis && pec.niveis[level];
-        if (niveisData && niveisData.efeitosArray && niveisData.efeitosArray.length > 0) {
-            niveisData.efeitosArray.forEach(txt => {
-                mecsHtml += `<li style="margin-bottom:4px;">${escHtml(txt)}</li>`;
-            });
-        } else {
-            pec.mecanicas.forEach(m => {
-                const mText = m.previewTexto || (typeof generatePreviewText === 'function' ? generatePreviewText(m) : m.nome);
-                mecsHtml += `<li style="margin-bottom:4px;">${escHtml(mText)}</li>`;
-            });
-        }
-        mecsHtml += `</ul></div>`;
-    }
-    
     let desc = pec.descricao || 'Sem descrição.';
     if (pec.descricaoNivel && pec.descricaoNivel[level]) {
         desc = pec.descricaoNivel[level];
     }
-    
-    return `
-        <strong>${escHtml(pec.nome)}</strong><br>
-        <div style="margin-top:8px;">${escHtml(desc)}</div>
-        ${mecsHtml}
-        ${generatePecLevelTable(pec, level)}
-    `;
+
+    /* A fórmula de uma peculiaridade é o que ela FAZ no nível escolhido. O
+       cadastro pode trazer o efeito já escrito por nível (`efeitosArray`); sem
+       isso, cai no preview de cada mecânica vinculada. */
+    const formula = [];
+    const niveisData = pec.niveis && pec.niveis[level];
+    if (niveisData && niveisData.efeitosArray && niveisData.efeitosArray.length) {
+        niveisData.efeitosArray.forEach(txt => formula.push({ fonte: `Nv. ${level}`, texto: txt }));
+    } else if (pec.mecanicas && pec.mecanicas.length) {
+        pec.mecanicas.forEach(m => formula.push({
+            fonte: m.nome || 'Vinculada',
+            texto: m.previewTexto || (typeof generatePreviewText === 'function' ? generatePreviewText(m) : ''),
+        }));
+    }
+
+    const miolo = window.LRDetalhe
+        ? window.LRDetalhe.detalheHTML({
+            nome: pec.nome, icone: pec.icone, descricao: desc, formula,
+            sys: window._systemData || null,
+        })
+        : `<strong>${escHtml(pec.nome)}</strong><div style="margin-top:8px;">${escHtml(desc)}</div>`;
+
+    return miolo + generatePecLevelTable(pec, level);
 }
+
 
 /**
  * Resolve the EXP mechanic linked via mecanicaExpCriacao.

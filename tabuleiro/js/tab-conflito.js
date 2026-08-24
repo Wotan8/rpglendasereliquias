@@ -94,7 +94,7 @@ function enerDe(pid) {
 // ---------- VDs de Defesa e Blindagem ----------
 async function carregarSys() {
     if (_sys) return _sys;
-    const m = await import('./tab-ficha-win.js?v=13');
+    const m = await import('./tab-ficha-win.js?v=14');
     _sys = await m.registroSistema();
     render();
     return _sys;
@@ -412,7 +412,7 @@ async function resolverProjetil(c, acertou) {
         logChat(`⚠️ ${pj.nome || 'Munição'} não foi descontada: o maço já não existia`);
     }
     // O maço mudou de tamanho (ou acabou): a próxima escolha refaz a query.
-    try { (await import('./tab-ficha-win.js?v=13')).invalidarItens(); } catch (e) {}
+    try { (await import('./tab-ficha-win.js?v=14')).invalidarItens(); } catch (e) {}
 
     const d = destinoDoProjetil({ acertou, chanceRecuperar: pj.chanceRecuperar });
     if (!d.caiu) {
