@@ -21,7 +21,7 @@ import {
 import {
     camposDaInstancia, valorDoItem, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo, htmlFormulario, htmlBarraFerramentas, ligarFormulario,
-} from '../../shared/equip-campos.js?v=13';
+} from '../../shared/equip-campos.js?v=14';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML } from '../../shared/restaurar-item.js?v=1';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário

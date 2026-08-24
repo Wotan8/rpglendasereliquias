@@ -6,8 +6,11 @@
 import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=16';
 import {
     CAMPOS_EQUIPAMENTO, normalizaFormaEquipar,
-    SECOES_EQUIPAMENTO, htmlBarraFerramentas, ligarFormulario, agruparEmSecoesDOM,
-} from '../../shared/equip-campos.js?v=13';
+    SECOES_EQUIPAMENTO, htmlBarraFerramentas, ligarFormulario, agruparEmSecoesDOM, atualizarResumo,
+} from '../../shared/equip-campos.js?v=14';
+import {
+    SECOES_CONDICAO, SECOES_CLASSE, SECOES_TRIBO, SECOES_VALOR_DERIVADO,
+} from './cadastro-secoes.js?v=1';
 
 /** Gaveta nasce aberta quando o registro já tem algo dentro dela. */
 const _preenchidoNoDado = (dado, k) => {
@@ -100,6 +103,9 @@ const MODULE_DEFS = {
     classes: {
         name: 'Classe', namePlural: 'Classes', icon: '⚔️',
         collection: 'system/data/classes',
+        // Gavetas: identidade, papel, com o que comeca, o que concede,
+        // progressao e mundo. Ver cadastro-secoes.js.
+        sections: SECOES_CLASSE,
         fields: [
             { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Guerreiro, Ladino' },
             { key: 'arquetipo', label: 'Arquétipo', type: 'text', required: true, placeholder: 'Ex: Combate Direto' },
@@ -136,6 +142,8 @@ const MODULE_DEFS = {
     tribes: {
         name: 'Tribo', namePlural: 'Tribos', icon: '🏕️',
         collection: 'system/data/tribes',
+        // Gavetas: identidade, o que concede, sociedade, militar, mundo.
+        sections: SECOES_TRIBO,
         fields: [
             { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Comuno, Famo, Pogtara' },
             { key: 'lema', label: 'Lema / Citação', type: 'text', placeholder: 'Lema da tribo' },
@@ -244,6 +252,9 @@ const MODULE_DEFS = {
     conditions: {
         name: 'Condição', namePlural: 'Condições', icon: '💀',
         collection: 'system/data/conditions',
+        // 30 campos, 11 pendurados no interruptor do Tabuleiro: em coluna
+        // corrida ninguem varre. Mapa das gavetas em cadastro-secoes.js.
+        sections: SECOES_CONDICAO,
         fields: [
             { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Atordoado, Cego' },
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
@@ -451,6 +462,8 @@ const MODULE_DEFS = {
     derivedValues: {
         name: 'Valor Derivado', namePlural: 'Valores Derivados', icon: '📊',
         collection: 'system/data/derivedValues',
+        // Gavetas: identidade, exibicao, calculo, campos editaveis e criacao.
+        sections: SECOES_VALOR_DERIVADO,
         fields: [
             { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Percepção, Iniciativa, Carga' },
             { key: 'blocoId', label: 'ID do Bloco', type: 'text', placeholder: 'ex: combat, senses, etc' },
@@ -2475,6 +2488,11 @@ window.openForm = function (itemId) {
     if (!container.dataset.efLigado) {
         ligarFormulario(container, '', { visibilidade: false });
         container.dataset.efLigado = '1';
+    } else if (modDef.sections) {
+        // reabrir reusa o MESMO #formFields: os ouvintes ficam, o contador não.
+        // Depois do setTimeout(0) do _wireShowWhen*, senão conta como visível o
+        // campo que ele ainda vai esconder.
+        setTimeout(() => atualizarResumo(container), 0);
     }
 
     const formModal = document.getElementById('formModal');

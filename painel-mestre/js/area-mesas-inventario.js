@@ -11,7 +11,7 @@ import * as SEL from '../../painel-criador/js/painel-mechanics.js';
 import {
     camposDaInstancia, valorDoItem, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo, modeloDaInstancia, htmlFormulario, htmlBarraFerramentas, ligarFormulario,
-} from '../../shared/equip-campos.js?v=13';
+} from '../../shared/equip-campos.js?v=14';
 import { ensureNpcSystemData } from './npc-system-data.js';
 import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,

@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v294';
+const VERSION = 'v295';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -105,6 +105,7 @@ const PRECACHE_URLS = [
   '/mapa-conflito/js/conflito-dados.js',
   '/mapa-conflito/js/mapa-conflito.js',
   '/painel-criador/css/painel-criador.css',
+  '/painel-criador/js/cadastro-secoes.js',
   '/painel-criador/js/painel-firebase.js',
   '/painel-criador/js/painel-mechanics.js',
   '/painel-criador/js/painel-runic.js',

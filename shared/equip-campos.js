@@ -571,7 +571,7 @@ export function aplicarVisibilidade(raiz, prefixo = '') {
         if (f.showWhenBoolean) mostra = !!val(f.showWhenBoolean)?.checked;
         grupo.style.display = mostra ? '' : 'none';
     }
-    atualizarResumo(raiz, prefixo);
+    atualizarResumo(raiz);
 }
 
 /** Grupo que o usuário enxerga agora: nem escondido por regra, nem cortado pela busca. */
@@ -582,7 +582,7 @@ const grupoVisivel = (g) => g.style.display !== 'none' && !g.hasAttribute('data-
  * Conta só o visível: escolher Arma faz o contador de Combate crescer, e uma
  * peça que não é contêiner não fica devendo 4 campos que nem existem para ela.
  */
-export function atualizarResumo(raiz, prefixo = '') {
+export function atualizarResumo(raiz) {
     let algum = false;
     raiz.querySelectorAll('details.ef-sec').forEach(sec => {
         const grupos = [...sec.querySelectorAll('[data-campo]')].filter(grupoVisivel);
@@ -590,11 +590,7 @@ export function atualizarResumo(raiz, prefixo = '') {
         if (!sec.hidden) algum = true;
         const badge = sec.querySelector('[data-ef-badge]');
         if (!badge) return;
-        const cheios = grupos.filter(g => {
-            const f = CAMPOS_EQUIPAMENTO.find(x => x.key === g.dataset.campo);
-            if (!f) return false;
-            try { return preenchido(f, coletarCampo(f, prefixo)); } catch { return false; }
-        }).length;
+        const cheios = grupos.filter(grupoPreenchido).length;
         badge.textContent = `${cheios}/${grupos.length}`;
         badge.classList.toggle('ef-sec-badge-cheio', cheios > 0);
     });
@@ -602,15 +598,37 @@ export function atualizarResumo(raiz, prefixo = '') {
     if (aviso) aviso.hidden = algum;
 }
 
+/**
+ * Um controle conta como preenchido? Lido do DOM, sem consultar spec nenhuma —
+ * é o que deixa o contador servir a qualquer cadastro do Painel do Criador.
+ * Seletor de mecânica/VD guarda JSON num input escondido: lista vazia é vazio.
+ */
+const controlePreenchido = (el) => {
+    if (el.type === 'checkbox' || el.type === 'radio') return el.checked;
+    if (el.multiple) return el.selectedOptions.length > 0;
+    const v = String(el.value ?? '').trim();
+    if (!v) return false;
+    if (v[0] === '[' || v[0] === '{') {
+        try {
+            const j = JSON.parse(v);
+            return Array.isArray(j) ? j.length > 0 : Object.keys(j).length > 0;
+        } catch { return true; }
+    }
+    return true;
+};
+
+/** O grupo de UM campo está preenchido se qualquer controle dele estiver. */
+const grupoPreenchido = (g) => [...g.querySelectorAll('input, select, textarea')].some(controlePreenchido);
+
 /** Busca por nome do campo: corta o que não casa e abre as seções que sobraram. */
-export function filtrarCampos(raiz, termo, prefixo = '') {
+export function filtrarCampos(raiz, termo) {
     const q = String(termo || '').trim().toLowerCase();
     raiz.querySelectorAll('[data-campo]').forEach(g => {
         const alvo = (g.textContent + ' ' + (g.dataset.campo || '')).toLowerCase();
         if (!q || alvo.includes(q)) g.removeAttribute('data-fora-busca');
         else g.setAttribute('data-fora-busca', '');
     });
-    atualizarResumo(raiz, prefixo);
+    atualizarResumo(raiz);
     if (q) raiz.querySelectorAll('details.ef-sec').forEach(s => { if (!s.hidden) s.open = true; });
 }
 
@@ -623,10 +641,10 @@ export function ligarFormulario(raiz, prefixo = '', { visibilidade = true } = {}
     // `visibilidade: false` = o Painel do Criador, que já tem o wiring dele
     // para showWhen/showWhenBoolean/showWhenNotNull. Ligar os dois faria o
     // mesmo campo ser mostrado e escondido duas vezes por tecla.
-    const repintar = () => visibilidade ? aplicarVisibilidade(raiz, prefixo) : atualizarResumo(raiz, prefixo);
+    const repintar = () => visibilidade ? aplicarVisibilidade(raiz, prefixo) : atualizarResumo(raiz);
     raiz.addEventListener('input', e => {
-        if (e.target.matches('[data-ef-busca]')) filtrarCampos(raiz, e.target.value, prefixo);
-        else atualizarResumo(raiz, prefixo);
+        if (e.target.matches('[data-ef-busca]')) filtrarCampos(raiz, e.target.value);
+        else atualizarResumo(raiz);
     });
     raiz.addEventListener('change', repintar);
     raiz.addEventListener('click', e => {
@@ -638,5 +656,5 @@ export function ligarFormulario(raiz, prefixo = '', { visibilidade = true } = {}
     // o wiring do Criador se resolve num setTimeout(0); recontar antes disso
     // marcaria como visível o campo que ele ainda vai esconder.
     if (visibilidade) aplicarVisibilidade(raiz, prefixo);
-    else setTimeout(() => atualizarResumo(raiz, prefixo), 0);
+    else setTimeout(() => atualizarResumo(raiz), 0);
 }

@@ -26,8 +26,9 @@
 
 <script type="module">
 import {
-    SECOES_EQUIPAMENTO, CAMPOS_EQUIPAMENTO, agruparEmSecoesDOM,
-} from './shared/equip-campos.js?v=13';
+    SECOES_EQUIPAMENTO, CAMPOS_EQUIPAMENTO, agruparEmSecoesDOM, atualizarResumo, filtrarCampos,
+} from './shared/equip-campos.js?v=14';
+import { SECOES_CONDICAO } from './painel-criador/js/cadastro-secoes.js?v=1';
 
 const linhas = [];
 let ok = 0;
@@ -104,6 +105,65 @@ teste('T9 · seção sem campo nenhum não vira gaveta vazia',
 // ---- 5. o aviso de busca sem resultado existe em toda grade agrupada ----
 teste('T10 · a grade ganha o aviso de "nenhum campo com esse nome"',
     !!$('[data-ef-vazio]', grade) && $('[data-ef-vazio]', grade).hidden);
+
+// ---- 6. o contador lê o DOM, não a spec do Equipamento ----
+// Sem isto os quatro cadastros do Criador (Condição, Classe, Tribo, Valor
+// Derivado) nasceriam todos "0/N": as chaves deles não estão em
+// CAMPOS_EQUIPAMENTO, que era onde atualizarResumo procurava o tipo do campo.
+(() => {
+    const chavesCond = SECOES_CONDICAO.flatMap(sec => sec.campos);
+    const gc = montarGrade(chavesCond);
+    // controles de tipos diferentes, como o Criador desenha
+    $('#field_removivel', gc).outerHTML = '<input type="checkbox" id="field_removivel">';
+    $('#field_efeitoMecanicaIds', gc).outerHTML = '<input type="hidden" id="field_efeitoMecanicaIds" value="[]">';
+    $('#field_afetaTabuleiro', gc).outerHTML = '<input type="checkbox" id="field_afetaTabuleiro">';
+    agruparEmSecoesDOM(gc, SECOES_CONDICAO, () => false, 'form-grid');
+
+    const badge = (id) => $(`details[data-secao="${id}"] [data-ef-badge]`, gc).textContent;
+    atualizarResumo(gc);
+    teste(`T11 · cadastro que não é Equipamento também conta (Identidade ${badge('identidade')})`,
+        badge('identidade') === '0/5');
+
+    // preencher de verdade: texto, checkbox e seletor com JSON
+    $('#field_nome', gc).value = 'Sangrando';
+    $('#field_removivel', gc).checked = true;
+    $('#field_efeitoMecanicaIds', gc).value = '[{"id":"me1"}]';
+    atualizarResumo(gc);
+    teste(`T12 · texto e checkbox contam (Identidade ${badge('identidade')})`,
+        badge('identidade') === '2/5');
+    teste(`T13 · seletor com lista VAZIA não conta; com item, conta (Efeito ${badge('efeito')})`,
+        badge('efeito') === '1/4');
+
+    // lista vazia volta a não contar
+    $('#field_efeitoMecanicaIds', gc).value = '[]';
+    atualizarResumo(gc);
+    teste('T14 · esvaziar o seletor derruba o contador de volta', badge('efeito') === '0/4');
+
+    // ---- 7. gaveta cujo interruptor está desligado NÃO some ----
+    // (é o que o cadastro-secoes.test.mjs cobra no mapa; aqui se mede na tela)
+    const gav = $('details[data-secao="tabuleiro"]', gc);
+    $$('[data-campo]', gav).forEach(g => {
+        if (g.dataset.campo !== 'afetaTabuleiro') g.style.display = 'none';
+    });
+    atualizarResumo(gc);
+    teste(`T15 · com o Tabuleiro desligado a gaveta continua na tela (${badge('tabuleiro')})`,
+        gav.hidden === false && badge('tabuleiro') === '0/1');
+
+    // religa: os 12 campos voltam
+    $$('[data-campo]', gav).forEach(g => g.style.display = '');
+    atualizarResumo(gc);
+    teste(`T16 · religado, o denominador volta a contar tudo (${badge('tabuleiro')})`,
+        badge('tabuleiro') === '0/13');
+
+    // ---- 8. a busca também vale nos cadastros do Criador ----
+    filtrarCampos(gc, 'visao');
+    const vivas = $$('details.ef-sec', gc).filter(x => !x.hidden);
+    teste('T17 · buscar campo funciona fora do Equipamento — ' + vivas.map(x => x.dataset.secao).join(', '),
+        vivas.length === 1 && vivas[0].dataset.secao === 'tabuleiro');
+    filtrarCampos(gc, '');
+    teste('T18 · limpar a busca devolve as gavetas',
+        $$('details.ef-sec', gc).filter(x => !x.hidden).length === SECOES_CONDICAO.length);
+})();
 
 // ---- saída ----
 $('#saida').innerHTML = linhas.map(([n, p]) =>
