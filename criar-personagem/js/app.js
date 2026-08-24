@@ -427,6 +427,7 @@ function criarGuiaCompraExp(tipo) {
                 ${nivelBase}
                 <li><span class="dot-legenda"></span> <strong>Bolinha sólida</strong> — paga com os <strong>pontos iniciais</strong> da pool acima. Não custa EXP.</li>
                 <li><span class="dot-legenda exp"></span> <strong>Bolinha dourada cheia</strong> — comprada com <strong>EXP</strong> pelo botão <strong>+</strong>. Vale antes, durante e depois de distribuir os pontos.</li>
+                <li><span class="dot-legenda mec"></span> <strong>Bolinha verde</strong> — veio de <strong>peculiaridade</strong>: o que a classe dá de graça e o que você distribuiu na etapa de Peculiaridades. Não custa ponto nem EXP, e soma por cima do resto.</li>
                 <li>O degrau <strong>N</strong> custa <strong>N ×</strong> ${custo}. Ir do 2 para o 3 é mais caro que do 1 para o 2.</li>
                 <li>O EXP passa por cima do teto de pontos da criação, mas <strong>nunca do nível ${teto}</strong>.</li>
                 ${limitador}

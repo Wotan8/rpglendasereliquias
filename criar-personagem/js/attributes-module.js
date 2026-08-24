@@ -94,6 +94,9 @@ function estadoCompraAtributo(attrKey) {
 
 function renderAttrDistribution() {
     const base = REGRAS_CRIACAO.atributos.base_inicial;
+    // Bônus de peculiaridade (fixo ou distribuído). Fora de nivelAtributo: a
+    // ficha reaplica a mecânica por cima dos dots, somar aqui dobraria.
+    const bonus = bonusDeMecanicas();
     let html = '';
 
     for (const grupo of GRUPOS_ATRIBUTOS) {
@@ -106,6 +109,8 @@ function renderAttrDistribution() {
         for (const attr of ATRIBUTOS[grupo]) {
             const pontos = base + (wizardState.atributos[attr.key] || 0);
             const total = nivelAtributo(attr.key);
+            const mec = bonus[attr.key] || 0;
+            const comMec = total + mec;
             const maxDots = getAttrMaxDots(attr.key, attr.id);
             const est = estadoCompraAtributo(attr.key);
 
@@ -120,12 +125,15 @@ function renderAttrDistribution() {
                 if (d === 1) classes.push('bonus');
                 if (d <= pontos) classes.push('filled');
                 else if (d <= total) classes.push('filled', 'exp');
+                else if (d <= comMec) classes.push('filled', 'mec');
 
                 // Acima do teto de pontos a bolinha só sobe pelo botão + (EXP).
                 const soExp = d > maxDots;
-                const titulo = soExp
-                    ? `Acima do teto de pontos iniciais (${maxDots}) — só sobe comprando com EXP no +.`
-                    : `Nível ${d} com os pontos iniciais`;
+                const titulo = d > total && d <= comMec
+                    ? `Vem de peculiaridade (${mec > 0 ? '+' : ''}${mec}) — soma por cima do que você distribuir.`
+                    : (soExp
+                        ? `Acima do teto de pontos iniciais (${maxDots}) — só sobe comprando com EXP no +.`
+                        : `Nível ${d} com os pontos iniciais`);
                 html += `<button class="${classes.join(' ')}" data-attr="${attr.key}" data-dot="${d}"
                     title="${escHtml(titulo)}" ${soExp ? 'disabled' : `onclick="clickAttrDot('${attr.key}', ${d}, '${grupo}')"`}></button>`;
             }

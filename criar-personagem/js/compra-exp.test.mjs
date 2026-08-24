@@ -44,7 +44,10 @@ ctx.window = ctx;
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 
-for (const f of ['js/data.js', 'js/wizard-engine.js', 'js/exp-tracker.js', 'js/app.js', 'js/attributes-module.js', 'js/skills-module.js']) {
+// distribuicoes-module entra porque atributo e perícia leem dele o bônus que a
+// peculiaridade soma na linha (bonusDeMecanicas). Sem peculiaridade escolhida
+// ele devolve {} e nada muda — mas a função precisa existir.
+for (const f of ['js/data.js', 'js/wizard-engine.js', 'js/exp-tracker.js', 'js/app.js', 'js/distribuicoes-module.js', 'js/attributes-module.js', 'js/skills-module.js']) {
     vm.runInContext(readFileSync(new URL(f, raiz), 'utf8'), ctx, { filename: f });
 }
 

@@ -200,7 +200,10 @@ function getSkillParentAttributeLevel(sk) {
     if (!attrSource) return Infinity;
 
     const nomes = Array.isArray(attrSource) ? attrSource : String(attrSource).split('/');
-    const niveis = nomes.map(_resolveAttrKey).filter(Boolean).map(nivelAtributo);
+    // Mesmo nível que a ficha usa como limitador: dots + bônus de mecânica.
+    const bonus = bonusDeMecanicas();
+    const niveis = nomes.map(_resolveAttrKey).filter(Boolean)
+        .map(k => nivelAtributo(k) + (bonus[k] || 0));
     return niveis.length ? Math.min(...niveis) : Infinity;
 }
 
@@ -243,10 +246,14 @@ function estadoCompraPericia(sk) {
 }
 
 /** Uma linha de perícia. `grupo` null = exclusiva (sem pontos iniciais, só EXP). */
-function renderSkillRow(sk, grupo) {
+function renderSkillRow(sk, grupo, bonus) {
     const dotKey = 'sk_' + sk.key;
     const pontos = wizardState.pericias[dotKey] || 0;
     const total = nivelPericia(dotKey);
+    // O que a peculiaridade soma por cima (fixo da classe ou distribuído). Fica
+    // FORA de nivelPericia: a ficha reaplica a mecânica, somar aqui dobraria.
+    const mec = (bonus || bonusDeMecanicas())[dotKey] || 0;
+    const comMec = total + mec;
     const maxPontos = grupo ? getSkillMaxPontos(sk).max : 0;
     const est = estadoCompraPericia(sk);
 
@@ -257,12 +264,15 @@ function renderSkillRow(sk, grupo) {
         const classes = ['dot'];
         if (d <= pontos) classes.push('filled');
         else if (d <= total) classes.push('filled', 'exp');
+        else if (d <= comMec) classes.push('filled', 'mec');
 
         const soExp = d > maxPontos;
-        const titulo = !grupo
-            ? 'Exclusiva: não recebe ponto inicial, só EXP pelo botão +.'
-            : (soExp ? `Acima do que os pontos iniciais alcançam (${maxPontos}) — daqui pra cima só com EXP no +.`
-                     : `Nível ${d} com os pontos iniciais do grupo`);
+        const titulo = d > total && d <= comMec
+            ? `Vem de peculiaridade (${mec > 0 ? '+' : ''}${mec}) — soma por cima do que você treinar.`
+            : (!grupo
+                ? 'Exclusiva: não recebe ponto inicial, só EXP pelo botão +.'
+                : (soExp ? `Acima do que os pontos iniciais alcançam (${maxPontos}) — daqui pra cima só com EXP no +.`
+                         : `Nível ${d} com os pontos iniciais do grupo`));
 
         dots += `<button class="${classes.join(' ')}" data-skill="${dotKey}" data-dot="${d}"
             title="${escHtml(titulo)}" ${soExp ? 'disabled' : `onclick="clickSkillDot('${dotKey}', ${d}, '${grupo}')"`}></button>`;
@@ -282,6 +292,7 @@ function renderSkillDistribution() {
     if (!container) return;
 
     let html = '';
+    const bonus = bonusDeMecanicas();
     for (const grp of _skillGroups) {
         const skills = window.SKILLS?.[grp] || [];
         const pool = getSkillGroupPool(grp);
@@ -292,7 +303,7 @@ function renderSkillDistribution() {
                 <div class="attr-dist-title">${_skillGroupLabels[grp]}</div>
                 <div class="attr-dist-counter" id="skillCounter_${grp}">Restante: ${remaining}/${pool}</div>
         `;
-        for (const sk of skills) html += renderSkillRow(sk, grp);
+        for (const sk of skills) html += renderSkillRow(sk, grp, bonus);
         html += `</div>`;
     }
     container.innerHTML = html;
@@ -333,8 +344,9 @@ function renderSkillExclusivas() {
             <div class="attr-dist-title">🌟 ${escHtml(wizardState.classeSelecionada || 'Exclusivas')}</div>
             <div class="attr-dist-counter">${skills.length} exclusiva(s) · ${gasto} EXP gastos em perícias · ${ExpTracker.getTotal()} EXP no pool</div>`;
 
+    const bonus = bonusDeMecanicas();
     for (const sk of skills) {
-        html += renderSkillRow(sk, null);
+        html += renderSkillRow(sk, null, bonus);
         if (sk.descricao) {
             html += `<div class="skill-desc" title="${escHtml(sk.descricao)}">${escHtml(sk.descricao)}</div>`;
         }

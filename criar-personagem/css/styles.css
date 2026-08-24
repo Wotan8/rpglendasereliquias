@@ -325,6 +325,15 @@ html.dark .dot.filled {
     background: var(--lr-text-1);
 }
 
+/* Bolinha que veio de peculiaridade (mecânica fixa da classe ou o que o
+   jogador distribuiu): verde, para não se confundir nem com ponto nem com EXP.
+   Ela mora sempre no topo da linha — soma por cima do que o jogador treinar. */
+.dot.mec.filled {
+    background: var(--success);
+    border-color: var(--success);
+    box-shadow: none;
+}
+
 html.dark .dot.bonus.filled {
     background: var(--lr-gold-soft);
     border-color: var(--lr-gold);

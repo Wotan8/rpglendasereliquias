@@ -186,3 +186,100 @@ function setDistribuirAlvo(sel) {
     renderDistribuicoes();
     saveWizardToStorage();
 }
+
+/* ===== BÔNUS DE MECÂNICA EM ATRIBUTO E PERÍCIA =====
+   A ficha lê o nível como dots + mechanicBonuses. O wizard só desenhava os
+   dots — então nem o +1 Disparo que a classe dá de graça (mecânica `modificar`)
+   nem o que o jogador acabou de distribuir aqui em cima apareciam na etapa de
+   Atributos/Perícias. Só na ficha, depois de criado.
+
+   Isto devolve o mesmo bônus, por chave de linha do wizard (attr_for, sk_disparo).
+   NÃO entra em nivelAtributo()/nivelPericia(): esses dois viram os dots gravados
+   no personagem, e a ficha reaplica a mecânica por cima — somar lá dobraria.
+
+   Valor que depende de equação da ficha ("[FOR] × 2") fica de fora: nenhum bônus
+   de atributo/perícia do cadastro usa isso hoje, e o resolvedor de equações mora
+   no mechanics-simulator. A ficha calcula certo de qualquer jeito; o que se
+   perde é só a prévia. */
+
+const _BM_ATTR = {
+    'INT': 'attr_int', 'RAC': 'attr_rac', 'PRS': 'attr_prs',
+    'FOR': 'attr_for', 'DES': 'attr_des', 'VIG': 'attr_vig',
+    'PRE': 'attr_pre', 'MAN': 'attr_man', 'AUT': 'attr_aut',
+    'Inteligência': 'attr_int', 'Raciocínio': 'attr_rac', 'Perseverança': 'attr_prs',
+    'Força': 'attr_for', 'Destreza': 'attr_des', 'Vigor': 'attr_vig',
+    'Presença': 'attr_pre', 'Manipulação': 'attr_man', 'Autocontrole': 'attr_aut'
+};
+
+/** Alvo de mecânica → chave da linha do wizard. null = não é atributo nem perícia. */
+function _bmChaveDoAlvo(nome) {
+    if (!nome) return null;
+    if (_BM_ATTR[nome]) return _BM_ATTR[nome];
+    // O prefixo "Perícia:" existe para desambiguar de VD homônimo; aqui ele só
+    // sai da BUSCA — nada é regravado sem ele.
+    const semPrefixo = String(nome).replace(/^Perícia:\s*/, '');
+    for (const lista of Object.values(window.SKILLS || {})) {
+        const sk = (lista || []).find(s => s.name === semPrefixo);
+        if (sk) return 'sk_' + sk.key;
+    }
+    return null;
+}
+
+/** Valor fixo de um cálculo. null quando depende de equação que lê a ficha. */
+function _bmValorFixo(calc) {
+    if (Array.isArray(calc.equacao) && calc.equacao.length) {
+        const t = calc.equacao[0];
+        if (calc.equacao.length > 1 || (t.tipo && t.tipo !== 'fixo')) return null;
+        return parseFloat(t.valor) || 0;
+    }
+    if (calc.valorTipo === 'ficha') return null;
+    return parseFloat(calc.valor) || 0;
+}
+
+/** { 'attr_for': 1, 'sk_disparo': 1 } — o que as peculiaridades somam nas linhas. */
+function bonusDeMecanicas() {
+    const out = {};
+    const soma = (nome, valor, operacao) => {
+        if (!valor || operacao === '=') return; // "=" é override, não bônus somável
+        const chave = _bmChaveDoAlvo(nome);
+        if (chave) out[chave] = (out[chave] || 0) + (operacao === '-' ? -valor : valor);
+    };
+
+    const vistos = new Set();
+    for (const { pec } of _distPecsAtivas()) {
+        for (const bruta of (pec.mecanicas || [])) {
+            if (!bruta || vistos.has(bruta.id)) continue;
+            vistos.add(bruta.id);
+            if (bruta.condicaoAplicacao && bruta.condicaoAplicacao.trim()) continue;
+
+            // Mesma régua da ficha (applyMechanicToSheet): `modificar` só vale
+            // permanente; `distribuir` vale permanente ou de criação.
+            const permanente = !bruta.duracao || bruta.duracao === 'permanente';
+            const criacao = bruta.duracao === 'criacao';
+            if (bruta.tipo === 'modificar' && !permanente) continue;
+            if (bruta.tipo === 'distribuir' && !permanente && !criacao) continue;
+            if (bruta.tipo !== 'modificar' && bruta.tipo !== 'distribuir') continue;
+
+            const mech = (bruta.evoluivel && typeof window._adjustMechanicForLevel === 'function')
+                ? window._adjustMechanicForLevel(bruta, _distNivelDaPec(pec))
+                : bruta;
+            const cfg = mech.config || {};
+
+            if (mech.tipo === 'distribuir') {
+                for (const alvo of (wizardState.distribuicoes?.[mech.id] || [])) {
+                    soma(alvo.nome, Number(alvo.valor) || 0, cfg.operacao);
+                }
+                continue;
+            }
+
+            const calculos = Array.isArray(cfg.calculos) ? cfg.calculos : (cfg.alvo ? [cfg] : []);
+            for (const calc of calculos) {
+                const val = _bmValorFixo(calc);
+                if (val === null) continue;
+                const alvos = Array.isArray(calc.alvo) ? calc.alvo : [calc.alvo];
+                alvos.forEach(a => soma(a, val, calc.operacao || cfg.operacao));
+            }
+        }
+    }
+    return out;
+}

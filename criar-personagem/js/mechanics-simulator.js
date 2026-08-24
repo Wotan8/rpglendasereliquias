@@ -16,12 +16,17 @@ export function simulateDerivedValues() {
     // Nível efetivo = base + pontos iniciais + níveis comprados com EXP na criação.
     // O comprado com EXP pesa nos derivados igual ao que veio da pool de pontos.
     const baseInicial = window.REGRAS_CRIACAO?.atributos?.base_inicial || 1;
+    /* O bônus que a peculiaridade põe no atributo/perícia entra aqui pelo mesmo
+       motivo que o EXP entra: a ficha soma dots + mechanicBonuses antes de
+       resolver qualquer fórmula. Sem isso o +1 Vigor da classe não engorda a
+       Vitalidade na prévia, mas engorda depois, na ficha. */
+    const bonusMec = (typeof window.bonusDeMecanicas === 'function') ? window.bonusDeMecanicas() : {};
     ['attr_int', 'attr_rac', 'attr_prs', 'attr_for', 'attr_des', 'attr_vig', 'attr_pre', 'attr_man', 'attr_aut'].forEach(attr => {
-        baseStats[attr] = (baseStats[attr] || 0) + (state.atributosExp?.[attr] || 0) + baseInicial;
+        baseStats[attr] = (baseStats[attr] || 0) + (state.atributosExp?.[attr] || 0) + baseInicial + (bonusMec[attr] || 0);
     });
 
-    /** Nível da perícia somando ponto inicial e nível comprado com EXP. */
-    const nivelPericia = (dotKey) => (state.pericias?.[dotKey] || 0) + (state.periciasExp?.[dotKey] || 0);
+    /** Nível da perícia somando ponto inicial, nível comprado com EXP e bônus de mecânica. */
+    const nivelPericia = (dotKey) => (state.pericias?.[dotKey] || 0) + (state.periciasExp?.[dotKey] || 0) + (bonusMec[dotKey] || 0);
 
     // 1. Iniciar com os Valores Iniciais definidos pela Raça, Classe e Tribo
     const raca = window._systemData?.races?.find(r => r.nome === state.racaSelecionada);

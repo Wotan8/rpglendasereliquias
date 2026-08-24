@@ -15,10 +15,12 @@
 
 <div id="out">carregando…</div>
 <div class="demo"><h4>Render real — Humano + Caçador (etapa Peculiaridades)</h4><div id="demo"></div></div>
+<div class="demo"><h4>Etapa Perícias — bolinha verde = veio de peculiaridade</h4><div id="demoSkills" class="attr-dist-grid"></div></div>
+<div class="demo"><h4>Etapa Atributos — mesma bolinha verde</h4><div id="demoAttrs" class="attr-dist-grid"></div></div>
 
 <!-- ?nocache: o service worker precacheia estes arquivos e serviria a versão
      antiga; um check tem que ler sempre o que está no disco. -->
-<script>document.write(['js/data.js','../ficha-v1.7_1/js/mechanics-engine.js','js/system-data-loader.js','js/distribuicoes-module.js']
+<script>document.write(['js/data.js','../ficha-v1.7_1/js/mechanics-engine.js','js/system-data-loader.js','js/wizard-engine.js','js/exp-tracker.js','js/distribuicoes-module.js','js/skills-module.js','js/attributes-module.js']
     .map(s => `<scr${''}ipt src="${s}?nocache=${Date.now()}"></scr${''}ipt>`).join(''));</script>
 <script>
     function escHtml(s) {
@@ -28,10 +30,17 @@
     }
     let salvou = 0;
     function saveWizardToStorage() { salvou++; }
-    window.wizardState = {
+    // Do app.js, que não é carregado aqui (ele inicia o wizard inteiro sozinho).
+    function avaliarCompraExp({ nivel, comprados }) { return { nivel, comprados, custoProx: 0, bloqueio: null }; }
+    function criarBotoesCompraExp() { return ''; }
+    function showWizardToast() {}
+    Object.assign(window.wizardState, {
         racaSelecionada: null, classeSelecionada: null, triboSelecionada: null,
-        peculiaridadesIndividuais: [], niveisPeculiaridadesHerdadas: {}, distribuicoes: {}
-    };
+        peculiaridadesIndividuais: [], niveisPeculiaridadesHerdadas: {}, distribuicoes: {},
+        pericias: {}, periciasExp: {}, atributos: {}, atributosExp: {}, expSources: {},
+        grupoPericiaPrimario: 'mental', grupoPericia2: 'fisico', grupoPericia3: 'social', grupoPericiaFraco: 'combate',
+        grupoPrimario: 'Mental', grupoFraco: 'Social'
+    });
 
     const log = [];
     const T = (cond, ok, erro) => log.push((cond ? ' ok   ' : 'FALHA ') + (cond ? ok : erro));
@@ -110,6 +119,56 @@
         wizardState.classeSelecionada = 'Caçador';
         wizardState.distribuicoes = {};
         document.getElementById('demo').innerHTML = `<div id="distribuicoesBox">${distribuicoesHtml()}</div>`;
+
+        // === Bônus nas linhas de Atributo/Perícia ===
+        // O Caçador dá +1 Disparo e +1 Herbalismo de graça (mecânica `modificar`),
+        // além dos 2 que o jogador distribui. Nada disso aparecia na etapa 4.
+        wizardState.distribuicoes = {};
+        let bonus = bonusDeMecanicas();
+        T(bonus['sk_disparo'] === 1 && bonus['sk_herbalismo'] === 1,
+            `bônus fixo da classe entra na linha: Disparo +${bonus['sk_disparo']}, Herbalismo +${bonus['sk_herbalismo']}`,
+            `esperava +1 em Disparo e Herbalismo, veio ${JSON.stringify(bonus)}`);
+
+        const alvoDist = distribuicoesDisponiveis().find(d => d.fonte === 'Classe');
+        wizardState.distribuicoes[alvoDist.mech.id] = [{ nome: 'Perícia: Esquiva', valor: 1 }];
+        bonus = bonusDeMecanicas();
+        T(bonus['sk_esquiva'] === 1, 'o que o jogador distribui soma na mesma linha',
+            `Esquiva não recebeu o distribuído: ${JSON.stringify(bonus)}`);
+
+        // renderSkillDistribution escreve em #skillDistGrid — o check monta o dele
+        document.getElementById('demoSkills').innerHTML = '<div id="skillDistGrid" class="attr-dist-grid"></div>';
+        renderSkillDistribution();
+        const linhasMec = document.querySelectorAll('#demoSkills .dot.mec.filled');
+        T(linhasMec.length >= 3,
+            `${linhasMec.length} bolinhas verdes na etapa de Perícias (Disparo, Herbalismo, Esquiva…)`,
+            `esperava ao menos 3 bolinhas verdes, achei ${linhasMec.length}`);
+
+        // Atributos: distribuir em atributo pinta a mesma bolinha
+        const distRaca = distribuicoesDisponiveis().find(d => d.fonte === 'Raça');
+        document.getElementById('demoAttrs').innerHTML = renderAttrDistribution();
+        const antesAttr = document.querySelectorAll('#demoAttrs .dot.mec.filled').length;
+        T(antesAttr === 0, 'sem bônus em atributo, nenhuma bolinha verde lá', `${antesAttr} bolinhas verdes sem motivo`);
+
+        /* Nenhuma peculiaridade do cadastro mexe em atributo hoje — mas a linha de
+           atributo passa pelo mesmo caminho, e no dia em que uma mexer tem de
+           acender. Peculiaridade sintética, só neste check. */
+        const pecFake = {
+            id: '__check_forca', nome: 'Teste: +1 Força', mecanicas: [{
+                id: '__check_mec_forca', tipo: 'modificar', duracao: 'permanente',
+                config: { calculos: [{ alvo: 'Força', operacao: '+', valor: 1 }] }
+            }]
+        };
+        window.INDIVIDUAL_PECULIARITIES.push(pecFake);
+        wizardState.peculiaridadesIndividuais = [{ id: pecFake.id, nome: pecFake.nome, nivel: 1 }];
+        T(bonusDeMecanicas()['attr_for'] === 1, 'mecânica que soma em atributo é reconhecida',
+            `attr_for veio ${bonusDeMecanicas()['attr_for']}`);
+        document.getElementById('demoAttrs').innerHTML = renderAttrDistribution();
+        T(document.querySelectorAll('#demoAttrs .dot.mec.filled').length === 1,
+            '+1 Força pinta uma bolinha verde na etapa de Atributos',
+            'a bolinha de atributo não apareceu');
+        wizardState.peculiaridadesIndividuais = [];
+        window.INDIVIDUAL_PECULIARITIES.pop();
+        wizardState.distribuicoes = {};
 
         const falhas = log.filter(l => l.startsWith('FALHA')).length;
         document.getElementById('out').textContent =

@@ -116,4 +116,58 @@ const antes = salvou;
 chamar('sincronizarDistribuicoes()');
 assert.equal(salvou, antes, 'sincronização estável não dispara auto-save');
 
-console.log('ok — distribuições da criação: opcionais, e somem junto com a peculiaridade');
+// === Bônus que a linha de Atributo/Perícia tem de mostrar ===
+// A ficha lê dots + mechanicBonuses; o wizard só desenhava os dots.
+ctx.SKILLS = { fisico: [{ name: 'Disparo', key: 'disparo' }, { name: 'Esquiva', key: 'esquiva' }] };
+ctx.RACES = { Yotun: { peculiaridades: [pecRaca] } };
+ws.racaSelecionada = 'Yotun';
+ws.peculiaridadesIndividuais = [];
+ws.distribuicoes = {};
+
+const bonus = () => chamar('bonusDeMecanicas()');
+
+// Pec de classe com bônus fixo (+1 Disparo) e um alvo de atributo junto
+ctx.CLASS_PECULIARITIES = {
+    Caçador: [{
+        id: 'pec_cac', nome: 'Perícias Iniciais', mecanicas: [{
+            id: 'mec_fixo', tipo: 'modificar', duracao: 'permanente',
+            config: { calculos: [
+                { alvo: 'Perícia: Disparo', operacao: '+', valor: 1 },
+                { alvo: 'Força', operacao: '+', valor: 2 },
+            ] },
+        }],
+    }],
+};
+ws.classeSelecionada = 'Caçador';
+assert.equal(bonus().sk_disparo, 1, 'o +1 fixo da classe entra na linha da perícia');
+assert.equal(bonus().attr_for, 2, 'alvo de atributo resolve para attr_*');
+
+// O que o jogador distribuiu soma na mesma conta
+ws.distribuicoes = { mec_estudo: [{ nome: 'Medicina', valor: 1 }] };
+assert.equal(bonus().sk_medicina, undefined, 'perícia fora de SKILLS não vira chave inventada');
+ctx.SKILLS.mental = [{ name: 'Medicina', key: 'medicina' }];
+assert.equal(bonus().sk_medicina, 1, 'o distribuído soma na linha da perícia');
+
+// Operação "-" desconta; "=" é override, não bônus somável
+ctx.CLASS_PECULIARITIES['Caçador'][0].mecanicas[0].config.calculos[0].operacao = '-';
+assert.equal(bonus().sk_disparo, -1, 'operação "-" desconta');
+ctx.CLASS_PECULIARITIES['Caçador'][0].mecanicas[0].config.calculos[0].operacao = '=';
+assert.equal(bonus().sk_disparo, undefined, '"=" não é bônus somável — fica para a ficha');
+
+// Valor que depende de equação da ficha fica de fora (não dá para prever aqui)
+ctx.CLASS_PECULIARITIES['Caçador'][0].mecanicas[0].config.calculos = [
+    { alvo: 'Perícia: Disparo', operacao: '+', equacao: [{ tipo: 'ficha', ref: 'FOR' }] },
+];
+assert.equal(bonus().sk_disparo, undefined, 'equação que lê a ficha não entra na prévia');
+
+// Mecânica condicional ou temporária não vale na linha, como na ficha
+ctx.CLASS_PECULIARITIES['Caçador'][0].mecanicas[0].config.calculos = [
+    { alvo: 'Perícia: Disparo', operacao: '+', valor: 1 },
+];
+ctx.CLASS_PECULIARITIES['Caçador'][0].mecanicas[0].duracao = 'cena';
+assert.equal(bonus().sk_disparo, undefined, 'mecânica temporária não entra na linha');
+ctx.CLASS_PECULIARITIES['Caçador'][0].mecanicas[0].duracao = 'permanente';
+ctx.CLASS_PECULIARITIES['Caçador'][0].mecanicas[0].condicaoAplicacao = 'se estiver ferido';
+assert.equal(bonus().sk_disparo, undefined, 'mecânica condicional não entra na linha');
+
+console.log('ok — distribuições da criação: opcionais, somem junto com a peculiaridade, e aparecem nas linhas');

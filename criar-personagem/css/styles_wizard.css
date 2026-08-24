@@ -1549,7 +1549,7 @@ html.dark .dot.exp.filled {
     vertical-align: middle;
 }
 
-/* As três variantes da legenda espelham as três bolinhas da linha. */
+/* As variantes da legenda espelham as bolinhas da linha. */
 .dot-legenda.exp {
     background: var(--accent);
     border-color: var(--accent);
@@ -1558,6 +1558,11 @@ html.dark .dot.exp.filled {
 .dot-legenda.base {
     background: var(--lr-gold-soft);
     border-color: var(--accent);
+}
+
+.dot-legenda.mec {
+    background: var(--success);
+    border-color: var(--success);
 }
 
 /* ===== LINHAS DE ATRIBUTO / PERÍCIA ===== */
