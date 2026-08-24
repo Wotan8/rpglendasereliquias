@@ -23,6 +23,7 @@ window.wizardState = {
     // Fase 2B
     peculiaridadesIndividuais: [], // [{ id, nome, nivel }]
     niveisPeculiaridadesHerdadas: {}, // { id: nivel }
+    distribuicoes: {}, // mechId → [{ nome, valor }] escolhidos nas mecânicas "distribuir"
 
     // Fase 3
     grupoPrimario: null,       // 'Mental' | 'Fisico' | 'Social'

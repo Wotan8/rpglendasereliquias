@@ -1,0 +1,120 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__check: distribuições na criação de personagem</title>
+<link rel="stylesheet" href="../shared/detalhe.css?v=4">
+<script type="module">import '../shared/detalhe.js?v=4';</script>
+<script>document.write(['../shared/tokens.css','css/styles.css','css/styles_wizard.css']
+    .map(h => `<li${''}nk rel="stylesheet" href="${h}?nocache=${Date.now()}">`).join(''));</script>
+<style>
+    body { padding: 16px; font-family: system-ui, sans-serif; }
+    #out { font: 12px monospace; white-space: pre-wrap; background: #111; color: #9f9; padding: 10px; border-radius: 6px; }
+    .demo { border: 1px solid #444; border-radius: 8px; padding: 12px; margin-top: 12px; }
+    .demo > h4 { margin: 0 0 8px; color: #9cf; font: 700 13px system-ui; }
+</style>
+
+<div id="out">carregando…</div>
+<div class="demo"><h4>Render real — Humano + Caçador (etapa Peculiaridades)</h4><div id="demo"></div></div>
+
+<!-- ?nocache: o service worker precacheia estes arquivos e serviria a versão
+     antiga; um check tem que ler sempre o que está no disco. -->
+<script>document.write(['js/data.js','../ficha-v1.7_1/js/mechanics-engine.js','js/system-data-loader.js','js/distribuicoes-module.js']
+    .map(s => `<scr${''}ipt src="${s}?nocache=${Date.now()}"></scr${''}ipt>`).join(''));</script>
+<script>
+    function escHtml(s) {
+        if (s === null || s === undefined) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+    let salvou = 0;
+    function saveWizardToStorage() { salvou++; }
+    window.wizardState = {
+        racaSelecionada: null, classeSelecionada: null, triboSelecionada: null,
+        peculiaridadesIndividuais: [], niveisPeculiaridadesHerdadas: {}, distribuicoes: {}
+    };
+
+    const log = [];
+    const T = (cond, ok, erro) => log.push((cond ? ' ok   ' : 'FALHA ') + (cond ? ok : erro));
+
+    fetch('__check-data.json', { cache: 'no-store' }).then(r => r.json()).then(data => {
+        Object.assign(window._systemData, data, { loaded: true });
+        buildSkillsFromFirebase();
+        window.RACES = buildRacesFromFirebase();
+        buildClassDataFromFirebase();
+        buildTribesFromFirebase();
+        buildIndividualPeculiarities();
+
+        // --- Personagem de teste: as duas fontes ao mesmo tempo ---
+        wizardState.racaSelecionada = 'Humano';   // Aprendizado Acelerado
+        wizardState.classeSelecionada = 'Caçador'; // Perícias Iniciais do Caçador
+
+        const disp = distribuicoesDisponiveis();
+        T(disp.length === 2, `duas distribuições abertas: ${disp.map(d => d.pec.nome).join(' + ')}`,
+            `esperava 2 distribuições, achei ${disp.length}`);
+        T(disp.every(d => d.alvos.length > 0), 'todo pool resolveu alvos', 'pool vazio chegou na lista');
+
+        // --- Render: um bloco por mecânica, um select por slot ---
+        document.getElementById('demo').innerHTML = `<div id="distribuicoesBox">${distribuicoesHtml()}</div>`;
+        const selects = document.querySelectorAll('#demo .dist-select');
+        const slotsEsperados = disp.reduce((n, d) => n + d.quantidade, 0);
+        T(selects.length === slotsEsperados, `${selects.length} selects para ${slotsEsperados} slots`,
+            `esperava ${slotsEsperados} selects, achei ${selects.length}`);
+        T([...selects].every(s => s.options[0].value === ''),
+            'todo slot abre em "não distribuir" — nada é obrigatório na criação',
+            'algum slot já nasce escolhido');
+
+        // --- Escolher pelo handler real ---
+        const alvo = disp[0].alvos[0];
+        const sel = document.querySelector(`#demo .dist-select[data-mech="${disp[0].mech.id}"]`);
+        sel.value = alvo;
+        sel.dispatchEvent(new Event('change'));
+        T(wizardState.distribuicoes[disp[0].mech.id]?.[0]?.nome === alvo,
+            `escolha gravada: ${alvo} (+${disp[0].valor})`, 'a escolha não chegou no wizardState');
+        T(document.querySelector(`#demo .dist-select[data-mech="${disp[0].mech.id}"]`).value === alvo,
+            'a caixa se repinta mantendo o escolhido', 'o select voltou vazio depois do repaint');
+
+        // --- O que vai para a ficha ---
+        const paraFicha = distribuicoesParaFicha();
+        const dados = paraFicha[disp[0].mech.id];
+        T(dados && dados.alvosEscolhidos.length === 1,
+            'mecanicasAplicadas sai no formato da ficha', 'mecanicasAplicadas saiu errado');
+        T(dados && dados.aplicada === (disp[0].quantidade === 1),
+            `aplicada=${dados && dados.aplicada} com ${dados && dados.alvosEscolhidos.length}/${disp[0].quantidade} slots`,
+            'flag aplicada não bate com os slots preenchidos');
+
+        // --- Trocar a classe tira a peculiaridade: a escolha some junto ---
+        const mechDaClasse = disp.find(d => d.fonte === 'Classe');
+        const mechDaRaca = disp.find(d => d.fonte === 'Raça');
+        wizardState.distribuicoes[mechDaClasse.mech.id] = [{ nome: mechDaClasse.alvos[0], valor: mechDaClasse.valor }];
+        wizardState.distribuicoes[mechDaRaca.mech.id] = [{ nome: mechDaRaca.alvos[0], valor: mechDaRaca.valor }];
+        wizardState.classeSelecionada = 'Guerreiro';
+        sincronizarDistribuicoes();
+        T(!wizardState.distribuicoes[mechDaClasse.mech.id],
+            'trocou de classe: a distribuição do Caçador foi apagada',
+            'a escolha do Caçador sobreviveu à troca de classe');
+        T(!!wizardState.distribuicoes[mechDaRaca.mech.id],
+            'a distribuição da raça, que continua no personagem, ficou',
+            'apagou a distribuição da raça sem motivo');
+
+        // --- Alvo que saiu do pool não passa ---
+        wizardState.distribuicoes[mechDaRaca.mech.id] = [{ nome: 'Perícia Inexistente', valor: 1 }];
+        sincronizarDistribuicoes();
+        T(!wizardState.distribuicoes[mechDaRaca.mech.id], 'alvo fora do pool é descartado', 'alvo inválido sobreviveu');
+
+        // --- Sincronização estável não fica salvando à toa ---
+        const antes = salvou;
+        sincronizarDistribuicoes();
+        T(salvou === antes, 'sincronização sem mudança não dispara auto-save', 'auto-save disparou sem mudança');
+
+        // Volta ao estado bonito para a captura de tela
+        wizardState.classeSelecionada = 'Caçador';
+        wizardState.distribuicoes = {};
+        document.getElementById('demo').innerHTML = `<div id="distribuicoesBox">${distribuicoesHtml()}</div>`;
+
+        const falhas = log.filter(l => l.startsWith('FALHA')).length;
+        document.getElementById('out').textContent =
+            (falhas ? `❌ ${falhas} FALHA(S)\n\n` : '✅ tudo ok\n\n') + log.join('\n');
+    }).catch(e => {
+        document.getElementById('out').textContent = 'ERRO: ' + e.message + '\n' + e.stack;
+    });
+</script>

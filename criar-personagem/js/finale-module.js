@@ -734,7 +734,9 @@ async function createCharacter() {
         inventoryItems,
         peculiaridadesIndividuais: ws.peculiaridadesIndividuais || [],
         partesDoCorpo, // <== Injetado no momento da criação
-        mecanicasAplicadas: {},
+        // Distribuições que o jogador já resolveu na criação (opcional). O que
+        // ficou vazio chega na ficha como pendente, como sempre foi.
+        mecanicasAplicadas: distribuicoesParaFicha(),
         mechanicBonuses: {},
         derivedModifiers: ws.derivedModifiers || {},
         mecanicasPendentes: [],

@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v306';
+const VERSION = 'v307';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -26,6 +26,7 @@ const PRECACHE_URLS = [
   '/criar-personagem/js/app.js',
   '/criar-personagem/js/attributes-module.js',
   '/criar-personagem/js/data.js',
+  '/criar-personagem/js/distribuicoes-module.js',
   '/criar-personagem/js/equipment-module.js',
   '/criar-personagem/js/exp-tracker.js',
   '/criar-personagem/js/finale-module.js',

@@ -262,7 +262,10 @@ export function simulateDerivedValues() {
             // Verificar condições — só aplica permanentes e sem condição
             const isConditional = mech.condicaoAplicacao && mech.condicaoAplicacao.trim() !== '';
             const isPermanent = !mech.duracao || mech.duracao === 'permanente';
-            if (!isPermanent || isConditional) return;
+            // Distribuir vale na criação também — é a mesma regra da ficha
+            // (applyMechanicToSheet: isCreation || isPermanent).
+            const valeAqui = isPermanent || (mech.tipo === 'distribuir' && mech.duracao === 'criacao');
+            if (!valeAqui || isConditional) return;
 
             if (mech.tipo === 'limitar') {
                 (mech.config.calculos || []).forEach(collectLimite);
@@ -279,6 +282,15 @@ export function simulateDerivedValues() {
                         const field = targetMap[alvo];
                         if (field) applyCalcToDV(calc, field);
                     });
+                });
+            } else if (mech.tipo === 'distribuir') {
+                // Alvo escolhido na etapa de Peculiaridades. Só alvo de Valor
+                // Derivado aparece aqui — bônus de mecânica em atributo o wizard
+                // já não simula (nem para 'modificar').
+                const alvos = (state.distribuicoes || {})[mech.id] || [];
+                alvos.forEach(alvo => {
+                    const field = targetMap[alvo.nome];
+                    if (field) applyCalcToDV({ valor: alvo.valor, operacao: mech.config.operacao || '+' }, field);
                 });
             } else if (mech.tipo === 'condicional') {
                 const config = mech.config;

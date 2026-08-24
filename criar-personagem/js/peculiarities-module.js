@@ -139,6 +139,10 @@ function initPhase2B(container) {
             html += `<div style="text-align:center;padding:30px;color:var(--muted);">Nenhuma peculiaridade individual encontrada no banco de dados.</div>`;
         }
 
+        /* Vem depois das peculiaridades: só dá para distribuir o que elas abriram.
+           A caixa se repinta sozinha quando o jogador pega, larga ou evolui uma. */
+        html += `<div id="distribuicoesBox">${distribuicoesHtml()}</div>`;
+
         html += createMemoryBox('peculiaridades', 'Escreva uma ou várias memórias sobre quando alguma ou todas essas peculiaridades que seu personagem tem, tiveram uma influência, positiva ou negativa. Te ajudando ou atrapalhando.', false);
 
         container.innerHTML = html;
@@ -497,6 +501,7 @@ function togglePeculiarity2(pecId) {
     }
 
     atualizarContadoresAvulsas();
+    renderDistribuicoes();
     saveWizardToStorage();
 }
 
@@ -550,6 +555,7 @@ function setPecLevel(pecId, level) {
         detailsPanel.innerHTML = generatePecDetailsHtml(pec, level);
     }
 
+    renderDistribuicoes();
     saveWizardToStorage();
 }
 
@@ -692,6 +698,7 @@ function setInheritedPecLevel(pecId, level) {
         detailsPanel.innerHTML = generatePecDetailsHtml(pec, targetLevel);
     }
 
+    renderDistribuicoes();
     saveWizardToStorage();
 }
 
