@@ -276,4 +276,37 @@ const CATALOG = [{ id: 'tpl-espada', nome: 'Espada Longa', formulaDano: '1d10' }
     assert.deepStrictEqual(computeGolpesDesarmados({}), [], 'contexto vazio não quebra');
 }
 
-console.log('✅ item-scope-calc: 13 grupos de asserções passaram.');
+// --- 14) danoParcelas: o "+N" colado no dado, aberto parcela por parcela ---
+{
+    // A janela do item mostrava "1d10+7" e nada dizia quais Valores Derivados
+    // somaram os 7. Sem esta lista, so o resultado.
+    const DVS2 = [
+        { key: 'BONUS_DANO', nome: 'Bônus de Dano', icone: '💥', escopoItem: 'dano' },
+        { key: 'AFIACAO', nome: 'Afiação', icone: '🗡️', escopoItem: 'dano' },
+        { key: 'ACERTO', nome: 'Acerto', icone: '🎯', escopoItem: 'coluna' },
+    ];
+    const ctx = {
+        derivedValues: DVS2,
+        derived: { BONUS_DANO: 2, AFIACAO: 0, ACERTO: 5 },
+        itemBonuses: { espada: { 'DERIVED:AFIACAO': 5 } },
+        catalog: CATALOG,
+    };
+    const r = computeItemScopedTotals({ id: 'espada', modeloId: 'tpl-espada' }, ctx);
+
+    assert.strictEqual(r.dano, '1d10+7', '2 do personagem + 5 da afiação do item');
+    assert.strictEqual(r.formulaBase, '1d10', 'o dado sozinho, para a linha "Dado da arma"');
+    assert.deepStrictEqual(r.danoParcelas.map(p => [p.nome, p.base, p.bonus, p.total]),
+        [['Bônus de Dano', 2, 0, 2], ['Afiação', 0, 5, 5]],
+        'cada parcela diz quanto veio do personagem e quanto veio do item');
+
+    // Parcela zerada nao vira linha: "Afiação 0" so polui.
+    const semAfiacao = computeItemScopedTotals({ id: 'outra', modeloId: 'tpl-espada' }, ctx);
+    assert.deepStrictEqual(semAfiacao.danoParcelas.map(p => p.nome), ['Bônus de Dano']);
+
+    // Sem dado nao ha dano — e entao nao ha parcelas para abrir.
+    const semDado = computeItemScopedTotals({ id: 'escudo' }, ctx);
+    assert.strictEqual(semDado.dano, '');
+    assert.strictEqual(semDado.formulaBase, '');
+}
+
+console.log('✅ item-scope-calc: 14 grupos de asserções passaram.');

@@ -107,6 +107,7 @@ function computeItemScopedTotals(item, ctx) {
     const bag = (ctx.itemBonuses || {})[item && item.id] || {};
 
     const colunas = [];
+    const danoParcelas = [];   // os DVs que entram no dado, um por um
     let canais = [];
     let somaDano = 0;
     let temBonusDano = false;
@@ -120,6 +121,14 @@ function computeItemScopedTotals(item, ctx) {
 
         if (dv.escopoItem === 'dano') {
             somaDano += total;
+            // O "+2" grudado no dado é a SOMA de vários VDs. Quem olha a janela
+            // do item via so o resultado e nao tinha como saber quais entraram.
+            if (total !== 0) {
+                danoParcelas.push({
+                    key: dv.key, nome: dv.nome, icone: dv.icone || '💥',
+                    base: _fmtNum(base), bonus: _fmtNum(bonus), total: _fmtNum(total),
+                });
+            }
             if (bonus !== 0) temBonusDano = true;
             continue;
         }
@@ -178,7 +187,8 @@ function computeItemScopedTotals(item, ctx) {
     // Sem dado não há golpe: o tipo só significa algo grudado numa fórmula.
     const tiposGolpe = formula ? getItemTiposGolpe(item, ctx.catalog) : [];
 
-    return { dano, tiposGolpe, tipoGolpe: tiposGolpe[0] || null, canais, colunas, temAlgo };
+    return { dano, formulaBase: formula, danoParcelas, tiposGolpe,
+        tipoGolpe: tiposGolpe[0] || null, canais, colunas, temAlgo };
 }
 
 /**

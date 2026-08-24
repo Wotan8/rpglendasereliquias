@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — fórmula na janela do item</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/detalhe.css">
+<link rel="stylesheet" href="css/inventory.css">
+<script>
+  // O CSS é editado durante o trabalho; o cache devolvia a versão velha.
+  for (const l of document.querySelectorAll('link[href*="inventory.css"], link[href*="detalhe.css"]'))
+      l.href += '?cb=' + Date.now();
+</script>
+<style>
+  body { margin:0; padding:16px; font:14px/1.6 Inter, system-ui, sans-serif;
+         background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table#saida { border-collapse:collapse; font:11px ui-monospace, monospace; width:100%; margin-bottom:14px; }
+  table#saida td { border:1px solid var(--lr-border); padding:2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight:700; }
+  #placar { font-weight:800; margin:8px 0 16px; padding-top:8px; border-top:1px solid var(--lr-border); }
+  h1 { font-size:1rem; margin:0 0 4px; } p.nota { margin:0 0 10px; color:var(--lr-text-2); font-size:.8rem; }
+  #alvo { max-width: 620px; }
+  .barra { display:flex; gap:8px; margin-bottom:12px; }
+</style></head>
+<body>
+<h1>🧮 "Com este item" — a conta aberta</h1>
+<p class="nota">O HTML é o REAL, recortado de <code>js/inventory.js</code>, com o CSS real de
+   <code>inventory.css</code> + <code>shared/detalhe.css</code>. Antes a janela dizia
+   "base 0 + 2 <em>(item)</em>" e não dizia de onde vinham os 2. Aqui se confere que cada
+   parcela nomeia a mecânica, mostra a equação com o valor de cada referência, e que o
+   bloco ocupa a linha inteira em vez de brigar com o total à direita.</p>
+
+<div class="barra">
+  <button type="button" onclick="document.documentElement.classList.toggle('dark')">🌗 Trocar tema</button>
+  <button type="button" onclick="const a=document.getElementById('alvo');
+      a.style.maxWidth = a.style.maxWidth === '340px' ? '620px' : '340px'">📱 Estreitar</button>
+</div>
+
+<table id="saida"></table>
+<div id="placar"></div>
+
+<div class="inv-detail-escopo" id="alvo"></div>
+
+<script type="module">
+const src = (await (await fetch('js/inventory.js?cb=' + Date.now())).text()).replace(/\r\n/g, '\n');
+
+/* Recorta do arquivo real o trecho que constrói a fórmula: de _fontesDoItem
+   até o fim de _descritorDaColuna. Só `_escHtml` vem de fora. */
+const i0 = src.indexOf('function _fontesDoItem(');
+const i1 = src.indexOf('\n}\n', src.indexOf('function _descritorDaColuna(')) + 3;
+if (i0 < 0 || i1 < 3) throw new Error('as funções de fórmula mudaram de forma — reveja o recorte');
+const F = new Function('_escHtml', 'window',
+    src.slice(i0, i1) + '\nreturn { _fontesDoItem, _linhasFormula, _blocoFormula, _descritorDaColuna, _linhaDet };')(
+    (t) => String(t ?? '').replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
+    window);
+
+/* ===== a ficha de mentirinha ===== */
+window.DERIVED_VALUES = [
+    { key: 'ACERTO_CC', nome: 'Acerto Corpo a Corpo', icone: '🗡️', descricao: 'Some ao Alvo do ataque.',
+      mechPreviews: ['+[Acerto] em Acerto Corpo a Corpo'] },
+    { key: 'BONUS_DANO', nome: 'Bônus de Dano', icone: '💥', mechPreviews: [] },
+];
+window.state = { itemBonusFontes: { adaga: {
+    'DERIVED:ACERTO_CC': [
+        { mecanica: 'Qualidade da Lâmina', op: '+', expr: '[Item: qualidade] 2', valor: 2 },
+        { mecanica: 'Punho Firme', op: '+', expr: '[FOR] 3 ÷ 3', valor: 1 },
+    ],
+    'BASE:DERIVED:ACERTO_CC': [
+        { mecanica: 'Forja Anã', op: '×', expr: '2', valor: 2 },
+    ],
+    'DERIVED:BONUS_DANO': [
+        // Caminho MAIS COMUM: o Valor Derivado Vinculado do cadastro do item,
+        // aplicado por inventory.js §1c e não por uma mecânica.
+        { mecanica: 'Vínculo de Adaga', op: '+', expr: '[Item: afiacao] 1', valor: 1 },
+    ],
+} } };
+window._systemData = null;
+
+const ITEM = { id: 'adaga', nome: 'Adaga' };
+const COL = { key: 'ACERTO_CC', nome: 'Acerto Corpo a Corpo', icone: '🗡️',
+              prefixo: '', sufixo: '', base: 4, bonus: 3, total: 7 };
+const PARCELA = { key: 'BONUS_DANO', nome: 'Bônus de Dano', icone: '💥', base: 0, bonus: 1, total: 1 };
+
+const bloco = F._blocoFormula(COL, 'adaga');
+const parcela = F._linhasFormula(PARCELA, 'adaga', { prefixoNome: true, semCadastro: true }).join('');
+
+document.getElementById('alvo').innerHTML = `
+    <span class="inv-detail-label">⚔️ Com este item</span>
+    <div class="inv-escopo-row">
+        <span class="inv-escopo-nome">💥 Dano</span>
+        <span class="inv-escopo-calc">🏹 Perfurante</span>
+        <span class="inv-escopo-total inv-escopo-dano">1d4+1</span>
+        <div class="lr-det-bloco inv-escopo-bloco">
+            <div class="lr-det-titulo">🧮 Fórmula</div>
+            ${F._linhaDet('Dado da arma', '1d4')}
+            ${F._linhaDet('💥 Bônus de Dano', '+1')}${parcela}
+        </div>
+    </div>
+    <div class="inv-escopo-row">
+        <button type="button" class="inv-escopo-nome inv-escopo-abrir" id="btnAbrir">🗡️ Acerto Corpo a Corpo</button>
+        <span class="inv-escopo-calc">base 4 + 3 <em>(item)</em></span>
+        <span class="inv-escopo-total">= 7</span>
+        ${bloco}
+    </div>`;
+
+/* ===== o placar ===== */
+const linhas = [];
+const t = (nome, cond) => linhas.push(
+    `<tr><td>${nome}</td><td class="${cond ? 'ok' : 'fail'}">${cond ? 'OK' : 'FALHOU'}</td></tr>`);
+const txt = document.getElementById('alvo').textContent.replace(/\s+/g, ' ');
+
+// --- o conteúdo ---
+t('T01 · a mecânica que somou aparece pelo nome', /Qualidade da Lâmina/.test(txt));
+t('T02 · a equação vem com o valor de cada referência', /\[Item: qualidade\] 2 = 2/.test(txt));
+t('T03 · e com a conta inteira quando há divisão', /\[FOR\] 3 ÷ 3 = 1/.test(txt));
+t('T04 · a base do personagem é uma linha própria', /Base do personagem/.test(txt) && / 4 /.test(txt));
+t('T05 · a base diz de onde vem', /raça, classe, peculiaridade, condição/.test(txt));
+t('T06 · multiplicação sai com ×, não com *', /× 2/.test(txt) && !/\* 2/.test(txt));
+t('T07 · parcela BASE: é marcada como "entra na base"', /entra na base/.test(txt));
+t('T08 · a regra geral do cadastro fecha o bloco',
+    /Cadastro do Valor Derivado/.test(txt) && /\+\[Acerto\] em Acerto Corpo a Corpo/.test(txt));
+t('T09 · a linha da parcela do dano vem recuada sob o nome dela',
+    /Bônus de Dano — Vínculo de Adaga/.test(txt));
+t('T09b · vínculo do cadastro do item aparece como fonte, igual a uma mecânica',
+    /Vínculo de Adaga \+ \[Item: afiacao\] 1 = 1/.test(txt));
+t('T10 · parcela de dano não repete o cadastro do VD (já está acima)',
+    (txt.match(/Cadastro do Valor Derivado/g) || []).length === 1);
+
+// --- vazio não vira bloco fantasma ---
+t('T11 · alvo sem fonte e sem base não desenha bloco',
+    F._blocoFormula({ key: 'NADA', nome: 'Nada', base: 0, bonus: 0, total: 0 }, 'adaga') === '');
+t('T12 · item que não existe na trilha não quebra',
+    F._fontesDoItem('nao-existe', 'ACERTO_CC').length === 0);
+
+// --- o descritor da janela cheia ---
+{
+    const d = F._descritorDaColuna(COL, 'adaga', ITEM);
+    t('T13 · o descritor leva nome e ícone', d.nome === 'Acerto Corpo a Corpo' && d.icone === '🗡️');
+    t('T14 · e a mesma fórmula, no formato do detalhe', d.formula.length === 5
+        && d.formula[0].fonte === 'Base do personagem'
+        && d.formula.some(f => f.fonte === 'Forja Anã (na base)'));
+    t('T15 · a nota diz o total COM o item', /Adaga: 7/.test(d.nota));
+}
+
+// --- o desenho ---
+const el = document.querySelector('.inv-escopo-bloco');
+const row = el.closest('.inv-escopo-row');
+t('T16 · o bloco ocupa a linha inteira, não disputa com o total',
+    Math.abs(el.getBoundingClientRect().width - row.getBoundingClientRect().width) < 30);
+t('T17 · e fica ABAIXO do total, não ao lado',
+    el.getBoundingClientRect().top >= document.querySelector('.inv-escopo-total').getBoundingClientRect().bottom - 2);
+t('T18 · o nome clicável é um <button> (o teclado precisa alcançar)',
+    document.getElementById('btnAbrir').tagName === 'BUTTON');
+
+// --- contraste, medido no que está na tela, nos dois temas ---
+const corDe = (e, p) => getComputedStyle(e)[p];
+const lum = (c) => {
+    const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => {
+        v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+    });
+    return .2126 * r + .7152 * g + .0722 * b;
+};
+const contraste = (a, b) => {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + .05) / (y + .05);
+};
+const fundoReal = (e) => {
+    for (let n = e; n; n = n.parentElement) {
+        const c = corDe(n, 'backgroundColor');
+        if (Number((c.match(/[\d.]+/g) || [])[3] ?? 1) >= .95) return c;
+    }
+    return 'rgb(255,255,255)';
+};
+const fonte = document.querySelector('.inv-escopo-bloco .lr-det-fonte');
+const valor = document.querySelector('.inv-escopo-bloco .lr-det-valor');
+const medir = (tema) => {
+    t(`${tema}: a fonte da fórmula é legível (≥4,5:1)`, contraste(corDe(fonte, 'color'), fundoReal(fonte)) >= 4.5);
+    t(`${tema}: o número em ouro é legível (≥4,5:1)`, contraste(corDe(valor, 'color'), fundoReal(valor)) >= 4.5);
+};
+medir('T19/T20 · claro');
+document.documentElement.classList.add('dark');
+await new Promise(r => setTimeout(r, 30));
+medir('T21/T22 · escuro');
+document.documentElement.classList.remove('dark');
+
+// --- celular ---
+document.getElementById('alvo').style.maxWidth = '340px';
+await new Promise(r => setTimeout(r, 30));
+t('T23 · em 340px nada empurra a página para o lado',
+    document.documentElement.scrollWidth <= window.innerWidth + 1);
+document.getElementById('alvo').style.maxWidth = '620px';
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const falhas = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML =
+    `<span class="${falhas ? 'fail' : 'ok'}">${linhas.length - falhas}/${linhas.length}</span>`
+    + (falhas ? ` — ${falhas} falha(s)` : ' — tudo certo');
+</script>
+</body></html>

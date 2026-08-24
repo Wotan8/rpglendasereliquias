@@ -1324,6 +1324,54 @@
     line-height: 1.35;
     opacity: .85;
 }
+
+/* =====================================================================
+   A CONTA ABERTA DE CADA LINHA
+
+   O bloco usa as classes de shared/detalhe.css (.lr-det-bloco/-linha/-fonte/
+   -valor): e a mesma fórmula do "ver detalhes" do hover, e duas telas
+   mostrando fórmula de dois jeitos obrigam a reaprender a ler.
+
+   Aqui só o encaixe: o bloco é filho de um flex-row, então precisa de
+   flex-basis 100% para ocupar a linha inteira em vez de disputar espaço com
+   o total à direita.
+   ===================================================================== */
+.inv-escopo-bloco {
+    flex-basis: 100%;
+    margin: 4px 0 2px 18px;
+    /* o traço de cima já vem do .lr-det-bloco; aqui ele encosta na esquerda */
+    padding-left: var(--lr-space-2, 8px);
+    border-left: 2px solid var(--lr-border-soft, rgba(128, 128, 128, .25));
+    border-top: none;
+    padding-top: 0;
+}
+
+/* Linha recuada = parcela de uma parcela (os VDs que somam no dado). */
+.inv-escopo-bloco .lr-det-linha .lr-det-fonte { overflow-wrap: anywhere; }
+
+/* O nome vira botão sem deixar de parecer texto: é o que abre a janela com o
+   "Usado em". Botão de verdade porque o teclado tem de alcançar. */
+.inv-escopo-abrir {
+    appearance: none;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    border-bottom: 1px dashed var(--lr-border, rgba(128, 128, 128, .4));
+}
+
+.inv-escopo-abrir:hover,
+.inv-escopo-abrir:focus-visible { color: var(--lr-gold); border-bottom-color: var(--lr-gold); }
+
+/* Em tela estreita o recuo come a largura útil da fórmula. */
+@media (max-width: 560px) {
+    .inv-escopo-bloco { margin-left: 8px; }
+    .inv-escopo-bloco .lr-det-linha { font-size: .7rem; }
+}
 .inv-escopo-dano {
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
     color: var(--lr-gold);

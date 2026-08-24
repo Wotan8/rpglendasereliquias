@@ -460,6 +460,10 @@ function clearMechanicBonuses() {
     // Reconstruído do zero a cada recálculo — sem isso os bônus de item
     // acumulariam a cada chamada de applyAllRaceMechanics.
     state.itemBonuses = {};
+    // A MESMA soma, mas parcela por parcela e com a conta aberta. O bag é um
+    // número só; a janela do item precisa dizer DE ONDE ele veio, e depois de
+    // somado não dá para descobrir. Ver _meRegistrarFonte().
+    state.itemBonusFontes = {};
     _meItemScope = null;
     state.mechanicLimits = {};
     state.capacidades = [];
@@ -821,6 +825,49 @@ function _meProjetilProp(prop) {
     return isNaN(num) ? 0 : num;
 }
 
+/**
+ * A equação com o VALOR de cada termo ao lado da referência.
+ *
+ * `_formatEquationPreview` mostra a REGRA ("[Item: qualidade] + [FOR]"); aqui
+ * interessa a CONTA desta ficha com este item ("[Item: qualidade] 2 + [FOR] 3").
+ * É a diferença entre saber o que a mecânica faz e saber por que o número deu
+ * o que deu.
+ */
+function _meEquacaoComValores(equacao) {
+    if (!Array.isArray(equacao) || !equacao.length) return '';
+    let str = '';
+    for (let i = 0; i < equacao.length; i++) {
+        const t = equacao[i] || {};
+        if (i > 0 && t.op) str += (t.op === 'min' || t.op === 'max') ? ` ⌊${t.op}⌋ ` : ` ${t.op} `;
+        if (t.tipo === 'ficha') {
+            // o número entre parênteses é o que ESTA ficha tem agora
+            str += `[${t.ref || '?'}] ${_resolveTermValue(t)}`;
+        } else if (t.tipo === 'sort') {
+            str += `🎲${t.min ?? '?'}~${t.max ?? '?'}`;
+        } else {
+            str += (t.valor ?? '?');
+        }
+    }
+    return str;
+}
+
+/**
+ * Guarda a parcela que ESTA mecânica pôs neste alvo, para este item.
+ *
+ * Só a soma vai para o bag, e depois de somada não há como saber quem somou.
+ * A janela do item mostrava "base 0 + 2 (item)" sem dizer de onde vinham os 2.
+ */
+function _meRegistrarFonte(itemId, field, mech, op, calc, val) {
+    if (!state.itemBonusFontes) state.itemBonusFontes = {};
+    const porItem = state.itemBonusFontes[itemId] = state.itemBonusFontes[itemId] || {};
+    (porItem[field] = porItem[field] || []).push({
+        mecanica: (mech && mech.nome) || '(sem nome)',
+        op: op || '+',
+        expr: _meEquacaoComValores(calc && calc.equacao),
+        valor: val,
+    });
+}
+
 /** Bag de destino de um bônus: o do item em escopo, ou o global do personagem. */
 function _meBonusBag(rawField) {
     if (_meItemScope && _meIsItemScopedTarget(rawField)) {
@@ -859,6 +906,11 @@ function _meItensDoFiltro(filtro) {
 }
 
 window._meSetItemScope = _meSetItemScope;
+// O inventário aplica os Valores Derivados Vinculados do item por conta
+// própria (inventory.js §1c), fora deste arquivo — e precisa gravar a
+// mesma trilha, senão a janela do item explica metade da conta.
+window._meRegistrarFonte = _meRegistrarFonte;
+window._meEquacaoComValores = _meEquacaoComValores;
 window._meIsItemScopedTarget = _meIsItemScopedTarget;
 window._meItensDoFiltro = _meItensDoFiltro;
 
@@ -1738,6 +1790,9 @@ function applyMechanicToSheet(mech, parentPec, isOneOff = false) {
 
                 // Alvo escopado a um item em escopo → bag daquele item; senão, global.
                 const bag = _meBonusBag(rawField);
+                if (_meItemScope && _meIsItemScopedTarget(rawField)) {
+                    _meRegistrarFonte(_meItemScope, field, mech, op, calc, val);
+                }
 
                 if (op === '+') bag[field] = (bag[field] || 0) + val;
                 else if (op === '-') bag[field] = (bag[field] || 0) - val;

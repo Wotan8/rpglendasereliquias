@@ -460,6 +460,16 @@ function applyEquippedItemsMechanics() {
                         bag = window.state.mechanicBonuses;
                     }
                     bag[targetKey] = (bag[targetKey] || 0) + total;
+                    /* A conta aberta, para a janela do item. Este é o caminho
+                       MAIS COMUM de bônus de peça (o vínculo do cadastro, não
+                       uma mecânica), e sem registrá-lo aqui a janela mostraria
+                       "+2" sem dizer de onde. O escopo do item já está posto,
+                       então refs "Item: ..." resolvem para ESTA peça. */
+                    if (escopado && typeof window._meRegistrarFonte === 'function') {
+                        window._meRegistrarFonte(item.id, targetKey,
+                            { nome: `Vínculo de ${item.nome || 'item'}` }, '+',
+                            { equacao: temEq ? dvObj.equacao : null }, total);
+                    }
                     // Trilha paralela só do que veio de PEÇA. O bag geral mistura
                     // peculiaridade, condição e item no mesmo número, e um teto
                     // sobre ele puniria coisa que não é equipamento. Quem limita
@@ -1257,6 +1267,116 @@ function _formulaDoVD(dvKey) {
     if (!previews.length) return '';
     return `<span class="inv-escopo-formula">ƒ ${previews.map(_escHtml).join(' · ')}</span>`;
 }
+
+/* =====================================================================
+   A CONTA ABERTA DE CADA LINHA DE "COM ESTE ITEM"
+
+   Antes esta janela dizia "base 0 + 2 (item)" e, embaixo, a regra geral do
+   Valor Derivado ("+[Acerto] em Acerto Corpo a Corpo"). Nenhum dos dois
+   respondia a pergunta que se faz olhando para uma arma: DE ONDE vieram os 2.
+
+   Agora cada parcela aparece com a mecânica que a pôs ali e com a equação
+   resolvida nos números DESTA ficha ("[Item: qualidade] 2 + [FOR] 3"). A
+   trilha vem de state.itemBonusFontes, gravada em mechanics-engine.js na hora
+   em que o bônus entra no bag — depois de somado não dá mais para saber
+   quem somou.
+
+   O vocabulário visual é o de shared/detalhe.css (.lr-det-bloco / -linha /
+   -fonte / -valor), o mesmo do "ver detalhes" do hover: duas telas mostrando
+   fórmula de dois jeitos diferentes obrigam a reaprender a ler.
+   ===================================================================== */
+
+/** As parcelas que ESTE item pôs neste alvo, com a conta de cada uma. */
+function _fontesDoItem(itemId, dvKey) {
+    const porItem = (window.state && window.state.itemBonusFontes || {})[itemId] || {};
+    // 'BASE:' é a mesma parcela, aplicada antes da fórmula do VD em vez de depois.
+    return [...(porItem[`DERIVED:${dvKey}`] || []),
+            ...(porItem[`BASE:DERIVED:${dvKey}`] || []).map(f => ({ ...f, naBase: true }))];
+}
+
+const _OP_SINAL = { '+': '+', '-': '−', '×': '×', '*': '×', '÷': '÷', '/': '÷', '=': '=' };
+
+/** Uma linha de fórmula no formato do detalhe: fonte à esquerda, número em ouro. */
+const _linhaDet = (fonte, valor, extra) => `
+    <div class="lr-det-linha">
+        <span class="lr-det-fonte">${_escHtml(fonte)}${extra ? ` <span class="lr-det-via">${_escHtml(extra)}</span>` : ''}</span>
+        <span class="lr-det-valor">${_escHtml(valor)}</span>
+    </div>`;
+
+/**
+ * O bloco 🧮 de uma linha de "Com este item".
+ *
+ * @param {object} c      coluna de computeItemScopedTotals ({key, nome, base, bonus, total})
+ * @param {string} itemId
+ * @param {{semBase?:boolean}} [opts]  canal e dano não têm "base do personagem" a mostrar
+ */
+function _linhasFormula(c, itemId, opts = {}) {
+    const linhas = [];
+    const rotulo = opts.prefixoNome ? `${c.icone} ${c.nome} — ` : '';
+
+    if (!opts.semBase && Number(c.base) !== 0) {
+        linhas.push(_linhaDet(rotulo + 'Base do personagem', String(c.base),
+            opts.prefixoNome ? '' : 'raça, classe, peculiaridade, condição'));
+    }
+
+    for (const f of _fontesDoItem(itemId, c.key)) {
+        const sinal = _OP_SINAL[f.op] || f.op || '+';
+        // a equação já vem com o valor de cada referência ao lado
+        const conta = f.expr ? `${f.expr} = ${f.valor}` : String(f.valor);
+        linhas.push(_linhaDet(rotulo + f.mecanica, `${sinal} ${conta}`, f.naBase ? 'entra na base' : ''));
+    }
+
+    // A regra geral do cadastro fecha o bloco: é o que vale para qualquer
+    // personagem, contra as linhas acima, que são desta ficha com este item.
+    if (!opts.semCadastro) {
+        const dv = (window.DERIVED_VALUES || []).find(d => d.key === c.key);
+        for (const p of ((dv && dv.mechPreviews) || [])) {
+            linhas.push(_linhaDet(rotulo + 'Cadastro do Valor Derivado', p));
+        }
+    }
+    return linhas;
+}
+
+function _blocoFormula(c, itemId, opts = {}) {
+    const linhas = _linhasFormula(c, itemId, opts);
+    if (!linhas.length) return '';
+    return `<div class="lr-det-bloco inv-escopo-bloco">
+        <div class="lr-det-titulo">🧮 Fórmula</div>
+        ${linhas.join('')}
+    </div>`;
+}
+
+/**
+ * Descritor para a janela cheia (shared/detalhe.js), que acrescenta o "Usado
+ * em" — quem consome este valor no resto do sistema. É o mesmo objeto que os
+ * rótulos da ficha já usam, para as duas janelas dizerem a mesma coisa.
+ */
+function _descritorDaColuna(c, itemId, item) {
+    const dv = (window.DERIVED_VALUES || []).find(d => d.key === c.key);
+    const formula = [];
+    if (Number(c.base) !== 0) formula.push({ fonte: 'Base do personagem', texto: String(c.base) });
+    for (const f of _fontesDoItem(itemId, c.key)) {
+        formula.push({
+            fonte: `${f.mecanica}${f.naBase ? ' (na base)' : ''}`,
+            texto: `${_OP_SINAL[f.op] || f.op || '+'} ${f.expr ? `${f.expr} = ${f.valor}` : f.valor}`,
+        });
+    }
+    for (const p of ((dv && dv.mechPreviews) || [])) {
+        formula.push({ fonte: 'Cadastro do Valor Derivado', texto: p });
+    }
+    return {
+        nome: c.nome, icone: c.icone, descricao: (dv && dv.descricao) || '',
+        formula, sys: window._systemData || null,
+        nota: `Com ${item && item.nome ? item.nome : 'este item'}: ${c.prefixo || ''}${c.total}${c.sufixo || ''}`,
+    };
+}
+
+/** Guarda os descritores da janela aberta — o onclick só carrega o índice. */
+window._invEscopoDetalhes = [];
+window.abrirDetalheEscopo = function (i) {
+    const o = window._invEscopoDetalhes[i];
+    if (o && window.LRDetalhe) window.LRDetalhe.abrirDetalhe(o);
+};
 
 /** Forma de Equipar do modelo do catálogo (só quando a instância não define). */
 function _formaEquiparDoModelo(item) {
@@ -2059,30 +2179,58 @@ window.openItemDetail = function(itemId) {
             catalog: window._inventoryState.catalog || [],
         });
         const ativo = itemTemEfeitosAtivos(item);
+        window._invEscopoDetalhes = [];
+
+        /* Nome clicável: o bloco 🧮 aqui mostra de onde sai o número, e a janela
+           do clique acrescenta o "Usado em" — quem consome este valor lá fora. */
+        const nomeClicavel = (c) => {
+            const i = window._invEscopoDetalhes.push(_descritorDaColuna(c, item.id, item)) - 1;
+            return `<button type="button" class="inv-escopo-nome inv-escopo-abrir"
+                onclick="abrirDetalheEscopo(${i})" title="Ver de onde sai este valor e onde ele é usado"
+                >${c.icone} ${_escHtml(c.nome)}</button>`;
+        };
+
         const linhas = r.colunas.filter(c => c.bonus !== 0 || c.total !== 0).map(c =>
             `<div class="inv-escopo-row">
-                <span class="inv-escopo-nome">${c.icone} ${_escHtml(c.nome)}</span>
+                ${nomeClicavel(c)}
                 <span class="inv-escopo-calc">base ${c.base} ${c.bonus >= 0 ? '+' : '−'} ${Math.abs(c.bonus)} <em>(item)</em></span>
                 <span class="inv-escopo-total">= ${_escHtml(c.prefixo)}${c.total}${_escHtml(c.sufixo)}</span>
-                ${_formulaDoVD(c.key)}
+                ${_blocoFormula(c, item.id)}
             </div>`).join('');
 
         // Canal de Essência é parcela separada: o alvo reduz cada uma com a
         // Blindagem da própria cor, então cada canal ganha a sua linha.
         const canaisHtml = (r.canais || []).map(c =>
             `<div class="inv-escopo-row">
-                <span class="inv-escopo-nome">${c.icone} ${_escHtml(c.nome)}</span>
+                ${nomeClicavel(c)}
                 <span class="inv-escopo-calc"><em>canal separado</em></span>
                 <span class="inv-escopo-total inv-escopo-dano">${c.total > 0 ? '+' : ''}${c.total}</span>
-                ${_formulaDoVD(c.key)}
+                ${_blocoFormula(c, item.id, { semBase: true })}
             </div>`).join('');
+
+        /* O dado sozinho não explica o "+2" colado nele: ele é a soma de vários
+           Valores Derivados de escopo 'dano'. Cada parcela vira uma linha, e
+           cada uma abre a sua própria conta. */
+        const danoHtml = !r.dano ? '' : `
+            <div class="inv-escopo-row">
+                <span class="inv-escopo-nome">💥 Dano</span>
+                ${(r.tiposGolpe || []).map(tg => `<span class="inv-escopo-calc" title="Barrado pela Blindagem ${_escHtml(tg.nome)} do alvo">${tg.icone} ${_escHtml(tg.nome)}</span>`).join('')}
+                <span class="inv-escopo-total inv-escopo-dano">${_escHtml(r.dano)}</span>
+                <div class="lr-det-bloco inv-escopo-bloco">
+                    <div class="lr-det-titulo">🧮 Fórmula</div>
+                    ${_linhaDet('Dado da arma', r.formulaBase || '—')}
+                    ${(r.danoParcelas || []).map(pc =>
+                        _linhaDet(`${pc.icone} ${pc.nome}`, `${pc.total > 0 ? '+' : ''}${pc.total}`)
+                        // e, recuada, a conta de cada parcela
+                        + _linhasFormula(pc, item.id, { prefixoNome: true, semCadastro: true }).join('')
+                    ).join('')}
+                </div>
+            </div>`;
 
         if (r.dano || canaisHtml || linhas) {
             escopoHtml = `<div class="inv-detail-escopo${ativo ? '' : ' inv-escopo-inativo'}">
                 <span class="inv-detail-label">⚔️ Com este item${ativo ? '' : ' <em>(efeitos inativos — equipe na forma prevista)</em>'}</span>
-                ${r.dano ? `<div class="inv-escopo-row"><span class="inv-escopo-nome">💥 Dano</span>${
-                    (r.tiposGolpe || []).map(tg => `<span class="inv-escopo-calc" title="Barrado pela Blindagem ${_escHtml(tg.nome)} do alvo">${tg.icone} ${_escHtml(tg.nome)}</span>`).join('')
-                }<span class="inv-escopo-total inv-escopo-dano">${_escHtml(r.dano)}</span></div>` : ''}
+                ${danoHtml}
                 ${canaisHtml}
                 ${linhas}
             </div>`;
