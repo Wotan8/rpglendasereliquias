@@ -1,0 +1,98 @@
+/* =============================================================
+   DETALHE DE UM VALOR — conteúdo da janelinha de hover
+
+   Só o MIOLO. A caixa (posição, fundo, borda, sombra) continua sendo de
+   cada tela, porque cada uma abre a janelinha de um jeito: a Ficha
+   encosta no rótulo, a Ficha de NPC segue o cursor.
+
+   Quatro blocos, sempre nesta ordem: nome em ouro · descrição · fórmula ·
+   onde é usado. Ver shared/detalhe.js.
+   ============================================================= */
+
+.lr-det {
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-sm);
+    line-height: var(--lr-lh-body);
+    color: var(--lr-text-1);
+}
+
+/* O nome é a âncora: a janelinha abre longe do rótulo e sem ele o leitor
+   não sabe de que valor a caixa está falando. */
+.lr-det-nome {
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-md);
+    font-weight: 700;
+    letter-spacing: var(--lr-track-title);
+    color: var(--lr-gold);
+    margin-bottom: var(--lr-space-1);
+}
+
+.lr-det-desc {
+    color: var(--lr-text-2);
+    margin-bottom: var(--lr-space-2);
+    white-space: pre-line;      /* descrição de cadastro separa parágrafo com \n */
+}
+
+.lr-det-bloco {
+    margin-top: var(--lr-space-2);
+    padding-top: var(--lr-space-2);
+    border-top: var(--lr-border-w) solid var(--lr-border);
+}
+
+.lr-det-titulo {
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--lr-track-title);
+    color: var(--lr-text-2);
+    margin-bottom: var(--lr-space-1);
+}
+
+.lr-det-linha {
+    display: flex;
+    align-items: baseline;
+    gap: var(--lr-space-2);
+    font-size: var(--lr-fs-xs);
+    padding: 1px 0;
+}
+.lr-det-fonte { flex: 1 1 auto; min-width: 0; color: var(--lr-text-1); }
+
+/* O número é o que o olho procura na fórmula: fica em ouro e alinhado à
+   direita, para a coluna toda ser lida de cima a baixo. */
+.lr-det-valor {
+    flex: 0 0 auto;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: var(--lr-gold);
+}
+
+/* "Usado em" é informação, não ação: azul arcano, e o "via" bem discreto. */
+.lr-det-uso .lr-det-fonte { color: var(--lr-arcane); }
+.lr-det-via { flex: 0 0 auto; font-size: var(--lr-fs-xs); color: var(--lr-text-2); opacity: var(--lr-op-muted); }
+
+.lr-det-nota {
+    margin-top: var(--lr-space-2);
+    font-size: var(--lr-fs-xs);
+    font-style: italic;
+    color: var(--lr-text-2);
+}
+
+/* ---- A caixa de quem não tinha uma (ver ligarDetalhe em detalhe.js) ----
+   Filete dourado no topo, como o diálogo e o toast da mesa. Não recebe
+   clique: ela existe para ser lida, e o rótulo embaixo continua clicável. */
+.lr-det-caixa {
+    position: fixed;
+    display: none;
+    z-index: var(--lr-z-toast);
+    max-width: 360px;
+    padding: var(--lr-space-3);
+    background: var(--lr-surface);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-top: 2px solid var(--lr-gold);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-shadow-3);
+    pointer-events: none;
+}
+
+/* Rótulo que explica alguma coisa avisa isso antes do mouse chegar. */
+[data-det-nome] { cursor: help; }

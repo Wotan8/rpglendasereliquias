@@ -609,13 +609,28 @@ async function renderAliadoDerivedValues(npc) {
         const sys = await ensureNpcSystemData();
         const calc = calcularNpc(npc, sys);
 
+        /* A conta DESTE aliado, uma linha por fonte — é o mesmo `fontes` que a
+           Ficha de NPC mostra, porque o cálculo vem do mesmo motor
+           (npc-calc-engine.js). O resto da janelinha (o que o valor alimenta)
+           o shared/detalhe.js tira do registro. */
+        const fontesDe = (dv) => (calc.derived[dv.key]?.fontes || [])
+            .map(f => `${f.fonte}: ${f.texto}`).join('\n');
+
         const statHtml = (dv) => {
             const val = calc.derived[dv.key]?.final ?? 0;
-            return `<div class="al-stat" title="${escapeHtml(dv.descricao || '')}">
-                <label>${dv.icone || '📊'} ${escapeHtml(dv.nome)}</label>
+            return `<div class="al-stat">
+                <label data-det-nome="${escapeHtml(dv.nome)}"
+                       data-det-icone="${escapeHtml(dv.icone || '📊')}"
+                       data-det-desc="${escapeHtml(dv.descricao || '')}"
+                       data-det-formula="${escapeHtml(fontesDe(dv))}">${dv.icone || '📊'} ${escapeHtml(dv.nome)}</label>
                 <strong>${escapeHtml(dv.prefixo)}${val}${escapeHtml(dv.sufixo)}</strong>
             </div>`;
         };
+
+        /* Uma vez por ficha: a caixa é criada na primeira vez que o mouse pousa
+           num rótulo. `sys` chega por função porque ele só existe depois do
+           carregamento — passar o valor agora congelaria um `undefined`. */
+        if (window.LRDetalhe) window.LRDetalhe.ligarDetalhe(document.body, () => sys);
 
         // VD marcado como status de combate sobe para o bloco de cima, junto de
         // Vitalidade/Energia/Sanidade, e sai daqui — senão apareceria duas vezes.

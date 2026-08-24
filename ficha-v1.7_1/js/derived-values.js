@@ -528,25 +528,31 @@ function initAttributeTooltips() {
 
 /* ----- Peças de HTML do tooltip (as mesmas nos quatro tipos) ----- */
 
+/**
+ * Monta a janelinha pelo conteúdo COMPARTILHADO (shared/detalhe.js): nome em
+ * ouro no topo, descrição, fórmula e onde o valor é usado. É o mesmo miolo da
+ * Ficha de NPC e da do Aliado.
+ *
+ * Os previews que esta ficha já calculava (mecânicas vinculadas e as de fora
+ * que afetam o valor) entram como fórmula: eles SÃO o que forma o número.
+ */
+function _dvMontar({ nome, icone, descricao, vinculadas = [], externas = [], nota = '' }) {
+    if (!window.LRDetalhe) return _dvDesc(descricao);
+    const formula = [
+        ...vinculadas.map(p => ({ fonte: 'Vinculada', texto: p })),
+        ...externas.map(f => ({ fonte: f.fonte, texto: f.preview })),
+    ];
+    return window.LRDetalhe.detalheHTML({
+        nome, icone, descricao, formula, nota,
+        sys: window._systemData || null,
+    });
+}
+
 const _dvDesc = (texto) => texto ? `<div class="dv-tooltip-desc">${_escHtml(texto)}</div>` : '';
 
-/** Bloco "⚙️ Mecânicas Vinculadas" — lista simples de previews. */
-function _dvBlocoVinculadas(previews) {
-    if (!previews || !previews.length) return '';
-    return '<div class="dv-tooltip-mechs">'
-        + '<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>'
-        + previews.map(p => `<div class="dv-tooltip-mech-item">• ${_escHtml(p)}</div>`).join('')
-        + '</div>';
-}
-
-/** Bloco de mecânicas externas — cada linha nomeia a fonte antes do preview. */
-function _dvBlocoFontes(titulo, itens, classeExtra = '') {
-    if (!itens || !itens.length) return '';
-    return `<div class="dv-tooltip-mechs${classeExtra}">`
-        + `<div class="dv-tooltip-mechs-title">${titulo}</div>`
-        + itens.map(i => `<div class="dv-tooltip-mech-item"><span class="dv-tooltip-fonte">${_escHtml(i.fonte)}:</span> ${_escHtml(i.preview)}</div>`).join('')
-        + '</div>';
-}
+/* Os dois blocos de HTML que moravam aqui (Mecânicas Vinculadas e Outras
+   fontes) saíram: quem monta a janelinha agora é shared/detalhe.js, e as
+   duas listas entram lá como FÓRMULA — que é o que elas sempre foram. */
 
 /**
  * Mecânicas de fora que afetam a propriedade, procurando por cada variante de
@@ -564,7 +570,6 @@ function _dvMecanicasQueAfetam(nomes, linkedIds = []) {
     return achadas;
 }
 
-const _DV_OUTRAS_FONTES = '🔗 Outras fontes que afetam:';
 
 /* ----- Um construtor de conteúdo por tipo de tooltip ----- */
 
@@ -574,9 +579,10 @@ function _dvTooltipVital(label) {
     // Variantes de nome cobrem os aliases do TARGET_MAP.
     const extras = _dvMecanicasQueAfetam(
         [`${vs.nome} Máxima`, `${vs.nome} Máximo`, vs.nome], vs.mecanicaIds || []);
-    return _dvDesc(vs.descricao)
-        + _dvBlocoVinculadas(vs.mechPreviews)
-        + _dvBlocoFontes(_DV_OUTRAS_FONTES, extras, ' dv-tooltip-extras');
+    return _dvMontar({
+        nome: vs.nome, icone: vs.icone, descricao: vs.descricao,
+        vinculadas: vs.mechPreviews || [], externas: extras,
+    });
 }
 
 function _dvTooltipAtributo(label) {
@@ -584,8 +590,9 @@ function _dvTooltipAtributo(label) {
     const fullName = ATTRIBUTE_FULL_NAMES[attrKey] || attrKey;
     // Procura pela abreviação e pelo nome completo.
     const extras = _dvMecanicasQueAfetam([attrKey, fullName]);
-    return _dvDesc(ATTRIBUTE_DESCRIPTIONS[attrKey])
-        + _dvBlocoFontes('⚙️ Mecânicas que afetam:', extras);
+    return _dvMontar({
+        nome: fullName, descricao: ATTRIBUTE_DESCRIPTIONS[attrKey], externas: extras,
+    });
 }
 
 function _dvTooltipPericia(label) {
@@ -602,9 +609,10 @@ function _dvTooltipPericia(label) {
     }).filter(Boolean);
 
     const extras = _dvMecanicasQueAfetam([skillName], linkedMechIds);
-    return _dvDesc(skill.descricao)
-        + _dvBlocoVinculadas(linkedPreviews)
-        + _dvBlocoFontes(_DV_OUTRAS_FONTES, extras, ' dv-tooltip-extras');
+    return _dvMontar({
+        nome: skill.nome || skillName, descricao: skill.descricao,
+        vinculadas: linkedPreviews, externas: extras,
+    });
 }
 
 function _dvTooltipPeculiaridade(label) {
@@ -618,15 +626,17 @@ function _dvTooltipValorDerivado(label) {
     const dv = (window.DERIVED_VALUES || []).find(d => d.id === dvId);
     if (!dv) return '';
 
-    let html = _dvDesc(dv.descricao);
+    // O que esta ficha sabe DESTE personagem e o registro não sabe: o valor
+    // exato antes do arredondamento de mesa e a constante da criação. Vai como
+    // nota, depois dos blocos.
+    let notas = [];
 
     // Valor exato de um VD que exibe arredondado na mesa (ex.: Blindagem).
     if (dv.arredondaMesa) {
         const exato = Number(state.derived?.[dv.key] || 0);
         if (!Number.isInteger(exato)) {
-            html += `<div class="dv-tooltip-exato">Valor exato: <strong>`
-                 + `${_escHtml(exato.toFixed(2).replace('.', ','))}</strong>`
-                 + ` &middot; na mesa vale ${dvValorDeMesa(exato)}</div>`;
+            notas.push(`Valor exato: ${exato.toFixed(2).replace('.', ',')}`
+                + ` · na mesa vale ${dvValorDeMesa(exato)}`);
         }
     }
 
@@ -635,16 +645,18 @@ function _dvTooltipValorDerivado(label) {
     if (creationMod && creationMod !== 0) {
         const sign = creationMod > 0 ? '+' : '';
         const fmtMod = Number.isInteger(creationMod) ? String(creationMod) : creationMod.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-        html += `<div class="dv-tooltip-creation-const">🎯 Constante de Criação: <span class="dv-tooltip-creation-val">${sign}${fmtMod}</span></div>`;
+        notas.push(`🎯 Constante de Criação: ${sign}${fmtMod}`);
     }
 
     // Variantes de nome cobrem os aliases com/sem sufixo Máxima/Máximo.
     const extras = _dvMecanicasQueAfetam(
         [dv.nome, `${dv.nome} (Máximo)`, `${dv.nome} Máxima`, `${dv.nome} Máximo`], dv.mecanicaIds || []);
 
-    return html
-        + _dvBlocoVinculadas(dv.mechPreviews)
-        + _dvBlocoFontes(_DV_OUTRAS_FONTES, extras, ' dv-tooltip-extras');
+    return _dvMontar({
+        nome: dv.nome, icone: dv.icone, descricao: dv.descricao,
+        vinculadas: dv.mechPreviews || [], externas: extras,
+        nota: notas.join(' · '),
+    });
 }
 
 const _DV_TOOLTIP_POR_TIPO = {
@@ -655,7 +667,11 @@ const _DV_TOOLTIP_POR_TIPO = {
     // Texto pronto em `data-tooltip-text`, para o que NÃO é Valor Derivado —
     // o alcance do disparo sai da arma equipada e da FOR, não do cadastro.
     // Sem isto o chip só teria `title`, que no celular ninguém vê.
-    texto: el => el.dataset.tooltipText ? _dvDesc(el.dataset.tooltipText) : '',
+    /* Texto pronto em `data-tooltip-text`, para o que NÃO é Valor Derivado.
+       Ganha nome no topo como todo o resto — `data-tooltip-nome` diz qual. */
+    texto: el => el.dataset.tooltipText
+        ? _dvMontar({ nome: el.dataset.tooltipNome || el.textContent.trim(), descricao: el.dataset.tooltipText })
+        : '',
 };
 
 /** Encosta o tooltip no label e puxa de volta se estourar a janela. */

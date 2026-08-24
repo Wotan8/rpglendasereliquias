@@ -179,7 +179,7 @@ export function initHud() {
     // ⚔️ registro dos VDs de Status de Combate (lazy, sem segurar o boot).
     // O motor de cálculo vem junto: o doc do NPC NÃO guarda o valor final dos
     // VDs (só overrides/atual por id), então o card calcula igual ao editor.
-    import('../../painel-mestre/js/npc-calc-engine.js?v=1.9')
+    import('../../painel-mestre/js/npc-calc-engine.js?v=1.10')
         .then(m => { _calcNpcHud = m.calcularNpc; })
         .catch(e => console.warn('motor de NPC no HUD', e));
     import('../../painel-mestre/js/npc-system-data.js')

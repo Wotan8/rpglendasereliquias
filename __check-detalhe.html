@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — A janelinha de detalhe, igual em toda ficha</title>
+<link rel="stylesheet" href="./shared/tokens.css">
+<link rel="stylesheet" href="./shared/lendas-reliquias.css">
+<!-- sem cache: o arnês tem de ler o CSS do disco, senão mede o de ontem -->
+<script>document.write('<link rel="stylesheet" href="./shared/detalhe.css?t=' + Date.now() + '">');</script>
+<style>
+  body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table { border-collapse: collapse; font: 11px ui-monospace, monospace; width: 800px; max-width: 100%; }
+  td { border: 1px solid var(--lr-border); padding: 2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight: 700; }
+  #placar { font-weight: 800; margin: 10px 0; padding-top: 10px; border-top: 1px solid var(--lr-border); }
+  h1 { font-size: 1rem; margin: 0 0 4px; } p { margin: 0 0 10px; color: var(--lr-text-2); font-size: .8rem; }
+  #palco { max-width: 380px; margin-top: 20px; padding: var(--lr-space-3);
+           background: var(--lr-surface); border: 1px solid var(--lr-border);
+           border-top: 2px solid var(--lr-gold); border-radius: var(--lr-radius); }
+</style></head>
+<body>
+<h1>🔎 A janelinha de detalhe, igual em toda ficha</h1>
+<p>Ao pousar o mouse num nome — Vitalidade, Força, Furtividade — a caixa
+   explica o valor. Cada ficha montava um conteúdo diferente. Agora todas usam
+   <code>shared/detalhe.js</code>: <b>nome em ouro</b>, descrição, fórmula e
+   onde o valor é usado. O índice de uso sai do próprio registro, lido ao
+   contrário — não há cadastro novo para ninguém preencher.</p>
+<table id="saida"></table>
+<div id="placar"></div>
+<div id="palco"></div>
+
+<script type="module">
+import { detalheHTML, indiceDeUso, equacaoEmTexto, chaveDoAlvo, ligarDetalhe } from './shared/detalhe.js?v=1';
+
+const linhas = [];
+let ok = 0;
+const teste = (nome, passou) => { linhas.push([nome, passou]); if (passou) ok++; };
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+/* Registro semeado: Vitalidade sai de VIG e Tamanho; Carga e Iniciativa
+   consomem Vitalidade; Sanidade não é usada por ninguém. */
+const SYS = { mechanics: [
+    { id: 'm1', nome: 'Vitalidade Base', config: { calculos: [
+        { operacao: '+', alvo: 'Vitalidade', equacao: [{ tipo: 'ficha', ref: 'VIG' }, { op: '+', tipo: 'ficha', ref: 'Tamanho' }] }] } },
+    { id: 'm2', nome: 'Vigor Rijo', config: { calculos: [
+        { operacao: '+', alvo: 'Vitalidade Máxima', equacao: [{ valor: 4 }] }] } },   // alias do MESMO alvo
+    { id: 'm3', nome: 'Carga', config: { calculos: [
+        { operacao: '+', alvo: 'Carga', equacao: [{ tipo: 'ficha', ref: 'Vitalidade' }, { op: '×', valor: 2 }] }] } },
+    { id: 'm4', nome: 'Iniciativa', config: { calculos: [
+        { operacao: '+', alvo: 'Iniciativa', equacao: [{ tipo: 'ficha', ref: 'Vitalidade' }] }] } },
+    { id: 'm5', nome: 'Sanidade Base', config: { calculos: [
+        { operacao: '+', alvo: 'Sanidade', equacao: [{ tipo: 'ficha', ref: 'PRS' }] }] } },
+    // formato antigo, de um cálculo só e sem `calculos`
+    { id: 'm6', nome: 'Legado', config: { operacao: '+', alvo: 'Vitalidade', valor: 1 } },
+]};
+
+const palco = $('#palco');
+const pinta = (o) => { palco.innerHTML = detalheHTML(o); return palco; };
+
+// ---- 1. o nome, em ouro, no topo ----
+pinta({ nome: 'Vitalidade', icone: '❤️', descricao: 'A integridade física.', sys: SYS });
+const nomeEl = $('.lr-det-nome', palco);
+teste('T1 · o nome vem no topo da caixa',
+    !!nomeEl && palco.firstElementChild.firstElementChild === nomeEl);
+teste('T2 · com o ícone antes do nome', nomeEl.textContent.trim() === '❤️ Vitalidade');
+const dourado = getComputedStyle(nomeEl).color;
+teste(`T3 · o nome é dourado, não a cor do texto comum (${dourado})`,
+    dourado !== getComputedStyle($('.lr-det-desc', palco)).color);
+teste('T4 · a descrição vem logo abaixo, como sempre foi',
+    $('.lr-det-desc', palco).textContent.includes('integridade física'));
+
+// ---- 2. a fórmula ----
+const linhasFormula = $$('.lr-det-formula .lr-det-linha', palco)
+    .map(l => l.textContent.replace(/\s+/g, ' ').trim());
+teste('T5 · a fórmula lista o que alimenta o valor — ' + linhasFormula.join(' / '),
+    linhasFormula.some(t => t.includes('VIG') && t.includes('Tamanho')));
+teste('T6 · alias do alvo ("Vitalidade Máxima") entra na MESMA fórmula',
+    linhasFormula.some(t => t.includes('Vigor Rijo')));
+teste('T7 · o formato antigo (um cálculo só, sem `calculos`) também entra',
+    linhasFormula.some(t => t.includes('Legado')));
+
+// ---- 3. onde é usado ----
+const usos = $$('.lr-det-uso .lr-det-linha', palco).map(l => l.textContent.replace(/\s+/g, ' ').trim());
+teste('T8 · diz onde o valor é usado — ' + usos.join(' / '),
+    usos.some(t => t.includes('Carga')) && usos.some(t => t.includes('Iniciativa')));
+teste('T9 · o bloco "usado em" vem DEPOIS da fórmula',
+    palco.innerHTML.indexOf('lr-det-formula') < palco.innerHTML.indexOf('lr-det-uso'));
+
+// ---- 4. o trecho some quando não há uso ----
+pinta({ nome: 'Sanidade', descricao: 'A saúde da mente.', sys: SYS });
+teste('T10 · valor que ninguém consome NÃO mostra o bloco "usado em"',
+    !$('.lr-det-uso', palco) && !!$('.lr-det-formula', palco));
+
+// ---- 5. o valor não aparece usando a si mesmo ----
+pinta({ nome: 'Vitalidade', sys: SYS });
+teste('T11 · o valor não se lista como uso de si mesmo',
+    !$$('.lr-det-uso .lr-det-fonte', palco).some(e => chaveDoAlvo(e.textContent) === 'vitalidade'));
+
+// ---- 6. o que a TELA sabe vem antes do que o registro sabe ----
+pinta({ nome: 'Vitalidade', sys: SYS, formula: [{ fonte: 'Deste NPC', texto: '+ 12' }] });
+const primeira = $('.lr-det-formula .lr-det-linha .lr-det-fonte', palco).textContent.trim();
+teste(`T12 · a conta DESTE personagem vem antes da regra geral (${primeira})`, primeira === 'Deste NPC');
+
+// ---- 7. sem registro, ainda assim monta ----
+pinta({ nome: 'Alcance do Disparo', descricao: 'Até onde a arma lança.',
+        nota: 'Não é Valor Derivado.' });
+teste('T13 · sem registro, o que não é Valor Derivado ainda ganha nome e descrição',
+    $('.lr-det-nome', palco).textContent.includes('Alcance')
+    && !$('.lr-det-formula', palco) && !$('.lr-det-uso', palco));
+teste('T14 · a nota fica por último', $('.lr-det-nota', palco).textContent.includes('Não é Valor Derivado'));
+
+// ---- 8. texto do usuário não vira HTML ----
+pinta({ nome: '<b>Injetado</b>', descricao: '<img src=x onerror="window.__furo=1">', sys: SYS });
+teste('T15 · nome e descrição são escapados',
+    !$('#palco b') && !$('#palco img') && window.__furo === undefined);
+
+// ---- 9. sem nome, não há caixa ----
+teste('T16 · sem nome não monta nada — a âncora é obrigatória', detalheHTML({ descricao: 'x' }) === '');
+
+// ---- 10. o índice é construído uma vez por registro ----
+teste('T17 · o índice é reaproveitado, não refeito a cada mouse',
+    indiceDeUso(SYS) === indiceDeUso(SYS));
+
+// ---- 11. leitura da equação ----
+teste('T18 · equação vira texto legível',
+    equacaoEmTexto([{ tipo: 'ficha', ref: 'FOR' }, { op: '+', valor: 2 }]) === 'FOR + 2');
+teste('T19 · sorteio aparece como faixa',
+    equacaoEmTexto([{ tipo: 'sort', min: 1, max: 6 }]).includes('1–6'));
+
+// ---- 12. a caixa de quem não tinha uma (Ficha de Aliado) ----
+/* A Ficha de Aliado usava `title=`, a caixinha do sistema operacional: no
+   celular ninguém vê e ela não mostra fórmula. `ligarDetalhe` dá a ela a
+   mesma janelinha, por delegação. */
+const rotulo = document.createElement('div');
+rotulo.setAttribute('data-det-nome', 'Vitalidade');
+rotulo.setAttribute('data-det-icone', '❤️');
+rotulo.setAttribute('data-det-desc', 'A integridade física.');
+// duas linhas "fonte: texto" — é como o motor do NPC entrega a conta
+rotulo.setAttribute('data-det-formula',
+    ['Fórmula (Vitalidade): +4', 'Couro Endurecido: +2'].join(String.fromCharCode(10)));
+rotulo.textContent = 'Vitalidade';
+document.body.appendChild(rotulo);
+
+ligarDetalhe(document.body, () => SYS);
+rotulo.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+const cx = $('.lr-det-caixa');
+teste('T20 · o rótulo do Aliado abre a janelinha ao passar o mouse',
+    !!cx && cx.style.display === 'block' && !!$('.lr-det-nome', cx));
+
+const fontes = $$('.lr-det-formula .lr-det-linha', cx)
+    .map(l => l.textContent.replace(/\s+/g, ' ').trim());
+teste('T21 · cada linha "fonte: texto" vira uma linha da fórmula — ' + fontes.slice(0, 2).join(' / '),
+    fontes.some(t => t.includes('Fórmula (Vitalidade)') && t.includes('+4'))
+    && fontes.some(t => t.includes('Couro Endurecido') && t.includes('+2')));
+
+teste('T22 · a conta do aliado vem antes da regra geral do registro',
+    fontes[0].includes('Fórmula (Vitalidade)'));
+teste('T23 · e o "usado em" do registro entra junto',
+    $$('.lr-det-uso .lr-det-fonte', cx).some(e => e.textContent.includes('Carga')));
+
+rotulo.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+teste('T24 · sai o mouse, fecha a janelinha', cx.style.display === 'none');
+teste('T25 · a caixa não rouba clique do rótulo embaixo',
+    getComputedStyle(cx).pointerEvents === 'none');
+rotulo.remove();
+
+// ---- saída ----
+$('#saida').innerHTML = linhas.map(([n, p]) =>
+    `<tr><td>${n.replace(/</g, '&lt;')}</td><td class="${p ? 'ok' : 'fail'}">${p ? 'OK' : 'FAIL'}</td></tr>`).join('');
+$('#placar').textContent = `${ok === linhas.length ? '✅' : '❌'} ${ok}/${linhas.length} — janelinha de detalhe`;
+document.title = `__check detalhe ${ok}/${linhas.length}`;
+pinta({ nome: 'Vitalidade', icone: '❤️', descricao: 'A integridade física do personagem: ossos, músculos, sangue e fôlego.', sys: SYS });
+</script>
+</body></html>

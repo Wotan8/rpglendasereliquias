@@ -4,7 +4,7 @@ import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassModule } from './npc-system-data.js?v=1.5';
-import { calcularNpc, ATTR_SIGLAS } from './npc-calc-engine.js?v=1.9';
+import { calcularNpc, ATTR_SIGLAS, ATTR_NOMES } from './npc-calc-engine.js?v=1.10';
 import './npc-inventario.js?v=9'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 import { npcNaMesa, mesasDoNpc, espelhoMesaId } from '../../shared/npc-mesas.js';
 import { melhorDisparo, bracoDeArremesso, METROS_POR_FOR } from '../../shared/alcance-disparo.js';
@@ -28,32 +28,57 @@ async function loadAllNpcs() {
 }
 window.loadAllNpcs = loadAllNpcs;
 
-/* ===== TOOLTIP ENGINE PARA NPCS ===== */
+/* ===== A JANELINHA DE DETALHE =====
+   A CAIXA é daqui (ela segue o cursor, que é o jeito desta tela). O CONTEÚDO
+   vem de shared/detalhe.js, o mesmo da Ficha do personagem e da do Aliado:
+   nome em ouro, descrição, fórmula e onde o valor é usado. */
 let npcTooltipEl = null;
 function ensureNpcTooltip() {
     if (!npcTooltipEl) {
         npcTooltipEl = document.createElement('div');
         npcTooltipEl.id = 'npcHoverTooltip';
         Object.assign(npcTooltipEl.style, {
-            position: 'fixed', display: 'none', backgroundColor: 'var(--bg-panel, #1e1e2e)',
-            color: 'var(--text, #e2e8f0)', border: '1px solid var(--primary, #8b5cf6)',
-            borderRadius: '6px', padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-            zIndex: '99999', maxWidth: '300px', pointerEvents: 'none', fontSize: '0.85rem',
-            lineHeight: '1.4', transition: 'opacity 0.15s ease-in-out'
+            position: 'fixed', display: 'none',
+            background: 'var(--lr-surface)', color: 'var(--lr-text-1)',
+            border: 'var(--lr-border-w) solid var(--lr-border)',
+            borderTop: '2px solid var(--lr-gold)',
+            borderRadius: 'var(--lr-radius)', padding: 'var(--lr-space-3)',
+            boxShadow: 'var(--lr-shadow-3)', zIndex: 'var(--lr-z-toast)',
+            // a fórmula precisa de largura: a 300px "VIG + Tamanho × 3" quebrava
+            maxWidth: '360px', pointerEvents: 'none',
+            transition: 'opacity var(--lr-t-fast) var(--lr-ease)'
         });
         document.body.appendChild(npcTooltipEl);
     }
     return npcTooltipEl;
 }
+/**
+ * `data-tt-formula` traz a conta DESTE NPC — uma linha por fonte, no formato
+ * "fonte: texto", que é como o motor (npc-calc-engine.js) já a entregava. Ela
+ * vem antes da regra geral que o registro conhece: esta sabe o valor deste
+ * NPC, aquela só sabe a regra.
+ */
+function _formulaDoRotulo(el) {
+    return (el.getAttribute('data-tt-formula') || '')
+        .split('\n').map(l => l.trim()).filter(Boolean)
+        .map(linha => {
+            const i = linha.indexOf(':');
+            return i < 0 ? { fonte: linha, texto: '' }
+                         : { fonte: linha.slice(0, i).trim(), texto: linha.slice(i + 1).trim() };
+        });
+}
+
 window.handleNpcTooltipEnter = function(event, el) {
-    const title = el.getAttribute('data-tt-title');
-    const desc = el.getAttribute('data-tt-desc');
-    const extra = el.getAttribute('data-tt-extra');
     const tipEl = ensureNpcTooltip();
-    let html = '';
-    if (title) html += `<div style="font-weight:bold;margin-bottom:6px;color:var(--primary);font-size:0.95rem">${escapeHtml(title)}</div>`;
-    if (desc) html += `<div style="margin-bottom:6px;color:var(--text-muted, #94a3b8)">${escapeHtml(desc)}</div>`;
-    if (extra) html += `<div style="border-top:1px solid var(--line, #334155);padding-top:6px;margin-top:6px;font-size:0.8rem;white-space:pre-wrap;">${escapeHtml(extra)}</div>`;
+    const html = window.LRDetalhe ? window.LRDetalhe.detalheHTML({
+        nome: el.getAttribute('data-tt-title') || '',
+        icone: el.getAttribute('data-tt-icone') || '',
+        descricao: el.getAttribute('data-tt-desc') || '',
+        formula: _formulaDoRotulo(el),
+        nota: el.getAttribute('data-tt-nota') || '',
+        sys: window._npcSys || window._systemData || null,
+    }) : '';
+    if (!html) return;
     tipEl.innerHTML = html;
     tipEl.style.opacity = '0'; tipEl.style.display = 'block';
     window.moveNpcTooltip(event);
@@ -627,6 +652,20 @@ function _npcSecaoIdentidade() {
 }
 
 /** O que o motor calcula: peculiaridades, status vitais, atributos, perícias e valores derivados. */
+/* Atributo: a sigla é o que cabe na grade, mas a janelinha fala o nome por
+   extenso — é por ele que o cadastro e as mecânicas se referem a ele. */
+const _nomeDoAtributo = (sigla) =>
+    Object.keys(ATTR_NOMES).find(n => ATTR_NOMES[n] === sigla) || sigla;
+
+/* A descrição vem do registro de atributos, quando o Criador cadastrou um. */
+function _descDoAtributo(sigla) {
+    const sys = window._npcSys || window._systemData || {};
+    const nome = _nomeDoAtributo(sigla);
+    const reg = (sys.attributes || []).find(a =>
+        a.sigla === sigla || a.key === sigla || a.nome === nome);
+    return (reg && reg.descricao) || '';
+}
+
 function _npcSecaoMecanica() {
     return `
     <!-- ============ SEÇÃO: MECÂNICA ============ -->
@@ -658,7 +697,12 @@ function _npcSecaoMecanica() {
             <div class="npcv2-attrs-grid" id="npcAttrsGrid">
                 ${ATTR_SIGLAS.map(a => `
                     <div class="npcv2-attr-cell">
-                        <div class="npcv2-attr-label">${a}</div>
+                        <div class="npcv2-attr-label"
+                             data-tt-title="${escapeHtml(_nomeDoAtributo(a))}"
+                             data-tt-desc="${escapeHtml(_descDoAtributo(a))}"
+                             onmouseenter="handleNpcTooltipEnter(event, this)"
+                             onmouseleave="hideNpcTooltip()"
+                             onmousemove="moveNpcTooltip(event)">${a}</div>
                         <input type="number" class="form-input npcv2-attr-input" id="npcAttr_${a}" value="0"
                             oninput="F.npc.atributos['${a}']=parseInt(this.value)||0;recalcStats()">
                         <div class="npcv2-attr-eff" id="npcAttrEff_${a}"></div>
@@ -1563,9 +1607,9 @@ function renderDvGrid() {
             return `<div class="npcv2-dv-cell ${locked ? 'locked' : ''}" data-dvkey="${dv.key}">
                 ${removeBtn}
                 <div class="npcv2-dv-label" 
-                     data-tt-title="${escapeHtml(dv.nome)}" 
+                     data-tt-title="${escapeHtml(dv.nome)}" data-tt-icone="${escapeHtml(dv.icone || '')}" 
                      data-tt-desc="${escapeHtml(desc)}" 
-                     data-tt-extra="${escapeHtml(tip)}"
+                     data-tt-formula="${escapeHtml(tip)}"
                      onmouseenter="handleNpcTooltipEnter(event, this)" 
                      onmouseleave="hideNpcTooltip()" 
                      onmousemove="moveNpcTooltip(event)">
@@ -1620,9 +1664,9 @@ function renderDvGrid() {
 
         return `<div class="npcv2-dv-cell npcv2-dv-calc${d.limitadoPorFor ? ' is-limitado' : ''}">
                 <div class="npcv2-dv-label"
-                     data-tt-title="Alcance do Disparo"
+                     data-tt-title="Alcance do Disparo" data-tt-icone="🏹"
                      data-tt-desc="${escapeHtml(dica)}"
-                     data-tt-extra="Sai da arma equipada e da FOR — não é Valor Derivado."
+                     data-tt-nota="Sai da arma equipada e da FOR — não é Valor Derivado."
                      onmouseenter="handleNpcTooltipEnter(event, this)"
                      onmouseleave="hideNpcTooltip()"
                      onmousemove="moveNpcTooltip(event)">

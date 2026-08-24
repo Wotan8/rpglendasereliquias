@@ -14,7 +14,7 @@ import { integridadeZerada } from '../../shared/inventario-motor.js?v=7';
 
 const ATTR_SIGLAS = ['INT', 'RAC', 'PRS', 'FOR', 'DES', 'VIG', 'PRE', 'MAN', 'AUT'];
 
-const ATTR_NOMES = {
+export const ATTR_NOMES = {
     'Inteligência': 'INT', 'Raciocínio': 'RAC', 'Perseverança': 'PRS',
     'Força': 'FOR', 'Destreza': 'DES', 'Vigor': 'VIG',
     'Presença': 'PRE', 'Manipulação': 'MAN', 'Autocontrole': 'AUT'

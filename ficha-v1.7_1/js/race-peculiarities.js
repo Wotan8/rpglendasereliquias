@@ -892,60 +892,45 @@ function buildPeculiarityTooltipHTML(pecKey, sourceKey) {
         }
     }
     if (!pec) return '';
+    if (!window.LRDetalhe) return '';
 
-    let html = '';
-    const esc = typeof _escHtml === 'function' ? _escHtml : (s => {
-        const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
-    });
+    /* A fórmula de uma peculiaridade é o que ela FAZ: o efeito no nível atual
+       mais as mecânicas vinculadas. Cada linha nomeia a fonte, como nos outros
+       tipos. */
+    const formula = [];
 
-    // Descrição
-    if (pec.descricao) {
-        html += `<div class="dv-tooltip-desc">${esc(pec.descricao)}</div>`;
-    }
-
-    // Efeito atual
     const efeito = _generatePecEffectText(pec);
-    if (efeito) {
-        html += `<div class="dv-tooltip-mechs">`;
-        html += `<div class="dv-tooltip-mechs-title">⚡ Efeito:</div>`;
-        html += `<div class="dv-tooltip-mech-item" style="white-space:pre-wrap">${esc(efeito)}</div>`;
-        html += `</div>`;
-    }
+    if (efeito) formula.push({ fonte: '⚡ Efeito', texto: efeito });
 
-    // Custo (evolutivas)
-    if (pec.tipo === 'evolutivo') {
-        const dotKey = 'pec_' + pec.key;
-        const currentLevel = state.dots[dotKey] || pec.nivelAtual || 1;
-        if (pec.niveis && pec.niveis[currentLevel]) {
-            const custoText = pec.niveis[currentLevel].custo || '';
-            if (custoText) {
-                html += `<div class="dv-tooltip-mech-item" style="font-style:italic;color:var(--muted)">💰 ${esc(custoText)}</div>`;
-            }
-        }
-    }
-
-    // Aura vinculada
     if (pec.auraVinculadaId && window.AURAS) {
         const auraDef = window.AURAS.find(a => a.id === pec.auraVinculadaId);
         if (auraDef) {
-            html += `<div class="dv-tooltip-mech-item" style="color:#7c3aed">🌟 Concede: <strong>${esc(auraDef.nome)}</strong> (Grau ${pec.auraGrauConcedido || 1})</div>`;
+            formula.push({ fonte: '🌟 Concede', texto: `${auraDef.nome} (Grau ${pec.auraGrauConcedido || 1})` });
         }
     }
 
-    // Mecânicas vinculadas
-    if (pec.mecanicas && pec.mecanicas.length > 0 && typeof generatePreviewText === 'function') {
-        html += `<div class="dv-tooltip-mechs">`;
-        html += `<div class="dv-tooltip-mechs-title">⚙️ Mecânicas Vinculadas:</div>`;
+    if (pec.mecanicas && pec.mecanicas.length && typeof generatePreviewText === 'function') {
         for (const m of pec.mecanicas) {
             const preview = generatePreviewText(m);
-            if (preview) {
-                html += `<div class="dv-tooltip-mech-item">• ${esc(preview)}</div>`;
-            }
+            if (preview) formula.push({ fonte: m.nome || 'Vinculada', texto: preview });
         }
-        html += `</div>`;
     }
 
-    return html;
+    // Custo só existe em peculiaridade evolutiva, e é nota, não fórmula: não
+    // entra na conta de nada, é o preço de subir de nível.
+    let nota = '';
+    if (pec.tipo === 'evolutivo') {
+        const nivel = state.dots['pec_' + pec.key] || pec.nivelAtual || 1;
+        const custo = pec.niveis && pec.niveis[nivel] && pec.niveis[nivel].custo;
+        if (custo) nota = `💰 ${custo}`;
+    }
+
+    return window.LRDetalhe.detalheHTML({
+        nome: pec.nome || pec.key,
+        descricao: pec.descricao,
+        formula, nota,
+        sys: window._systemData || null,
+    });
 }
 
 // Legacy compatibility — old code may call renderPeculiaridadeCard
