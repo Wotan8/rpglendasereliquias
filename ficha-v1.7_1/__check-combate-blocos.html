@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — blocos da aba Combate</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="css/inventory.css">
+<script>
+  for (const l of document.querySelectorAll('link[href*="inventory.css"]')) l.href += '?cb=' + Date.now();
+</script>
+<style>
+  body { margin:0; padding:16px; font:14px/1.6 Inter, system-ui, sans-serif;
+         background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table#saida { border-collapse:collapse; font:11px ui-monospace, monospace; width:100%; margin-bottom:14px; }
+  table#saida td { border:1px solid var(--lr-border); padding:2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight:700; }
+  #placar { font-weight:800; margin:8px 0 16px; padding-top:8px; border-top:1px solid var(--lr-border); }
+  h1 { font-size:1rem; margin:0 0 4px; } h2 { font-size:.85rem; margin:18px 0 6px; }
+  p.nota { margin:0 0 10px; color:var(--lr-text-2); font-size:.8rem; }
+  .palco { max-width: 900px; border:1px dashed var(--lr-border); padding:10px; border-radius:8px; }
+  .barra { display:flex; gap:8px; margin-bottom:12px; }
+</style></head>
+<body>
+<h1>⚔️ Aba Combate — Equipamentos e Ataques</h1>
+<p class="nota">Os dois blocos são renderizados pelas funções REAIS de <code>js/inventory.js</code>,
+   com o CSS real. Confere o que a tela mostrava errado: a parte vazia esticando até a altura da
+   parte cheia ao lado (parecia aberta sem estar) e as colunas de <code>0</code> na tabela de
+   ataques, uma para cada Valor Derivado que a peça não tem.</p>
+
+<div class="barra">
+  <button type="button" onclick="document.documentElement.classList.toggle('dark')">🌗 Trocar tema</button>
+  <button type="button" onclick="const p=document.querySelectorAll('.palco');
+      p.forEach(x => x.style.maxWidth = x.style.maxWidth === '360px' ? '900px' : '360px')">📱 Estreitar</button>
+</div>
+
+<table id="saida"></table>
+<div id="placar"></div>
+
+<h2>⚔️ Equipamentos</h2>
+<div class="palco"><div class="inv-equipped-grid" id="equippedItemsGrid"></div></div>
+
+<h2>⚔️ Ataques e Efeitos Ativos</h2>
+<div class="palco">
+  <div class="section" id="activeEffectsSection">
+    <div class="atk-table-wrap"><table class="atk-table" id="activeEffectsTable"></table></div>
+  </div>
+</div>
+
+<script src="js/item-scope-calc.js"></script>
+<script type="module">
+const src = (await (await fetch('js/inventory.js?cb=' + Date.now())).text()).replace(/\r\n/g, '\n');
+
+/** Recorta uma função inteira do arquivo real, pelo nome. */
+const fatia = (nome) => {
+    const i = src.indexOf(`function ${nome}(`);
+    if (i < 0) throw new Error(`não achei ${nome} em inventory.js`);
+    const j = src.indexOf('\n}\n', i) + 3;
+    return src.slice(i, j);
+};
+
+const _escHtml = (t) => String(t ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ===== os dados de mentirinha =====
+   Uma faca (só acerto corpo a corpo e à distância), uma poção (nenhum acerto)
+   e um soco desarmado (só acerto desarmado). É a combinação que enchia a
+   tabela de zeros: cada um usa um Valor Derivado que os outros não usam. */
+const DVS = [
+    { key: 'ACC', nome: 'Acerto Corpo a Corpo', icone: '🗡️', escopoItem: 'coluna' },
+    { key: 'ADI', nome: 'Acerto à Distância', icone: '🏹', escopoItem: 'coluna' },
+    { key: 'ADE', nome: 'Acerto Desarmado', icone: '👊', escopoItem: 'coluna' },
+    { key: 'BDA', nome: 'Bônus de Dano', icone: '💥', escopoItem: 'dano' },
+    { key: 'DVM', nome: 'Dano Vermelha', icone: '🔥', escopoItem: 'dano-canal' },
+];
+const CATALOG = [];
+const ITENS = [
+    { id: 'faca', nome: 'Faca de Sangria', tipo: 'Arma', equipado: true, estadoEquip: 'empunhado',
+      slotAnatomico: 'mao_1', formulaDano: '1d4', tipoGolpe: 'perfurante' },
+    { id: 'pocao', nome: 'Loção de cura 2 (+4)', tipo: 'Consumível', equipado: true,
+      estadoEquip: 'empunhado', slotAnatomico: 'mao_2', quantidade: 3 },
+];
+
+window._inventoryState = { items: ITENS, catalog: CATALOG, itemRules: [] };
+window.DERIVED_VALUES = DVS;
+window._systemData = { bodyParts: [] };
+window.state = {
+    derived: { ACC: 0, ADI: 0, ADE: 2, BDA: 1, DVM: 0 },
+    itemBonuses: { faca: { 'DERIVED:ACC': 2, 'DERIVED:ADI': 2 }, pocao: { 'DERIVED:ADI': 2 } },
+    mechanicBonuses: {},
+    partesDoCorpo: [
+        { id: 'cabeca', nome: 'Cabeça', slots: 1 },
+        { id: 'mao', nome: 'Mão', slots: 2 },
+        { id: 'braco', nome: 'Braço', slots: 2 },
+        { id: 'torso', nome: 'Torso', slots: 1 },
+    ],
+};
+
+const BODY_SLOTS = {
+    cabeca: { label: 'Cabeça', icon: '🎓', max: 1, partId: 'cabeca' },
+    mao_1: { label: 'Mão 1', icon: '✋', max: 1, partId: 'mao' },
+    mao_2: { label: 'Mão 2', icon: '🤚', max: 1, partId: 'mao' },
+    braco_1: { label: 'Braço 1', icon: '💪', max: 1, partId: 'braco' },
+    braco_2: { label: 'Braço 2', icon: '💪', max: 1, partId: 'braco' },
+    torso: { label: 'Torso', icon: '🧥', max: 1, partId: 'torso' },
+};
+
+const DEPS = {
+    _escHtml,
+    _getTipoEmoji: (t) => ({ Arma: '⚔️', 'Consumível': '🧪' }[t] || '📦'),
+    _getItemPressure: (i) => Number(i.pressao) || 0.5,
+    _getMechPreview: () => '',
+    EQUIP_STATES: { empunhado: { icon: '✊', label: 'Empunhado', description: 'na mão' } },
+    itemTemEfeitosAtivos: (i) => !!i.equipado,
+    _getCharacterBodySlots: () => BODY_SLOTS,
+    _slotsDoItem: (i) => (i.slotAnatomico ? [i.slotAnatomico] : []),
+    _bagsDasPartes: () => ({}),
+    computeItemScopedTotals: window.computeItemScopedTotals,
+    // Um soco desarmado, para provar que ele NÃO arrasta uma coluna de zeros
+    // para as linhas de arma (era o "Acerto Desarmado 0" da faca).
+    computeGolpesDesarmados: () => ([{
+        desarmado: true, nome: 'Braço', qtd: 2, icone: '💪', dano: '1d4+1',
+        tiposGolpe: [{ chave: 'contundente', nome: 'Contundente', icone: '🔨' }],
+        canais: [], colunas: [
+            { key: 'ACC', nome: 'Acerto Corpo a Corpo', icone: '🗡️', prefixo: '', sufixo: '', base: 0, bonus: 0, total: 0 },
+            { key: 'ADE', nome: 'Acerto Desarmado', icone: '👊', prefixo: '', sufixo: '', base: 0, bonus: 2, total: 2 },
+        ],
+    }]),
+};
+
+const F = new Function(...Object.keys(DEPS), 'window',
+    [fatia('renderActiveEffects'), fatia('renderEquippedItems'), fatia('_renderEquipCard')].join('\n')
+    + '\nreturn { renderActiveEffects, renderEquippedItems };')(...Object.values(DEPS), window);
+
+F.renderActiveEffects();
+F.renderEquippedItems();
+
+/* ===== o placar ===== */
+const linhas = [];
+const t = (nome, cond) => linhas.push(
+    `<tr><td>${nome}</td><td class="${cond ? 'ok' : 'fail'}">${cond ? 'OK' : 'FALHOU'}</td></tr>`);
+const tabela = document.getElementById('activeEffectsTable');
+const grade = document.getElementById('equippedItemsGrid');
+const linhaDe = (nome) => [...tabela.querySelectorAll('tbody tr')]
+    .find(r => r.textContent.includes(nome));
+
+// ===== A) tabela de ataques: nada de coluna de zero =====
+{
+    const ths = [...tabela.querySelectorAll('th')].map(x => x.textContent.trim());
+    t('T01 · a tabela tem 3 colunas fixas, não uma por Valor Derivado', ths.length === 3);
+    t('T02 · e as colunas são Item / Dano / Valores',
+        /Item/.test(ths[0]) && /Dano/.test(ths[1]) && /Valores/.test(ths[2]));
+    t('T03 · nenhum Valor Derivado virou cabeçalho de coluna',
+        !ths.some(h => /Acerto/.test(h)));
+
+    const faca = linhaDe('Faca de Sangria');
+    const chipsFaca = [...faca.querySelectorAll('.atk-chip-nome')].map(x => x.textContent.trim());
+    t('T04 · a faca lista os dois acertos que ela tem',
+        chipsFaca.some(c => /Corpo a Corpo/.test(c)) && chipsFaca.some(c => /à Distância/.test(c)));
+    t('T05 · e NÃO lista o Acerto Desarmado, que é 0 nela',
+        !chipsFaca.some(c => /Desarmado/.test(c)));
+    t('T06 · nenhum zero solto sobrou na linha da faca',
+        !/(^|\s)0(\s|$)/.test(faca.textContent.replace(/\s+/g, ' ')));
+
+    const soco = linhaDe('Braço');
+    const chipsSoco = [...soco.querySelectorAll('.atk-chip-nome')].map(x => x.textContent.trim());
+    t('T07 · o soco lista só o Acerto Desarmado',
+        chipsSoco.length === 1 && /Desarmado/.test(chipsSoco[0]));
+
+    const pocao = linhaDe('Loção');
+    t('T08 · a poção, que só vincula Acerto à Distância, aparece com ele só',
+        !!pocao && [...pocao.querySelectorAll('.atk-chip-nome')]
+            .map(x => x.textContent.trim()).join('|') === '🏹 Acerto à Distância');
+    // A regra é "a peça MOVE este valor", não "o número não é zero": com um
+    // bônus global de Acerto Desarmado (aqui, base 2) o critério do número
+    // devolveria "Acerto Desarmado" para a faca — legível e irrelevante.
+    t('T08b · base global de um VD alheio não reaparece na peça',
+        window.state.derived.ADE === 2 && !chipsFaca.some(c => /Desarmado/.test(c)));
+
+    // O número é o que se lê em jogo.
+    const val = faca.querySelector('.atk-chip-val strong');
+    // Arma sem vínculo nenhum ainda precisa mostrar o Acerto com que se ataca.
+    t('T08c · peça que não move nada cai nos totais, em vez de ficar vazia', (() => {
+        const so = { colunas: [{ key: 'ACC', bonus: 0, total: 5 }, { key: 'ADE', bonus: 0, total: 0 }] };
+        const vis = so.colunas.filter(c => (so.colunas.some(x => x.bonus !== 0) ? c.bonus !== 0 : c.total !== 0));
+        return vis.length === 1 && vis[0].key === 'ACC';
+    })());
+
+    t('T09 · o número continua grande e destacado',
+        parseFloat(getComputedStyle(val).fontSize) >= 16 && Number(getComputedStyle(val).fontWeight) >= 700);
+    t('T10 · o delta do item aparece ao lado do número',
+        /\+2/.test(faca.querySelector('.atk-delta')?.textContent || ''));
+    t('T11 · o title da ficha ainda abre a conta',
+        /Base 0 \+ 2 \(item\) = 2/.test(faca.querySelector('.atk-chip')?.title || ''));
+    t('T12 · o dado de dano continua na coluna dele',
+        /1d4/.test(faca.querySelector('.atk-dano')?.textContent || ''));
+    t('T13 · o rótulo do chip cabe sem empurrar a tabela',
+        tabela.scrollWidth <= tabela.parentElement.clientWidth + 1);
+}
+
+// ===== B) equipamentos: parte vazia não vira caixa alta =====
+{
+    const grupos = [...grade.querySelectorAll('.inv-slot-group')];
+    const nomeDe = (g) => g.querySelector('.inv-slot-group-title').textContent.trim();
+    const mao = grupos.find(g => /Mão/.test(nomeDe(g)));
+    const cabeca = grupos.find(g => /Cabeça/.test(nomeDe(g)));
+
+    t('T14 · a Mão, que tem itens, fica aberta', !mao.classList.contains('collapsed'));
+    t('T15 · a Cabeça, vazia, fica fechada', cabeca.classList.contains('collapsed'));
+    t('T16 · e é marcada como vazia', cabeca.classList.contains('is-vazio'));
+
+    // O bug: numa grade, as células de uma linha esticam até a mais alta.
+    t('T17 · a parte vazia NÃO estica até a altura da parte cheia',
+        cabeca.getBoundingClientRect().height < mao.getBoundingClientRect().height / 2);
+    t('T18 · a parte vazia é só o título, uma linha',
+        cabeca.getBoundingClientRect().height <= 40);
+
+    t('T19 · os vazios ficam juntos no fim, fora do meio da grade',
+        !!grade.querySelector('.inv-vazios')
+        && [...grade.children].indexOf(grade.querySelector('.inv-vazios')) === grade.children.length - 1);
+    t('T20 · e todos os vazios estão lá dentro',
+        grade.querySelectorAll('.inv-vazios .inv-slot-group').length === 3);
+    t('T21 · nenhum grupo com item foi parar entre os vazios',
+        !grade.querySelector('.inv-vazios .group-has-items-dot'));
+
+    t('T22 · a grade se adapta à largura em vez de forçar 2 colunas',
+        /minmax/.test(getComputedStyle(grade).gridTemplateColumns) ||
+        getComputedStyle(grade).gridTemplateColumns.split(' ').length >= 2);
+    t('T23 · a grade não estica as células (align-items)',
+        getComputedStyle(grade).alignItems === 'start');
+
+    t('T24 · os dois itens equipados aparecem',
+        grade.querySelectorAll('.inv-card').length === 2);
+}
+
+// ===== C) contraste, nos dois temas =====
+const corDe = (e, p) => getComputedStyle(e)[p];
+const lum = (c) => {
+    const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => {
+        v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+    });
+    return .2126 * r + .7152 * g + .0722 * b;
+};
+const contraste = (a, b) => {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + .05) / (y + .05);
+};
+const fundoReal = (e) => {
+    for (let n = e; n; n = n.parentElement) {
+        const c = corDe(n, 'backgroundColor');
+        if (Number((c.match(/[\d.]+/g) || [])[3] ?? 1) >= .95) return c;
+    }
+    return 'rgb(255,255,255)';
+};
+const rotulo = document.querySelector('.atk-chip-nome');
+const numero = document.querySelector('.atk-chip-val strong');
+const medir = (tema) => {
+    // 3:1 no rótulo: é maiúscula pequena mas só acompanha o número, que é o dado.
+    t(`${tema}: o rótulo do chip é legível (≥3:1)`, contraste(corDe(rotulo, 'color'), fundoReal(rotulo)) >= 3);
+    t(`${tema}: o número é legível (≥4,5:1)`, contraste(corDe(numero, 'color'), fundoReal(numero)) >= 4.5);
+};
+medir('T25/T26 · claro');
+document.documentElement.classList.add('dark');
+await new Promise(r => setTimeout(r, 30));
+medir('T27/T28 · escuro');
+document.documentElement.classList.remove('dark');
+
+// ===== D) celular =====
+document.querySelectorAll('.palco').forEach(p => p.style.maxWidth = '360px');
+await new Promise(r => setTimeout(r, 40));
+t('T29 · em 360px nada empurra a página para o lado',
+    document.documentElement.scrollWidth <= window.innerWidth + 1);
+document.querySelectorAll('.palco').forEach(p => p.style.maxWidth = '900px');
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const falhas = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML =
+    `<span class="${falhas ? 'fail' : 'ok'}">${linhas.length - falhas}/${linhas.length}</span>`
+    + (falhas ? ` — ${falhas} falha(s)` : ' — tudo certo');
+</script>
+</body></html>

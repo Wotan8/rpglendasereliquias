@@ -1,11 +1,49 @@
 /* ===== INVENTORY CSS — Sistema de Inventário (Ficha v1.7) ===== */
 
 /* === CARDS DE EQUIPAMENTO (Aba Combate) === */
+/* `align-items: start` é o conserto do bloco que parecia aberto sem estar:
+   numa grade, todas as células de uma linha esticam até a altura da mais alta.
+   Com a MÃO cheia à direita, a CABEÇA vazia à esquerda virava uma caixa alta e
+   oca do mesmo tamanho — lida como "aberta". Cada grupo agora tem a altura do
+   próprio conteúdo.
+
+   E `auto-fill` no lugar das duas colunas fixas: com muitas partes do corpo,
+   duas colunas obrigam a rolar; em tela larga cabem três ou quatro. */
 .inv-equipped-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    align-items: start;
     gap: 12px;
 }
+
+/* Parte sem nada equipado é contexto, não conteúdo: título só, recuado do
+   resto, para os grupos que TÊM item saltarem à vista. */
+.inv-slot-group.is-vazio {
+    background: none;
+    border-style: dashed;
+    border-color: var(--line, rgba(255, 255, 255, .08));
+    padding: 4px 10px;
+    opacity: .65;
+}
+
+.inv-slot-group.is-vazio:hover { opacity: 1; }
+
+.inv-slot-group.is-vazio .inv-slot-group-title {
+    margin: 0;
+    padding: 0;
+    border-bottom: none;
+}
+
+/* Os vazios ficam juntos no fim, numa faixa que atravessa a grade inteira:
+   espalhados entre os cheios, eram buracos no meio do desenho. */
+.inv-vazios {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.inv-vazios .inv-slot-group { flex: 0 1 auto; }
 
 /* === SLOT GROUPS — Agrupamentos anatômicos === */
 .inv-slot-group {
@@ -1270,6 +1308,65 @@
     border: 1px solid var(--lr-border, rgba(255, 255, 255, .15));
     white-space: nowrap;
 }
+/* =====================================================================
+   OS VALORES DE CADA LINHA
+
+   Eram uma COLUNA por Valor Derivado, e a maior parte da tabela virava zero:
+   a faca mostrava "Acerto Desarmado 0", o soco mostrava "Acerto Corpo a Corpo
+   0". Zero não é informação — o que importa é o que a peça faz. Agora cada
+   linha traz só os seus, em ficha: rótulo pequeno em cima, número grande
+   embaixo, que é o que o olho procura no meio do combate.
+   ===================================================================== */
+.atk-col-vals { text-align: left; white-space: normal; }
+
+.atk-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.atk-chip {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    padding: 3px 9px;
+    border-radius: 8px;
+    background: var(--lr-bg-1);
+    border: 1px solid var(--line, rgba(255, 255, 255, 0.10));
+    line-height: 1.15;
+}
+
+.atk-chip-nome {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--muted, var(--lr-text-2));
+    white-space: nowrap;
+}
+
+/* O número é o que se lê em jogo: fica grande, e o resto encolhe em volta. */
+.atk-chip-val {
+    font-size: 0.8rem;
+    color: var(--ink, var(--lr-text-1));
+}
+
+.atk-chip-val strong {
+    font-size: 1.15rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Canal de Essência não é um total, é uma parcela do golpe — mesma família
+   visual do dado, para não ser lido como um valor a mais. */
+.atk-chip-canal .atk-chip-val strong {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--lr-gold);
+}
+
+.atk-nada { color: var(--muted, var(--lr-text-2)); }
+
 .atk-val strong { font-size: 1rem; }
 .atk-delta {
     margin-left: 4px;

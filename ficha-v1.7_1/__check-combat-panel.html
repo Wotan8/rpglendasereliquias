@@ -280,7 +280,11 @@
 
             // Sanfona das seções (não afeta o HUD)
             const equip = document.getElementById('equipSection');
-            equip.classList.remove('cbt-collapsed');   // no celular ela já nasce fechada
+            // Em combate consulta-se "Ataques e Efeitos Ativos", que ja diz o que
+            // cada peca faz; a lista anatomica e conferencia, nao consulta.
+            eq('Equipamentos nasce fechado em qualquer tela',
+                equip.classList.contains('cbt-collapsed'), true);
+            equip.classList.remove('cbt-collapsed');
             equip.querySelector('.section-title').click();
             eq('clique no título recolhe a seção', equip.classList.contains('cbt-collapsed'), true);
             equip.querySelector('.section-title').click();

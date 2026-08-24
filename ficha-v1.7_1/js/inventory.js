@@ -663,24 +663,35 @@ function renderActiveEffects() {
 
     if (linhas.length === 0) { section.style.display = 'none'; return; }
 
-    // Colunas exibidas: só as que algum item realmente usa (evita tabela larga
-    // com colunas vazias quando há muitos Valores Derivados escopados).
-    const colDefs = [];
-    for (const l of linhas) {
-        for (const c of l.colunas) {
-            if (c.bonus === 0 && c.total === 0) continue;
-            if (!colDefs.some(x => x.key === c.key)) colDefs.push({ key: c.key, nome: c.nome, icone: c.icone });
-        }
-    }
+    /* UMA coluna de valores, não uma por Valor Derivado.
+       Com coluna por VD, toda peça mostrava um número em cada VD que ela não
+       tem: a faca exibia "Acerto Desarmado 0" e o soco exibia "Acerto Corpo a
+       Corpo 0". Colunas assim são a maior parte da tabela e não dizem nada — o
+       que importa é o que a peça FAZ.
+
+       O critério NÃO é "o número é diferente de zero", e essa distinção custou
+       um teste: com um bônus global de Acerto Desarmado, a faca voltaria a
+       mostrar "Acerto Desarmado 3" — mais legível e igualmente irrelevante,
+       porque ninguém soca com a faca na mão. O que liga um Valor Derivado a
+       uma peça é a peça MOVER aquele valor.
+
+       A ressalva é a peça que não move nada: aí a linha mostra os totais que
+       não são zero, senão uma arma sem vínculo apareceria sem o Acerto com que
+       se ataca com ela. */
+    const valoresDe = (l) => {
+        const cols = l.colunas || [];
+        const temVinculo = cols.some(c => c.bonus !== 0);
+        return cols.filter(c => (temVinculo ? c.bonus !== 0 : c.total !== 0));
+    };
+
     const temDano = linhas.some(l => l.dano);
     // Canais de Essência: parcelas paralelas ao dano físico, cada uma reduzida
-    // pela Blindagem da própria cor no alvo. Uma coluna só, com todas.
-    const temCanais = linhas.some(l => l.canais && l.canais.length);
+    // pela Blindagem da própria cor no alvo. Entram junto com os demais valores.
+    const temValores = linhas.some(l => valoresDe(l).length || (l.canais && l.canais.length));
 
     let html = '<thead><tr><th class="atk-col-item">Item</th>';
-    if (temDano) html += '<th>💥 Dano</th>';
-    if (temCanais) html += '<th title="Cada canal é reduzido pela Blindagem daquela Essência no alvo, não pela Blindagem física.">🌈 Canais</th>';
-    for (const c of colDefs) html += `<th title="${_escHtml(c.nome)}">${c.icone} ${_escHtml(c.nome)}</th>`;
+    if (temDano) html += '<th class="atk-col-dano">💥 Dano</th>';
+    if (temValores) html += '<th class="atk-col-vals">📊 Valores</th>';
     html += '</tr></thead><tbody>';
 
     for (const l of linhas) {
@@ -704,19 +715,25 @@ function renderActiveEffects() {
                 + tgs.map(tg => `<small class="atk-tipo-golpe" title="Barrado pela Blindagem ${_escHtml(tg.nome)} do alvo">${tg.icone} ${_escHtml(tg.nome)}</small>`).join('')
                 + '</td>';
         }
-        if (temCanais) {
-            const cs = (l.canais || []).map(c =>
-                `<span class="atk-canal" title="${_escHtml(c.nome)}">${c.icone} ${c.total}</span>`).join('');
-            html += `<td class="atk-canais">${cs || '—'}</td>`;
-        }
-        for (const cd of colDefs) {
-            const c = l.colunas.find(x => x.key === cd.key);
-            if (!c) { html += '<td class="atk-val">—</td>'; continue; }
-            const title = `Base ${c.base} ${c.bonus >= 0 ? '+' : '−'} ${Math.abs(c.bonus)} (${l.desarmado ? 'parte' : 'item'}) = ${c.total}`;
-            html += `<td class="atk-val" title="${_escHtml(title)}">
-                ${_escHtml(c.prefixo)}<strong>${c.total}</strong>${_escHtml(c.sufixo)}
-                ${c.bonus !== 0 ? `<small class="atk-delta">${c.bonus > 0 ? '+' : ''}${c.bonus}</small>` : ''}
-            </td>`;
+        if (temValores) {
+            const de = l.desarmado ? 'parte' : 'item';
+            const chips = valoresDe(l).map(c => {
+                const title = `Base ${c.base} ${c.bonus >= 0 ? '+' : '−'} ${Math.abs(c.bonus)} (${de}) = ${c.total}`;
+                return `<span class="atk-chip" title="${_escHtml(title)}">
+                    <span class="atk-chip-nome">${c.icone} ${_escHtml(c.nome)}</span>
+                    <span class="atk-chip-val">${_escHtml(c.prefixo)}<strong>${c.total}</strong>${_escHtml(c.sufixo)}${
+                        c.bonus !== 0 ? `<small class="atk-delta">${c.bonus > 0 ? '+' : ''}${c.bonus}</small>` : ''}</span>
+                </span>`;
+            });
+            // O canal fecha a lista: ele não é um total, é uma parcela do golpe.
+            for (const c of (l.canais || [])) {
+                chips.push(`<span class="atk-chip atk-chip-canal" title="Parcela de Essência — reduzida pela Blindagem ${_escHtml(c.nome)} do alvo, não pela física.">
+                    <span class="atk-chip-nome">${c.icone} ${_escHtml(c.nome)}</span>
+                    <span class="atk-chip-val"><strong>${c.total > 0 ? '+' : ''}${c.total}</strong></span>
+                </span>`);
+            }
+            html += `<td class="atk-col-vals">${chips.length
+                ? `<div class="atk-chips">${chips.join('')}</div>` : '<span class="atk-nada">—</span>'}</td>`;
         }
         html += '</tr>';
     }
@@ -775,6 +792,7 @@ function renderEquippedItems() {
 
     const bodySlots = typeof _getCharacterBodySlots === 'function' ? _getCharacterBodySlots() : {};
     const partesDoCorpo = window.state?.partesDoCorpo || [];
+    const comItem = [], vazios = [];
 
     // Renderizar por Partes do Corpo cadastradas na ficha
     for (const bp of partesDoCorpo) {
@@ -809,19 +827,26 @@ function renderEquippedItems() {
             }
         }
         
-        let groupHtml = `<div class="inv-slot-group ${groupHasAnyItems ? '' : 'collapsed'}">
+        const groupHtml = `<div class="inv-slot-group ${groupHasAnyItems ? '' : 'collapsed is-vazio'}">
             <h4 class="inv-slot-group-title" onclick="this.parentElement.classList.toggle('collapsed')">
                 <span class="group-toggle-icon">▶</span>
-                ${bp.nome}
+                ${_escHtml(bp.nome)}
                 ${groupHasAnyItems ? `<span class="group-has-items-dot"></span>` : ''}
             </h4>
             <div class="inv-slot-group-content">
-                ${slotsHtml !== '' ? slotsHtml : `<div class="inv-slot-empty" style="text-align:center;color:var(--muted);font-size:0.8rem;padding:8px;border:1px dashed var(--line);border-radius:6px;">Nenhum item equipado neste local.</div>`}
+                ${slotsHtml !== '' ? slotsHtml : '<div class="inv-slot-empty">Nenhum item equipado neste local.</div>'}
             </div>
         </div>`;
-        
-        html += groupHtml;
+
+        (groupHasAnyItems ? comItem : vazios).push(groupHtml);
     }
+
+    /* Os vazios vão TODOS para o fim, numa faixa própria. Espalhados na ordem
+       anatômica, cada parte sem item abria um buraco entre as que têm — e a
+       grade, esticando as células da linha, fazia o buraco ter a altura do
+       vizinho cheio. Quem olhava via caixas grandes e vazias. */
+    html += comItem.join('');
+    if (vazios.length) html += `<div class="inv-vazios">${vazios.join('')}</div>`;
 
     // Identificar itens equipados sem slot anatômico definido (legado ou armas de duas mãos em slot secundário)
     // O slotAnatomico2 (outra mão) não renderiza card duplo, é só referência.

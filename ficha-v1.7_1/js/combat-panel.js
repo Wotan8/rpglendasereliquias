@@ -400,8 +400,10 @@
                 if (e.target.closest('button, input, a, select')) return;
                 sec.classList.toggle('cbt-collapsed');
             });
-            // Equipamentos ocupa muita altura: começa fechado no celular.
-            if (sec.id === 'equipSection' && window.innerWidth < 600) sec.classList.add('cbt-collapsed');
+            /* Equipamentos nasce fechado em qualquer tela: em combate o que se
+               consulta é Ataques e Efeitos Ativos, que já lista cada peça com o
+               que ela faz. A lista anatômica é conferência, não consulta. */
+            if (sec.id === 'equipSection') sec.classList.add('cbt-collapsed');
             // Condições nascem fechadas: o resumo delas já está no topo, em miniatura.
             if (sec.id === 'conditionsSection') sec.classList.add('cbt-collapsed');
         });
