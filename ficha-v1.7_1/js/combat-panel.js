@@ -382,6 +382,8 @@
         document.querySelectorAll('#combatValuesBlocks .cbt-chip').forEach(chip => {
             chip.addEventListener('mouseenter', showDvTooltip);
             chip.addEventListener('mouseleave', hideDvTooltip);
+            // o clique abre a janela com a fórmula inteira (o hover só resume)
+            if (typeof abrirDetalheDoRotulo === 'function') chip.addEventListener('click', abrirDetalheDoRotulo);
             chip.addEventListener('touchstart', showDvTooltip, { passive: true });
             chip.addEventListener('touchend', hideDvTooltip);
         });

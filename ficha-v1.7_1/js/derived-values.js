@@ -390,6 +390,9 @@ let _dvTooltipEl = null;
 function _dvLigarTooltip(el) {
     el.addEventListener('mouseenter', showDvTooltip);
     el.addEventListener('mouseleave', hideDvTooltip);
+    el.addEventListener('click', abrirDetalheDoRotulo);
+    /* No toque não há hover: o dedo abre a janela direto, que é onde a
+       fórmula cabe de verdade. */
     el.addEventListener('touchstart', showDvTooltip, { passive: true });
     el.addEventListener('touchend', hideDvTooltip);
 }
@@ -537,15 +540,11 @@ function initAttributeTooltips() {
  * que afetam o valor) entram como fórmula: eles SÃO o que forma o número.
  */
 function _dvMontar({ nome, icone, descricao, vinculadas = [], externas = [], nota = '' }) {
-    if (!window.LRDetalhe) return _dvDesc(descricao);
     const formula = [
         ...vinculadas.map(p => ({ fonte: 'Vinculada', texto: p })),
         ...externas.map(f => ({ fonte: f.fonte, texto: f.preview })),
     ];
-    return window.LRDetalhe.detalheHTML({
-        nome, icone, descricao, formula, nota,
-        sys: window._systemData || null,
-    });
+    return { nome, icone, descricao, formula, nota, sys: window._systemData || null };
 }
 
 const _dvDesc = (texto) => texto ? `<div class="dv-tooltip-desc">${_escHtml(texto)}</div>` : '';
@@ -616,9 +615,9 @@ function _dvTooltipPericia(label) {
 }
 
 function _dvTooltipPeculiaridade(label) {
-    return typeof buildPeculiarityTooltipHTML === 'function'
-        ? buildPeculiarityTooltipHTML(label.dataset.pecKey, label.dataset.raceKey)
-        : '';
+    return typeof buildPeculiarityDetalhe === 'function'
+        ? buildPeculiarityDetalhe(label.dataset.pecKey, label.dataset.raceKey)
+        : null;
 }
 
 function _dvTooltipValorDerivado(label) {
@@ -671,7 +670,7 @@ const _DV_TOOLTIP_POR_TIPO = {
        Ganha nome no topo como todo o resto — `data-tooltip-nome` diz qual. */
     texto: el => el.dataset.tooltipText
         ? _dvMontar({ nome: el.dataset.tooltipNome || el.textContent.trim(), descricao: el.dataset.tooltipText })
-        : '',
+        : null,
 };
 
 /** Encosta o tooltip no label e puxa de volta se estourar a janela. */
@@ -691,18 +690,43 @@ function _dvPosicionarTooltip(label) {
     });
 }
 
+/* O descritor deste rótulo. Os construtores por tipo sabem ONDE mora a
+   descrição e a lista de mecânicas de cada coisa; o formato é o mesmo. */
+function _dvDescritor(label) {
+    const construir = _DV_TOOLTIP_POR_TIPO[label.dataset.tooltipType] || _dvTooltipValorDerivado;
+    const o = construir(label);
+    return (o && o.nome) ? o : null;
+}
+
+/**
+ * O hover mostra RESUMO — nome, descrição e o convite. A fórmula inteira só
+ * na janela, pelo clique: valor denso (a Sanidade tem doze linhas) estourava
+ * a tela quando tudo vinha aqui, porque caixa flutuante não tem para onde
+ * crescer sem sair do viewport.
+ */
 function showDvTooltip(e) {
     const label = e.currentTarget;
     if (!_dvTooltipEl) return;
-
-    // Sem `data-tooltip-type` o label é de Valor Derivado — é o caso mais comum.
-    const construir = _DV_TOOLTIP_POR_TIPO[label.dataset.tooltipType] || _dvTooltipValorDerivado;
-    const html = construir(label);
-    if (!html) return;   // nada a dizer: o tooltip continua escondido
+    const o = _dvDescritor(label);
+    if (!o) return;   // nada a dizer: o tooltip continua escondido
+    const html = window.LRDetalhe
+        ? window.LRDetalhe.detalheHTML(o, 'resumo')
+        : _dvDesc(o.descricao);
+    if (!html) return;
 
     _dvTooltipEl.innerHTML = html;
     _dvTooltipEl.style.display = 'block';
     _dvPosicionarTooltip(label);
+}
+
+/** Clique no rótulo: a janela, com tudo. É por aqui que o celular chega aos
+ *  detalhes — lá hover não existe. */
+function abrirDetalheDoRotulo(e) {
+    if (!window.LRDetalhe) return;
+    const o = _dvDescritor(e.currentTarget);
+    if (!o || !window.LRDetalhe.temDetalhe(o)) return;
+    hideDvTooltip();
+    window.LRDetalhe.abrirDetalhe(o);
 }
 
 function hideDvTooltip() {
@@ -1265,3 +1289,6 @@ function syncModuleDerivedValuesUI() {
 }
 window.syncModuleDerivedValuesUI = syncModuleDerivedValuesUI;
 
+/* combat-panel.js e race-peculiarities.js ligam o clique deles nesta mesma
+   funcao: sao arquivos separados, entao ela precisa estar no window. */
+window.abrirDetalheDoRotulo = abrirDetalheDoRotulo;

@@ -23,8 +23,19 @@
      · mecânica cuja `equacao` cita este valor    → o `alvo` dela CONSOME.
    Não há cadastro novo para ninguém preencher: o que já está lá responde.
 
-   Quem desenha (posição, fundo, borda) continua sendo de cada tela — o que
-   este arquivo entrega é o HTML de dentro e o CSS dele (shared/detalhe.css).
+   ⚠️ DOIS TAMANHOS, e a razão importa:
+
+     · o HOVER mostra só nome + descrição + "clique para ver detalhes";
+     · o CLIQUE abre uma janela com a fórmula inteira e o "usado em".
+
+   Foi um bug que ensinou isso. Pôr tudo no hover estourava a tela em valor
+   denso — a Sanidade tem doze linhas de fórmula, e uma caixa flutuante não
+   tem para onde crescer sem sair do viewport: ela saía por cima e as linhas
+   longas vazavam pela direita. Janela tem: ela centraliza, limita a altura e
+   rola por dentro.
+
+   Quem desenha a caixa do hover (posição, fundo, borda) continua sendo de
+   cada tela. A JANELA é daqui, uma só para todas.
    ===================================================================== */
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -131,6 +142,16 @@ function formulasDe(nome, sys) {
         .map(f => ({ fonte: (f.mecanica && f.mecanica.nome) || 'Mecânica', texto: `${f.operacao} ${f.texto}`.trim() }));
 }
 
+/** Há algo além de nome e descrição? Sem isso, o convite mentiria. */
+export function temDetalhe(o = {}) {
+    if (!o.nome) return false;
+    if ((o.formula || []).some(f => f && (f.texto || f.fonte))) return true;
+    if (!o.sys) return false;
+    const chave = chaveDoAlvo(o.nome);
+    const idx = indiceDeUso(o.sys);
+    return !!(idx.alimenta[chave] || []).length || !!usosDe(o.nome, o.sys).length;
+}
+
 const bloco = (titulo, itens, classe) => !itens.length ? '' : `
     <div class="lr-det-bloco ${classe}">
         <div class="lr-det-titulo">${titulo}</div>
@@ -148,10 +169,24 @@ const bloco = (titulo, itens, classe) => !itens.length ? '' : `
  *               previews da ficha). Junta com o que o registro souber.
  *   sys         o registro (window._systemData / _npcSys) para fórmula e uso
  *   nota        linha solta no fim (ex.: "não é Valor Derivado")
+ *
+ * @param {'completo'|'resumo'} modo
+ *   'resumo' é o do hover: nome, descrição e o convite para abrir a janela.
+ *   Sem fórmula e sem "usado em" — é justamente o que não cabia lá.
  */
-export function detalheHTML(o = {}) {
+export function detalheHTML(o = {}, modo = 'completo') {
     const nome = o.nome || '';
     if (!nome) return '';
+
+    if (modo === 'resumo') {
+        return `
+    <div class="lr-det">
+        <div class="lr-det-nome">${o.icone ? esc(o.icone) + ' ' : ''}${esc(nome)}</div>
+        ${o.descricao ? `<div class="lr-det-desc">${esc(o.descricao)}</div>` : ''}
+        ${temDetalhe(o) ? '<div class="lr-det-mais">🔎 Clique para ver detalhes</div>' : ''}
+        ${o.nota ? `<div class="lr-det-nota">${esc(o.nota)}</div>` : ''}
+    </div>`;
+    }
 
     const daTela = (o.formula || []).filter(f => f && (f.texto || f.fonte));
     const doRegistro = o.sys ? formulasDe(nome, o.sys) : [];
@@ -179,6 +214,32 @@ export function detalheHTML(o = {}) {
             </div>`), 'lr-det-uso')}
         ${o.nota ? `<div class="lr-det-nota">${esc(o.nota)}</div>` : ''}
     </div>`;
+}
+
+/* =====================================================================
+   A JANELA — onde a fórmula inteira cabe
+
+   Aberta pelo clique no rótulo. `<dialog>` nativo: foco preso, Esc e camada
+   de topo vêm do navegador, e a altura é limitada com rolagem por dentro —
+   que é exatamente o que a caixa flutuante não conseguia dar.
+   ===================================================================== */
+
+let _janela = null;
+export function abrirDetalhe(o = {}) {
+    const html = detalheHTML(o, 'completo');
+    if (!html) return;
+    if (!_janela) {
+        _janela = document.createElement('dialog');
+        _janela.className = 'lr-det-janela';
+        // clique fora fecha: a janela é de leitura, não pede decisão
+        _janela.addEventListener('click', (e) => { if (e.target === _janela) _janela.close(); });
+        document.body.appendChild(_janela);
+    }
+    _janela.innerHTML = `
+        <div class="lr-det-janela-corpo">${html}</div>
+        <button type="button" class="lr-det-janela-x" aria-label="Fechar">✕</button>`;
+    _janela.querySelector('.lr-det-janela-x').addEventListener('click', () => _janela.close());
+    if (!_janela.open) _janela.showModal();
 }
 
 /* =====================================================================
@@ -228,18 +289,19 @@ export function ligarDetalhe(raiz, sysDe) {
     if (!raiz || raiz.dataset.detLigado) return;
     raiz.dataset.detLigado = '1';
     const alvo = (e) => e.target.closest && e.target.closest('[data-det-nome]');
+    const descritor = (el) => ({
+        nome: el.dataset.detNome,
+        icone: el.dataset.detIcone || '',
+        descricao: el.dataset.detDesc || '',
+        formula: linhasDeFormula(el.dataset.detFormula),
+        nota: el.dataset.detNota || '',
+        sys: (typeof sysDe === 'function' ? sysDe() : sysDe) || null,
+    });
 
     raiz.addEventListener('mouseover', (e) => {
         const el = alvo(e);
         if (!el) return;
-        const html = detalheHTML({
-            nome: el.dataset.detNome,
-            icone: el.dataset.detIcone || '',
-            descricao: el.dataset.detDesc || '',
-            formula: linhasDeFormula(el.dataset.detFormula),
-            nota: el.dataset.detNota || '',
-            sys: (typeof sysDe === 'function' ? sysDe() : sysDe) || null,
-        });
+        const html = detalheHTML(descritor(el), 'resumo');
         if (!html) return;
         const c = caixa();
         c.innerHTML = html;
@@ -249,9 +311,19 @@ export function ligarDetalhe(raiz, sysDe) {
     raiz.addEventListener('mouseout', (e) => {
         if (alvo(e) && _caixa) _caixa.style.display = 'none';
     });
+    /* O clique abre a janela — e é também como o celular chega aos detalhes,
+       onde hover não existe. */
+    raiz.addEventListener('click', (e) => {
+        const el = alvo(e);
+        if (!el) return;
+        const o = descritor(el);
+        if (!temDetalhe(o)) return;      // sem fórmula nem uso, a janela não diria nada
+        if (_caixa) _caixa.style.display = 'none';
+        abrirDetalhe(o);
+    });
 }
 
 if (typeof window !== 'undefined') {
     /* Ponte para os scripts CLÁSSICOS da Ficha, que não importam. */
-    window.LRDetalhe = { detalheHTML, indiceDeUso, equacaoEmTexto, chaveDoAlvo, ligarDetalhe };
+    window.LRDetalhe = { detalheHTML, indiceDeUso, equacaoEmTexto, chaveDoAlvo, ligarDetalhe, abrirDetalhe, temDetalhe };
 }

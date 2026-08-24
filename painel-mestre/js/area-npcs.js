@@ -68,16 +68,34 @@ function _formulaDoRotulo(el) {
         });
 }
 
-window.handleNpcTooltipEnter = function(event, el) {
-    const tipEl = ensureNpcTooltip();
-    const html = window.LRDetalhe ? window.LRDetalhe.detalheHTML({
+/** O descritor deste rótulo — serve ao resumo do hover e à janela do clique. */
+function _descritorDoRotulo(el) {
+    return {
         nome: el.getAttribute('data-tt-title') || '',
         icone: el.getAttribute('data-tt-icone') || '',
         descricao: el.getAttribute('data-tt-desc') || '',
         formula: _formulaDoRotulo(el),
         nota: el.getAttribute('data-tt-nota') || '',
         sys: window._npcSys || window._systemData || null,
-    }) : '';
+    };
+}
+
+/** Clique no rótulo: a janela, com a fórmula inteira e o "usado em". */
+window.abrirDetalheNpc = function(el) {
+    if (!window.LRDetalhe) return;
+    const o = _descritorDoRotulo(el);
+    if (!window.LRDetalhe.temDetalhe(o)) return;
+    window.hideNpcTooltip();
+    window.LRDetalhe.abrirDetalhe(o);
+};
+
+/* O hover mostra RESUMO. A fórmula inteira só na janela: valor denso (a
+   Sanidade tem doze linhas) estourava a tela quando tudo vinha na caixa
+   flutuante, que não tem para onde crescer sem sair do viewport. */
+window.handleNpcTooltipEnter = function(event, el) {
+    const tipEl = ensureNpcTooltip();
+    const html = window.LRDetalhe
+        ? window.LRDetalhe.detalheHTML(_descritorDoRotulo(el), 'resumo') : '';
     if (!html) return;
     tipEl.innerHTML = html;
     tipEl.style.opacity = '0'; tipEl.style.display = 'block';

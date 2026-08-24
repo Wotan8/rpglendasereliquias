@@ -29,7 +29,7 @@
 <div id="palco"></div>
 
 <script type="module">
-import { detalheHTML, indiceDeUso, equacaoEmTexto, chaveDoAlvo, ligarDetalhe } from './shared/detalhe.js?v=2';
+import { detalheHTML, indiceDeUso, equacaoEmTexto, chaveDoAlvo, ligarDetalhe, abrirDetalhe, temDetalhe } from './shared/detalhe.js?v=3';
 
 const linhas = [];
 let ok = 0;
@@ -146,23 +146,102 @@ rotulo.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
 const cx = $('.lr-det-caixa');
 teste('T20 · o rótulo do Aliado abre a janelinha ao passar o mouse',
     !!cx && cx.style.display === 'block' && !!$('.lr-det-nome', cx));
+teste('T21 · e no hover vem só o resumo, com o convite',
+    !$('.lr-det-formula', cx) && !!$('.lr-det-mais', cx));
 
-const fontes = $$('.lr-det-formula .lr-det-linha', cx)
+// o clique é que abre a janela com tudo
+rotulo.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+const jan2 = $('.lr-det-janela');
+const fontes = $$('.lr-det-formula .lr-det-linha', jan2)
     .map(l => l.textContent.replace(/\s+/g, ' ').trim());
-teste('T21 · cada linha "fonte: texto" vira uma linha da fórmula — ' + fontes.slice(0, 2).join(' / '),
+teste('T22 · cada linha "fonte: texto" vira uma linha da fórmula na janela — ' + fontes.slice(0, 2).join(' / '),
     fontes.some(t => t.includes('Fórmula (Vitalidade)') && t.includes('+4'))
     && fontes.some(t => t.includes('Couro Endurecido') && t.includes('+2')));
+teste('T23 · a conta do aliado vem antes da regra geral do registro',
+    (fontes[0] || '').includes('Fórmula (Vitalidade)'));
+teste('T24 · e o "usado em" do registro entra junto',
+    $$('.lr-det-uso .lr-det-fonte', jan2).some(e => e.textContent.includes('Carga')));
+teste('T25 · abrir a janela fecha a caixa do hover', cx.style.display === 'none');
+jan2.close();
 
-teste('T22 · a conta do aliado vem antes da regra geral do registro',
-    fontes[0].includes('Fórmula (Vitalidade)'));
-teste('T23 · e o "usado em" do registro entra junto',
-    $$('.lr-det-uso .lr-det-fonte', cx).some(e => e.textContent.includes('Carga')));
-
+rotulo.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
 rotulo.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
-teste('T24 · sai o mouse, fecha a janelinha', cx.style.display === 'none');
-teste('T25 · a caixa não rouba clique do rótulo embaixo',
+teste('T25b · sai o mouse, fecha a caixa', cx.style.display === 'none');
+teste('T25c · a caixa não rouba clique do rótulo embaixo',
     getComputedStyle(cx).pointerEvents === 'none');
 rotulo.remove();
+
+// ---- 13. hover é RESUMO; a fórmula inteira mora na janela ----
+/* O bug: com tudo no hover, valor denso estourava a tela. A Sanidade tem doze
+   linhas de fórmula, e caixa flutuante não tem para onde crescer sem sair do
+   viewport — ela saía por cima e as linhas longas vazavam pela direita. */
+pinta({ nome: 'Vitalidade', icone: '❤️', descricao: 'A integridade física.', sys: SYS });
+const completo = palco.innerHTML;
+palco.innerHTML = detalheHTML({ nome: 'Vitalidade', icone: '❤️', descricao: 'A integridade física.', sys: SYS }, 'resumo');
+teste('T26 · o resumo traz nome e descrição',
+    !!$('.lr-det-nome', palco) && !!$('.lr-det-desc', palco));
+teste('T27 · e NÃO traz a fórmula nem o "usado em" — era isso que estourava',
+    !$('.lr-det-formula', palco) && !$('.lr-det-uso', palco));
+teste('T28 · o resumo convida a abrir a janela',
+    !!$('.lr-det-mais', palco) && /clique/i.test($('.lr-det-mais', palco).textContent));
+teste('T29 · o resumo é bem menor que o completo',
+    palco.innerHTML.length < completo.length / 2);
+
+// valor sem fórmula nem uso não promete o que não tem
+palco.innerHTML = detalheHTML({ nome: 'Alcance do Disparo', descricao: 'Até onde a arma lança.' }, 'resumo');
+teste('T30 · sem fórmula nem uso, o convite não aparece — não mentiria o quê',
+    !$('.lr-det-mais', palco));
+teste('T31 · temDetalhe() concorda',
+    temDetalhe({ nome: 'Vitalidade', sys: SYS }) === true
+    && temDetalhe({ nome: 'Alcance do Disparo' }) === false);
+
+// ---- 14. a janela ----
+abrirDetalhe({ nome: 'Vitalidade', icone: '❤️', descricao: 'A integridade física.', sys: SYS });
+const jan = $('.lr-det-janela');
+teste('T32 · o clique abre uma janela modal', !!jan && jan.open && jan.matches(':modal'));
+teste('T33 · e nela vem TUDO: fórmula e usado em',
+    !!$('.lr-det-formula', jan) && !!$('.lr-det-uso', jan));
+teste('T34 · a janela tem teto de altura e rola por dentro — não estoura a tela',
+    getComputedStyle($('.lr-det-janela-corpo', jan)).overflowY === 'auto'
+    && jan.getBoundingClientRect().height <= window.innerHeight);
+teste('T35 · a janela cabe na largura da tela',
+    jan.getBoundingClientRect().width <= window.innerWidth);
+
+// nenhuma linha de fórmula pode vazar pela direita
+const corpo = $('.lr-det-janela-corpo', jan);
+const dentro = corpo.getBoundingClientRect();
+const vazando = $$('.lr-det-linha', jan).filter(l => l.getBoundingClientRect().right > dentro.right + 1);
+teste('T36 · nenhuma linha de fórmula vaza pela direita' + (vazando.length ? ` — ${vazando.length}` : ''),
+    vazando.length === 0);
+
+$('.lr-det-janela-x', jan).click();
+teste('T37 · o ✕ fecha a janela', !jan.open);
+
+// ---- 15. o caso que gerou o bug: a Sanidade, densa, num celular ----
+/* Doze fontes, várias com equação longa. Era isto que empurrava a caixa
+   flutuante para fora da tela e fazia a linha vazar pela direita. */
+const NOMES_SAN = ['Vitalidade', '−1 ENER −1 SAN', '−2 ENER −1 SAN', 'Sanidade', '−1 Sanidade',
+    '−3 ENER −10 SAN', 'Sanidade Mínima', 'Invocação Abissal BOTÃO 3', 'Conexão com Abismo'];
+const LONGA = '[AUT] + [PRS] + [Resiliência] × 2 em Sanidade Máxima; −([Abismancia] × 2) em Sanidade Máxima';
+const SYS_SAN = { mechanics: NOMES_SAN.map((n, i) => ({ id: 's' + i, nome: n, config: { calculos: [
+    { operacao: '+', alvo: 'Sanidade', equacao: [{ tipo: 'ficha', ref: i % 2 ? LONGA : 'INT + AUT + PRS + Perícia: Resiliência × 2' }] }] } })) };
+
+abrirDetalhe({ nome: 'Sanidade', icone: '🧠',
+    descricao: 'Quando a Sanidade Atual chega a 0, a mente cede e o personagem entra no estado "Enlouquecendo".',
+    sys: SYS_SAN });
+const jd = $('.lr-det-janela');
+const cd = $('.lr-det-janela-corpo', jd);
+const rjd = jd.getBoundingClientRect(), rcd = cd.getBoundingClientRect();
+teste(`T38 · a janela cabe inteira na tela (${Math.round(rjd.width)}×${Math.round(rjd.height)} em ${innerWidth}×${innerHeight})`,
+    rjd.left >= -1 && rjd.top >= -1 && rjd.right <= innerWidth + 1 && rjd.bottom <= innerHeight + 1);
+const vazandoSan = $$('.lr-det-linha', jd).filter(l => l.getBoundingClientRect().right > rcd.right + 1);
+teste('T39 · nenhuma linha longa vaza pela direita' + (vazandoSan.length ? ` — ${vazandoSan.length}` : ''),
+    vazandoSan.length === 0);
+teste('T40 · com muita fonte, o corpo rola por dentro em vez de crescer',
+    cd.scrollHeight >= cd.clientHeight);
+teste('T41 · e a página não ganha rolagem horizontal',
+    document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+jd.close();
 
 // ---- saída ----
 $('#saida').innerHTML = linhas.map(([n, p]) =>

@@ -755,6 +755,8 @@ function initPeculiarityTooltips() {
         nameEl.dataset.tooltipBound = '1';
         nameEl.addEventListener('mouseenter', showDvTooltip);
         nameEl.addEventListener('mouseleave', hideDvTooltip);
+        // o clique abre a janela com o efeito inteiro (o hover só resume)
+        if (typeof abrirDetalheDoRotulo === 'function') nameEl.addEventListener('click', abrirDetalheDoRotulo);
         nameEl.addEventListener('touchstart', showDvTooltip, { passive: true });
     });
 }
@@ -855,7 +857,7 @@ function _generatePecEffectText(pec) {
  * Chamada por showDvTooltip quando tooltipType === 'peculiaridade'.
  * Busca em RACES, CLASS_PECULIARITIES e TRIBES.
  */
-function buildPeculiarityTooltipHTML(pecKey, sourceKey) {
+function buildPeculiarityDetalhe(pecKey, sourceKey) {
     // Buscar peculiaridade em todas as fontes
     let pec = null;
     if (sourceKey && window.RACES && window.RACES[sourceKey]) {
@@ -891,8 +893,7 @@ function buildPeculiarityTooltipHTML(pecKey, sourceKey) {
             }
         }
     }
-    if (!pec) return '';
-    if (!window.LRDetalhe) return '';
+    if (!pec) return null;
 
     /* A fórmula de uma peculiaridade é o que ela FAZ: o efeito no nível atual
        mais as mecânicas vinculadas. Cada linha nomeia a fonte, como nos outros
@@ -925,12 +926,15 @@ function buildPeculiarityTooltipHTML(pecKey, sourceKey) {
         if (custo) nota = `💰 ${custo}`;
     }
 
-    return window.LRDetalhe.detalheHTML({
+    /* Devolve o DESCRITOR, não HTML: o mesmo objeto serve ao resumo do hover
+       e à janela que o clique abre. */
+    return {
         nome: pec.nome || pec.key,
+        icone: pec.icone,
         descricao: pec.descricao,
         formula, nota,
         sys: window._systemData || null,
-    });
+    };
 }
 
 // Legacy compatibility — old code may call renderPeculiaridadeCard

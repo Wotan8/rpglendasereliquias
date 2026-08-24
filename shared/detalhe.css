@@ -48,19 +48,29 @@
     margin-bottom: var(--lr-space-1);
 }
 
+/* `wrap` + `anywhere` porque foi por aqui que vazou: "Vitalidade: +[AUT] +
+   [PRS] + [Resiliência] × 2 em Sanidade Máxima" não cabe em linha nenhuma, e
+   sem quebrar ela saía pela direita da caixa. */
 .lr-det-linha {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: var(--lr-space-2);
+    gap: 0 var(--lr-space-2);
     font-size: var(--lr-fs-xs);
     padding: 1px 0;
 }
-.lr-det-fonte { flex: 1 1 auto; min-width: 0; color: var(--lr-text-1); }
+.lr-det-fonte {
+    flex: 1 1 60%;
+    min-width: 0;
+    color: var(--lr-text-1);
+    overflow-wrap: anywhere;
+}
 
 /* O número é o que o olho procura na fórmula: fica em ouro e alinhado à
    direita, para a coluna toda ser lida de cima a baixo. */
 .lr-det-valor {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    overflow-wrap: anywhere;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     color: var(--lr-gold);
@@ -94,5 +104,64 @@
     pointer-events: none;
 }
 
-/* Rótulo que explica alguma coisa avisa isso antes do mouse chegar. */
+
+
+/* ---- O convite do hover ----
+   O hover mostra só nome e descrição; a fórmula inteira mora na janela. */
+.lr-det-mais {
+    margin-top: var(--lr-space-2);
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    color: var(--lr-arcane);
+}
 [data-det-nome] { cursor: help; }
+
+/* ---- A JANELA ----
+   Onde a caixa flutuante não tinha para onde crescer, a janela tem: centrada,
+   com teto de altura e rolagem por dentro. É o conserto do estouro de tela em
+   valor denso (a Sanidade tem doze linhas de fórmula). */
+.lr-det-janela {
+    width: min(560px, calc(100vw - var(--lr-space-5) * 2));
+    max-height: min(80vh, 720px);
+    padding: 0;
+    overflow: hidden;
+    background: var(--lr-surface);
+    color: var(--lr-text-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-top: 2px solid var(--lr-gold);
+    border-radius: var(--lr-radius-lg);
+    box-shadow: var(--lr-shadow-3);
+}
+.lr-det-janela::backdrop { background: rgb(0 0 0 / 0.55); }
+
+.lr-det-janela-corpo {
+    max-height: min(80vh, 720px);
+    overflow-y: auto;
+    padding: var(--lr-space-5);
+}
+/* Na janela o texto respira: ela não é uma tarja flutuante. */
+.lr-det-janela .lr-det-linha { font-size: var(--lr-fs-sm); padding: 2px 0; }
+.lr-det-janela .lr-det-desc { font-size: var(--lr-fs-sm); }
+
+.lr-det-janela-x {
+    position: absolute;
+    top: var(--lr-space-2);
+    right: var(--lr-space-2);
+    width: 30px;
+    height: 30px;
+    background: none;
+    border: none;
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-md);
+    cursor: pointer;
+    border-radius: var(--lr-radius-sm);
+    transition: color var(--lr-t-fast) var(--lr-ease), background var(--lr-t-fast) var(--lr-ease);
+}
+.lr-det-janela-x:hover { color: var(--lr-text-1); background: var(--lr-bg-1); }
+.lr-det-janela-x:focus-visible { outline: none; box-shadow: var(--lr-glow-gold); }
+
+@media (max-width: 600px) {
+    .lr-det-janela-corpo { padding: var(--lr-space-4); }
+    /* Caixa de hover estreita cabe melhor com a fórmula em duas linhas. */
+    .lr-det-caixa { max-width: calc(100vw - var(--lr-space-4) * 2); }
+}

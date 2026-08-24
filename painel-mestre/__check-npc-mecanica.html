@@ -2,8 +2,8 @@
 <html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__check — Aba Mecânica das Fichas de NPC e Aliado</title>
-<link rel="stylesheet" href="../shared/detalhe.css?v=2">
-<script type="module">import '../shared/detalhe.js?v=2';</script>
+<link rel="stylesheet" href="../shared/detalhe.css?v=3">
+<script type="module">import '../shared/detalhe.js?v=3';</script>
 <link rel="stylesheet" href="../shared/dialogo.css?v=2">
 <script type="module">import '../shared/dialogo.js?v=2';</script>
 <link rel="stylesheet" href="../shared/tokens.css">
@@ -54,7 +54,16 @@ const ATTR_SIGLAS = ['FOR','DES','VIG','INT','RAC','PRS','PRE','MAN','AUT'];
 const src = (await (await fetch('js/area-npcs.js')).text()).replace(/\r\n/g, '\n');
 const ini = src.indexOf('function _npcSecaoMecanica()');
 const fim = src.indexOf('\n}\n', ini) + 3;
-const secao = new Function('ATTR_SIGLAS', src.slice(ini, fim) + '\nreturn _npcSecaoMecanica();')(ATTR_SIGLAS);
+/* O recorte começa em `function _npcSecaoMecanica`, então tudo o que ele
+   CHAMA de fora precisa entrar por parâmetro. `escapeHtml` e os dois helpers
+   de atributo chegaram junto com a janelinha de detalhe. */
+const escapeHtml = (t) => String(t ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const _nomeDoAtributo = (sig) => sig;
+const _descDoAtributo = () => '';
+const secao = new Function('ATTR_SIGLAS', 'escapeHtml', '_nomeDoAtributo', '_descDoAtributo',
+    src.slice(ini, fim) + '\nreturn _npcSecaoMecanica();')(
+    ATTR_SIGLAS, escapeHtml, _nomeDoAtributo, _descDoAtributo);
 document.getElementById('alvo').innerHTML = secao;
 document.getElementById('npcSec_mecanica').classList.add('active');
 
