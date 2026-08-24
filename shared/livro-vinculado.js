@@ -387,18 +387,71 @@
     }
 
     /** Abre um capítulo. O botão de volta aparece se houver sumário ou estante. */
+    /**
+     * Os capítulos vizinhos DESTE capítulo, na ordem de leitura — o mesmo
+     * recorte que o sumário mostra, não o livro inteiro:
+     *
+     *   · lendo por um vínculo (raça, classe, tribo), os irmãos são só os
+     *     capítulos que o vínculo libera;
+     *   · capítulo que a trava do Conhecimento deixa `oculto` ou `bloqueado`
+     *     fica de fora — botão que leva a um cadeado é botão quebrado.
+     *
+     * Sem o acervo em memória (leitura por link direto), devolve vazio: aí a
+     * navegação some, que é melhor do que apontar para lugar nenhum.
+     */
+    function _irmaosDoCapitulo(cap, livro, caps) {
+        if (!cap || !cap.bookId || !caps) return [];
+        const doRecorte = _sum && _sum.bookId === cap.bookId
+            ? capitulosDo(_sum, caps)
+            : caps.filter(c => c.bookId === cap.bookId);
+        const estado = (c) => (_bib && _bib.capituloEstado) ? _bib.capituloEstado(c, livro) : 'liberado';
+        return doRecorte.filter(c => estado(c) === 'liberado');
+    }
+
+    /**
+     * Avançar e voltar capítulo, com o NOME do destino — o mesmo desenho do
+     * Escritório do Cronista (shared/acervo.css, classes `wb-capnav*`), onde
+     * o autor navega assim desde sempre.
+     */
+    function _navCapsHTML(cap, livro, caps) {
+        const irmaos = _irmaosDoCapitulo(cap, livro, caps);
+        const i = irmaos.findIndex(c => c.id === cap.id);
+        if (i < 0) return '';
+        const ant = i > 0 ? irmaos[i - 1] : null;
+        const prox = i < irmaos.length - 1 ? irmaos[i + 1] : null;
+        if (!ant && !prox) return '';         // capítulo único: nada a navegar
+        const botao = (c, dir, cls) => c
+            ? `<button type="button" class="wb-capnav__btn ${cls}" onclick="window.lvLerCapitulo('${esc(c.id)}')">
+                   <span class="wb-capnav__dir">${dir}</span>
+                   <span class="wb-capnav__nome">${esc(c.title || 'Sem título')}</span>
+               </button>`
+            : '<span class="wb-capnav__vazio"></span>';
+        return `<nav class="wb-capnav">
+            ${botao(ant, '← Capítulo anterior', '')}
+            ${botao(prox, 'Próximo capítulo →', 'wb-capnav__btn--next')}
+        </nav>`;
+    }
+
     function lerCapitulo(capId) {
         _repintar = () => lerCapitulo(capId);
-        _buscarCapitulo(capId).then((achado) => {
+        Promise.all([_buscarCapitulo(capId), _p]).then(([achado, acervo]) => {
             if (!achado) return;
             const { cap, livro } = achado;
+            const volta = _sum ? _btnVoltar('Sumário', 'sum')
+                : (_bib ? _btnVoltar(_bib.titulo || 'Biblioteca', 'bib') : '');
+            const nav = _navCapsHTML(cap, livro, acervo && acervo.caps);
             _pintar(`
-                ${_sum ? _btnVoltar('Sumário', 'sum') : (_bib ? _btnVoltar(_bib.titulo || 'Biblioteca', 'bib') : '')}
+                ${volta}
                 ${livro ? `<div style="font-size:.8rem;opacity:.7;margin-bottom:4px">📗 ${esc(livro.title || '')} ${seloVersao(livro, 'font-weight:700;color:var(--lr-gold,#D4AF37)')}</div>` : ''}
                 <h2 style="margin:0 0 8px">${esc(cap.title || 'Sem título')}</h2>
                 ${cap.synopsis ? `<p style="opacity:.8;font-style:italic;margin:0 0 16px">${esc(cap.synopsis)}</p>` : ''}
                 ${(_bib && _bib.acaoCapitulo) ? `<div style="margin:0 0 14px">${_bib.acaoCapitulo(cap)}</div>` : ''}
-                <div class="texto-mundo">${cap.contentHTML || '<p><em>Capítulo ainda sem conteúdo.</em></p>'}</div>`);
+                ${nav}
+                <div class="texto-mundo">${cap.contentHTML || '<p><em>Capítulo ainda sem conteúdo.</em></p>'}</div>
+                ${nav}
+                ${volta}`);
+            // (o _pintar já devolve a rolagem ao topo, então trocar de
+            //  capítulo começa do começo sem código a mais aqui)
         }).catch(e => console.error('📖 Leitura do capítulo:', e));
     }
 
@@ -466,6 +519,9 @@
     /* Espere isto antes de desenhar livro sem passar por lvCarregarLivros():
        é o que garante o selo de versão na primeira pintura. */
     window.lvPronto = () => _pub;
+    /* Só para o arnês: o renderizador da navegação de capítulo, que decide
+       qual é o vizinho. Medir isso pelo leitor exigiria Firestore. */
+    window.__lvNavCapsHTML = _navCapsHTML;
     window.lvVoltar = voltar;
     // Redesenha a tela atual sem mudar de lugar — o mestre exibe um capítulo e
     // o botão vira "parar" ali mesmo, sem voltar para a estante.

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Check — Livro Vinculado</title>
-<link rel="stylesheet" href="./shared/acervo.css?v=1">
+<link rel="stylesheet" href="./shared/acervo.css?v=2">
 <link rel="stylesheet" href="./shared/dialogo.css?v=2">
 <script type="module">import './shared/dialogo.js?v=2';</script>
     <link rel="stylesheet" href="shared/tokens.css">
@@ -30,7 +30,8 @@
     <h3>Classe com DOIS livros (formato novo)</h3>
     <div id="alvo4"></div>
 
-    <script src="shared/livro-vinculado.js"></script>
+    <!-- sem cache: o arnês tem de ler o arquivo do disco, senão mede o de ontem -->
+    <script>document.write('<script src="shared/livro-vinculado.js?t=' + Date.now() + '"><\/script>');</script>
     <script>
         const ACERVO = {
             livros: [
@@ -107,8 +108,19 @@
             await tick(); await tick();
             ov = document.getElementById('lvLeitor');
             diz(ov.querySelector('.texto-mundo')?.innerHTML.includes('<b>um</b>'), 'capítulo renderiza o HTML do texto');
-            const voltar = [...ov.querySelectorAll('button')].find(b => b.textContent.includes('Sumário'));
-            diz(!!voltar, 'capítulo tem botão de voltar ao sumário');
+            const voltas = [...ov.querySelectorAll('button')].filter(b => b.textContent.includes('Sumário'));
+            diz(voltas.length === 2, `Sumário no começo E no fim do capítulo (veio ${voltas.length})`);
+
+            // Avançar/voltar capítulo com o nome do destino, como no Escritório
+            const nav = ov.querySelectorAll('.wb-capnav');
+            diz(nav.length === 2, `navegação de capítulo nas duas pontas (veio ${nav.length})`);
+            const prox = ov.querySelector('.wb-capnav__btn--next .wb-capnav__nome');
+            diz(!!prox && prox.textContent.trim().length > 0,
+                `o botão traz o NOME do próximo capítulo ("${prox ? prox.textContent.trim() : ''}")`);
+            diz(!ov.textContent.includes('A Queda'),
+                'a navegação não oferece capítulo que o vínculo não liberou');
+
+            const voltar = voltas[0];
             voltar.click();
             await tick(); await tick();
             diz(document.getElementById('lvLeitor').textContent.includes('Sumário'), 'voltar retorna ao sumário');

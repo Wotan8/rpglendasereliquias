@@ -25,7 +25,7 @@
 <div id="placar"></div>
 <div id="palco"></div>
 
-<script src="./shared/livro-vinculado.js?v=7"></script>
+<script src="./shared/livro-vinculado.js?v=8"></script>
 <script>
 (async () => {
 const linhas = [];
@@ -128,6 +128,56 @@ teste('T17 · título e descrição são escapados',
 const cs = getComputedStyle($('.wb-estante', palco));
 teste(`T18 · acervo.css está de pé (borda ${cs.borderTopWidth}, raio ${cs.borderTopLeftRadius})`,
     cs.borderTopStyle === 'solid' && parseFloat(cs.borderTopLeftRadius) > 0);
+
+// ================= NAVEGAÇÃO DE CAPÍTULO =================
+/* O leitor abre num overlay e busca no Firestore, que aqui não existe. Então
+   o que se mede é o RENDERIZADOR da navegação, com o acervo semeado na mão —
+   é ele que decide qual capítulo é o vizinho, e é aí que mora o risco:
+   capítulo trancado ou fora do recorte não pode virar destino de botão. */
+const nav = window.__lvNavCapsHTML;
+teste('T19 · o renderizador da navegação está exposto para medição', typeof nav === 'function');
+
+const CAPS = [
+    { id: 'c1', bookId: 'b1', title: 'Alquimancia' },
+    { id: 'c2', bookId: 'b1', title: 'As Oito da Bancada' },
+    { id: 'c3', bookId: 'b1', title: 'Soma, Amplificação e Reação' },
+    { id: 'c9', bookId: 'b2', title: 'De outro livro' },
+];
+const capa = document.createElement('div');
+document.body.appendChild(capa);
+const pinta = (cap) => { capa.innerHTML = nav(cap, { id: 'b1' }, CAPS); return capa; };
+
+pinta(CAPS[1]);
+const btns = $$('.wb-capnav__btn', capa);
+teste('T20 · capítulo do meio ganha os dois botões', btns.length === 2);
+teste('T21 · o botão traz o NOME do capítulo de destino, não só a seta — '
+    + $$('.wb-capnav__nome', capa).map(e => e.textContent).join(' / '),
+    $$('.wb-capnav__nome', capa).map(e => e.textContent.trim()).join('|')
+        === 'Alquimancia|Soma, Amplificação e Reação');
+teste('T22 · e diz de que lado vai',
+    $$('.wb-capnav__dir', capa).map(e => e.textContent.trim()).join('|')
+        === '← Capítulo anterior|Próximo capítulo →');
+teste('T23 · clicar chama o leitor no capítulo certo',
+    /lvLerCapitulo\('c1'\)/.test(btns[0].getAttribute('onclick'))
+    && /lvLerCapitulo\('c3'\)/.test(btns[1].getAttribute('onclick')));
+
+pinta(CAPS[0]);
+teste('T24 · o primeiro capítulo não oferece "anterior" — o espaço fica, o botão não',
+    $$('.wb-capnav__btn', capa).length === 1 && !!$('.wb-capnav__vazio', capa));
+pinta(CAPS[2]);
+teste('T25 · o último não oferece "próximo"',
+    $$('.wb-capnav__btn', capa).length === 1);
+
+teste('T26 · capítulo de outro livro não entra na conta',
+    !capa.textContent.includes('De outro livro'));
+
+capa.innerHTML = nav({ id: 'só', bookId: 'b3', title: 'Sozinho' }, { id: 'b3' }, [{ id: 'só', bookId: 'b3', title: 'Sozinho' }]);
+teste('T27 · livro de um capítulo só não desenha navegação nenhuma', capa.innerHTML.trim() === '');
+
+capa.innerHTML = nav(CAPS[1], { id: 'b1' }, null);
+teste('T28 · sem acervo em memória a navegação some, em vez de apontar para lugar nenhum',
+    capa.innerHTML.trim() === '');
+capa.remove();
 
 // ---- saída ----
 $('#saida').innerHTML = linhas.map(([n, p]) =>

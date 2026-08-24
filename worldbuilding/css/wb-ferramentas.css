@@ -497,30 +497,8 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 /* ── Navegação de capítulos (topo e pé do texto) ────────────
    Sempre em par: o que veio antes à esquerda, o que vem depois à
    direita, cada um com o nome do capítulo. */
-.wb-capnav { display: flex; gap: var(--lr-space-2); max-width: 72ch; margin: var(--lr-space-3) 0; }
-.wb-capnav__vazio { flex: 1 1 0; }
-.wb-capnav__btn {
-    flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left;
-    padding: var(--lr-space-2) var(--lr-space-3); cursor: pointer;
-    background: var(--lr-surface); color: var(--lr-text-1);
-    border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius);
-    font-family: var(--lr-font-body);
-    transition: background var(--lr-t-base) var(--lr-ease), border-color var(--lr-t-base) var(--lr-ease);
-}
-.wb-capnav__btn:hover { background: var(--lr-surface-2); border-color: var(--lr-gold); }
-.wb-capnav__btn--next { text-align: right; align-items: flex-end; }
-.wb-capnav__dir { font-size: var(--lr-fs-xs); color: var(--lr-text-2); letter-spacing: var(--lr-track-title); }
-.wb-capnav__nome {
-    max-width: 100%; font-family: var(--lr-font-subtitle); font-size: var(--lr-fs-md); font-weight: 600;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-/* Tela estreita: lado a lado sobra meia dúzia de letras para o nome do
-   capítulo. Empilhados, cada um usa a linha inteira. */
-@media (max-width: 480px) {
-    .wb-capnav { flex-direction: column; }
-    .wb-capnav__btn--next { text-align: left; align-items: flex-start; }
-    .wb-capnav__vazio { display: none; }
-}
+/* A navegação de capítulo (wb-capnav) foi para shared/acervo.css: o leitor
+   compartilhado passou a usar a mesma. */
 
 /* ── Modo leitura ───────────────────────────────────────────
    Mesma tela, sem ferramenta nenhuma: some a barra de formatação
