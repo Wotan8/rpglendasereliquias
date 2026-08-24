@@ -313,8 +313,9 @@
         const item = AI.items.find(i => i.id === editId);
         const tpl = _RI.modeloDoItem(item, _catalogo());
         const patch = _RI.patchRestauracao(tpl);
-        if (!patch) { alert('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.'); return; }
-        if (!confirm(_RI.textoConfirmacao(item, tpl))) return;
+        if (!patch) { LRDialogo.toast('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.', 'aviso'); return; }
+        if (!await LRDialogo.confirmar(_RI.textoConfirmacao(item, tpl),
+            { titulo: '♻️ Restaurar do cadastro', ok: 'Restaurar' })) return;
         try {
             const { doc, setDoc } = await _fs();
             await setDoc(doc(window.db, 'items', editId), patch, { merge: true });
@@ -327,20 +328,20 @@
             _renderList();
         } catch (e) {
             console.error('❌ Erro ao restaurar item do aliado:', e);
-            alert('Erro ao restaurar item: ' + e.message);
+            LRDialogo.toast('Erro ao restaurar item: ' + e.message, 'erro');
         }
     }
 
     async function saveForm() {
         const nome = document.getElementById('aif_nome')?.value?.trim();
-        if (!nome) { alert('Nome obrigatório'); return; }
-        if (!AI.npc?.id || !window.currentUser) { alert('Erro: aliado ou usuário não carregado'); return; }
+        if (!nome) { LRDialogo.toast('Nome obrigatório', 'aviso'); return; }
+        if (!AI.npc?.id || !window.currentUser) { LRDialogo.toast('Erro: aliado ou usuário não carregado', 'erro'); return; }
 
         const editId = document.getElementById('aif_editId')?.value || '';
         const tipo = document.getElementById('aif_tipo')?.value || 'Objeto';
         const isContainer = tipo === 'Container';
         const categoriaArma = document.getElementById('aif_categoriaArma')?.value || null;
-        if (tipo === 'Arma' && !categoriaArma) { alert('Selecione a categoria da arma'); return; }
+        if (tipo === 'Arma' && !categoriaArma) { LRDialogo.toast('Selecione a categoria da arma', 'aviso'); return; }
 
         const equipOpts = document.getElementById('aif_equipavelEm')?.selectedOptions;
         const equipavelEm = equipOpts ? Array.from(equipOpts).map(o => o.value) : [];
@@ -398,13 +399,14 @@
             _renderList();
         } catch (e) {
             console.error('❌ Erro ao salvar item do aliado:', e);
-            alert('Erro ao salvar item: ' + e.message);
+            LRDialogo.toast('Erro ao salvar item: ' + e.message, 'erro');
         }
     }
 
     async function remove(itemId) {
         const item = AI.items.find(i => i.id === itemId);
-        if (!item || !confirm(`Excluir o item "${item.nome || 'item'}" do aliado?`)) return;
+        if (!item || !await LRDialogo.confirmar(`"${item.nome || 'item'}" sai do inventário do aliado.`,
+            { titulo: 'Excluir item', ok: 'Excluir', perigo: true })) return;
         try {
             const { doc, deleteDoc } = await _fs();
             await deleteDoc(doc(window.db, 'items', itemId));
@@ -417,7 +419,7 @@
             _renderList();
         } catch (e) {
             console.error('❌ Erro ao excluir item do aliado:', e);
-            alert('Erro ao excluir item: ' + e.message);
+            LRDialogo.toast('Erro ao excluir item: ' + e.message, 'erro');
         }
     }
 
@@ -427,7 +429,7 @@
         if (!item) return;
         const slots = _bodySlots();
         const slotKeys = Object.keys(slots);
-        if (!slotKeys.length) { alert('O aliado não tem partes do corpo definidas. Peça ao Mestre para configurar a anatomia no Painel.'); return; }
+        if (!slotKeys.length) { LRDialogo.toast('O aliado não tem partes do corpo definidas. Peça ao Mestre para configurar a anatomia no Painel.', 'aviso'); return; }
 
         // Item de vários slots bloqueia todos eles, não só o principal.
         const ocupados = new Set(AI.items.filter(i => i.equipado && i.id !== itemId)
@@ -493,7 +495,7 @@
             labelParte: nomeParte,
         });
         if (plano.faltaMao) {
-            alert(`Falta ${plano.faltaMao} livre para empunhar esta arma. Desequipe algo antes.`);
+            LRDialogo.toast(`Falta ${plano.faltaMao} livre para empunhar esta arma. Desequipe algo antes.`, 'aviso');
             return;
         }
 
@@ -511,7 +513,7 @@
             document.getElementById('aliadoEquipModal')?.remove();
             await _loadItems();
             _renderList();
-        } catch (e) { console.error(e); alert('Erro ao equipar: ' + e.message); }
+        } catch (e) { console.error(e); LRDialogo.toast('Erro ao equipar: ' + e.message, 'erro'); }
     }
 
     async function unequip(itemId) {
@@ -528,7 +530,7 @@
             ]);
             await _loadItems();
             _renderList();
-        } catch (e) { console.error(e); alert('Erro ao desequipar: ' + e.message); }
+        } catch (e) { console.error(e); LRDialogo.toast('Erro ao desequipar: ' + e.message, 'erro'); }
     }
 
     /* ============ TRANSFERÊNCIA (a partir do aliado) ============ */
@@ -635,8 +637,8 @@
         if (transferQty > 1) {
             const qtyInput = document.getElementById('aliadoTransferQty');
             const inputQty = parseInt(qtyInput?.value, 10);
-            if (isNaN(inputQty) || inputQty <= 0) { alert('Quantidade inválida ou igual a zero. Informe a quantidade acima da lista de alvos.'); return; }
-            if (inputQty > transferQty) { alert('O aliado não possui essa quantidade toda. Transferência cancelada.'); return; }
+            if (isNaN(inputQty) || inputQty <= 0) { LRDialogo.toast('Quantidade inválida ou igual a zero. Informe a quantidade acima da lista de alvos.', 'aviso'); return; }
+            if (inputQty > transferQty) { LRDialogo.toast('O aliado não possui essa quantidade toda. Transferência cancelada.', 'aviso'); return; }
             if (inputQty < transferQty) partial = true;
             transferQty = inputQty;
         }
@@ -644,7 +646,7 @@
         const msg = transferQty > 1
             ? `Transferir ${transferQty}x "${item.nome || 'item'}" para ${target.nome}?`
             : `Transferir "${item.nome || 'item'}" para ${target.nome}?`;
-        if (!confirm(msg)) return;
+        if (!await LRDialogo.confirmar(msg, { titulo: 'Transferir item', ok: 'Transferir' })) return;
 
         try {
             const { doc, setDoc, getDoc } = await _fs();
@@ -694,10 +696,10 @@
                 loadCharacterItems(window.currentCharacterId);
             }
 
-            alert(`✅ Item "${item.nome}" transferido com sucesso!`);
+            LRDialogo.toast(`✅ Item "${item.nome}" transferido com sucesso!`, 'sucesso');
         } catch (e) {
             console.error('❌ Erro ao transferir item do aliado:', e);
-            alert('❌ Erro ao transferir item: ' + e.message);
+            LRDialogo.toast('❌ Erro ao transferir item: ' + e.message, 'erro');
         }
     }
 

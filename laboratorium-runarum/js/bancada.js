@@ -339,7 +339,7 @@ const LabBancada = (() => {
 
     /* Desconta o que a gravação usa. Escritas mínimas e explícitas. */
     async function consumir() {
-        if (!confirm('Consumir os materiais selecionados?\n(desconta consumíveis, +1 desgaste nas ferramentas, debita Lunis)')) return;
+        if (!await LRDialogo.confirmar('Consumir os materiais selecionados?\n(desconta consumíveis, +1 desgaste nas ferramentas, debita Lunis)')) return;
         const db = window.LabFB.db || getFirestore();
         const escritas = [];
         for (const i of state.instancias) {
@@ -454,15 +454,15 @@ const LabBancada = (() => {
     }
 
     /** Pergunta em que peça a runa vai ser gravada. null = desistiu. */
-    function escolherBase() {
+    async function escolherBase() {
         const opts = basesPossiveis();
         if (!opts.length) {
-            alert('Nenhuma peça no inventário para gravar.\n\nA runa precisa de uma superfície: papel e pergaminho na Escripta, pedra, osso ou metal na Talha.');
+            LRDialogo.toast('Nenhuma peça no inventário para gravar.\n\nA runa precisa de uma superfície: papel e pergaminho na Escripta, pedra, osso ou metal na Talha.', 'aviso');
             return null;
         }
         if (opts.length === 1) return opts[0];
         const lista = opts.map((i, k) => (k + 1) + '. ' + (i.nome || i.cat?.nome)).join('\n');
-        const r = prompt('Em que peça a runa vai ser gravada?\n\n' + lista + '\n\nDigite o número:', '1');
+        const r = await LRDialogo.perguntar('Em que peça a runa vai ser gravada?\n\n' + lista + '\n\nDigite o número:', { valor: '1' });
         if (r === null) return null;
         return opts[parseInt(r, 10) - 1] || null;
     }
@@ -491,24 +491,24 @@ const LabBancada = (() => {
         const b = blocoDaRuna(runa);
 
         if (b.problemas.length) {
-            const seguir = confirm('⚠️ Este circuito não fecha como runa de combate:\n\n· ' + b.problemas.join('\n· ')
+            const seguir = await LRDialogo.confirmar('⚠️ Este circuito não fecha como runa de combate:\n\n· ' + b.problemas.join('\n· ')
                 + '\n\nEmitir assim mesmo? A peça existe, mas o Tabuleiro não vai saber resolvê-la sozinho.');
             if (!seguir) return;
         }
         if (b.periciaExigida && !achaDot(norm(b.periciaExigida).replace(/[^a-z0-9]/g, ''))) {
-            alert('🚫 ' + b.nucleo.aspectus + ' exige a perícia ' + b.periciaExigida + ' para ser gravado.');
+            LRDialogo.toast('🚫 ' + b.nucleo.aspectus + ' exige a perícia ' + b.periciaExigida + ' para ser gravado.', 'aviso');
             return;
         }
 
         const db = fb.db || getFirestore();
         const agora = new Date().toISOString();
-        const base = state.ramo === 'tatuagem' ? null : escolherBase();
+        const base = state.ramo === 'tatuagem' ? null : await escolherBase();
         if (state.ramo !== 'tatuagem' && !base) return;
 
         const cabeca = state.ramo === 'tatuagem'
             ? 'Tatuar "' + runa.nome + '" como Peculiaridade?'
             : 'Gravar "' + runa.nome + '" em ' + (base.nome || base.cat?.nome) + '?';
-        if (!confirm(cabeca + '\n(' + ramoNome + ')\n\n' + resumoDoBloco(b))) return;
+        if (!await LRDialogo.confirmar(cabeca + '\n(' + ramoNome + ')\n\n' + resumoDoBloco(b))) return;
 
         try {
             if (state.ramo === 'tatuagem') {
@@ -592,7 +592,7 @@ const LabBancada = (() => {
         const fb = window.LabFB;
         if (!fb?.charId) { toast?.('❌ Abra o Laboratorium pela ficha para enviar runas.'); return; }
         const ramoNome = { escripta: 'Escripta', talha: 'Talha', tatuagem: 'Tatuagem' }[state.ramo];
-        if (!confirm('Anotar "' + runa.nome + '" no Cartucho Rúnico da ficha?\n\nSó registra o projeto — para criar a peça, use "Gravar".')) return;
+        if (!await LRDialogo.confirmar('Anotar "' + runa.nome + '" no Cartucho Rúnico da ficha?\n\nSó registra o projeto — para criar a peça, use "Gravar".')) return;
         try {
             await registrarNoCartucho(runa, blocoDaRuna(runa), ramoNome, fb.db || getFirestore(), fb);
             toast?.('🜃 "' + runa.nome + '" anotada no Cartucho (' + ramoNome + '). Recarregue a ficha.');

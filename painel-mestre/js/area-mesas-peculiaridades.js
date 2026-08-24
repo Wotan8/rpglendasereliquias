@@ -515,7 +515,7 @@ window._saveMestrePeculiaridade = async function() {
 // ===== DELETE =====
 
 window._deleteMestrePeculiaridade = async function(charId, idx) {
-    if (!confirm('Deseja realmente excluir esta peculiaridade?')) return;
+    if (!await LRDialogo.confirmar('Deseja realmente excluir esta peculiaridade?', { perigo: true })) return;
 
     try {
         const snap = await getDoc(doc(db, 'char', charId));

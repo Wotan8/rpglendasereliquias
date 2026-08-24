@@ -10,6 +10,7 @@ import { screenToWorld } from './tab-render.js';
 import { pontoVisivelAgora } from './tab-fog.js';
 import { logChat } from './tab-chat.js';
 
+import { confirmar } from '../../shared/dialogo.js?v=1';
 let equipCatalogo = null;
 let caixaItens = null;
 
@@ -154,7 +155,8 @@ window._renderVincNpcs = function() {
 window.tbToggleVincNpc = async function(npcId, vincular) {
     const n = T.npcsTodos.find(x => x.id === npcId);
     if (vincular && n?.mesaId && n.mesaId !== T.mesaId &&
-        !confirm(`“${n.nome || 'NPC'}” está vinculado a outra mesa. Trazer para esta?`)) return;
+        !await confirmar(`“${n.nome || 'NPC'}” está vinculado a outra mesa.`,
+            { titulo: 'Trazer para esta mesa?', ok: 'Trazer' })) return;
     try {
         await vincularNpcNaMesa(npcId, vincular);
         toast(vincular ? `🔗 ${n?.nome || 'NPC'} vinculado` : `✕ ${n?.nome || 'NPC'} desvinculado`);

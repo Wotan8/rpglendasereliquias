@@ -47,7 +47,7 @@
         onCanvasChange(LabCanvas.getState());
         bindTabs();
 
-        $('#labBtnLimpar').addEventListener('click', () => { if (confirm('Limpar a mesa de montagem?')) { currentRuna = null; $('#labRunaNome').value = ''; LabCanvas.clear(); } });
+        $('#labBtnLimpar').addEventListener('click', async () => { if (await LRDialogo.confirmar('Limpar a mesa de montagem?', { perigo: true })) { currentRuna = null; $('#labRunaNome').value = ''; LabCanvas.clear(); } });
         $('#labBtnSalvar').addEventListener('click', salvarRuna);
         $('#labBtnPdf')?.addEventListener('click', exportarMesa);   // ausente se o HTML não foi atualizado
 
@@ -293,7 +293,7 @@
                 } else if (b.dataset.acao === 'pdf') {
                     exportarRuna(r);
                 } else if (b.dataset.acao === 'excluir') {
-                    if (!confirm(`Apagar "${r.nome}" do Grimório?`)) return;
+                    if (!await LRDialogo.confirmar(`Apagar "${r.nome}" do Grimório?`, { perigo: true })) return;
                     window.LabFB.runomancia.grimorio = window.LabFB.runomancia.grimorio.filter(x => x.id !== id);
                     if (currentRuna === id) currentRuna = null;
                     await window.LabFB.saveRunomancia();

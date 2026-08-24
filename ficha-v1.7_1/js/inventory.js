@@ -560,7 +560,7 @@ function _desequipaItensBloqueados() {
                 await unequipItem(item.id);
             }
             const nomes = bloqueados.map(b => `• ${b.item.nome} — ${b.motivo} (${b.bloqueio.fonte})`).join('\n');
-            alert(`🚫 ${bloqueados.length === 1 ? 'Um item foi desequipado' : `${bloqueados.length} itens foram desequipados`} por uma regra que você não cumpre:\n\n${nomes}\n\nEles continuam no inventário — os bloqueados só de efeito podem voltar segurados ou fixados.`);
+            LRDialogo.toast(`🚫 ${bloqueados.length === 1 ? 'Um item foi desequipado' : `${bloqueados.length} itens foram desequipados`} por uma regra que você não cumpre:\n\n${nomes}\n\nEles continuam no inventário — os bloqueados só de efeito podem voltar segurados ou fixados.`, 'aviso');
         } finally {
             _desequipandoBloqueados = false;
         }
@@ -1340,7 +1340,7 @@ function _avisaEquipBloqueado(item) {
         ? window.equipBloqueioDoItem(item) : null;
     if (!bloqueio) return false;
     const motivo = bloqueio.descricao ? `\n\n${bloqueio.descricao}` : '';
-    alert(`🚫 Você não pode equipar "${item.nome || 'este item'}".\n\nRegra de: ${bloqueio.fonte || 'mecânica'}${motivo}`);
+    LRDialogo.toast(`🚫 Você não pode equipar "${item.nome || 'este item'}".\n\nRegra de: ${bloqueio.fonte || 'mecânica'}${motivo}`, 'aviso');
     return true;
 }
 
@@ -1383,7 +1383,7 @@ window.openEquipModal = function(itemId) {
     let slotsToShow = compatSlots;
 
     if (slotsToShow.length === 0) {
-        alert('Nenhum slot compatível encontrado para este tipo de item.');
+        LRDialogo.toast('Nenhum slot compatível encontrado para este tipo de item.', 'aviso');
         return;
     }
 
@@ -1621,7 +1621,7 @@ window.confirmEquip = async function(itemId) {
     const bloqEfeitos = typeof window.equipBloqueioEfeitosDoItem === 'function'
         ? window.equipBloqueioEfeitosDoItem(item) : null;
     if (bloqEfeitos && _estadoAtivaEfeitos(item, st.selectedSlot, st.selectedState)) {
-        alert(`⚡ "${item.nome || 'Este item'}" não pode ser equipado com os efeitos ativos.\n\nRegra de: ${bloqEfeitos.fonte || 'mecânica'}${bloqEfeitos.descricao ? `\n\n${bloqEfeitos.descricao}` : ''}\n\nVocê ainda pode segurar, fixar ou guardar num contêiner.`);
+        LRDialogo.toast(`⚡ "${item.nome || 'Este item'}" não pode ser equipado com os efeitos ativos.\n\nRegra de: ${bloqEfeitos.fonte || 'mecânica'}${bloqEfeitos.descricao ? `\n\n${bloqEfeitos.descricao}` : ''}\n\nVocê ainda pode segurar, fixar ou guardar num contêiner.`, 'aviso');
         return;
     }
 
@@ -1640,7 +1640,7 @@ window.confirmEquip = async function(itemId) {
         { catalog: window._inventoryState.catalog, labelParte: nomeParte });
 
     if (plano.faltaMao) {
-        alert(`Não há outra mão/slot livre que possa empunhar a arma (falta ${plano.faltaMao}). Desequipe algo antes.`);
+        LRDialogo.toast(`Não há outra mão/slot livre que possa empunhar a arma (falta ${plano.faltaMao}). Desequipe algo antes.`, 'aviso');
         return;
     }
     const otherHand = plano.maoExtra;
@@ -1698,7 +1698,7 @@ window.confirmEquip = async function(itemId) {
         if (typeof recalcAll === 'function') recalcAll();
     } catch (e) {
         console.error('❌ Erro ao equipar:', e);
-        alert('Erro ao equipar item: ' + e.message);
+        LRDialogo.toast('Erro ao equipar item: ' + e.message, 'erro');
         // Restaurar botão em caso de erro
         if (btn) { btn.disabled = false; btn.textContent = '✅ Confirmar'; }
     }
@@ -1745,7 +1745,7 @@ window.unequipItem = async function(itemId) {
         if (typeof recalcAll === 'function') recalcAll();
     } catch (e) {
         console.error('❌ Erro ao desequipar:', e);
-        alert('Erro ao desequipar item: ' + e.message);
+        LRDialogo.toast('Erro ao desequipar item: ' + e.message, 'erro');
     }
 };
 
@@ -1770,7 +1770,7 @@ window.vincularProjetil = async function(armaId, projetilId) {
         if (typeof recalcAll === 'function') recalcAll();
     } catch (e) {
         console.error('❌ Erro ao apontar projétil:', e);
-        alert('Erro ao apontar projétil: ' + e.message);
+        LRDialogo.toast('Erro ao apontar projétil: ' + e.message, 'erro');
     }
 };
 
@@ -1819,7 +1819,7 @@ window.usarItem = async function(itemId) {
     const item = window._inventoryState.items.find(i => i.id === itemId);
     if (!item) return;
     if (item.tipo !== 'Consumível') {
-        alert('Só itens do tipo Consumível podem ser usados.');
+        LRDialogo.toast('Só itens do tipo Consumível podem ser usados.', 'aviso');
         return;
     }
 
@@ -1904,7 +1904,9 @@ window.usarItem = async function(itemId) {
 window.deleteInventoryItem = async function(itemId) {
     const item = window._inventoryState.items.find(i => i.id === itemId);
     if (!item) return;
-    if (!confirm(`Excluir "${item.nome || 'item'}"?`)) return;
+    if (!await LRDialogo.confirmar(`"${item.nome || 'item'}" sai do inventário`
+        + (item.ehContainer ? ' — e tudo o que estiver dentro dele vai junto.' : '.'),
+        { titulo: 'Excluir item', ok: 'Excluir', perigo: true })) return;
     try {
         // Also remove items inside if it's a container
         if (item.ehContainer) {
@@ -1938,7 +1940,7 @@ window.moveToContainer = async function(itemId, destinoId) {
     const tplCont = (window._inventoryState.catalog || []).find(t => t.id === contItem.modeloId);
     const veredito = window.InvMotor?.cabeNoConteiner(item, contItem, window._inventoryState.items, tplCont);
     if (veredito && !veredito.ok) {
-        if (veredito.motivo) alert('📦 ' + veredito.motivo);
+        if (veredito.motivo) LRDialogo.toast('📦 ' + veredito.motivo, 'aviso');
         return;
     }
     const aviso = window.InvMotor?.avisoDePeso(item, contItem, window._inventoryState.items, tplCont);
@@ -1956,7 +1958,7 @@ window.moveToContainer = async function(itemId, destinoId) {
             applyAllRaceMechanics(raca);
         }
         if (typeof recalcAll === 'function') recalcAll();
-        if (aviso) alert('⚠️ ' + aviso);
+        if (aviso) LRDialogo.toast('⚠️ ' + aviso, 'aviso');
         await _desgastarPorConteudo(contItem, tplCont);
     } catch (e) {
         console.error('❌ Erro ao mover para container:', e);
@@ -1987,7 +1989,7 @@ async function _desgastarPorConteudo(cont, tpl) {
                 if (f) f.parentItemId = null;
             }
             if (window._openContainerId === cont.id) window._openContainerId = null;
-            alert(`🎒 ${cont.nome || 'O contêiner'} rompeu — ${r.filhos.length} item(ns) foram para Itens Soltos.`);
+            LRDialogo.toast(`🎒 ${cont.nome || 'O contêiner'} rompeu — ${r.filhos.length} item(ns) foram para Itens Soltos.`, 'aviso');
         }
         renderEquippedItems();
         renderInventoryTab();
@@ -2276,10 +2278,10 @@ window.confirmSplitItem = async function(itemId, maxQty) {
         renderInventoryTab();
         recalcInventoryPressure();
         
-        alert(`✅ Pilha dividida com sucesso! (${remainQty} e ${newQty})`);
+        LRDialogo.toast(`✅ Pilha dividida com sucesso! (${remainQty} e ${newQty})`, 'sucesso');
     } catch (e) {
         console.error('❌ Erro ao dividir item:', e);
-        alert('❌ Erro ao dividir item: ' + e.message);
+        LRDialogo.toast('❌ Erro ao dividir item: ' + e.message, 'erro');
     }
 };
 
@@ -2466,17 +2468,17 @@ window.transferItem = async function(itemId, targetCharId, targetOwnerUid) {
     if (transferQty > 1) {
         const qtyInput = document.getElementById('invTransferQtyInput');
         if (!qtyInput) {
-            alert("Erro: Campo de quantidade não encontrado.");
+            LRDialogo.toast("Erro: Campo de quantidade não encontrado.", 'erro');
             return;
         }
         
         const inputQty = parseInt(qtyInput.value, 10);
         if (isNaN(inputQty) || inputQty <= 0) {
-            alert("Quantidade inválida ou igual a zero. Por favor, insira um valor válido no campo de quantidade acima da lista de alvos.");
+            LRDialogo.toast("Quantidade inválida ou igual a zero. Por favor, insira um valor válido no campo de quantidade acima da lista de alvos.", 'aviso');
             return;
         }
         if (inputQty > transferQty) {
-            alert("Você não possui essa quantidade toda. Transferência cancelada.");
+            LRDialogo.toast("Você não possui essa quantidade toda. Transferência cancelada.", 'aviso');
             return;
         }
         if (inputQty < transferQty) {
@@ -2489,7 +2491,7 @@ window.transferItem = async function(itemId, targetCharId, targetOwnerUid) {
         ? `Transferir ${transferQty}x "${item.nome || 'item'}" para ${targetName}?` 
         : `Transferir "${item.nome || 'item'}" para ${targetName}?`;
     
-    if (!confirm(confirmMsg)) return;
+    if (!await LRDialogo.confirmar(confirmMsg, { titulo: 'Transferir item', ok: 'Transferir' })) return;
 
     try {
         const updateData = {
@@ -2559,10 +2561,10 @@ window.transferItem = async function(itemId, targetCharId, targetOwnerUid) {
         }
         if (typeof recalcAll === 'function') recalcAll();
 
-        alert(`✅ Item "${item.nome}" transferido com sucesso!`);
+        LRDialogo.toast(`✅ Item "${item.nome}" transferido com sucesso!`, 'sucesso');
     } catch (e) {
         console.error('❌ Erro ao transferir item:', e);
-        alert('❌ Erro ao transferir item: ' + e.message);
+        LRDialogo.toast('❌ Erro ao transferir item: ' + e.message, 'erro');
     }
 };
 
@@ -2617,11 +2619,11 @@ function _pintarCamposItem(item, modelo) {
 window.openItemFormModal = function(title, item, containerId) {
     // Guarda única para todos os caminhos (criar solto, criar no container, editar).
     if (!window.podeEditarItens()) {
-        alert('🔒 Só o Mestre ou o Criador pode criar e editar itens.');
+        LRDialogo.toast('🔒 Só o Mestre ou o Criador pode criar e editar itens.', 'aviso');
         return;
     }
     if (!window.EquipCampos || !window.EquipSel) {
-        alert('⏳ O formulário ainda está carregando. Tente de novo em um instante.');
+        LRDialogo.toast('⏳ O formulário ainda está carregando. Tente de novo em um instante.', 'aviso');
         return;
     }
     document.getElementById('invFormModal')?.remove();
@@ -2741,8 +2743,9 @@ window.restaurarItemDoModelo = async function() {
     const item = window._inventoryState.items.find(i => i.id === editId);
     const tpl = item?.modeloId ? (window._inventoryState.catalog || []).find(t => t.id === item.modeloId) : null;
     const patch = _RestaurarItem.patchRestauracao(tpl);
-    if (!patch) { alert('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.'); return; }
-    if (!confirm(_RestaurarItem.textoConfirmacao(item, tpl))) return;
+    if (!patch) { LRDialogo.toast('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.', 'aviso'); return; }
+    if (!await LRDialogo.confirmar(_RestaurarItem.textoConfirmacao(item, tpl),
+        { titulo: '♻️ Restaurar do cadastro', ok: 'Restaurar' })) return;
     try {
         await _firestoreSetDoc('items', editId, patch);
         const idx = window._inventoryState.items.findIndex(i => i.id === editId);
@@ -2754,7 +2757,7 @@ window.restaurarItemDoModelo = async function() {
         if (typeof recalcAll === 'function') recalcAll();
     } catch (e) {
         console.error('❌ Erro ao restaurar item:', e);
-        alert('Erro ao restaurar: ' + e.message);
+        LRDialogo.toast('Erro ao restaurar: ' + e.message, 'erro');
     }
 };
 
@@ -2763,12 +2766,12 @@ window.saveInventoryItemForm = async function() {
     const dados = EC.coletarCampos(EC.camposDaInstancia());
 
     const nome = String(dados.nome || '').trim();
-    if (!nome) { alert('Nome obrigatório'); return; }
-    if (dados.tipo === 'Arma' && !dados.categoriaArma) { alert('Selecione a categoria da arma'); return; }
+    if (!nome) { LRDialogo.toast('Nome obrigatório', 'aviso'); return; }
+    if (dados.tipo === 'Arma' && !dados.categoriaArma) { LRDialogo.toast('Selecione a categoria da arma', 'aviso'); return; }
 
     const charId = _getCurrentCharId();
     const user = _getCurrentUser();
-    if (!charId || !user) { alert('Erro: personagem não carregado'); return; }
+    if (!charId || !user) { LRDialogo.toast('Erro: personagem não carregado', 'erro'); return; }
 
     const containerId = document.getElementById('invFormContainerId')?.value || '';
     const editId = document.getElementById('invFormEditId')?.value || '';
@@ -2785,7 +2788,7 @@ window.saveInventoryItemForm = async function() {
             if (novoId) modeloId = novoId;
         } catch (e) {
             console.error('❌ Erro ao salvar no catálogo:', e);
-            alert('⚠️ O item foi salvo no inventário, mas não entrou no catálogo: ' + e.message);
+            LRDialogo.toast('⚠️ O item foi salvo no inventário, mas não entrou no catálogo: ' + e.message, 'aviso');
         }
     }
 
@@ -2843,7 +2846,7 @@ window.saveInventoryItemForm = async function() {
         if (typeof recalcAll === 'function') recalcAll();
     } catch (e) {
         console.error('❌ Erro ao salvar item:', e);
-        alert('Erro ao salvar item: ' + e.message);
+        LRDialogo.toast('Erro ao salvar item: ' + e.message, 'erro');
     }
 };
 
@@ -3129,7 +3132,7 @@ function _fillConditionFromTemplate(templateId) {
 
 window.saveConditionForm = function() {
     const nome = document.getElementById('condFormNome')?.value?.trim();
-    if (!nome) { alert('Nome obrigatório'); return; }
+    if (!nome) { LRDialogo.toast('Nome obrigatório', 'aviso'); return; }
 
     const condData = {
         nome,

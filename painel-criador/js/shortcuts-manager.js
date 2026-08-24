@@ -275,8 +275,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reset button
     const btnReset = document.getElementById('btnResetShortcuts');
     if (btnReset) {
-        btnReset.addEventListener('click', () => {
-            if (confirm('Deseja restaurar os atalhos para os padrões originais?')) {
+        btnReset.addEventListener('click', async () => {
+            if (await LRDialogo.confirmar('Deseja restaurar os atalhos para os padrões originais?')) {
                 userShortcuts = { ...DEFAULT_SHORTCUTS };
                 saveShortcuts();
                 renderShortcutsUI();

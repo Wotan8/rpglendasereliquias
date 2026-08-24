@@ -29,6 +29,8 @@
 /* Peso e Tamanho do item SEMPRE saem com unidade. Tamanho é em metros e
    fracionado — 0,1 é 10 cm —, então nada de arredondar para inteiro; as casas
    mortas caem para "1 m" não virar "1,00 m". */
+
+import { perguntar } from './dialogo.js?v=1';
 const _pesoKg = (v) => `${(parseFloat(v) || 0).toFixed(2)} kg`;
 const _tamanhoM = (v) => `${Math.round((parseFloat(v) || 0) * 100) / 100} m`;
 
@@ -74,11 +76,13 @@ export function dividirPilha(item, qtd) {
     return { move: false, qtd: q, restante: total - q };
 }
 
-/** Quantos mover/dropar. null = cancelou. Pilha de 1 nem pergunta. */
-export function escolherQtd(i, msg) {
+/** Quantos mover/dropar. null = cancelou. Pilha de 1 nem pergunta.
+ *  ⚠️ PROMESSA desde que o prompt() nativo virou diálogo da mesa: as seis
+ *  telas que chamam isto precisam de `await`. */
+export async function escolherQtd(i, msg) {
     const total = qtdDe(i);
     if (total === 1) return 1;
-    const s = prompt(`${msg} (1–${total})`, total);
+    const s = await perguntar(`${msg} (1–${total})`, { valor: total, tipo: 'number' });
     if (s === null) return null;
     return parseInt(s) || total;
 }

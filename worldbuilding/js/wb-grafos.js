@@ -253,7 +253,7 @@ export const Grafos = (() => {
             </div>`);
         document.getElementById('relEdit').onclick = () => openEdgeForm(r);
         document.getElementById('relDel').onclick = async () => {
-            if (!confirm('Excluir este vínculo?')) return;
+            if (!await LRDialogo.confirmar('Excluir este vínculo?', { perigo: true })) return;
             await deleteDoc(doc(db, 'worldbuilding-relations', r.id));
             await loadAll(); ToolModal.close(); draw();
         };
@@ -410,7 +410,7 @@ export const Grafos = (() => {
         };
         const del = document.getElementById('linDel');
         if (del) del.onclick = async () => {
-            if (!confirm('Excluir esta linhagem? Os NPCs continuam existindo; só o agrupamento é removido.')) return;
+            if (!await LRDialogo.confirmar('Excluir esta linhagem? Os NPCs continuam existindo; só o agrupamento é removido.', { perigo: true })) return;
             await deleteDoc(doc(db, 'worldbuilding-lineages', l.id));
             await loadAll(); lineageAtual = null; ToolModal.close(); render();
         };

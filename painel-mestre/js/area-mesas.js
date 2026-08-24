@@ -289,7 +289,7 @@ window.linkPlayer = async function() {
 };
 
 window.unlinkPlayer = async function(uid) {
-    if (!S.currentMesaId || !confirm('Desvincular este jogador?')) return;
+    if (!S.currentMesaId || !await LRDialogo.confirmar('Desvincular este jogador?')) return;
     try {
         const jogadores = (S.currentMesaData.jogadores || []).filter(id => id !== uid);
         await updateDoc(doc(db, 'mesas', S.currentMesaId), { jogadores });

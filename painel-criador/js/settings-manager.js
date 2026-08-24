@@ -145,17 +145,17 @@ function filterUsers(e) {
 }
 
 window.updateUserRole = async function(userId, newRole) {
-    if(!confirm(`Tem certeza que deseja alterar o cargo deste usuário para ${newRole}?`)) {
+    if(!await LRDialogo.confirmar(`Tem certeza que deseja alterar o cargo deste usuário para ${newRole}?`)) {
         loadUsers(); // reload to reset dropdown
         return;
     }
     
     try {
         await updateDoc(doc(db, "users", userId), { role: newRole });
-        alert("Cargo atualizado com sucesso!");
+        LRDialogo.toast("Cargo atualizado com sucesso!", 'sucesso');
     } catch(e) {
         console.error("Error updating role:", e);
-        alert("Erro ao atualizar cargo. Verifique se você tem permissão.");
+        LRDialogo.toast("Erro ao atualizar cargo. Verifique se você tem permissão.", 'erro');
         loadUsers();
     }
 }
@@ -204,14 +204,14 @@ async function loadFavicons() {
                 const img = new Image();
                 img.onload = () => {
                     if ((fav.id === 'app-windows' || fav.id === 'pwa-icon') && img.width !== img.height) {
-                        alert("O Ícone do App deve ser uma imagem quadrada (ex: 256x256, 512x512).");
+                        LRDialogo.toast("O Ícone do App deve ser uma imagem quadrada (ex: 256x256, 512x512).", 'aviso');
                         return;
                     }
                     preview.src = url;
                     preview.style.display = 'block';
                     saveBtn.disabled = false;
                 };
-                img.onerror = () => { alert("Não consegui carregar essa imagem."); };
+                img.onerror = () => { LRDialogo.toast("Não consegui carregar essa imagem.", 'aviso'); };
                 img.src = url;
             });
 
@@ -227,11 +227,11 @@ async function loadFavicons() {
                         [fav.id]: downloadURL
                     }, { merge: true });
 
-                    alert('Favicon atualizado com sucesso!');
+                    LRDialogo.toast('Favicon atualizado com sucesso!', 'sucesso');
                     saveBtn.innerText = 'Salvo';
                 } catch (err) {
                     console.error("Error saving favicon:", err);
-                    alert("Erro ao salvar favicon.");
+                    LRDialogo.toast("Erro ao salvar favicon.", 'erro');
                     saveBtn.innerText = 'Salvar Alteração';
                     saveBtn.disabled = false;
                 }

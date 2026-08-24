@@ -1329,7 +1329,7 @@ function _collectMechEquipReqs(containerId) {
     return reqs;
 }
 
-window._mechEquipReqAdd = function (select, containerId) {
+window._mechEquipReqAdd = async function (select, containerId) {
     const raw = select.value;
     if (!raw) return;
     const list = document.getElementById(containerId);
@@ -1341,7 +1341,7 @@ window._mechEquipReqAdd = function (select, containerId) {
         // Tag ainda não usada por nenhum equipamento (ex: cadastrar a regra das
         // adagas antes de criar as adagas) — digita na hora.
         if (dupValue === '__nova__') {
-            dupValue = (prompt('Tag do equipamento (escreva igual à do cadastro):') || '').trim();
+            dupValue = (await LRDialogo.perguntar('Tag do equipamento (escreva igual à do cadastro):') || '').trim();
             if (!dupValue) { select.value = ''; return; }
         }
         req = { targetTipo: 'tag', tag: dupValue, formasEquip: [] };

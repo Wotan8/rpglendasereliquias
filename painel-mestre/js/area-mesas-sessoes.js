@@ -277,7 +277,7 @@ window.viewSessionLog = async function(logId) {
 
 // ===== DELETE SESSION LOG =====
 window.deleteSessionLog = async function(logId) {
-    if (!confirm('Deletar este log de sessão?')) return;
+    if (!await LRDialogo.confirmar('Deletar este log de sessão?', { perigo: true })) return;
     try {
         await deleteDoc(doc(db, 'session-logs', logId));
         showAlert('✅ Log deletado', 'success');

@@ -635,7 +635,7 @@ async function fundirPilhas(win, origemId, alvoId) {
     const a = (win.itens || []).find(x => x.id === origemId);
     const b = (win.itens || []).find(x => x.id === alvoId);
     if (!a || !b || !itensIdenticos(a, b)) return;
-    const q = escolherQtd(a, `Juntar quantos "${a.nome || 'item'}" nesta pilha?`);
+    const q = await escolherQtd(a, `Juntar quantos "${a.nome || 'item'}" nesta pilha?`);
     if (q == null) return;
     const plano = dividirPilha(a, q);
     const total = qtdDe(b) + plano.qtd;
@@ -668,7 +668,7 @@ async function moverItem(win, id, alvo) {
        inventário. */
     const veredito = cabeNoConteiner(i, c, win.itens, tplDoItemMotor(c, _sys));
     if (!veredito.ok) { if (veredito.motivo) toast('📦 ' + veredito.motivo, 'warning'); return; }
-    const q = escolherQtd(i, `Mover quantos "${i.nome || 'item'}" para ${c.nome || 'o contêiner'}?`);
+    const q = await escolherQtd(i, `Mover quantos "${i.nome || 'item'}" para ${c.nome || 'o contêiner'}?`);
     if (q == null) return;
     const plano = dividirPilha(i, q);
     try {
@@ -698,7 +698,7 @@ async function droparNoMapa(dados, ponto) {
         return;
     }
     const cont = ehContainer(i);
-    const q = cont ? qtdDe(i) : escolherQtd(i, `Dropar quantos "${i.nome || 'item'}" no mapa?`);
+    const q = cont ? qtdDe(i) : await escolherQtd(i, `Dropar quantos "${i.nome || 'item'}" no mapa?`);
     if (q == null) return;
     const plano = dividirPilha(i, q);
     const filhos = cont ? (win.itens || []).filter(x => x.parentItemId === i.id) : [];

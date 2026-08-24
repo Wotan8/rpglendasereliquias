@@ -50,7 +50,7 @@ function confirmPrint() {
     const selectedTabs = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
 
     if (selectedTabs.length === 0) {
-        alert('Selecione pelo menos uma aba para imprimir.');
+        LRDialogo.toast('Selecione pelo menos uma aba para imprimir.', 'aviso');
         return;
     }
 

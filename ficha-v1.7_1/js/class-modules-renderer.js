@@ -1039,7 +1039,7 @@ function _cmAbrirSelecaoPredef(mod, predefs, podeCriar) {
 }
 
 /** Valida EXP + equipamentos + mecânicas, confirma, cobra e adiciona o item. */
-function _cmValidarECobrar(mod, predef) {
+async function _cmValidarECobrar(mod, predef) {
     const custoExp = predef && predef.custoExpProprio !== null && predef.custoExpProprio !== undefined
         ? predef.custoExpProprio : (mod.custoExpPorItem || 0);
     const reqs = predef && Array.isArray(predef.custoEquipamentos)
@@ -1051,7 +1051,7 @@ function _cmValidarECobrar(mod, predef) {
         if (typeof showUpgradeBlocked === 'function') {
             showUpgradeBlocked(`Equipamentos necessários em falta:\n${check.faltas.join('\n')}`);
         } else {
-            alert(`Equipamentos necessários em falta:\n${check.faltas.join('\n')}`);
+            LRDialogo.toast(`Equipamentos necessários em falta:\n${check.faltas.join('\n')}`, 'aviso');
         }
         return;
     }
@@ -1108,15 +1108,18 @@ function _cmValidarECobrar(mod, predef) {
 
     if (custoExp > 0 && typeof showUpgradeConfirm === 'function') {
         if (extraCosts.length > 0) {
-             // Exibe o confirm do navegador por causa dos custos extras não suportados nativamente pelo showUpgradeConfirm
-             if (confirm(`Adicionar "${nomeItem}"?\n\nCusto para Adicionar:\n- ${custoExp} EXP\n- ${extraCosts.join('\n- ')}`)) {
+             // Diálogo próprio por causa dos custos extras, que o
+             // showUpgradeConfirm não sabe listar.
+             if (await LRDialogo.confirmar(`Custo para adicionar:\n- ${custoExp} EXP\n- ${extraCosts.join('\n- ')}`,
+                 { titulo: `Adicionar "${nomeItem}"?`, ok: 'Adicionar' })) {
                  executar();
              }
         } else {
              showUpgradeConfirm(nomeItem, currentItems.length + 1, custoExp, executar);
         }
     } else if (extraCosts.length > 0) {
-        if (confirm(`Adicionar "${nomeItem}"?\n\nCusto para Adicionar:\n- ${extraCosts.join('\n- ')}`)) {
+        if (await LRDialogo.confirmar(`Custo para adicionar:\n- ${extraCosts.join('\n- ')}`,
+            { titulo: `Adicionar "${nomeItem}"?`, ok: 'Adicionar' })) {
             executar();
         }
     } else {
@@ -1374,7 +1377,7 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
             btnUnlock.className = 'no-print cm-edit-btn';
             btnUnlock.textContent = '✏️ Editar';
             btnUnlock.title = 'Desbloquear edição (Sujeito a custo)';
-            btnUnlock.addEventListener('click', () => {
+            btnUnlock.addEventListener('click', async () => {
                 const edIds = _cmGetCostMechanics(mod, 'custoEdicao');
                 if (edIds.length > 0) {
                     const check = _cmCheckMechanicsCosts(edIds);
@@ -1382,7 +1385,8 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
                         showUpgradeBlocked(`Edição Bloqueada: ${check.label}`);
                         return;
                     }
-                    if (confirm(`Desbloquear edição?\nCusto: ${check.label.replace('Custo: ', '')}`)) {
+                    if (await LRDialogo.confirmar(`Custo: ${check.label.replace('Custo: ', '')}`,
+                        { titulo: 'Desbloquear edição?', ok: 'Desbloquear' })) {
                         _cmApplyMechanicsCosts(edIds);
                         
                         // Recriar o item no DOM como editável
@@ -1818,7 +1822,7 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
                     if (typeof showUpgradeBlocked === 'function') {
                         showUpgradeBlocked('Nenhuma mecânica configurada para este botão.');
                     } else if (typeof alert === 'function') {
-                        alert('Nenhuma mecânica configurada para este botão.');
+                        LRDialogo.toast('Nenhuma mecânica configurada para este botão.', 'aviso');
                     }
                     return;
                 }
@@ -2169,7 +2173,7 @@ function _cmApplyMechanicsCosts(mechIds) {
 /**
  * Remove um item de módulo com confirmação e validação de custo.
  */
-function _removeModuleItem(mod, itemEl) {
+async function _removeModuleItem(mod, itemEl) {
     const remIds = _cmGetCostMechanics(mod, 'custoRemocao');
     if (mod.custoRemocaoAtivo && remIds.length > 0) {
         const check = _cmCheckMechanicsCosts(remIds);
@@ -2177,15 +2181,16 @@ function _removeModuleItem(mod, itemEl) {
             if (typeof showUpgradeBlocked === 'function') {
                 showUpgradeBlocked(`Bloqueado: ${check.label}`);
             } else {
-                alert(`Bloqueado: ${check.label}`);
+                LRDialogo.toast(`Bloqueado: ${check.label}`, 'aviso');
             }
             return; // Impede exclusão
         }
         
-        if (!confirm(`Remover este item?\nIsso consumirá: ${check.label.replace('Custo: ', '')}`)) return;
+        if (!await LRDialogo.confirmar(`Isso consumirá: ${check.label.replace('Custo: ', '')}`,
+            { titulo: 'Remover este item?', ok: 'Remover', perigo: true })) return;
         _cmApplyMechanicsCosts(remIds);
     } else {
-        if (!confirm('Remover este item?')) return;
+        if (!await LRDialogo.confirmar('Remover este item?', { ok: 'Remover', perigo: true })) return;
     }
 
     const container = itemEl.parentElement;

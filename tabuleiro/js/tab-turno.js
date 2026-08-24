@@ -40,13 +40,14 @@ import { updObj } from './tab-objects.js';
 import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte, fonteDoParticipante } from './tab-hud.js';
 import { carregarCondicoesSistema, aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { grausDoAtaque } from './tab-conflito-calc.js';
-import { calcularDadiva, rotuloDoGanho } from '../../shared/dadiva.js?v=1';
+import { calcularDadiva, rotuloDoGanho, tetoDoAtributo } from '../../shared/dadiva.js?v=2';
 import { bonusDosGanhos } from '../../shared/bonus-temporario.js?v=1';
 import { porqueNaoPodeIncorporar, custoEscalonado, dadivasDoHospede, ehAncestral,
          quemFicaInerte, CONDICAO_TRANSE } from '../../shared/incorporacao.js?v=1';
 import { oQueDesfazer, comecarRitual, precisaSegundoEstagio, miraDoSegundoEstagio } from '../../shared/turno-efeitos.js?v=1';
 import { logChat } from './tab-chat.js';
 
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
 // Abertura do arco do golpe corpo a corpo (graus). Régua de mesa da UI —
 // o alcance vem da arma + Tamanho; o arco só diz o quão "largo" é o balanço.
 const ARCO_GOLPE_GRAUS = 90;
@@ -736,8 +737,10 @@ window.tbTurnoAgirAgora = async (pid) => {
     // O guardado só vale uma vez e interrompe a ordem de todo mundo — clique
     // sem querer aqui custa o turno inteiro, então confirma.
     const daVez = participanteDaVez(c);
-    if (!confirm(`⚡ ${p.name || 'Este personagem'} vai interromper agora, no meio do turno de ${daVez?.name || '?'}?\n\n`
-        + 'O turno guardado é consumido e a ordem volta ao normal quando ele encerrar.')) return;
+    if (!await confirmar(
+        `${p.name || 'Este personagem'} interrompe no meio do turno de ${daVez?.name || '?'}.\n\n`
+        + 'O turno guardado é consumido e a ordem volta ao normal quando ele encerrar.',
+        { titulo: '⚡ Agir agora?', ok: 'Agir agora' })) return;
     const parts = (c.participantes || []).map(x => x.id === pid ? { ...x, guardadoNaRodada: null } : x);
     await salvarCena({
         participantes: parts,
@@ -751,7 +754,8 @@ window.tbTurnoAgirAgora = async (pid) => {
 /** Ação gasta sem mira (descrita pelo jogador): pede o texto, gasta e loga. */
 window.tbTurnoGastarAvulso = async (custo) => {
     const p = participanteDaVez(cena());
-    const desc = prompt(`O que ${p?.name || 'o personagem'} faz com a ${custo === 'movimento' ? 'Ação de Movimento' : 'Ação Padrão'}?`);
+    const desc = await perguntar(`O que ${p?.name || 'o personagem'} faz?`,
+        { titulo: custo === 'movimento' ? 'Ação de Movimento' : 'Ação Padrão' });
     if (desc === null) return;
     sub = null;
     await gastar(custo);
@@ -1324,19 +1328,28 @@ async function aplicarIncorporacao(m, p, tok, tokAlvo) {
     // As sobras: o que o hóspede tem de melhor que quem conjura. O catálogo diz
     // o que é Sentido, Deslocamento e perícia social — quem classifica é o
     // CADASTRO, não este arquivo.
-    let cat = { derivedValues: [], pericias: [] };
+    let cat = { derivedValues: [], pericias: [], auras: [] };
     try {
         const sys = await (await import('./tab-ficha-win.js?v=13')).registroSistema();
-        cat = { derivedValues: sys.derivedValues || [], pericias: sys.skills || [] };
+        cat = { derivedValues: sys.derivedValues || [], pericias: sys.skills || [], auras: sys.auras || [] };
     } catch (e) {
         console.warn('registro do sistema p/ Dádiva', e);
         toast('⚠️ Registro do sistema indisponível — a Dádiva não pôde ser calculada', 'warning');
         cancelarMira(); return;
     }
+    const fontePersonagem = fonteDoParticipante(p);
     const fichaHospede = achatarFicha(hospede, cat);
-    const fichaPersonagem = achatarFicha(fonteDoParticipante(p), cat);
+    const fichaPersonagem = achatarFicha(fontePersonagem, cat);
+    // ⛔ Teto do herdado: 5 sem Aura, +1 por grau de Aura ligada ao atributo
+    // (Yotun 6 de FOR), e teto racial declarado vence tudo (Pogo 3). Sem isto
+    // um Eco poderoso levava um personagem comum além do teto do sistema.
+    const teto = (sigla) => tetoDoAtributo(sigla, {
+        auras: fontePersonagem?.auras || {},
+        catalogoAuras: cat.auras || [],
+        tetoRacial: fontePersonagem?.tetoRacialAtributo || null,
+    });
     const dadivas = dadivasDoHospede(hospede, m.exigeVinculo)
-        .map(k => calcularDadiva(k, fichaHospede, fichaPersonagem, cat, { ancestral }))
+        .map(k => calcularDadiva(k, fichaHospede, fichaPersonagem, cat, { ancestral, teto }))
         .filter(d => d && (d.ganhos.length || d.modulos.length));
 
     const ganhos = dadivas.flatMap(d => d.ganhos);

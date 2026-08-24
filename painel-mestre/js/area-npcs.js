@@ -1210,9 +1210,9 @@ window.addPecFromRegistry = function() {
 };
 
 window.addPecCustom = function() {
-    const nome = prompt('Nome da peculiaridade personalizada:');
+    const nome = await LRDialogo.perguntar('Nome da peculiaridade personalizada:');
     if (!nome || !nome.trim()) return;
-    const efeito = prompt('Efeito (texto livre, opcional):') || '';
+    const efeito = await LRDialogo.perguntar('Efeito (texto livre, opcional):') || '';
     F.npc.peculiaridades.push({ refId: null, nomeCustom: nome.trim(), efeitoManual: efeito.trim(), nivel: 1 });
     renderPecs(); recalcStats();
 };
@@ -1371,7 +1371,7 @@ window.addNpcClassModule = function() {
 
 window.removeNpcClassModule = function(mi) {
     const vinc = F.npc.modulosClasse?.[mi]; if (!vinc) return;
-    if ((vinc.itens || []).length && !confirm('Este módulo possui itens preenchidos. Desvincular mesmo assim?')) return;
+    if ((vinc.itens || []).length && !await LRDialogo.confirmar('Este módulo possui itens preenchidos. Desvincular mesmo assim?')) return;
     F.npc.modulosClasse.splice(mi, 1);
     renderNpcClassModules();
 };
@@ -1872,7 +1872,7 @@ window.addVincAliado = async function() {
     
     // Se não for o próprio, gerar clone:
     if (!isProprio) {
-        if (!confirm('Isto criará um CLONE INDEPENDENTE deste NPC para vincular a este personagem. Deseja prosseguir?')) return;
+        if (!await LRDialogo.confirmar('Isto criará um CLONE INDEPENDENTE deste NPC para vincular a este personagem. Deseja prosseguir?')) return;
         
         try {
             const cloneData = JSON.parse(JSON.stringify(collectNpcData()));
@@ -2063,7 +2063,7 @@ window.toggleDefaultSkills = function(checked) {
         renderStructuredSkills();
         recalcStats();
     } else {
-        if (!confirm('Desmarcar esta opção irá desvincular TODAS as perícias padrões deste NPC. Quaisquer níveis aplicados a elas serão perdidos. Deseja continuar?')) {
+        if (!await LRDialogo.confirmar('Desmarcar esta opção irá desvincular TODAS as perícias padrões deste NPC. Quaisquer níveis aplicados a elas serão perdidos. Deseja continuar?', { perigo: true })) {
             document.getElementById('npcHasDefaultSkills').checked = true;
             return;
         }
@@ -2121,7 +2121,7 @@ window.addSkillByCategory = function() {
 };
 
 window.removeSkill = function(idx) {
-    if (!confirm('Remover esta perícia? Os níveis aplicados a ela serão perdidos.')) return;
+    if (!await LRDialogo.confirmar('Remover esta perícia? Os níveis aplicados a ela serão perdidos.', { perigo: true })) return;
     F.npc.periciasEstruturadas.splice(idx, 1);
     renderStructuredSkills();
     recalcStats();
@@ -2294,7 +2294,7 @@ window.closeNpcModal = function() {
 };
 
 window.deleteCurrentNpc = async function() {
-    if (!currentEditingNpc || !confirm(`Deletar "${currentEditingNpc.nome}"?`)) return;
+    if (!currentEditingNpc || !await LRDialogo.confirmar(`Deletar "${currentEditingNpc.nome}"?`, { perigo: true })) return;
     try { await deleteDoc(doc(db, 'npcs', currentEditingNpc.id)); await addLog(S.currentUser?.email, 'Deletou NPC', currentEditingNpc.nome, 'npcs'); showAlert('✅ Deletado', 'success'); closeNpcModal(); await loadAllNpcs(); if (window._loadMesaNpcs) await window._loadMesaNpcs(); } catch (e) { showAlert('❌ Erro', 'danger'); }
 };
 
@@ -2304,13 +2304,13 @@ window.selectAllFilteredNpcs = function() { const cbs = document.querySelectorAl
 window.deleteSelectedNpcs = async function() {
     const cbs = document.querySelectorAll('.npc-checkbox:checked'); if (!cbs.length) { showAlert('⚠️ Selecione NPCs', 'warning'); return; }
     const names = Array.from(cbs).map(cb => S.allNpcs.find(n=>n.id===cb.dataset.npcId)?.nome||'-');
-    if (!confirm(`Deletar ${cbs.length} NPC(s)?\n${names.join('\n')}`)) return;
+    if (!await LRDialogo.confirmar(`Deletar ${cbs.length} NPC(s)?\n${names.join('\n')}`, { perigo: true })) return;
     try { for (const cb of cbs) { await deleteDoc(doc(db, 'npcs', cb.dataset.npcId)); await addLog(S.currentUser?.email, 'Deletou NPC', names.shift(), 'npcs'); } showAlert(`✅ ${cbs.length} deletado(s)`, 'success'); await loadAllNpcs(); } catch (e) { showAlert('❌ Erro', 'danger'); }
 };
 
 window.duplicateSelectedNpcs = async function() {
     const cbs = document.querySelectorAll('.npc-checkbox:checked'); if (!cbs.length) { showAlert('⚠️ Selecione NPCs', 'warning'); return; }
-    if (!confirm(`Duplicar ${cbs.length} NPC(s)?`)) return;
+    if (!await LRDialogo.confirmar(`Duplicar ${cbs.length} NPC(s)?`)) return;
     let c = 0;
     try { for (const cb of cbs) { const n = S.allNpcs.find(x=>x.id===cb.dataset.npcId); if (!n) continue; const copy = {...n, nome: n.nome+' (Cópia)', lastUpdate: new Date().toISOString(), lastUpdateBy: S.currentUser?.email}; delete copy.id; await setDoc(doc(collection(db, 'npcs')), copy); await addLog(S.currentUser?.email, 'Duplicou NPC', `${n.nome} → ${copy.nome}`, 'npcs'); c++; } showAlert(`✅ ${c} duplicado(s)`, 'success'); await loadAllNpcs(); } catch (e) { showAlert('❌ Erro', 'danger'); }
 };
@@ -2481,7 +2481,7 @@ window.exportNpcFromForm = async function() {
 window.bulkImportNpcs = function() {
     let fi = document.getElementById('npcBulkFile');
     if (!fi) { fi = document.createElement('input'); fi.type='file'; fi.id='npcBulkFile'; fi.accept='.json'; fi.multiple=true; fi.style.display='none'; document.body.appendChild(fi);
-        fi.addEventListener('change', async e => { const files = Array.from(e.target.files); if (!files.length) return; if (!confirm(`Importar ${files.length} arquivo(s)?`)) { fi.value=''; return; }
+        fi.addEventListener('change', async e => { const files = Array.from(e.target.files); if (!files.length) return; if (!await LRDialogo.confirmar(`Importar ${files.length} arquivo(s)?`)) { fi.value=''; return; }
             let cr=0,up=0,er=0;
             for (const f of files) { try { const list = JSON.parse(await f.text()); const arr = Array.isArray(list)?list:[list];
                 for (const d of arr) { try { 

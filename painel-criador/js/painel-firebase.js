@@ -853,7 +853,7 @@ async function findUserDoc(user) {
 // ===== NAVIGATION =====
 window.goToMenu = () => { window.location.href = '../menu/menu.html'; };
 window.logout = async function () {
-    if (confirm('🚪 Tem certeza que deseja sair?')) {
+    if (await LRDialogo.confirmar('🚪 Tem certeza que deseja sair?')) {
         try { await signOut(auth); window.location.href = '../index.html'; }
         catch (e) { showAlert('❌ Erro ao sair: ' + e.message, 'danger'); }
     }
@@ -5686,7 +5686,7 @@ function truncate(str, maxLen) {
 // ᛟ RUNOMANCIA — Importação do Compêndio (5 Artus + 14 Aspectus + 45 Sigilus)
 // =====================================================================
 window.runicImportSeed = async function () {
-    if (!confirm('Importar os 64 Elementos Rúnicos do Compêndio da Magia Rúnica?\n(Reimportar sobrescreve os elementos importados anteriormente, preservando os criados manualmente.)')) return;
+    if (!await LRDialogo.confirmar('Importar os 64 Elementos Rúnicos do Compêndio da Magia Rúnica?\n(Reimportar sobrescreve os elementos importados anteriormente, preservando os criados manualmente.)')) return;
     const btn = document.getElementById('runicSeedBtn');
     try {
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Importando…'; }

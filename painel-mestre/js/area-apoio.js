@@ -349,7 +349,7 @@ window.deleteApoio = async function(i) {
     if (!S.currentSelectedUserId) return;
     const original = S.todosApoiosCarregados[i];
     if (!original) { showAlert('⚠️ Apoio não encontrado, recarregue a lista', 'warning'); return; }
-    if (!confirm(`Excluir o apoio "${original.nome || 'sem nome'}" (x${original.montante || 1})?`)) return;
+    if (!await LRDialogo.confirmar(`Excluir o apoio "${original.nome || 'sem nome'}" (x${original.montante || 1})?`, { perigo: true })) return;
     const chaveOriginal = chaveApoio(original);
     try {
         await mutateApoios(S.currentSelectedUserId, apoios => {
@@ -567,7 +567,7 @@ window.deleteMeta = async function(id) {
     const meta = dynamicMetas.find(m => m.id === id);
     const total = metaTotais[id] || 0;
     // Os apoios continuam no banco apontando para esta meta — só o alvo some.
-    if (!confirm(`Excluir a meta "${meta?.nome || id}"?\n\nAs etapas serão perdidas. Os ${total} apoio(s) já atrelados a ela NÃO são apagados, mas deixam de aparecer em qualquer progresso.`)) return;
+    if (!await LRDialogo.confirmar(`Excluir a meta "${meta?.nome || id}"?\n\nAs etapas serão perdidas. Os ${total} apoio(s) já atrelados a ela NÃO são apagados, mas deixam de aparecer em qualquer progresso.`, { perigo: true })) return;
 
     try {
         await deleteDoc(doc(db, 'metas', id));
@@ -625,8 +625,8 @@ function renderProd() {
     tb.innerHTML = S.listaProducao.map((it, i) => `<tr style="border-bottom:1px solid var(--line)"><td style="padding:12px;text-align:center;color:var(--muted)">☰</td><td style="padding:12px;cursor:pointer" onclick="editProd(${i},'nome')">${it.nome||'-'}</td><td style="padding:12px;cursor:pointer" onclick="editProd(${i},'progresso')">${it.progresso||'-'}</td><td style="padding:12px;text-align:center"><button class="btn btn-danger btn-small" onclick="remProd(${i})">🗑️</button></td></tr>`).join('');
 }
 window.adicionarItemProducao = async function() { S.listaProducao.push({ nome: 'Novo Item', progresso: '' }); await salvarProd(); renderProd(); };
-window.remProd = async function(i) { if (confirm('Remover?')) { S.listaProducao.splice(i, 1); await salvarProd(); renderProd(); } };
-window.editProd = async function(i, f) { const v = prompt(`Editar ${f}:`, S.listaProducao[i][f]||''); if (v !== null) { S.listaProducao[i][f] = v; await salvarProd(); renderProd(); } };
+window.remProd = async function(i) { if (await LRDialogo.confirmar('Remover?', { perigo: true })) { S.listaProducao.splice(i, 1); await salvarProd(); renderProd(); } };
+window.editProd = async function(i, f) { const v = await LRDialogo.perguntar(`Editar ${f}:`, { valor: S.listaProducao[i][f] || '' }); if (v !== null) { S.listaProducao[i][f] = v; await salvarProd(); renderProd(); } };
 // Carregado em onTabActivated — antes rodava num setTimeout no import do módulo,
 // correndo com o auth e engolindo o erro de permissão num console.warn.
 
@@ -910,7 +910,7 @@ window.updateQuantidadeRepertorio = async function (userId, itemIndex, novaQuant
 };
 
 window.deleteItemRepertorio = async function (userId, itemIndex) {
-    if (!confirm('Tem certeza que deseja deletar este item do repertório?')) return;
+    if (!await LRDialogo.confirmar('Tem certeza que deseja deletar este item do repertório?', { perigo: true })) return;
 
     try {
         const userDoc = await getDoc(doc(db, 'users', userId));
@@ -1037,9 +1037,9 @@ window.carregarComprasDinheiro = async function() {
 };
 
 window.resolverCompraDinheiro = async function(compraId, aprovar) {
-    if (!confirm(aprovar
+    if (!await LRDialogo.confirmar(aprovar
         ? 'Confirmar que o dinheiro foi recebido e entregar o item agora?'
-        : 'Cancelar este pedido? O jogador será avisado.')) return;
+        : 'Cancelar este pedido? O jogador será avisado.', { perigo: true })) return;
     try {
         const fn = httpsCallable(functions, 'confirmarCompraDinheiro');
         await fn({ compraId, aprovar });
@@ -1387,7 +1387,7 @@ window.toggleLojaVendaAtiva = async function(id, isAtiva) {
 };
 
 window.deleteLojaItem = async function(id) {
-    if (!confirm('Tem certeza que deseja excluir este item? Essa ação não pode ser desfeita.')) return;
+    if (!await LRDialogo.confirmar('Tem certeza que deseja excluir este item? Essa ação não pode ser desfeita.', { perigo: true })) return;
     try {
         await deleteDoc(doc(db, 'loja_itens', id));
         showAlert('✅ Item excluído.', 'success');

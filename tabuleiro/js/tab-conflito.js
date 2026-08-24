@@ -35,6 +35,7 @@ import { addObj } from './tab-objects.js';
 import { participanteDoToken, valorVdDaFonte, fonteDoParticipante, VITAIS } from './tab-hud.js';
 import { aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { logChat } from './tab-chat.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal, absorverResolve, ajusteDeTamanho,
          defesasLivres, custoDaDefesa, soODado,
          precisaRolarDano,
@@ -595,7 +596,8 @@ window.tbConfFechar = async () => { await salvar(null); };
 window.tbConfCancelar = async () => {
     const c = conflito(); if (!c) return;
     if (!controla(c.atacante.pid)) return;
-    if (!confirm('Cancelar este conflito? A ação já gasta não volta.')) return;
+    if (!await confirmar('A ação já gasta não volta.',
+        { titulo: 'Cancelar este conflito?', ok: 'Cancelar o conflito', cancelar: 'Voltar', perigo: true })) return;
     await salvar(null);
 };
 

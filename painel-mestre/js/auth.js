@@ -86,7 +86,7 @@ window.goToWorldbuilding = () => { window.location.href = '../worldbuilding/worl
 window.goToHexmap = () => { window.location.href = '../hexmap.html'; };
 
 window.logout = async function () {
-    if (confirm('🚪 Tem certeza que deseja sair?')) {
+    if (await LRDialogo.confirmar('🚪 Tem certeza que deseja sair?')) {
         try {
             try { localStorage.removeItem('pm-mesa-lembrada'); } catch (e) { /* ver MESA_LEMBRADA em area-mesas.js */ }
             await signOut(auth);

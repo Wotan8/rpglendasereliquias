@@ -195,7 +195,7 @@ export function bindRich(ed, toolbar, onChange) {
     }
 
     /* ── Botões da barra ─────────────────────────────────── */
-    toolbar.addEventListener('click', (e) => {
+    toolbar.addEventListener('click', async (e) => {
         const alvo = e.target.closest('[data-rich]');
         if (!alvo || alvo.dataset.rich === 'cor') return;
         e.preventDefault();
@@ -212,12 +212,12 @@ export function bindRich(ed, toolbar, onChange) {
                 alternarClasse(alvo.dataset.classe);
                 break;
             case 'link': {
-                const url = prompt('Endereço do link:', 'https://');
+                const url = await LRDialogo.perguntar('Endereço do link:', { valor: 'https://' });
                 if (url) document.execCommand('createLink', false, url);
                 break;
             }
             case 'imagem': pedirImagem(false); break;
-            case 'tabela': inserirTabela(); break;
+            case 'tabela': await inserirTabela(); break;
         }
         avisar();
     });
@@ -235,10 +235,10 @@ export function bindRich(ed, toolbar, onChange) {
     });
 
     /** Tabela com cabeçalho, do tamanho que o autor pedir. */
-    function inserirTabela() {
-        const cols = Math.min(8, Math.max(1, parseInt(prompt('Quantas colunas?', '3'), 10) || 0));
+    async function inserirTabela() {
+        const cols = Math.min(8, Math.max(1, parseInt(await LRDialogo.perguntar('Quantas colunas?', { valor: '3' }), 10) || 0));
         if (!cols) return;
-        const linhas = Math.min(30, Math.max(1, parseInt(prompt('Quantas linhas (sem contar o cabeçalho)?', '3'), 10) || 0));
+        const linhas = Math.min(30, Math.max(1, parseInt(await LRDialogo.perguntar('Quantas linhas (sem contar o cabeçalho)?', { valor: '3' }), 10) || 0));
         if (!linhas) return;
 
         const cel = (t) => `<${t}><br></${t}>`.repeat(cols);

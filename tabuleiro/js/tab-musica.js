@@ -21,6 +21,7 @@ import { refMusica, abrirModal } from './tab-main.js';
 import { uploadArquivo } from './tab-objects.js';
 import { planoDeReproducao, posicaoInicial, idDoYoutube } from './tab-musica-calc.js';
 
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
 let dados = { playlists: [], ativa: null, tocando: {} };
 const tocadores = new Map();   // faixaId -> tocador (áudio ou YouTube)
 // faixaId -> t0 que falhou. Sem isto, arquivo 404 ou vídeo sem permissão de
@@ -387,7 +388,8 @@ function faixaHtml(f) {
 }
 
 window.tbMusNovaPlaylist = async function() {
-    const nome = prompt('Nome da playlist:', 'Playlist ' + (dados.playlists.length + 1));
+    const nome = await perguntar('Como se chama a playlist?',
+        { titulo: 'Nova playlist', valor: 'Playlist ' + (dados.playlists.length + 1), ok: 'Criar' });
     if (!nome) return;
     const p = { id: uid(), nome: nome.trim(), faixas: [] };
     dados.playlists.push(p);
@@ -396,14 +398,15 @@ window.tbMusNovaPlaylist = async function() {
 };
 window.tbMusRenomearPlaylist = async function() {
     const p = playlistAtiva(); if (!p) return;
-    const nome = prompt('Novo nome:', p.nome);
+    const nome = await perguntar('Novo nome da playlist:', { titulo: 'Renomear playlist', valor: p.nome });
     if (!nome) return;
     p.nome = nome.trim();
     await salvar(); render(); window.tbMusModal();
 };
 window.tbMusExcluirPlaylist = async function() {
     const p = playlistAtiva(); if (!p) return;
-    if (!confirm(`Excluir a playlist “${p.nome}” e suas faixas?`)) return;
+    if (!await confirmar(`A playlist “${p.nome}” e as faixas dela somem.`,
+        { titulo: 'Excluir playlist', ok: 'Excluir', perigo: true })) return;
     const t = { ...tocandoAgora() };
     (p.faixas || []).forEach(f => delete t[f.id]);
     dados.tocando = t;

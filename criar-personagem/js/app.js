@@ -3,7 +3,7 @@
 let _wizardInitialized = false;
 
 /** Chamada após dados do Firebase carregados */
-window.initWizard = function () {
+window.initWizard = async function () {
     if (_wizardInitialized) return;
     _wizardInitialized = true;
 
@@ -16,7 +16,8 @@ window.initWizard = function () {
 
     // Check for saved state
     if (hasWizardSave()) {
-        if (confirm('📂 Encontramos um personagem em progresso. Deseja continuar de onde parou?')) {
+        if (await LRDialogo.confirmar('Encontramos um personagem em progresso.',
+            { titulo: '📂 Continuar de onde parou?', ok: 'Continuar', cancelar: 'Comecar do zero' })) {
             loadWizardFromStorage();
         } else {
             clearWizardStorage();
@@ -901,7 +902,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         if (_wizardInitialized) return;
         if (temMesa) {
-            alert('⚠️ Não foi possível carregar a configuração da mesa. Recarregue a página.');
+            LRDialogo.toast('⚠️ Não foi possível carregar a configuração da mesa. Recarregue a página.', 'erro');
             return;
         }
         console.log('⚠️ Firebase não detectado, tentando inicializar offline...');

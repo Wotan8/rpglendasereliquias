@@ -95,7 +95,7 @@ export const Mural = (() => {
             const delCol = e.target.closest('[data-delcol]'), cor = e.target.closest('[data-cor]');
             if (add) { findCol(add.dataset.addcard)?.cards.push({ id: uid('card'), text: 'Nova ideia…', color: CORES[Math.floor(Math.random() * CORES.length)] }); persist(); render(); }
             if (delC) { const f = findCard(delC.dataset.delcard); if (f) { f.col.cards.splice(f.i, 1); persist(); render(); } }
-            if (delCol && confirm('Excluir a coluna e todos os post-its?')) { board.columns = board.columns.filter(c => c.id !== delCol.dataset.delcol); persist(); render(); }
+            if (delCol && await LRDialogo.confirmar('Excluir a coluna e todos os post-its?', { perigo: true })) { board.columns = board.columns.filter(c => c.id !== delCol.dataset.delcol); persist(); render(); }
             if (cor) { const f = findCard(cor.dataset.forcard); if (f) { f.card.color = cor.dataset.cor; persist(); render(); } }
         });
         root.addEventListener('focusout', (e) => {

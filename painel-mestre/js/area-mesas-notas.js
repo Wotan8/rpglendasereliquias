@@ -207,7 +207,7 @@ window.editSingleNote = function(charId, noteId) {
 
 // Delete a specific note
 window.deleteSingleNote = async function(charId, noteId) {
-    if (!confirm('Excluir esta nota?')) return;
+    if (!await LRDialogo.confirmar('Excluir esta nota?', { perigo: true })) return;
     const chars = S.mesaCharacters || [];
     const c = chars.find(x => x.id === charId);
     if (!c) return;

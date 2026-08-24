@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Diálogos da mesa</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/lendas-reliquias.css">
+<!-- sem cache: arnes tem de ler o CSS do disco, senao mede o de ontem -->
+<script>document.write('<link rel="stylesheet" href="./shared/dialogo.css?t=' + Date.now() + '">');</script>
+<style>
+  body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table { border-collapse: collapse; font: 11px ui-monospace, monospace; width: 700px; max-width: 100%; }
+  td { border: 1px solid var(--lr-border); padding: 2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight: 700; }
+  #placar { font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--lr-border); }
+  h1 { font-size: 1rem; margin: 0 0 4px; } p { margin: 0 0 10px; color: var(--lr-text-2); font-size: .8rem; }
+</style></head>
+<body>
+<h1>🗨️ Diálogos da mesa</h1>
+<p>Substituem as 176 caixas do sistema operacional. O contrato do
+   <code>confirm()</code> e do <code>prompt()</code> tem de continuar valendo —
+   inclusive o <code>null</code> de quem cancela e o <code>''</code> de quem
+   apaga tudo e confirma —, só que agora em promessa.</p>
+<table id="saida"></table>
+<div id="placar"></div>
+
+<script type="module">
+import { toast, confirmar, perguntar } from './shared/dialogo.js?v=2';
+
+const linhas = [];
+let ok = 0;
+const teste = (nome, passou) => { linhas.push([nome, passou]); if (passou) ok++; };
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const cor = (el, p) => getComputedStyle(el)[p];
+const espera = (ms) => new Promise(r => setTimeout(r, ms));
+/** Clica no botão do diálogo aberto e devolve a promessa já resolvida. */
+const clicar = (sel) => { $(`.lr-dialogo ${sel}`).click(); };
+
+// ============ TOAST ============
+const t1 = toast('Item salvo', 'sucesso');
+teste('T1 · o aviso entra na pilha', !!$('.lr-avisos') && $('.lr-avisos').contains(t1));
+teste('T2 · a pilha não rouba o clique do mapa atrás dela',
+    cor($('.lr-avisos'), 'pointerEvents') === 'none' && cor(t1, 'pointerEvents') === 'auto');
+teste('T3 · a pilha é anunciada para leitor de tela',
+    $('.lr-avisos').getAttribute('role') === 'status'
+    && $('.lr-avisos').getAttribute('aria-live') === 'polite');
+
+// o filete da esquerda é o que carrega o significado
+const filete = (tipo) => cor(toast('x', tipo), 'borderLeftColor');
+const verde = filete('sucesso'), vermelho = filete('erro'), azul = filete('info');
+teste(`T4 · cada tipo tem seu filete (sucesso ${verde} · erro ${vermelho} · info ${azul})`,
+    verde !== vermelho && vermelho !== azul && verde !== azul);
+teste('T5 · o aviso herda a superfície do lendas-reliquias.css (não é transparente)',
+    cor(t1, 'backgroundColor') !== 'rgba(0, 0, 0, 0)');
+
+// texto do usuário não vira HTML
+const tx = toast('<img src=x onerror="window.__furo=1">', 'info');
+teste('T6 · mensagem é escapada, não interpretada',
+    !tx.querySelector('img') && window.__furo === undefined);
+
+// fechar na mão
+const antes = $$('.lr-avisos .lr-toast').length;
+$('.lr-toast-x', tx).click();
+await espera(450);
+teste('T7 · o ✕ fecha o aviso', $$('.lr-avisos .lr-toast').length < antes);
+
+// some sozinho
+/* Espera folgada de propósito: aba em segundo plano prende o setTimeout em
+   1s, e o aviso sai em dois tempos (marcar saída + remover). Com 500ms isto
+   falhava por relógio, não por defeito. */
+const efemero = toast('some rápido', 'info', 10);
+await espera(3000);
+teste('T8 · o aviso some sozinho depois do tempo', !efemero.isConnected);
+$$('.lr-avisos .lr-toast').forEach(e => e.remove());
+
+// ============ CONFIRMAR ============
+let p = confirmar('Excluir esta nota?');
+await espera(0);
+teste('T9 · abre como dialog MODAL (foco preso e camada de topo vêm do navegador)',
+    !!$('.lr-dialogo') && $('.lr-dialogo').open && $('.lr-dialogo').matches(':modal'));
+clicar('.lr-dialogo-ok');
+teste('T10 · Confirmar devolve true', await p === true);
+teste('T11 · o diálogo sai do DOM ao fechar', !$('.lr-dialogo'));
+
+p = confirmar('Excluir esta nota?');
+await espera(0);
+clicar('.lr-dialogo-cancel');
+teste('T12 · Cancelar devolve false', await p === false);
+
+// Esc é o mesmo que cancelar — é o contrato do confirm() nativo
+p = confirmar('Excluir esta nota?');
+await espera(0);
+$('.lr-dialogo').dispatchEvent(new Event('cancel'));
+teste('T13 · Esc devolve false, nunca true', await p === false);
+teste('T13b · e o diálogo sai do DOM ao cancelar', !$('.lr-dialogo'));
+
+// ação destrutiva: vermelho e foco no Cancelar
+p = confirmar('Excluir este canvas e TODO o conteúdo?', { perigo: true, ok: 'Excluir' });
+await espera(0);
+const btOk = $('.lr-dialogo-ok');
+const vermelhoBotao = cor(btOk, 'backgroundColor');
+const focoNoCancelar = document.activeElement === $('.lr-dialogo-cancel');
+clicar('.lr-dialogo-cancel');
+await p;
+teste(`T14 · ação destrutiva nasce com o foco no Cancelar, não no Excluir`, focoNoCancelar);
+teste(`T15 · e o botão de perigo é sangue, não ouro (${vermelhoBotao})`,
+    vermelhoBotao !== cor(document.body, 'backgroundColor'));
+
+// mensagem de várias linhas (o confirm() herdado usa \n\n)
+p = confirmar('Linha um.\n\nLinha dois.');
+await espera(0);
+teste('T16 · quebra de linha da mensagem antiga continua quebrando',
+    cor($('.lr-dialogo-msg'), 'whiteSpace') === 'pre-line');
+clicar('.lr-dialogo-cancel'); await p;
+
+// ============ PERGUNTAR ============
+let q = perguntar('Nome do novo canvas:', { valor: 'Tabuleiro 2' });
+await espera(0);
+teste('T17 · o valor padrão chega preenchido, como no prompt()',
+    $('.lr-dialogo-input').value === 'Tabuleiro 2');
+teste('T18 · o campo nasce focado', document.activeElement === $('.lr-dialogo-input'));
+$('.lr-dialogo-input').value = 'Cripta';
+clicar('.lr-dialogo-ok');
+teste('T19 · devolve o que foi digitado', await q === 'Cripta');
+
+q = perguntar('Nome:', { valor: 'x' });
+await espera(0);
+clicar('.lr-dialogo-cancel');
+teste('T20 · cancelar devolve null (não string vazia) — é o contrato do prompt()',
+    await q === null);
+
+// apagar tudo e confirmar devolve '', que é diferente de cancelar
+q = perguntar('Nome:', { valor: 'x' });
+await espera(0);
+$('.lr-dialogo-input').value = '';
+clicar('.lr-dialogo-ok');
+const vazio = await q;
+teste('T21 · apagar tudo e confirmar devolve string vazia, não null',
+    vazio === '' && vazio !== null);
+
+// número continua saindo como texto: quem chama já faz o parseFloat
+q = perguntar('Tamanho em células:', { valor: 1, tipo: 'number' });
+await espera(0);
+const ehNumero = $('.lr-dialogo-input').type === 'number';
+$('.lr-dialogo-input').value = '2.5';
+clicar('.lr-dialogo-ok');
+const r = await q;
+teste('T22 · tipo número usa teclado numérico mas devolve texto',
+    ehNumero && r === '2.5' && typeof r === 'string');
+
+q = perguntar('Nome:');
+await espera(0);
+$('.lr-dialogo').dispatchEvent(new Event('cancel'));
+teste('T23 · Esc devolve null', await q === null);
+
+// Enter dentro do campo confirma, como no prompt() nativo
+q = perguntar('Nome:', { valor: 'Cripta' });
+await espera(0);
+$('.lr-dialogo form').requestSubmit();
+teste('T24 · Enter no campo confirma sem precisar clicar', await q === 'Cripta');
+
+// ---- saída ----
+$('#saida').innerHTML = linhas.map(([n, pa]) =>
+    `<tr><td>${n}</td><td class="${pa ? 'ok' : 'fail'}">${pa ? 'OK' : 'FAIL'}</td></tr>`).join('');
+$('#placar').textContent = `${ok === linhas.length ? '✅' : '❌'} ${ok}/${linhas.length} — diálogos da mesa`;
+document.title = `__check diálogos ${ok}/${linhas.length}`;
+</script>
+</body></html>

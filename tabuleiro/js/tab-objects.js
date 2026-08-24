@@ -13,6 +13,7 @@ import { SENSORES } from './tab-fog.js';
 import { criarFilaDeEscrita } from './tab-write-queue.js';
 import { logChat } from './tab-chat.js';
 
+import { confirmar } from '../../shared/dialogo.js?v=1';
 // ===== CRUD =====
 export async function addObj(data) {
     const id = uid();
@@ -270,7 +271,8 @@ window.tbCriarToken = async function() {
         // NPC de fora da mesa: vincula junto, senão o token fica sem vitais nem ficha
         if (n.mesaId !== T.mesaId) {
             const outra = !!n.mesaId;
-            if (outra && !confirm(`“${n.nome || 'NPC'}” está vinculado a outra mesa. Trazer para esta?`)) return;
+            if (outra && !await confirmar(`“${n.nome || 'NPC'}” está vinculado a outra mesa.`,
+                { titulo: 'Trazer para esta mesa?', ok: 'Trazer' })) return;
             try { await vincularNpcNaMesa(n.id, true); toast(`🔗 ${n.nome || 'NPC'} vinculado a esta mesa`); }
             catch (e) { console.error(e); toast('❌ Não consegui vincular o NPC à mesa', 'danger'); return; }
         }
@@ -414,7 +416,8 @@ window.tbSalvarCamada = async function(id) {
     fecharModal(); toast('✅ Camada salva');
 };
 window.tbExcluirCamada = async function(id) {
-    if (!confirm('Excluir camada? Os objetos dela serão apagados.')) return;
+    if (!await confirmar('Os objetos dessa camada serão apagados junto.',
+        { titulo: 'Excluir camada', ok: 'Excluir', perigo: true })) return;
     for (const o of [...T.objects.values()]) if (o.layerId === id) await delObj(o.id);
     const cs = (T.canvas.camadas || []).filter(c => c.id !== id);
     await updateDoc(refCanvas(), { camadas: cs });
@@ -680,7 +683,8 @@ window.tbDesbloquearObj = (id) => {
 
 // ===== LIMPAR DESENHOS E TEXTO =====
 window.tbLimparDesenhos = async function() {
-    if (!confirm('Limpar todos os desenhos, textos e medições permanentes (exceto camada Luz)?')) return;
+    if (!await confirmar('Some com todo desenho, texto e medição permanente. A camada Luz fica.',
+        { titulo: 'Limpar desenhos', ok: 'Limpar', perigo: true })) return;
     const alvos = [...T.objects.values()].filter(o => o.layerId !== 'luz' && ['desenho', 'texto', 'medida'].includes(o.tipo));
     // F7.2: exclusão em LOTE (1 commit a cada 400 docs em vez de 1 write por doc)
     for (let i = 0; i < alvos.length; i += 400) {

@@ -875,7 +875,7 @@ window.confirmDelete = async function () {
 
 // ===== LOGOUT =====
 window.logout = async function () {
-    if (confirm('🚪 Tem certeza que deseja sair?')) {
+    if (await LRDialogo.confirmar('🚪 Tem certeza que deseja sair?')) {
         try {
             await signOut(auth);
             // Sem redirect: o onAuthStateChanged mostra o login nesta página.

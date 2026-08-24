@@ -723,8 +723,8 @@ function createNewMap() {
     }
 }
 
-function clearMap() {
-    if (confirm('Tem certeza que deseja limpar todo o mapa?')) {
+async function clearMap() {
+    if (await LRDialogo.confirmar('Tem certeza que deseja limpar todo o mapa?', { perigo: true })) {
         saveState();
         initializeMap();
         drawMap();
@@ -776,7 +776,7 @@ function saveProject() {
         if (window.showAlert) {
             window.showAlert('✅ Projeto salvo localmente!', 'success');
         } else {
-            alert('✅ Projeto salvo localmente!');
+            LRDialogo.toast('✅ Projeto salvo localmente!', 'sucesso');
         }
     }
 }
@@ -871,9 +871,9 @@ function handleJSONImport(event) {
                 drawMap();
                 drawMinimap();
                 updateUndoRedoButtons();
-                alert('✅ Mapa importado com sucesso!');
+                LRDialogo.toast('✅ Mapa importado com sucesso!', 'sucesso');
             } catch (error) {
-                alert('❌ Erro ao importar arquivo JSON!');
+                LRDialogo.toast('❌ Erro ao importar arquivo JSON!', 'erro');
             }
         };
         reader.readAsText(file);
@@ -1145,12 +1145,12 @@ async function selectTerrainImage(terrainKey) {
         createTerrainGrid();
         openTerrainEditor();
     };
-    img.onerror = function () { alert('❌ Não consegui carregar essa imagem.'); };
+    img.onerror = function () { LRDialogo.toast('❌ Não consegui carregar essa imagem.', 'erro'); };
     img.src = url;
 }
 
-function removeTerrainImage(terrainKey) {
-    if (confirm(`Remover imagem personalizada de ${terrains[terrainKey].name}?\\n\\n⚠️ Lembre-se de SALVAR o mapa depois!`)) {
+async function removeTerrainImage(terrainKey) {
+    if (await LRDialogo.confirmar(`Remover imagem personalizada de ${terrains[terrainKey].name}?\\n\\n⚠️ Lembre-se de SALVAR o mapa depois!`, { perigo: true })) {
         delete state.terrainImages[terrainKey];
         delete state.loadedImages[terrainKey];
 
@@ -1162,13 +1162,13 @@ function removeTerrainImage(terrainKey) {
         if (window.showAlert) {
             window.showAlert('✅ Imagem removida! Clique em SALVAR para confirmar.', 'warning');
         } else {
-            alert('✅ Imagem removida! Clique em SALVAR para confirmar.');
+            LRDialogo.toast('✅ Imagem removida! Clique em SALVAR para confirmar.', 'sucesso');
         }
     }
 }
 
-function clearAllTerrainImages() {
-    if (confirm('Remover TODAS as imagens personalizadas?\\n\\n⚠️ Lembre-se de SALVAR o mapa depois!')) {
+async function clearAllTerrainImages() {
+    if (await LRDialogo.confirmar('Remover TODAS as imagens personalizadas?\\n\\n⚠️ Lembre-se de SALVAR o mapa depois!', { perigo: true })) {
         state.terrainImages = {};
         state.loadedImages = {};
 
@@ -1180,7 +1180,7 @@ function clearAllTerrainImages() {
         if (window.showAlert) {
             window.showAlert('✅ Imagens removidas! Clique em SALVAR para confirmar.', 'warning');
         } else {
-            alert('✅ Imagens removidas! Clique em SALVAR para confirmar.');
+            LRDialogo.toast('✅ Imagens removidas! Clique em SALVAR para confirmar.', 'sucesso');
         }
     }
 }

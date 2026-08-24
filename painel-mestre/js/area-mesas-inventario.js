@@ -327,7 +327,7 @@ async function _fundirPilhasMestre(ownerId, origemId, alvoId) {
     const a = _itemDoDono(ownerId, origemId);
     const b = _itemDoDono(ownerId, alvoId);
     if (!a || !b) return;
-    const q = escolherQtd(a, `Juntar quantos "${a.nome || 'item'}" nesta pilha?`);
+    const q = await escolherQtd(a, `Juntar quantos "${a.nome || 'item'}" nesta pilha?`);
     if (q == null) return;
     const plano = dividirPilha(a, q);
     const total = qtdDe(b) + plano.qtd;
@@ -371,7 +371,7 @@ async function _moverItemMestre(ownerId, itemId, alvo) {
     const veredito = cabeNoConteiner(i, c, _donos.get(ownerId)?.itens, tplDoItem(c, window._npcSys || window._systemData || {}));
     if (!veredito.ok) { if (veredito.motivo) showAlert('📦 ' + veredito.motivo, 'warning'); return; }
 
-    const q = escolherQtd(i, `Mover quantos "${i.nome || 'item'}" para ${c.nome || 'o contêiner'}?`);
+    const q = await escolherQtd(i, `Mover quantos "${i.nome || 'item'}" para ${c.nome || 'o contêiner'}?`);
     if (q == null) return;
     const plano = dividirPilha(i, q);
     const dentro = { parentItemId: contId, equipado: false, estadoEquip: null, slotAnatomico: null, slotsOcupados: [] };
@@ -410,7 +410,7 @@ async function _transferirArrastando(deId, itemId, paraId) {
         ? (destino.char.fields?.nome || destino.char.nome || 'personagem')
         : 'Caixa do Mestre';
 
-    const q = escolherQtd(i, `Passar quantos "${i.nome || 'item'}" para ${nomeDestino}?`);
+    const q = await escolherQtd(i, `Passar quantos "${i.nome || 'item'}" para ${nomeDestino}?`);
     if (q == null) return;
     const plano = dividirPilha(i, q);
 
@@ -793,7 +793,7 @@ window._restaurarMestreItem = async function() {
         const tpl = modeloDoItem(item, _catalogoMestre());
         const patch = patchRestauracao(tpl);
         if (!patch) { showAlert('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.', 'warning'); return; }
-        if (!confirm(textoConfirmacao(item, tpl))) return;
+        if (!await LRDialogo.confirmar(textoConfirmacao(item, tpl))) return;
 
         await setDoc(doc(db, 'items', editId), patch, { merge: true });
         if (window.addLog) {
@@ -948,7 +948,7 @@ window._saveMestreItem = async function() {
 };
 
 window._deleteMestreItem = async function(itemId) {
-    if (!confirm('Excluir este item?')) return;
+    if (!await LRDialogo.confirmar('Excluir este item?', { perigo: true })) return;
     try {
         // Capturar dados do item ANTES de deletar (para o log)
         let itemInfo = null;
@@ -1145,7 +1145,7 @@ window._filterMestreTransfer = function() {
 };
 
 window._executeMestreTransfer = async function(itemId, targetCharId, targetOwnerUid, isNpc = false) {
-    if (!confirm('Transferir este item para o destino selecionado?')) return;
+    if (!await LRDialogo.confirmar('Transferir este item para o destino selecionado?')) return;
     try {
         // Capturar item ANTES da transferência (para o log)
         let itemInfo = null;
@@ -1219,7 +1219,7 @@ window._executeMestreTransfer = async function(itemId, targetCharId, targetOwner
 };
 
 window._transferCharacterLooseItems = async function(charId) {
-    if (!confirm('Transferir todos os itens soltos deste personagem para a Caixa do Mestre?')) return;
+    if (!await LRDialogo.confirmar('Transferir todos os itens soltos deste personagem para a Caixa do Mestre?')) return;
     try {
         const allItems = await _fetchAllItems();
         const charItems = allItems.filter(it => it.characterId === charId && !it.parentItemId && !it.equipado);
@@ -1249,7 +1249,7 @@ window._transferCharacterLooseItems = async function(charId) {
 };
 
 window._transferAllLooseItems = async function() {
-    if (!confirm('Transferir todos os itens soltos de TODOS os personagens para a Caixa do Mestre?')) return;
+    if (!await LRDialogo.confirmar('Transferir todos os itens soltos de TODOS os personagens para a Caixa do Mestre?')) return;
     try {
         const allItems = await _fetchAllItems();
         const chars = S.mesaCharacters || [];

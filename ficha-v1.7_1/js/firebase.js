@@ -277,7 +277,7 @@ window.saveToFirebase = async function () {
 
             } catch (uploadErr) {
                 console.error("❌ Falha no upload da imagem:", uploadErr);
-                alert("Falha ao enviar imagem. Tente uma imagem menor ou verifique sua conexão.");
+                LRDialogo.toast("Falha ao enviar imagem. Tente uma imagem menor ou verifique sua conexão.", 'erro');
                 // Se falhar o upload, NÃO salvar a string gigante no Firestore
                 throw new Error("Upload de imagem falhou. Abortando salvamento para evitar sobrecarga.");
             }
@@ -291,11 +291,11 @@ window.saveToFirebase = async function () {
             // Tentar identificar o culpado
             if (data.charImg && data.charImg.length > 100000) {
                 console.error("⚠️ Culpado provável: charImg ainda é gigante (" + data.charImg.length + " bytes).");
-                alert("Erro: A imagem não foi processada corretamente. Tente recarregar a página.");
+                LRDialogo.toast("Erro: A imagem não foi processada corretamente. Tente recarregar a página.", 'erro');
                 throw new Error("Dados muito grandes. Abortando.");
             }
 
-            alert("Não foi possível salvar: Muitos dados na ficha. Reduza o conteúdo ou remova a imagem.");
+            LRDialogo.toast("Não foi possível salvar: Muitos dados na ficha. Reduza o conteúdo ou remova a imagem.", 'erro');
             throw new Error("Payload size too large: " + payloadSize);
         }
 
@@ -384,7 +384,8 @@ window.updateSharedNoteInFirebase = async function(ownerId, noteData) {
 
 // ===== LOGOUT =====
 window.logout = async function () {
-    if (confirm('🚪 Tem certeza que deseja sair?')) {
+    if (await LRDialogo.confirmar('Você volta para a tela de entrada.',
+        { titulo: '🚪 Sair da conta?', ok: 'Sair' })) {
         try {
             await signOut(auth);
             window.location.href = '../index.html';
@@ -488,7 +489,7 @@ onAuthStateChanged(auth, async (user) => {
                         }
                     }
                     if (!isMestreOfMesa) {
-                        alert('🚫 ACESSO NEGADO! Esta ficha não pertence a você.');
+                        LRDialogo.toast('🚫 ACESSO NEGADO! Esta ficha não pertence a você.', 'aviso');
                         window.location.href = '../menu/menu.html';
                         return;
                     }

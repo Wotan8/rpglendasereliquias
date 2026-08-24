@@ -339,7 +339,11 @@
             if (bAce1) bAce1.onclick = () => _acelerar(idx, +bAce1.dataset.n, +bAce1.dataset.exp, cfg);
             const bOk = row.querySelector('.runo-btn.ok');
             if (bOk) bOk.onclick = () => _concluirEstudo(idx, cfg);
-            row.querySelector('.rm').onclick = () => { if (confirm('Abandonar este estudo? O progresso será perdido.')) { runo.estudos.splice(idx, 1); _refresh(cfg); _save(); } };
+            row.querySelector('.rm').onclick = async () => {
+                if (!await LRDialogo.confirmar('O progresso deste estudo será perdido.',
+                    { titulo: 'Abandonar estudo?', ok: 'Abandonar', perigo: true })) return;
+                runo.estudos.splice(idx, 1); _refresh(cfg); _save();
+            };
             body.appendChild(row);
         });
 

@@ -146,7 +146,7 @@ window.npcApplyDefaultBodyParts = async function() {
     await ensureBodyPartsRegistry();
     const padrao = defaultHumanoidParts();
     if (!padrao.length) { showAlert('⚠️ Nenhuma parte padrão cadastrada no Painel de Criador.', 'warning'); return; }
-    if (n.partesDoCorpo.length && !confirm('Substituir as partes atuais pela anatomia padrão (humanoide)?')) return;
+    if (n.partesDoCorpo.length && !await LRDialogo.confirmar('Substituir as partes atuais pela anatomia padrão (humanoide)?')) return;
     n.partesDoCorpo = padrao;
     renderNpcBodyPartsEditor();
     showAlert('✅ Anatomia padrão aplicada. Salve o NPC para persistir.', 'success');
@@ -162,12 +162,12 @@ window.npcAddBodyPartFromRegistry = function() {
     renderNpcBodyPartsEditor();
 };
 
-window.npcAddBodyPartCustom = function() {
+window.npcAddBodyPartCustom = async function() {
     const n = _npc(); if (!n) return;
-    const nome = prompt('Nome da parte do corpo (ex.: Cauda, Asa, Tentáculo):');
+    const nome = await LRDialogo.perguntar('Nome da parte do corpo (ex.: Cauda, Asa, Tentáculo):');
     if (!nome || !nome.trim()) return;
-    const icone = prompt('Ícone/emoji (opcional):') || '🦴';
-    const slots = parseInt(prompt('Quantidade de slots desta parte:', '1')) || 1;
+    const icone = await LRDialogo.perguntar('Ícone/emoji (opcional):') || '🦴';
+    const slots = parseInt(await LRDialogo.perguntar('Quantidade de slots desta parte:', { valor: '1' })) || 1;
     n.partesDoCorpo.push({
         id: 'bp-custom-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
         nome: nome.trim(), icone: icone.trim() || '🦴', slots,
@@ -301,7 +301,7 @@ async function fundirPilhasNpc(origemId, alvoId) {
     const a = NI.items.find(x => x.id === origemId);
     const b = NI.items.find(x => x.id === alvoId);
     if (!a || !b) return;
-    const q = escolherQtd(a, `Juntar quantos "${a.nome || 'item'}" nesta pilha?`);
+    const q = await escolherQtd(a, `Juntar quantos "${a.nome || 'item'}" nesta pilha?`);
     if (q == null) return;
     const plano = dividirPilha(a, q);
     const total = qtdDe(b) + plano.qtd;
@@ -345,7 +345,7 @@ async function moverItemNpc(itemId, alvo) {
     const veredito = cabeNoConteiner(i, c, NI.items, tplDoItem(c, window._npcSys || window._systemData || {}));
     if (!veredito.ok) { if (veredito.motivo) showAlert('📦 ' + veredito.motivo, 'warning'); return; }
 
-    const q = escolherQtd(i, `Mover quantos "${i.nome || 'item'}" para ${c.nome || 'o contêiner'}?`);
+    const q = await escolherQtd(i, `Mover quantos "${i.nome || 'item'}" para ${c.nome || 'o contêiner'}?`);
     if (q == null) return;
     const plano = dividirPilha(i, q);
     const dentro = { parentItemId: contId, equipado: false, estadoEquip: null, slotAnatomico: null, slotsOcupados: [] };
@@ -554,7 +554,7 @@ window.restaurarNpcItemDoModelo = async function() {
     const tpl = item ? tplDoItem(item, window._npcSys || window._systemData || {}) : null;
     const patch = patchRestauracao(tpl);
     if (!patch) { showAlert('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.', 'warning'); return; }
-    if (!confirm(textoConfirmacao(item, tpl))) return;
+    if (!await LRDialogo.confirmar(textoConfirmacao(item, tpl))) return;
     try {
         await setDoc(doc(db, 'items', editId), patch, { merge: true });
         addLog(S.currentUser?.email, `♻️ Item "${item.nome || ''}" do NPC restaurado ao cadastro de "${tpl.nome}"`,
@@ -656,7 +656,7 @@ window.saveNpcItemForm = async function() {
 };
 
 window.deleteNpcItem = async function(itemId) {
-    if (!confirm('Excluir este item?')) return;
+    if (!await LRDialogo.confirmar('Excluir este item?', { perigo: true })) return;
     const item = NI.items.find(i => i.id === itemId);
     try {
         await deleteDoc(doc(db, 'items', itemId));
@@ -919,7 +919,7 @@ window._filterNpcTransfer = function() {
 };
 
 window._executeNpcTransfer = async function(itemId, targetId, targetKind) {
-    if (!confirm('Transferir este item para o destino selecionado?')) return;
+    if (!await LRDialogo.confirmar('Transferir este item para o destino selecionado?')) return;
     const item = NI.items.find(i => i.id === itemId);
     const nomeItem = item?.nome || itemId;
     try {

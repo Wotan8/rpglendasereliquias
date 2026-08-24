@@ -1,0 +1,158 @@
+/* =============================================================
+   DIÁLOGOS DA MESA — layout de shared/dialogo.js
+
+   A IDENTIDADE (superfície, borda, filete dourado, sombra) já vem de
+   lendas-reliquias.css, que estiliza `dialog` e `[class*="toast"]` desde
+   antes deste módulo existir. Aqui só entra o que falta: posição, espaço,
+   botões e movimento. Nenhum valor cravado — tudo por token.
+   ============================================================= */
+
+/* ---------- PILHA DE AVISOS ----------
+   Sem "toast" no nome de propósito: lendas-reliquias.css neutraliza
+   `[class*="toast"] [class*="toast"]`, então um container "toasts" apagaria
+   o estilo de todos os filhos. */
+.lr-avisos {
+    position: fixed;
+    top: var(--lr-space-4);
+    right: var(--lr-space-4);
+    z-index: var(--lr-z-toast);
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-space-2);
+    width: min(380px, calc(100vw - var(--lr-space-4) * 2));
+    pointer-events: none;   /* a pilha não rouba clique do mapa */
+}
+
+.lr-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--lr-space-2);
+    padding: var(--lr-space-3);
+    font-size: var(--lr-fs-sm);
+    line-height: var(--lr-lh-body);
+    pointer-events: auto;   /* o aviso em si é clicável (fechar) */
+    transition: opacity var(--lr-t-base) var(--lr-ease),
+                transform var(--lr-t-base) var(--lr-ease);
+}
+.lr-toast-saindo { opacity: 0; transform: translateX(var(--lr-space-4)); }
+
+/* O filete à esquerda é o que diz o significado. Ouro é o padrão herdado. */
+.lr-toast-sucesso { border-left-color: var(--lr-nature); }
+.lr-toast-erro    { border-left-color: var(--lr-blood-2); }
+.lr-toast-aviso   { border-left-color: var(--lr-gold); }
+.lr-toast-info    { border-left-color: var(--lr-arcane); }
+
+.lr-toast-ico { flex: 0 0 auto; line-height: var(--lr-lh-body); }
+.lr-toast-msg { flex: 1 1 auto; min-width: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.lr-toast-x {
+    flex: 0 0 auto;
+    padding: 0 var(--lr-space-1);
+    background: none;
+    border: none;
+    color: var(--lr-text-2);
+    font-size: var(--lr-fs-xs);
+    cursor: pointer;
+    transition: color var(--lr-t-fast) var(--lr-ease);
+}
+.lr-toast-x:hover { color: var(--lr-text-1); }
+.lr-toast-x:focus-visible { outline: none; box-shadow: var(--lr-glow-gold); border-radius: var(--lr-radius-sm); }
+
+/* ---------- DIÁLOGO ----------
+   <dialog> nativo: foco preso, Esc e camada de topo são do navegador. Camada
+   de topo é o que o põe por cima do canvas do Tabuleiro sem z-index. */
+.lr-dialogo {
+    width: min(440px, calc(100vw - var(--lr-space-5) * 2));
+    max-height: calc(100vh - var(--lr-space-6) * 2);
+    padding: 0;
+    overflow: auto;
+}
+.lr-dialogo::backdrop { background: rgb(0 0 0 / 0.55); }
+
+.lr-dialogo-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-space-3);
+    padding: var(--lr-space-5);
+}
+.lr-dialogo-titulo {
+    margin: 0;
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-lg);
+    font-weight: 700;
+    letter-spacing: var(--lr-track-title);
+    line-height: var(--lr-lh-tight);
+    color: var(--lr-text-1);
+}
+.lr-dialogo-msg {
+    margin: 0;
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-md);
+    line-height: var(--lr-lh-body);
+    color: var(--lr-text-1);
+    white-space: pre-line;      /* as mensagens herdadas separam parágrafo com \n */
+    overflow-wrap: anywhere;
+}
+.lr-dialogo-input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: var(--lr-space-2) var(--lr-space-3);
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-md);
+    color: var(--lr-text-1);
+    background: var(--lr-bg-0);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    transition: border-color var(--lr-t-fast) var(--lr-ease), box-shadow var(--lr-t-fast) var(--lr-ease);
+}
+.lr-dialogo-input:focus { outline: none; border-color: var(--lr-gold); box-shadow: var(--lr-glow-gold); }
+
+/* Ordem invertida: no HTML o Confirmar vem primeiro para o Enter escolher
+   ele; na tela o Cancelar fica à esquerda, como todo mundo espera. */
+.lr-dialogo-botoes {
+    display: flex;
+    flex-direction: row-reverse;
+    gap: var(--lr-space-2);
+    margin-top: var(--lr-space-1);
+}
+.lr-dialogo-botoes button {
+    padding: var(--lr-space-2) var(--lr-space-4);
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-sm);
+    font-weight: 700;
+    border-radius: var(--lr-radius);
+    border: var(--lr-border-w) solid transparent;
+    cursor: pointer;
+    transition: background var(--lr-t-fast) var(--lr-ease), border-color var(--lr-t-fast) var(--lr-ease);
+}
+.lr-dialogo-botoes button:focus-visible { outline: none; box-shadow: var(--lr-glow-gold); }
+
+.lr-dialogo-ok {
+    color: var(--lr-divine);
+    background: var(--lr-gold);
+    border-color: var(--lr-gold);
+}
+.lr-dialogo-ok:hover { background: var(--lr-gold-2); border-color: var(--lr-gold-2); }
+
+/* Ação destrutiva: vermelho sangue, e o foco nasce no Cancelar (ver dialogo.js). */
+.lr-dialogo-perigo { background: var(--lr-blood); border-color: var(--lr-blood); }
+.lr-dialogo-perigo:hover { background: var(--lr-blood-3); border-color: var(--lr-blood-3); }
+
+.lr-dialogo-cancel {
+    color: var(--lr-text-1);
+    background: transparent;
+    border-color: var(--lr-border);
+}
+.lr-dialogo-cancel:hover { background: var(--lr-bg-1); }
+
+/* Celular: aviso ocupa a largura e o diálogo respira menos. */
+@media (max-width: 600px) {
+    .lr-avisos {
+        top: var(--lr-space-2);
+        right: var(--lr-space-2);
+        left: var(--lr-space-2);
+        width: auto;
+    }
+    .lr-dialogo-form { padding: var(--lr-space-4); }
+    .lr-dialogo-botoes button { flex: 1 1 auto; }
+}

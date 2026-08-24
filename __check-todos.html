@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — todos os arnêses</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<style>
+  body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; background: var(--lr-bg-0); color: var(--lr-text-1); }
+  h1 { font-size: 1rem; margin: 0 0 4px; }
+  p { margin: 0 0 10px; color: var(--lr-text-2); font-size: .8rem; }
+  table { border-collapse: collapse; font: 11px ui-monospace, monospace; width: 100%; max-width: 900px; }
+  td { border: 1px solid var(--lr-border); padding: 2px 6px; vertical-align: top; }
+  td:first-child { white-space: nowrap; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight: 700; }
+  .skip { color: var(--lr-text-2); }
+  #placar { font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--lr-border); }
+  iframe { position: fixed; left: -9999px; width: 1200px; height: 900px; border: 0; }
+</style></head>
+<body>
+<h1>🧪 Todos os arnêses de uma vez</h1>
+<p>Carrega cada <code>__check-*.html</code> num iframe e lê o placar dele. Serve
+   para varredura larga — quando algo cai aqui, abra a página sozinha, que é
+   onde está a mensagem de verdade. Páginas sem placar aparecem como “—”: ou
+   medem à mão, ou ficaram penduradas esperando o Firestore.</p>
+<p><b>Antes de acreditar num vermelho, tire o service worker da frente.</b> Ele
+   serve a versão em cache e faz arnês passar (ou falhar) por arquivo velho:
+   <code>navigator.serviceWorker.getRegistrations().then(r =&gt; r.forEach(x =&gt; x.unregister()))</code>
+   e <code>caches.keys().then(k =&gt; k.forEach(n =&gt; caches.delete(n)))</code>.</p>
+<table id="saida"></table>
+<div id="placar">rodando…</div>
+
+<script type="module">
+const PAGINAS = [
+    '__check-biblioteca.html', '__check-campo-imagem.html', '__check-cronista.html',
+    '__check-dialogo.html', '__check-equacao-vinculo-vd.html', '__check-fichas-npc.html',
+    '__check-input-invisivel.html', '__check-item-secoes.html', '__check-lealdade.html',
+    '__check-livro-versao.html', '__check-livro-vinculado.html', '__check-livros-recolhidos.html',
+    '__check-mapa-local.html', '__check-texto-mundo.html', '__check-worldbuilding.html',
+    'criar-personagem/__check-alinhamento.html', 'criar-personagem/__check-class-modal.html',
+    'criar-personagem/__check-compra-exp.html', 'criar-personagem/__check-pec-niveis.html',
+    'criar-personagem/__check-wizard-fases.html',
+    'ficha-v1.7_1/__check-combat-panel.html', 'ficha-v1.7_1/__check-espelho.html',
+    'ficha-v1.7_1/__check-exp-sem-gastar.html', 'ficha-v1.7_1/__check-header-toasts.html',
+    'ficha-v1.7_1/__check-inventario-arrasto.html', 'ficha-v1.7_1/__check-item-form.html',
+    'ficha-v1.7_1/__check-item-unidades.html', 'ficha-v1.7_1/__check-vd-blocos.html',
+    'painel-criador/__check-medida-formula.html',
+    'painel-mestre/__check-log-sessao.html', 'painel-mestre/__check-mesa-inventario.html',
+    'painel-mestre/__check-mesa.html', 'painel-mestre/__check-npc-inventario.html',
+    'painel-mestre/__check-npc-mecanica.html',
+    'tabuleiro/__check-ficha-win.html', 'tabuleiro/__check-fog.html',
+    'tabuleiro/__check-hud-token.html', 'tabuleiro/__check-laco.html',
+    'tabuleiro/__check-perf-arrasto.html', 'tabuleiro/__check-regua.html',
+    'tabuleiro/__check-rota.html',
+];
+
+const saida = document.getElementById('saida');
+const espera = (ms) => new Promise(r => setTimeout(r, ms));
+
+/**
+ * Lê o veredito de uma página já carregada. Os arnêses não seguem um formato
+ * só — uns têm `#placar`, outros `#out` ou `#saida`, outros nada —, então
+ * aqui se tenta o placar e, na falta dele, o primeiro "N/M" do texto. A
+ * contagem de falha soma classe `.fail` e as marcas textuais (FALHOU, ❌),
+ * porque metade das páginas não usa classe nenhuma.
+ */
+function ler(doc) {
+    const alvo = doc.getElementById('placar') || doc.getElementById('out') || doc.getElementById('saida');
+    const txt = doc.body ? (doc.body.innerText || '') : '';
+    const falhas = [...doc.querySelectorAll('.fail, .falhou')]
+        .map(e => ((e.closest('tr') || e).textContent || '').trim()).filter(Boolean);
+    const marcas = (txt.match(/FALHOU|FALHA:/g) || []).length;
+    const doAlvo = (alvo && alvo.textContent || '').trim().split('\n').map(x => x.trim()).filter(Boolean).pop() || '';
+    const m = txt.match(/[✅❌]?\s*\d+\s*\/\s*\d+[^\n]{0,60}/);
+    return { placar: doAlvo || (m ? m[0].trim() : ''), falhas, marcas };
+}
+
+let comFalha = 0, semPlacar = 0, rodadas = 0;
+
+/* Em lotes: aba em segundo plano prende todo setTimeout em 1s, e em fila
+   41 arneses levariam minutos. Sao independentes, entao rodam juntos. */
+const LOTE = 7;
+
+async function rodar(src) {
+    const fr = document.createElement('iframe');
+    fr.src = src + '?runner=' + Date.now();
+    document.body.appendChild(fr);
+    let erro = '';
+    await new Promise(res => {
+        fr.addEventListener('load', res, { once: true });
+        setTimeout(res, 8000);       // arnes travado nao segura a fila
+    });
+    for (let i = 0; i < 12; i++) {
+        try { if (fr.contentDocument?.getElementById('placar')?.textContent?.trim()) break; }
+        catch (e) { erro = e.message; break; }
+        await espera(400);
+    }
+    let r = { placar: '', falhas: [], marcas: 0 };
+    try { r = ler(fr.contentDocument); } catch (e) { erro = e.message; }
+    fr.remove();
+
+    const ruim = r.falhas.length > 0 || r.marcas > 0 || /❌/.test(r.placar);
+    const vazio = !r.placar;
+    if (ruim) comFalha++;
+    if (vazio) semPlacar++;
+    rodadas++;
+    const classe = ruim ? 'fail' : (vazio ? 'skip' : 'ok');
+    const texto = r.placar || (erro ? 'erro: ' + erro : '—');
+    saida.insertAdjacentHTML('beforeend',
+        `<tr><td>${src}</td><td class="${classe}">${texto.replace(/</g, '&lt;')}</td>
+         <td class="fail">${r.falhas.slice(0, 3).map(f => f.replace(/</g, '&lt;')).join('<br>')}</td></tr>`);
+    document.getElementById('placar').textContent =
+        `${rodadas}/${PAGINAS.length} — ${comFalha} com falha, ${semPlacar} sem placar`;
+}
+
+for (let i = 0; i < PAGINAS.length; i += LOTE) {
+    await Promise.all(PAGINAS.slice(i, i + LOTE).map(rodar));
+}
+
+document.getElementById('placar').textContent =
+    `${comFalha === 0 ? '✅' : '❌'} ${PAGINAS.length} arnêses · ${comFalha} com falha · ${semPlacar} sem placar (medem à mão)`;
+document.title = `__check todos ${PAGINAS.length - comFalha}/${PAGINAS.length}`;
+</script>
+</body></html>

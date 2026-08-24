@@ -12,6 +12,7 @@ import { refCombate, refLegenda, trocarCanvas } from './tab-main.js';
 import { transicaoDeCena } from './tab-cena.js';
 import { updObj } from './tab-objects.js';
 
+import { confirmar } from '../../shared/dialogo.js?v=1';
 let SES = null;
 
 const refSessao = () => doc(db, 'mesas', T.mesaId, 'sessoes', SES.id);
@@ -164,7 +165,8 @@ window.tbSesRevelar = async function(segId, telao) {
 window.tbSesEncontro = async function(encId) {
     if (!SES) return;
     const enc = (SES.encontros || []).find(x => x.id === encId); if (!enc) return;
-    if (!confirm(`Iniciar "${enc.nome}"? Substitui o combate atual.`)) return;
+    if (!await confirmar(`Isto substitui o combate atual.`,
+        { titulo: `Iniciar "${enc.nome}"?`, ok: 'Iniciar' })) return;
     try {
         await setDoc(refCombate(), { participantes: enc.participantes || [], turnoAtual: 0, rodada: 1, atualizadoEm: Date.now() }, { merge: true });
         toast('⚔️ Encontro iniciado');

@@ -256,7 +256,7 @@ window.editItemMestre = function(containerId, itemId) {
 // ===== DELETE ITEM =====
 window.deleteItemMestre = async function(containerId, itemId) {
     const item = S.currentInventarioItems.find(i => i.id === itemId);
-    if (!item || !confirm(`Excluir "${item.nome||item.name||'item'}"?`)) return;
+    if (!item || !await LRDialogo.confirmar(`Excluir "${item.nome||item.name||'item'}"?`, { perigo: true })) return;
     try {
         await deleteDoc(doc(db,'items',itemId));
         showAlert('✅ Item excluído','success');

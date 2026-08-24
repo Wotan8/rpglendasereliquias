@@ -31,6 +31,7 @@ import { carregarExploracao, SENSORES } from './tab-fog.js';
 import { limparHistorico } from './tab-undo.js';
 import { posDisplay, screenToWorld } from './tab-render.js';
 
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
 // ===== Refs Firestore =====
 export const refCanvases = () => collection(db, 'mesas', T.mesaId, 'tabuleiros');
 export const refCanvas = (id) => doc(db, 'mesas', T.mesaId, 'tabuleiros', id || T.canvasId);
@@ -505,7 +506,8 @@ window.tbAbrirCanvases = function() {
 window.tbIrCanvas = async (id) => { fecharModal(); limparNavegacao(); await trocarCanvas(id, false); };
 window.tbAtivarCanvas = async (id) => { await setDoc(refEstado(), { canvasAtivoId: id }, { merge: true }); toast('📡 Canvas exibido ao público'); fecharModal(); };
 window.tbNovoCanvas = async () => {
-    const nome = prompt('Nome do novo canvas:', 'Tabuleiro ' + (T.canvases.length + 1));
+    const nome = await perguntar('Como se chama o novo canvas?',
+        { titulo: 'Novo canvas', valor: 'Tabuleiro ' + (T.canvases.length + 1), ok: 'Criar' });
     if (nome === null) return;
     const id = await criarCanvas(nome || 'Tabuleiro', false);
     await trocarCanvas(id, false);
@@ -513,14 +515,15 @@ window.tbNovoCanvas = async () => {
 };
 window.tbRenomearCanvas = async (id) => {
     const c = T.canvases.find(x => x.id === id);
-    const nome = prompt('Novo nome:', c?.nome || '');
+    const nome = await perguntar('Novo nome do canvas:', { titulo: 'Renomear canvas', valor: c?.nome || '' });
     if (!nome) return;
     await updateDoc(refCanvas(id), { nome });
     fecharModal(); window.tbAbrirCanvases();
 };
 window.tbExcluirCanvas = async (id) => {
     if (T.canvases.length <= 1) { toast('⚠️ Mantenha ao menos um canvas', 'warning'); return; }
-    if (!confirm('Excluir este canvas e TODO o seu conteúdo?')) return;
+    if (!await confirmar('O canvas e TODO o conteúdo dele somem — mapas, tokens, desenhos e luzes.',
+        { titulo: 'Excluir canvas', ok: 'Excluir', perigo: true })) return;
     try {
         const objs = await getDocs(refObjetos(id));
         const chat = await getDocs(collection(db, 'mesas', T.mesaId, 'tabuleiros', id, 'chat'));

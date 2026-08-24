@@ -441,7 +441,9 @@ async function createCharacter() {
     
     // Validar Itens de Repertório
     if (wizardState.itensRepertorioSelecionados && wizardState.itensRepertorioSelecionados.length > 0) {
-        if (!confirm('Você selecionou Itens de Repertório.\nAo confirmar a criação do personagem, estes itens serão deduzidos definitivamente do inventário da sua conta.\n\nDeseja continuar?')) {
+        if (!await LRDialogo.confirmar(
+            'Ao confirmar a criação do personagem, os Itens de Repertório escolhidos saem definitivamente do inventário da sua conta.',
+            { titulo: 'Itens de Repertório selecionados', ok: 'Continuar' })) {
             return;
         }
     }

@@ -73,7 +73,7 @@ window.linkNpcToMesa = async function() {
 };
 
 window.unlinkNpcFromMesa = async function(npcId) {
-    if (!confirm('Desvincular este NPC da mesa?')) return;
+    if (!await LRDialogo.confirmar('Desvincular este NPC da mesa?')) return;
     try {
         await _setVinculo(npcId, false);
         showAlert('✅ NPC desvinculado', 'success');

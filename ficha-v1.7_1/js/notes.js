@@ -144,7 +144,7 @@ async function saveNote() {
         const myPermission = n.sharedWith && n.sharedWith[window.currentCharacterId];
         const canEdit = myPermission === 'edit';
         if (!canEdit) {
-            alert('Você não tem permissão para editar esta nota.');
+            LRDialogo.toast('Você não tem permissão para editar esta nota.', 'aviso');
             return;
         }
         
@@ -152,11 +152,11 @@ async function saveNote() {
             if (window.updateSharedNoteInFirebase) {
                 await window.updateSharedNoteInFirebase(n.ownerId, n);
             } else {
-                alert('Função de salvar nota compartilhada não implementada no Firebase.');
+                LRDialogo.toast('Função de salvar nota compartilhada não implementada no Firebase.', 'aviso');
             }
         } catch (e) {
             console.error(e);
-            alert('Erro ao salvar nota compartilhada.');
+            LRDialogo.toast('Erro ao salvar nota compartilhada.', 'erro');
         }
     } else {
         scheduleAutosave();
@@ -166,8 +166,8 @@ async function saveNote() {
     renderNotes();
 }
 
-function deleteNote(id) {
-    if (!confirm('Excluir esta nota?')) return;
+async function deleteNote(id) {
+    if (!await LRDialogo.confirmar('Excluir esta nota?', { ok: 'Excluir', perigo: true })) return;
     state.notes = (state.notes || []).filter(x => x.id !== id);
     renderNotes();
     scheduleAutosave();
@@ -326,5 +326,5 @@ window.saveShareSettings = function(noteId) {
     
     document.getElementById('shareNoteModal')?.remove();
     scheduleAutosave();
-    alert('✅ Permissões de compartilhamento salvas!');
+    LRDialogo.toast('✅ Permissões de compartilhamento salvas!', 'sucesso');
 };

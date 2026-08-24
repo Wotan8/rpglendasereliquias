@@ -398,7 +398,7 @@ window._saveMestreCondition = async function() {
 };
 
 window._deleteMestreCondition = async function(charId, idx) {
-    if (!confirm('Deseja realmente excluir esta condição?')) return;
+    if (!await LRDialogo.confirmar('Deseja realmente excluir esta condição?', { perigo: true })) return;
 
     try {
         const snap = await getDoc(doc(db, 'char', charId));

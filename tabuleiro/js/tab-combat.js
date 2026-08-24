@@ -13,6 +13,7 @@ import { tirarRetrato, avancarRitual } from '../../shared/turno-efeitos.js?v=1';
 import { logChat } from './tab-chat.js';
 import { CONDICAO_TRANSE } from '../../shared/incorporacao.js?v=1';
 
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
 let janelaAberta = false;
 
 // Janela flutuante de ficha de combate (NPC/personagem) — módulo carregado só
@@ -88,20 +89,22 @@ async function salvarDoc(docNovo) {
 }
 
 window.tbCenaTrocar = (id) => salvarDoc(comTrocaDeCena(T.combate, id));
-window.tbCenaNova = () => {
-    const nome = prompt('Nome da cena de combate:', 'Cena ' + (cenasDoDoc(T.combate).length + 1));
+window.tbCenaNova = async () => {
+    const nome = await perguntar('Como se chama a cena?',
+        { titulo: 'Nova cena de combate', valor: 'Cena ' + (cenasDoDoc(T.combate).length + 1), ok: 'Criar' });
     if (nome === null) return;
     salvarDoc(comCenaNova(T.combate, 'c' + uid(), nome.trim() || 'Nova cena'));
 };
-window.tbCenaRenomear = (id) => {
+window.tbCenaRenomear = async (id) => {
     const atual = cenasDoDoc(T.combate).find(c => c.id === id);
-    const nome = prompt('Nome da cena:', atual?.nome || '');
+    const nome = await perguntar('Novo nome da cena:', { titulo: 'Renomear cena', valor: atual?.nome || '' });
     if (nome === null) return;
     salvarDoc(comCenaAtivaPatch(T.combate, { nome: nome.trim() || 'Cena' }));
 };
-window.tbCenaApagar = (id) => {
+window.tbCenaApagar = async (id) => {
     const c = cenasDoDoc(T.combate).find(x => x.id === id);
-    if (!confirm(`Apagar a cena "${c?.nome || ''}" e os participantes dela?`)) return;
+    if (!await confirmar(`A cena "${c?.nome || ''}" e todos os participantes dela somem.`,
+        { titulo: 'Apagar cena', ok: 'Apagar', perigo: true })) return;
     salvarDoc(semCena(T.combate, id));
 };
 
@@ -332,7 +335,9 @@ window.tbCombIniciarCena = async function() {
     const parts = c.participantes || [];
     if (!parts.length) { toast('⚠️ A cena não tem participantes', 'warning'); return; }
     const semIni = parts.filter(p => !(p.initiative > 0));
-    if (semIni.length && !confirm(`${semIni.length} participante(s) sem iniciativa (${semIni.map(p => p.name).join(', ')}). Iniciar mesmo assim?`)) return;
+    if (semIni.length && !await confirmar(
+        `${semIni.length} participante(s) sem iniciativa: ${semIni.map(p => p.name).join(', ')}.`,
+        { titulo: 'Iniciar assim mesmo?', ok: 'Iniciar' })) return;
     await salvar(parts.map(p => ({ ...p, guardadoNaRodada: null })), { iniciado: true, turnoAtual: 0, rodada: 1, acoesTurno: acoesNovas(), retomar: null });
     const vez = participanteDaVez({ ...c, turnoAtual: 0 });
     toast('⚔️ Combate iniciado!');
@@ -374,7 +379,8 @@ async function aplicarRunasPassivas(parts) {
 }
 
 window.tbCombEncerrarCena = async function() {
-    if (!confirm('Encerrar o combate desta cena? (participantes e iniciativas ficam; o painel de turno some)')) return;
+    if (!await confirmar('Participantes e iniciativas ficam; o painel de turno some.',
+        { titulo: 'Encerrar o combate desta cena?', ok: 'Encerrar' })) return;
     await salvar(partsDaCena(), { iniciado: false, retomar: null });
     logChat('🕊️ Combate encerrado pelo mestre');
     // 🧱 Nada manifestado por runa sobrevive à cena: o fluxo que sustentava a
@@ -1097,7 +1103,7 @@ window.tbCombCondRm = async function(pid, i) {
 };
 
 window.tbCombRemover = async function(pid) {
-    if (!confirm('Remover do combate?')) return;
+    if (!await confirmar('Remover do combate?', { ok: 'Remover', perigo: true })) return;
     const parts = partsDaCena().filter(p => p.id !== pid);
     await salvar(parts);
 };
@@ -1138,7 +1144,8 @@ window.tbTesteCriar = async function() {
 
 window.tbTesteApagar = async function(tid) {
     const t = testesDaCena().find(x => x.id === tid);
-    if (!confirm(`Apagar o teste "${t?.nome || ''}" e os resultados dele?`)) return;
+    if (!await confirmar(`O teste "${t?.nome || ''}" e os resultados dele somem.`,
+        { titulo: 'Apagar teste', ok: 'Apagar', perigo: true })) return;
     await salvar(partsDaCena(), { testes: testesDaCena().filter(x => x.id !== tid) });
 };
 
@@ -1151,7 +1158,7 @@ window.tbTesteRolar = async function(tid, pid) {
     let alvo = input && input.value !== '' ? parseFloat(input.value)
         : (typeof t.resultados[pid]?.alvo === 'number' ? t.resultados[pid].alvo : alvoSugerido(t, p));
     if (alvo == null || isNaN(alvo)) {
-        const s = prompt(`Alvo de ${p.name} em "${t.nome}":`);
+        const s = await perguntar(`Alvo de ${p.name} em "${t.nome}":`, { tipo: 'number' });
         if (s === null) return;
         alvo = parseFloat(s);
         if (isNaN(alvo)) { toast('⚠️ Alvo inválido', 'warning'); return; }
@@ -1211,7 +1218,8 @@ window.tbTesteInserir = async function(tid, pid) {
     const testes = testesDaCena();
     const t = testes.find(x => x.id === tid); if (!t) return;
     const p = partsDaCena().find(x => x.id === pid); if (!p) return;
-    const s = prompt(`Graus de ${p.name} em "${t.nome}" (+2, 0, -1...):`);
+    const s = await perguntar(`Graus de ${p.name} em "${t.nome}":`,
+        { tipo: 'number', placeholder: '+2, 0, -1...' });
     if (s === null) return;
     const graus = parseInt(String(s).replace('+', ''), 10);
     if (isNaN(graus)) { toast('⚠️ Valor inválido — digite um número de Graus', 'warning'); return; }

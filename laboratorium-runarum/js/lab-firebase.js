@@ -152,7 +152,7 @@ onAuthStateChanged(auth, async (user) => {
             if (snap.exists()) {
                 const data = snap.data();
                 if (data.ownerUid && data.ownerUid !== user.uid) {
-                    alert('🚫 Esta ficha não pertence a você.');
+                    LRDialogo.toast('🚫 Esta ficha não pertence a você.', 'aviso');
                     window.location.href = '../menu/menu.html';
                     return;
                 }

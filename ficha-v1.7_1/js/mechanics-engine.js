@@ -2335,7 +2335,7 @@ function confirmarDistribuicao(mech, wrapper, parentPec) {
     }
 
     if (novosAlvos.length === 0) {
-        alert('Selecione pelo menos 1 alvo antes de confirmar.');
+        LRDialogo.toast('Selecione pelo menos 1 alvo antes de confirmar.', 'aviso');
         return;
     }
 

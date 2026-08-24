@@ -14,6 +14,7 @@ import { cenaAtiva, comCenaAtivaPatch, condicoesAgrupadas } from '../../shared/c
 import { fichaComBonus } from '../../shared/bonus-temporario.js?v=1';
 import { logChat } from './tab-chat.js';
 
+import { perguntar } from '../../shared/dialogo.js?v=1';
 // charId -> { hp, hpMax, ener, enerMax, san, sanMax, conds:[{icone,nome}] }
 export const VITAIS = new Map();
 const unsubsVitais = [];
@@ -406,12 +407,14 @@ export function abrirMenuRadial(o, sx, sy) {
         acoes.push({ ic: o.luz?.ativa ? 'luz' : 'luz-off', tip: 'Alternar luz', fn: () => updObj(o.id, { luz: { ...(o.luz||{ alcance: 3 }), ativa: !o.luz?.ativa } }) });
         acoes.push({ ic: o.invisivel ? 'brilho' : 'fantasma', tip: o.invisivel ? 'Tornar visível' : 'Tornar invisível', fn: () => updObj(o.id, { invisivel: !o.invisivel }) });
         acoes.push({ ic: 'caveira', tip: 'Adicionar condição', fn: () => adicionarCondicao(o) });
-        acoes.push({ ic: 'redimensionar', tip: 'Tamanho...', fn: () => {
-            const t = prompt('Tamanho em células (0.5, 1, 2, 3...):', o.tamanhoCelulas || 1);
+        acoes.push({ ic: 'redimensionar', tip: 'Tamanho...', fn: async () => {
+            const t = await perguntar('Quantas células o token ocupa?',
+                { titulo: 'Tamanho do token', valor: o.tamanhoCelulas || 1, tipo: 'number', placeholder: '0,5 · 1 · 2 · 3' });
             if (t) updObj(o.id, { tamanhoCelulas: parseFloat(t) || 1 });
         }});
-        acoes.push({ ic: 'elevacao', tip: 'Elevação...', fn: () => {
-            const e = prompt('Elevação (na unidade do canvas):', o.elev || 0);
+        acoes.push({ ic: 'elevacao', tip: 'Elevação...', fn: async () => {
+            const e = await perguntar('Elevação, na unidade do canvas:',
+                { titulo: 'Elevação do token', valor: o.elev || 0, tipo: 'number' });
             if (e !== null) updObj(o.id, { elev: parseFloat(e) || 0 });
         }});
         acoes.push({ ic: 'engrenagem', tip: 'Propriedades', fn: () => { selecionar(o.id); abrirPropriedades(o.id); markDirty(); } });
@@ -482,7 +485,7 @@ async function adicionarCondicao(o) {
         window.tbCombCondAdd(p.id);
     } else {
         // Fallback caso o módulo de combate não esteja carregado
-        const nome = prompt('Condição (ex: Envenenado, Caído):');
+        const nome = await perguntar('Qual condição?', { titulo: 'Adicionar condição', placeholder: 'Ex: Envenenado, Caído' });
         if (!nome) return;
         const parts = (cenaAtiva(T.combate).participantes || []).map(pp => ({ ...pp }));
         const pp = parts.find(x => x.id === p.id); if (!pp) return;
