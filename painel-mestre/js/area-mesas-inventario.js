@@ -19,7 +19,7 @@ import {
     desgastarConteiner, GATILHO,
 } from '../../shared/inventario-motor.js?v=7';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML, modeloDoItem } from '../../shared/restaurar-item.js?v=1';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 
 
 const _catalogoMestre = () => (window._systemData?.equipment || window._mestreCatalog || [])

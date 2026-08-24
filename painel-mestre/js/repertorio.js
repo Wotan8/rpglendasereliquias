@@ -3,7 +3,7 @@ import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, query, where, 
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 
 // ===== POPULATE SELECT =====
 

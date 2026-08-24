@@ -17,7 +17,7 @@
    ═══════════════════════════════════════════════════════════ */
 
 import { limparHTML } from './wb-rich-sanitize.js';
-import { perguntar } from '../../shared/dialogo.js?v=1';
+import { perguntar } from '../../shared/dialogo.js?v=2';
 
 /* Blocos que o autor escolhe no seletor de estilo. */
 const BLOCOS = [

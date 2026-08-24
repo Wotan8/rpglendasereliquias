@@ -24,7 +24,7 @@ import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND, pool
 import { dossieHTML } from './wb-dossie.js';
 import { TOOLBAR_HTML, bindRich } from './wb-rich.js';
 import { PUBLICACOES, pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 
 export const Editor = (() => {
     let books = [], artigos = [], estantes = [], atual = null;

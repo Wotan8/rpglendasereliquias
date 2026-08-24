@@ -31,7 +31,7 @@ import { carregarExploracao, SENSORES } from './tab-fog.js';
 import { limparHistorico } from './tab-undo.js';
 import { posDisplay, screenToWorld } from './tab-render.js';
 
-import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 // ===== Refs Firestore =====
 export const refCanvases = () => collection(db, 'mesas', T.mesaId, 'tabuleiros');
 export const refCanvas = (id) => doc(db, 'mesas', T.mesaId, 'tabuleiros', id || T.canvasId);

@@ -4,7 +4,7 @@
 import { db, collection, getDocs, doc, getDoc, updateDoc } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 
 window._loadPersonagensCondicoes = loadPersonagensCondicoes;
 

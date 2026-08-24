@@ -9,7 +9,7 @@ import './npc-inventario.js?v=9'; // Aba Inventário da Ficha de NPC (itens + pa
 import { npcNaMesa, mesasDoNpc, espelhoMesaId } from '../../shared/npc-mesas.js';
 import { melhorDisparo, bracoDeArremesso, METROS_POR_FOR } from '../../shared/alcance-disparo.js';
 import { linhasDeDisparoNpc } from './npc-inventario.js?v=9';
-import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 
 let currentEditingNpc = null;
 let _npcModalUnsubscribe = null;

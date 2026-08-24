@@ -6,7 +6,7 @@
 import { db, collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
-import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 
 window._loadMesaFrentes = loadMesaFrentes;
 

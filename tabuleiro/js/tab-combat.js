@@ -13,7 +13,7 @@ import { tirarRetrato, avancarRitual } from '../../shared/turno-efeitos.js?v=1';
 import { logChat } from './tab-chat.js';
 import { CONDICAO_TRANSE } from '../../shared/incorporacao.js?v=1';
 
-import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 let janelaAberta = false;
 
 // Janela flutuante de ficha de combate (NPC/personagem) — módulo carregado só

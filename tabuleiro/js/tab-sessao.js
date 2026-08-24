@@ -12,7 +12,7 @@ import { refCombate, refLegenda, trocarCanvas } from './tab-main.js';
 import { transicaoDeCena } from './tab-cena.js';
 import { updObj } from './tab-objects.js';
 
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 let SES = null;
 
 const refSessao = () => doc(db, 'mesas', T.mesaId, 'sessoes', SES.id);

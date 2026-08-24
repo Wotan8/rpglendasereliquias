@@ -23,7 +23,7 @@ import {
     instanciarDoModelo, htmlFormulario, htmlBarraFerramentas, ligarFormulario,
 } from '../../shared/equip-campos.js?v=14';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML } from '../../shared/restaurar-item.js?v=1';
-import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário
 // (shared/inventario-motor.js), o mesmo da Ficha de Combate do Tabuleiro.

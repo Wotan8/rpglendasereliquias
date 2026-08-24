@@ -21,7 +21,7 @@ import {
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 import { somarApoiosDoJogador, somarMetaTotais, progressoDasEtapas, proximaEtapa, valorApoio, parseMetaIds, resolveMetaId } from '../../shared/apoios-calc.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar, toast } from '../../shared/dialogo.js?v=2';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -922,17 +922,10 @@ function getCpColor(letra) {
     return cores[letra] || '#94a3b8';
 }
 
-function showAlert(message, type, duration = 3000) {
-    const alertArea = document.getElementById('alertArea');
-    if (!alertArea) return;
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type}`;
-    alert.textContent = message;
-    alertArea.appendChild(alert);
-    setTimeout(() => {
-        if (alert.parentNode === alertArea) alertArea.removeChild(alert);
-    }, duration);
-}
+/* Casca: quem desenha e o toast da mesa (shared/dialogo.js). O terceiro
+   argumento (duracao) casa com o do toast, entao as chamadas com tempo
+   proprio continuam valendo. */
+function showAlert(message, type, duration = 3000) { return toast(message, type, duration); }
 
 function escapeHtml(text) {
     const div = document.createElement('div');

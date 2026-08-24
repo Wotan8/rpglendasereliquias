@@ -14,7 +14,7 @@ import { cenaAtiva, comCenaAtivaPatch, condicoesAgrupadas } from '../../shared/c
 import { fichaComBonus } from '../../shared/bonus-temporario.js?v=1';
 import { logChat } from './tab-chat.js';
 
-import { perguntar } from '../../shared/dialogo.js?v=1';
+import { perguntar } from '../../shared/dialogo.js?v=2';
 // charId -> { hp, hpMax, ener, enerMax, san, sanMax, conds:[{icone,nome}] }
 export const VITAIS = new Map();
 const unsubsVitais = [];

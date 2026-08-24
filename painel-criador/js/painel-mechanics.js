@@ -8,7 +8,7 @@ console.log("🧩 painel-mechanics v2.1 — múltiplos booleanos ATIVOS");
 // O diálogo da mesa entra por import: este arquivo é módulo (o Painel do
 // Criador, a Ficha e o Painel do Mestre o importam), e módulo não deve
 // depender de global que outro módulo plantou.
-import { perguntar } from '../../shared/dialogo.js?v=1';
+import { perguntar } from '../../shared/dialogo.js?v=2';
 
 // --- Shared state (set by painel-firebase.js) ---
 // window._mechState = { db, collection, getDocs, addDoc, updateDoc, doc, Timestamp, currentUser, ... }

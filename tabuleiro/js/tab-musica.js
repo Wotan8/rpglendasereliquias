@@ -21,7 +21,7 @@ import { refMusica, abrirModal } from './tab-main.js';
 import { uploadArquivo } from './tab-objects.js';
 import { planoDeReproducao, posicaoInicial, idDoYoutube } from './tab-musica-calc.js';
 
-import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 let dados = { playlists: [], ativa: null, tocando: {} };
 const tocadores = new Map();   // faixaId -> tocador (áudio ou YouTube)
 // faixaId -> t0 que falhou. Sem isto, arquivo 404 ou vídeo sem permissão de

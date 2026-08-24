@@ -1022,21 +1022,20 @@ html, body {
 #tbLockBtn:active { transform: translate(-50%, -100%) scale(.92); }
 
 /* ===== Toasts ===== */
-#tbToasts { position: fixed; top: calc(var(--tb-bar-h) + var(--lr-space-2)); left: 50%; transform: translateX(-50%); z-index: 150; display: flex; flex-direction: column; gap: var(--lr-space-2); align-items: center; pointer-events: none; }
-/* Escopado pelo #id de propósito: lendas-reliquias.css pinta TODO [class*=toast]
-   com filete dourado e carrega depois — sem o id, as variantes de aviso e de
-   perigo ficavam idênticas à de sucesso. */
-#tbToasts .tb-toast {
-    background: var(--lr-surface); border: 1px solid var(--lr-border);
-    border-left: 3px solid var(--lr-nature); color: var(--lr-text-1);
-    border-radius: var(--lr-radius); padding: var(--lr-space-2) var(--lr-space-4);
-    font-size: var(--lr-fs-sm); font-weight: 600;
-    box-shadow: var(--lr-shadow-3); animation: tbin var(--lr-t-slow) var(--lr-ease); max-width: 90vw;
+/* ===== Avisos =====
+   Quem desenha e a pilha compartilhada (shared/dialogo.css); daqui sai so o
+   ANCORAMENTO. No Tabuleiro o aviso nasce no meio, abaixo da barra: no canto
+   direito ele cairia em cima das ferramentas laterais.
+
+   `body` na frente por causa da ordem de carga — tabuleiro.css vem ANTES de
+   shared/dialogo.css no <head>, entao `.lr-avisos` sozinho perderia. */
+body .lr-avisos {
+    top: calc(var(--tb-bar-h) + var(--lr-space-2));
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    align-items: center;
 }
-#tbToasts .tb-toast-warning { border-left-color: var(--lr-gold); }
-#tbToasts .tb-toast-danger { border-left-color: var(--lr-blood-2); }
-#tbToasts .tb-toast.out { opacity: 0; transform: translateY(-8px); transition: opacity var(--lr-t-slow) var(--lr-ease), transform var(--lr-t-slow) var(--lr-ease); }
-@keyframes tbin { from { opacity: 0; transform: translateY(-8px); } }
 
 /* ===== Zoom flutuante ===== */
 .tb-zoombar { position: fixed; bottom: var(--lr-space-3); left: var(--lr-space-3); z-index: 40; display: flex; gap: var(--lr-space-1); }

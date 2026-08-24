@@ -47,7 +47,7 @@ import { porqueNaoPodeIncorporar, custoEscalonado, dadivasDoHospede, ehAncestral
 import { oQueDesfazer, comecarRitual, precisaSegundoEstagio, miraDoSegundoEstagio } from '../../shared/turno-efeitos.js?v=1';
 import { logChat } from './tab-chat.js';
 
-import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 // Abertura do arco do golpe corpo a corpo (graus). Régua de mesa da UI —
 // o alcance vem da arma + Tamanho; o arco só diz o quão "largo" é o balanço.
 const ARCO_GOLPE_GRAUS = 90;

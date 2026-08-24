@@ -8,7 +8,7 @@ import { addLog } from './logs.js';
 import { notifyUsers } from './notify.js';
 import { renderCombatList } from './combat.js';
 import { initPrefsDaMesa } from './area-mesas-prefs.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 
 export async function onTabActivated() { await loadMesas(); }
 

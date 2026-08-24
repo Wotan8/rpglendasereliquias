@@ -30,7 +30,7 @@ import { getFirestore, collection, getDocs, query, where, doc, updateDoc, setDoc
     from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { blocoDeCombate } from '../../shared/runa-em-jogo.js?v=1';
 import { instanciarDoModelo } from '../../shared/equip-campos.js?v=14';
-import { toast, confirmar, perguntar } from '../../shared/dialogo.js?v=1';
+import { toast, confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 
 const LabBancada = (() => {
 

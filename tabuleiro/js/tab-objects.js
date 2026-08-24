@@ -13,7 +13,7 @@ import { SENSORES } from './tab-fog.js';
 import { criarFilaDeEscrita } from './tab-write-queue.js';
 import { logChat } from './tab-chat.js';
 
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 // ===== CRUD =====
 export async function addObj(data) {
     const id = uid();

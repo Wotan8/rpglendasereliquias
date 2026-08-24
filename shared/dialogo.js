@@ -27,7 +27,12 @@ const esc = (t) => t == null ? '' : String(t)
 
 /** As quatro cores de significado do sistema. Tudo o mais cai em 'info'. */
 const TIPOS = new Set(['sucesso', 'erro', 'aviso', 'info']);
-const tipoValido = (t) => TIPOS.has(t) ? t : 'info';
+
+/* Os avisos antigos das seis telas falavam ingles. Traduzir AQUI foi o que
+   permitiu eles virarem casca sem renomear nenhuma das 662 chamadas — a que
+   diz `showAlert(msg, 'danger')` continua dizendo exatamente isso. */
+const HERDADO = { success: 'sucesso', danger: 'erro', error: 'erro', warning: 'aviso', info: 'info' };
+const tipoValido = (t) => TIPOS.has(t) ? t : (HERDADO[t] || 'info');
 
 // ===================== TOAST =====================
 
@@ -187,7 +192,7 @@ export function perguntar(msg, opts = {}) {
    plantou, porque a ordem de carga vira requisito invisivel.
 
    Quem entra aqui precisa que a pagina carregue este modulo antes:
-       <script type="module">import '../shared/dialogo.js?v=1';</script> */
+       <script type="module">import '../shared/dialogo.js?v=2';</script> */
 if (typeof window !== 'undefined') {
     window.LRDialogo = { toast, confirmar, perguntar };
 }

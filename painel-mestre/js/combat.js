@@ -5,7 +5,7 @@ import { db, collection, getDocs, getDoc, setDoc, updateDoc, doc, onSnapshot, qu
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena } from '../../shared/combate-cenas.js';
-import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 
 let combatListeners = {};
 

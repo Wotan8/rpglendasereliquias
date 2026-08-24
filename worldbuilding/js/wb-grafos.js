@@ -23,7 +23,7 @@ import { db, collection, getDocs, doc, setDoc, deleteDoc } from './firebase-conf
 import { WB, esc, uid, ToolModal, setTitle, contentBody, imgOf } from './wb-utils.js';
 import { Eco } from './wb-ecosystem.js';
 import { Calendario } from './wb-calendario.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 
 export const TIPOS_REL = {
     lineage: {

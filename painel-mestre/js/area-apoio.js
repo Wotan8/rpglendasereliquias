@@ -5,7 +5,7 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { notifyUsers } from './notify.js';
 import { parseMetaIds, resolveMetaId as resolveMetaIdPuro, somarMetaTotais, chaveApoio, valorApoio, progressoDasEtapas } from '../../shared/apoios-calc.js';
-import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 
 let dynamicMetas = [];
 let metaTotais = {};   // { [metaId]: somaDosMontantes }

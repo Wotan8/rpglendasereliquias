@@ -10,7 +10,7 @@ import {
     collection, doc, getDocs, getDoc, setDoc, addDoc,
     updateDoc, deleteDoc, query, orderBy, where
 } from './firebase-config.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar, toast } from '../../shared/dialogo.js?v=2';
 
         let currentUser = null;
         let currentCategory = 'dashboard';
@@ -236,13 +236,8 @@ import { confirmar } from '../../shared/dialogo.js?v=1';
             initHoverCards();
         }
 
-        function showAlert(message, type) {
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type}`;
-            alert.textContent = message;
-            document.body.appendChild(alert);
-            setTimeout(() => alert.remove(), 3000);
-        }
+        /* Casca: quem desenha e o toast da mesa (shared/dialogo.js). */
+        function showAlert(message, type) { return toast(message, type); }
 
         // ==================== GEOGRAPHIC HIERARCHY FUNCTIONS ====================
 

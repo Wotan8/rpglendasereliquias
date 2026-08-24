@@ -27,7 +27,7 @@ import {
     deleteDoc, updateDoc, doc, orderBy, limit, getCountFromServer, Timestamp, addDoc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar, toast } from '../../shared/dialogo.js?v=2';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -5650,15 +5650,10 @@ async function _autoLinkBodyPartToAllRaces(bodyPartId) {
 }
 
 // ===== HELPERS =====
-function showAlert(message, type) {
-    const alertArea = document.getElementById('alertArea');
-    if (!alertArea) return;
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type}`;
-    alert.textContent = message;
-    alertArea.appendChild(alert);
-    setTimeout(() => { if (alert.parentNode === alertArea) alertArea.removeChild(alert); }, 3000);
-}
+/* Casca: quem desenha e o toast da mesa (shared/dialogo.js). O #alertArea do
+   HTML ficou sem uso — o aviso agora e fixo na tela, nao preso ao topo da
+   coluna, e por isso aparece mesmo com a pagina rolada. */
+function showAlert(message, type) { return toast(message, type); }
 
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';

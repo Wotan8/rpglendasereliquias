@@ -193,7 +193,8 @@
         else r.grimorio.push(runa);
 
         const ok = await window.LabFB.saveRunomancia();
-        toast(ok ? `📖 "${esc(nome)}" gravada no Grimório!` : '❌ Falha ao salvar — tente novamente.');
+        toast(ok ? `📖 "${nome}" gravada no Grimório!` : '❌ Falha ao salvar — tente novamente.',
+            ok ? 'sucesso' : 'erro');
         if (ok) { currentRuna = runa.id; renderGrimorio(); }
     }
 
@@ -362,12 +363,8 @@
     // A Runoteca precisa devolver o circuito à mesa: é a única troca de aba
     // que vem de fora deste módulo.
     window.labSwitchTab = switchTab;
-    function toast(msg) {
-        const t = document.createElement('div');
-        t.className = 'lab-toast'; t.innerHTML = msg;
-        document.body.appendChild(t);
-        setTimeout(() => t.classList.add('show'), 20);
-        setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 2800);
-    }
+    /* Casca: quem desenha e o toast da mesa. Este arquivo e script CLASSICO e
+       nao importa — alcanca pela ponte window.LRDialogo. */
+    function toast(msg, tipo) { window.LRDialogo?.toast(msg, tipo); }
     window.labToast = toast;   // usado por rune-export.js
 })();

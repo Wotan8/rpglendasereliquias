@@ -7,6 +7,9 @@
 // dá a cena ativa para a visibilidade do loot oculto por teste.
 import { PERF } from './tab-perf.js';
 import { cenaAtiva, efeitoDasCondicoes } from '../../shared/combate-cenas.js';
+// `avisoDaMesa` para o nome `toast` continuar sendo o QUE ESTE ARQUIVO exporta:
+// as 249 chamadas do Tabuleiro importam `toast` daqui, nao do shared.
+import { toast as avisoDaMesa } from '../../shared/dialogo.js?v=2';
 
 export const T = {
     // Contexto
@@ -143,13 +146,12 @@ export function ico(nome) { return `<svg class="tb-ico"><use href="#i-${nome}"/>
 
 export function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
-export function toast(msg, type = 'success') {
-    const el = document.createElement('div');
-    el.className = 'tb-toast tb-toast-' + type;
-    el.textContent = msg;
-    document.getElementById('tbToasts').appendChild(el);
-    setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 350); }, 2600);
-}
+/* Casca: quem desenha e o toast da mesa (shared/dialogo.js). O nome exportado
+   fica, porque as 249 chamadas do Tabuleiro importam `toast` daqui.
+   A POSICAO continua sendo a de sempre — no meio, abaixo da barra —, mas agora
+   quem manda nisso e uma regra de `.lr-avisos` em tabuleiro.css: no canto
+   direito o aviso cairia em cima das ferramentas. */
+export function toast(msg, type = 'success') { return avisoDaMesa(msg, type); }
 
 export function markDirty() { T.dirty = true; }
 

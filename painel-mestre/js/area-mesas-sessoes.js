@@ -7,7 +7,7 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { notifyUsers } from './notify.js';
 import { expDeltas } from '../../shared/exp-deltas.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 
 // Register global loader
 window._loadSessionLogs = loadSessionLogs;

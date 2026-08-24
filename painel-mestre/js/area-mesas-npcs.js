@@ -5,7 +5,7 @@ import { db, collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc } fr
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { npcNaMesa, patchVinculoMesa } from '../../shared/npc-mesas.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 
 window._loadMesaNpcs = loadMesaNpcs;
 

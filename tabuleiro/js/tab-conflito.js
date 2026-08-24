@@ -35,7 +35,7 @@ import { addObj } from './tab-objects.js';
 import { participanteDoToken, valorVdDaFonte, fonteDoParticipante, VITAIS } from './tab-hud.js';
 import { aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { logChat } from './tab-chat.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal, absorverResolve, ajusteDeTamanho,
          defesasLivres, custoDaDefesa, soODado,
          precisaRolarDano,

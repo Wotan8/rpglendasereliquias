@@ -394,12 +394,7 @@ body {
 
 /* ---------- MISC ---------- */
 .lab-empty { text-align: center; color: var(--muted); padding: 30px 12px; line-height: 1.8; grid-column: 1/-1; }
-.lab-toast {
-    position: fixed; bottom: 22px; left: 50%; transform: translate(-50%, 16px);
-    background: var(--bancada); border: 1px solid var(--lume); color: var(--ink);
-    border-radius: 10px; padding: 10px 18px; opacity: 0; transition: .3s; z-index: 70; font-size: .84rem;
-}
-.lab-toast.show { opacity: 1; transform: translate(-50%, 0); }
+/* O aviso do Laboratorium virou casca do toast da mesa (shared/dialogo.css). */
 
 /* ---------- RESPONSIVO ---------- */
 @media (max-width: 1100px) {

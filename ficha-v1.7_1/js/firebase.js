@@ -7,7 +7,7 @@ import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/fi
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
-import { toast, confirmar } from '../../shared/dialogo.js?v=1';
+import { toast, confirmar } from '../../shared/dialogo.js?v=2';
 
 // ===== CONFIG (mesma do projeto rpg-lendasereliquias) =====
 const firebaseConfig = {

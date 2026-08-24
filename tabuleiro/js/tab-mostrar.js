@@ -10,7 +10,7 @@ import { screenToWorld } from './tab-render.js';
 import { pontoVisivelAgora } from './tab-fog.js';
 import { logChat } from './tab-chat.js';
 
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 let equipCatalogo = null;
 let caixaItens = null;
 

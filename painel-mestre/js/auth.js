@@ -5,7 +5,7 @@
 import { auth, db, onAuthStateChanged, signOut, collection, query, where, getDocs, getDoc, doc } from './firebase-config.js';
 import { setCurrentUser } from './state.js';
 import { showAlert } from './ui-utils.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 
 // ===== FIND USER DOC =====
 async function findUserDoc(user) {

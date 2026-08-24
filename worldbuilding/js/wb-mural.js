@@ -7,7 +7,7 @@
 
 import { db, doc, getDoc, setDoc } from './firebase-config.js';
 import { WB, esc, uid, setTitle, contentBody } from './wb-utils.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 
 const CORES = ['#9D6B2F', '#8B1E2D', '#3FAE6A', '#5B3FB8', '#a34d6b'];
 const DEFAULT = { columns: [

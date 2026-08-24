@@ -1,21 +1,19 @@
 // =============================================
 // PAINEL DO MESTRE — UI Utilities
 // =============================================
+import { toast } from '../../shared/dialogo.js?v=2';
 
 // ===== ALERT TOAST =====
-export function showAlert(message, type = 'success') {
-    const existing = document.querySelectorAll('.alert');
-    existing.forEach(el => el.remove());
+/* Casca: quem desenha é o toast da mesa (shared/dialogo.js), o mesmo da Ficha,
+   do Tabuleiro e do Criador. As 286 chamadas daqui não mudaram — nem o nome,
+   nem o vocabulário inglês do tipo ('success', 'danger'), que o toast traduz.
 
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type}`;
-    alert.textContent = message;
-    document.body.appendChild(alert);
+   Uma diferença de propósito: o aviso antigo apagava o anterior, este empilha.
+   Duas mensagens seguidas passaram a ser legíveis em vez de uma comer a outra.
 
-    setTimeout(() => {
-        if (alert.parentNode) alert.remove();
-    }, 3000);
-}
+   `function` e não `const` porque a declaração é içada: chamada que aconteça
+   antes desta linha continua valendo, como valia com o corpo antigo. */
+export function showAlert(message, type = 'success') { return toast(message, type); }
 window.showAlert = showAlert;
 
 // ===== ESCAPE HTML =====

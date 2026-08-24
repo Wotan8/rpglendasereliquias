@@ -14,7 +14,7 @@ import { comCena, comCenaNova } from '../../shared/combate-cenas.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { computeAvanco } from './area-mesas-frentes.js';
 import { carregarCharsMesa, logCamposHtml, coletarLogCampos, gravarSessionLog } from './area-mesas-sessoes.js';
-import { confirmar } from '../../shared/dialogo.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 
 window._loadMesaSessao = loadMesaSessao;
 
