@@ -7,6 +7,7 @@ import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/fi
 import { getFirestore, doc, setDoc, collection, getDocs, query, where, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -140,7 +141,7 @@ onAuthStateChanged(auth, async (user) => {
 
 // ===== LOGOUT =====
 window.logout = async function () {
-    if (await LRDialogo.confirmar('Seu progresso fica salvo.',
+    if (await confirmar('Seu progresso fica salvo.',
         { titulo: '🚪 Sair da conta?', ok: 'Sair' })) {
         try {
             await signOut(auth);

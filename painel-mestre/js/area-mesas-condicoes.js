@@ -4,6 +4,7 @@
 import { db, collection, getDocs, doc, getDoc, updateDoc } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 window._loadPersonagensCondicoes = loadPersonagensCondicoes;
 
@@ -398,7 +399,7 @@ window._saveMestreCondition = async function() {
 };
 
 window._deleteMestreCondition = async function(charId, idx) {
-    if (!await LRDialogo.confirmar('Deseja realmente excluir esta condição?', { perigo: true })) return;
+    if (!await confirmar('Deseja realmente excluir esta condição?', { perigo: true })) return;
 
     try {
         const snap = await getDoc(doc(db, 'char', charId));

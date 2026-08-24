@@ -1,5 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, collection, getDocs, doc, updateDoc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { toast, confirmar } from '../../shared/dialogo.js?v=1';
 
 const firebaseConfig = {
     apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -145,17 +146,17 @@ function filterUsers(e) {
 }
 
 window.updateUserRole = async function(userId, newRole) {
-    if(!await LRDialogo.confirmar(`Tem certeza que deseja alterar o cargo deste usuário para ${newRole}?`)) {
+    if(!await confirmar(`Tem certeza que deseja alterar o cargo deste usuário para ${newRole}?`)) {
         loadUsers(); // reload to reset dropdown
         return;
     }
     
     try {
         await updateDoc(doc(db, "users", userId), { role: newRole });
-        LRDialogo.toast("Cargo atualizado com sucesso!", 'sucesso');
+        toast("Cargo atualizado com sucesso!", 'sucesso');
     } catch(e) {
         console.error("Error updating role:", e);
-        LRDialogo.toast("Erro ao atualizar cargo. Verifique se você tem permissão.", 'erro');
+        toast("Erro ao atualizar cargo. Verifique se você tem permissão.", 'erro');
         loadUsers();
     }
 }
@@ -204,14 +205,14 @@ async function loadFavicons() {
                 const img = new Image();
                 img.onload = () => {
                     if ((fav.id === 'app-windows' || fav.id === 'pwa-icon') && img.width !== img.height) {
-                        LRDialogo.toast("O Ícone do App deve ser uma imagem quadrada (ex: 256x256, 512x512).", 'aviso');
+                        toast("O Ícone do App deve ser uma imagem quadrada (ex: 256x256, 512x512).", 'aviso');
                         return;
                     }
                     preview.src = url;
                     preview.style.display = 'block';
                     saveBtn.disabled = false;
                 };
-                img.onerror = () => { LRDialogo.toast("Não consegui carregar essa imagem.", 'aviso'); };
+                img.onerror = () => { toast("Não consegui carregar essa imagem.", 'aviso'); };
                 img.src = url;
             });
 
@@ -227,11 +228,11 @@ async function loadFavicons() {
                         [fav.id]: downloadURL
                     }, { merge: true });
 
-                    LRDialogo.toast('Favicon atualizado com sucesso!', 'sucesso');
+                    toast('Favicon atualizado com sucesso!', 'sucesso');
                     saveBtn.innerText = 'Salvo';
                 } catch (err) {
                     console.error("Error saving favicon:", err);
-                    LRDialogo.toast("Erro ao salvar favicon.", 'erro');
+                    toast("Erro ao salvar favicon.", 'erro');
                     saveBtn.innerText = 'Salvar Alteração';
                     saveBtn.disabled = false;
                 }

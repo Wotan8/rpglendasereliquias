@@ -5,6 +5,7 @@
 import { auth, db, onAuthStateChanged, signOut, collection, query, where, getDocs, getDoc, doc } from './firebase-config.js';
 import { setCurrentUser } from './state.js';
 import { showAlert } from './ui-utils.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 // ===== FIND USER DOC =====
 async function findUserDoc(user) {
@@ -86,7 +87,7 @@ window.goToWorldbuilding = () => { window.location.href = '../worldbuilding/worl
 window.goToHexmap = () => { window.location.href = '../hexmap.html'; };
 
 window.logout = async function () {
-    if (await LRDialogo.confirmar('🚪 Tem certeza que deseja sair?')) {
+    if (await confirmar('🚪 Tem certeza que deseja sair?')) {
         try {
             try { localStorage.removeItem('pm-mesa-lembrada'); } catch (e) { /* ver MESA_LEMBRADA em area-mesas.js */ }
             await signOut(auth);

@@ -8,6 +8,7 @@ import { addLog } from './logs.js';
 import { notifyUsers } from './notify.js';
 import { renderCombatList } from './combat.js';
 import { initPrefsDaMesa } from './area-mesas-prefs.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 export async function onTabActivated() { await loadMesas(); }
 
@@ -289,7 +290,7 @@ window.linkPlayer = async function() {
 };
 
 window.unlinkPlayer = async function(uid) {
-    if (!S.currentMesaId || !await LRDialogo.confirmar('Desvincular este jogador?')) return;
+    if (!S.currentMesaId || !await confirmar('Desvincular este jogador?')) return;
     try {
         const jogadores = (S.currentMesaData.jogadores || []).filter(id => id !== uid);
         await updateDoc(doc(db, 'mesas', S.currentMesaId), { jogadores });

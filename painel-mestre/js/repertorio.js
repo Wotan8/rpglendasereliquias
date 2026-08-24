@@ -3,6 +3,7 @@ import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, query, where, 
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 // ===== POPULATE SELECT =====
 
@@ -256,7 +257,7 @@ window.editItemMestre = function(containerId, itemId) {
 // ===== DELETE ITEM =====
 window.deleteItemMestre = async function(containerId, itemId) {
     const item = S.currentInventarioItems.find(i => i.id === itemId);
-    if (!item || !await LRDialogo.confirmar(`Excluir "${item.nome||item.name||'item'}"?`, { perigo: true })) return;
+    if (!item || !await confirmar(`Excluir "${item.nome||item.name||'item'}"?`, { perigo: true })) return;
     try {
         await deleteDoc(doc(db,'items',itemId));
         showAlert('✅ Item excluído','success');

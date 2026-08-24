@@ -17,6 +17,7 @@
    ═══════════════════════════════════════════════════════════ */
 
 import { limparHTML } from './wb-rich-sanitize.js';
+import { perguntar } from '../../shared/dialogo.js?v=1';
 
 /* Blocos que o autor escolhe no seletor de estilo. */
 const BLOCOS = [
@@ -212,7 +213,7 @@ export function bindRich(ed, toolbar, onChange) {
                 alternarClasse(alvo.dataset.classe);
                 break;
             case 'link': {
-                const url = await LRDialogo.perguntar('Endereço do link:', { valor: 'https://' });
+                const url = await perguntar('Endereço do link:', { valor: 'https://' });
                 if (url) document.execCommand('createLink', false, url);
                 break;
             }
@@ -236,9 +237,9 @@ export function bindRich(ed, toolbar, onChange) {
 
     /** Tabela com cabeçalho, do tamanho que o autor pedir. */
     async function inserirTabela() {
-        const cols = Math.min(8, Math.max(1, parseInt(await LRDialogo.perguntar('Quantas colunas?', { valor: '3' }), 10) || 0));
+        const cols = Math.min(8, Math.max(1, parseInt(await perguntar('Quantas colunas?', { valor: '3' }), 10) || 0));
         if (!cols) return;
-        const linhas = Math.min(30, Math.max(1, parseInt(await LRDialogo.perguntar('Quantas linhas (sem contar o cabeçalho)?', { valor: '3' }), 10) || 0));
+        const linhas = Math.min(30, Math.max(1, parseInt(await perguntar('Quantas linhas (sem contar o cabeçalho)?', { valor: '3' }), 10) || 0));
         if (!linhas) return;
 
         const cel = (t) => `<${t}><br></${t}>`.repeat(cols);

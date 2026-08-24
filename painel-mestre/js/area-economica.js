@@ -6,6 +6,7 @@ import { db, collection, getDocs, getDoc, setDoc, deleteDoc, doc, addDoc, update
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 
 /* Peso e Tamanho do item SEMPRE saem com unidade. Tamanho é em metros e
@@ -73,7 +74,7 @@ window.openAddAvulsoItemModal = function() { showAlert('⚠️ Criar recurso —
 window.editAvulsoItem = function(id) { showAlert('⚠️ Editar recurso — em migração', 'warning'); };
 window.deleteAvulsoItem = async function(id) {
     const item = S.avulsosItems.find(i => i.id === id);
-    if (!item || !await LRDialogo.confirmar(`Excluir "${item.name}"?`, { perigo: true })) return;
+    if (!item || !await confirmar(`Excluir "${item.name}"?`, { perigo: true })) return;
     try { await deleteDoc(doc(db, 'items', id)); showAlert('✅ Recurso excluído', 'success'); await addLog(S.currentUser?.email, `excluiu recurso avulso "${item.name}"`); await loadAvulsosItems(); }
     catch (e) { showAlert('❌ Erro', 'danger'); }
 };
@@ -108,7 +109,7 @@ window.previewJsonItems = function() {
 
 window.importJsonItemsToAvulso = async function() {
     if (S.parsedJsonItems.length === 0) { window.previewJsonItems(); if (S.parsedJsonItems.length === 0) return; }
-    if (!await LRDialogo.confirmar(`Importar ${S.parsedJsonItems.length} item(s)?`)) return;
+    if (!await confirmar(`Importar ${S.parsedJsonItems.length} item(s)?`)) return;
     let ok = 0;
     for (const item of S.parsedJsonItems) {
         try { await addDoc(collection(db, 'items'), { ...item, characterId: null, createdAt: new Date().toISOString(), createdBy: S.currentUser?.email }); ok++; } catch (e) { /* skip */ }

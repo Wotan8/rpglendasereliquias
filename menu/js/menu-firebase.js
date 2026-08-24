@@ -21,6 +21,7 @@ import {
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 import { somarApoiosDoJogador, somarMetaTotais, progressoDasEtapas, proximaEtapa, valorApoio, parseMetaIds, resolveMetaId } from '../../shared/apoios-calc.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -875,7 +876,7 @@ window.confirmDelete = async function () {
 
 // ===== LOGOUT =====
 window.logout = async function () {
-    if (await LRDialogo.confirmar('🚪 Tem certeza que deseja sair?')) {
+    if (await confirmar('🚪 Tem certeza que deseja sair?')) {
         try {
             await signOut(auth);
             // Sem redirect: o onAuthStateChanged mostra o login nesta página.

@@ -7,6 +7,7 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { notifyUsers } from './notify.js';
 import { expDeltas } from '../../shared/exp-deltas.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 // Register global loader
 window._loadSessionLogs = loadSessionLogs;
@@ -277,7 +278,7 @@ window.viewSessionLog = async function(logId) {
 
 // ===== DELETE SESSION LOG =====
 window.deleteSessionLog = async function(logId) {
-    if (!await LRDialogo.confirmar('Deletar este log de sessão?', { perigo: true })) return;
+    if (!await confirmar('Deletar este log de sessão?', { perigo: true })) return;
     try {
         await deleteDoc(doc(db, 'session-logs', logId));
         showAlert('✅ Log deletado', 'success');

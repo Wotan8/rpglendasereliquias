@@ -23,6 +23,7 @@ import { db, collection, getDocs, doc, setDoc, deleteDoc } from './firebase-conf
 import { WB, esc, uid, ToolModal, setTitle, contentBody, imgOf } from './wb-utils.js';
 import { Eco } from './wb-ecosystem.js';
 import { Calendario } from './wb-calendario.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 export const TIPOS_REL = {
     lineage: {
@@ -253,7 +254,7 @@ export const Grafos = (() => {
             </div>`);
         document.getElementById('relEdit').onclick = () => openEdgeForm(r);
         document.getElementById('relDel').onclick = async () => {
-            if (!await LRDialogo.confirmar('Excluir este vínculo?', { perigo: true })) return;
+            if (!await confirmar('Excluir este vínculo?', { perigo: true })) return;
             await deleteDoc(doc(db, 'worldbuilding-relations', r.id));
             await loadAll(); ToolModal.close(); draw();
         };
@@ -410,7 +411,7 @@ export const Grafos = (() => {
         };
         const del = document.getElementById('linDel');
         if (del) del.onclick = async () => {
-            if (!await LRDialogo.confirmar('Excluir esta linhagem? Os NPCs continuam existindo; só o agrupamento é removido.', { perigo: true })) return;
+            if (!await confirmar('Excluir esta linhagem? Os NPCs continuam existindo; só o agrupamento é removido.', { perigo: true })) return;
             await deleteDoc(doc(db, 'worldbuilding-lineages', l.id));
             await loadAll(); lineageAtual = null; ToolModal.close(); render();
         };

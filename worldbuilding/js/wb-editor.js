@@ -24,6 +24,7 @@ import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND, pool
 import { dossieHTML } from './wb-dossie.js';
 import { TOOLBAR_HTML, bindRich } from './wb-rich.js';
 import { PUBLICACOES, pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 export const Editor = (() => {
     let books = [], artigos = [], estantes = [], atual = null;
@@ -184,7 +185,7 @@ export const Editor = (() => {
         const del = $('#esDel');
         if (del) del.onclick = async () => {
             const n = livrosDaEstante(e.id).length;
-            if (!await LRDialogo.confirmar(`Excluir a estante "${e.nome}"?${n ? `\nOs ${n} livros NÃO serão apagados — continuam nas outras estantes em que estejam, e em "Todos os livros".` : ''}`, { perigo: true })) return;
+            if (!await confirmar(`Excluir a estante "${e.nome}"?${n ? `\nOs ${n} livros NÃO serão apagados — continuam nas outras estantes em que estejam, e em "Todos os livros".` : ''}`, { perigo: true })) return;
             estantes = estantes.filter(x => x.id !== e.id);
             await salvarEstantes();
             ToolModal.close(); renderLibrary();
@@ -247,7 +248,7 @@ export const Editor = (() => {
         contentBody().querySelectorAll('[data-delart]').forEach(b =>
             b.onclick = async (e) => {
                 e.stopPropagation();
-                if (!await LRDialogo.confirmar('Excluir este texto? Esta ação não pode ser desfeita.', { perigo: true })) return;
+                if (!await confirmar('Excluir este texto? Esta ação não pode ser desfeita.', { perigo: true })) return;
                 await deleteDoc(doc(db, 'worldbuilding-articles', b.dataset.delart));
                 artigos = artigos.filter(x => x.id !== b.dataset.delart);
                 renderLibrary();
@@ -312,7 +313,7 @@ export const Editor = (() => {
         const del = $('#bkDel');
         if (del) del.onclick = async () => {
             const caps = chaptersOf(b.id);
-            if (!await LRDialogo.confirmar(`Excluir o livro "${b.title}"?${caps.length ? `\nOs ${caps.length} capítulos NÃO serão apagados — voltarão para "Textos avulsos".` : ''}`, { perigo: true })) return;
+            if (!await confirmar(`Excluir o livro "${b.title}"?${caps.length ? `\nOs ${caps.length} capítulos NÃO serão apagados — voltarão para "Textos avulsos".` : ''}`, { perigo: true })) return;
             // Desvincula capítulos (viram avulsos) antes de excluir o livro.
             for (const a of caps) {
                 a.bookId = null;

@@ -23,6 +23,7 @@ import {
     instanciarDoModelo, htmlFormulario, htmlBarraFerramentas, ligarFormulario,
 } from '../../shared/equip-campos.js?v=14';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML } from '../../shared/restaurar-item.js?v=1';
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário
 // (shared/inventario-motor.js), o mesmo da Ficha de Combate do Tabuleiro.
@@ -146,7 +147,7 @@ window.npcApplyDefaultBodyParts = async function() {
     await ensureBodyPartsRegistry();
     const padrao = defaultHumanoidParts();
     if (!padrao.length) { showAlert('⚠️ Nenhuma parte padrão cadastrada no Painel de Criador.', 'warning'); return; }
-    if (n.partesDoCorpo.length && !await LRDialogo.confirmar('Substituir as partes atuais pela anatomia padrão (humanoide)?')) return;
+    if (n.partesDoCorpo.length && !await confirmar('Substituir as partes atuais pela anatomia padrão (humanoide)?')) return;
     n.partesDoCorpo = padrao;
     renderNpcBodyPartsEditor();
     showAlert('✅ Anatomia padrão aplicada. Salve o NPC para persistir.', 'success');
@@ -164,10 +165,10 @@ window.npcAddBodyPartFromRegistry = function() {
 
 window.npcAddBodyPartCustom = async function() {
     const n = _npc(); if (!n) return;
-    const nome = await LRDialogo.perguntar('Nome da parte do corpo (ex.: Cauda, Asa, Tentáculo):');
+    const nome = await perguntar('Nome da parte do corpo (ex.: Cauda, Asa, Tentáculo):');
     if (!nome || !nome.trim()) return;
-    const icone = await LRDialogo.perguntar('Ícone/emoji (opcional):') || '🦴';
-    const slots = parseInt(await LRDialogo.perguntar('Quantidade de slots desta parte:', { valor: '1' })) || 1;
+    const icone = await perguntar('Ícone/emoji (opcional):') || '🦴';
+    const slots = parseInt(await perguntar('Quantidade de slots desta parte:', { valor: '1' })) || 1;
     n.partesDoCorpo.push({
         id: 'bp-custom-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
         nome: nome.trim(), icone: icone.trim() || '🦴', slots,
@@ -554,7 +555,7 @@ window.restaurarNpcItemDoModelo = async function() {
     const tpl = item ? tplDoItem(item, window._npcSys || window._systemData || {}) : null;
     const patch = patchRestauracao(tpl);
     if (!patch) { showAlert('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.', 'warning'); return; }
-    if (!await LRDialogo.confirmar(textoConfirmacao(item, tpl))) return;
+    if (!await confirmar(textoConfirmacao(item, tpl))) return;
     try {
         await setDoc(doc(db, 'items', editId), patch, { merge: true });
         addLog(S.currentUser?.email, `♻️ Item "${item.nome || ''}" do NPC restaurado ao cadastro de "${tpl.nome}"`,
@@ -656,7 +657,7 @@ window.saveNpcItemForm = async function() {
 };
 
 window.deleteNpcItem = async function(itemId) {
-    if (!await LRDialogo.confirmar('Excluir este item?', { perigo: true })) return;
+    if (!await confirmar('Excluir este item?', { perigo: true })) return;
     const item = NI.items.find(i => i.id === itemId);
     try {
         await deleteDoc(doc(db, 'items', itemId));
@@ -919,7 +920,7 @@ window._filterNpcTransfer = function() {
 };
 
 window._executeNpcTransfer = async function(itemId, targetId, targetKind) {
-    if (!await LRDialogo.confirmar('Transferir este item para o destino selecionado?')) return;
+    if (!await confirmar('Transferir este item para o destino selecionado?')) return;
     const item = NI.items.find(i => i.id === itemId);
     const nomeItem = item?.nome || itemId;
     try {

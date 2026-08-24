@@ -7,6 +7,7 @@ import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/fi
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+import { toast, confirmar } from '../../shared/dialogo.js?v=1';
 
 // ===== CONFIG (mesma do projeto rpg-lendasereliquias) =====
 const firebaseConfig = {
@@ -277,7 +278,7 @@ window.saveToFirebase = async function () {
 
             } catch (uploadErr) {
                 console.error("❌ Falha no upload da imagem:", uploadErr);
-                LRDialogo.toast("Falha ao enviar imagem. Tente uma imagem menor ou verifique sua conexão.", 'erro');
+                toast("Falha ao enviar imagem. Tente uma imagem menor ou verifique sua conexão.", 'erro');
                 // Se falhar o upload, NÃO salvar a string gigante no Firestore
                 throw new Error("Upload de imagem falhou. Abortando salvamento para evitar sobrecarga.");
             }
@@ -291,11 +292,11 @@ window.saveToFirebase = async function () {
             // Tentar identificar o culpado
             if (data.charImg && data.charImg.length > 100000) {
                 console.error("⚠️ Culpado provável: charImg ainda é gigante (" + data.charImg.length + " bytes).");
-                LRDialogo.toast("Erro: A imagem não foi processada corretamente. Tente recarregar a página.", 'erro');
+                toast("Erro: A imagem não foi processada corretamente. Tente recarregar a página.", 'erro');
                 throw new Error("Dados muito grandes. Abortando.");
             }
 
-            LRDialogo.toast("Não foi possível salvar: Muitos dados na ficha. Reduza o conteúdo ou remova a imagem.", 'erro');
+            toast("Não foi possível salvar: Muitos dados na ficha. Reduza o conteúdo ou remova a imagem.", 'erro');
             throw new Error("Payload size too large: " + payloadSize);
         }
 
@@ -384,7 +385,7 @@ window.updateSharedNoteInFirebase = async function(ownerId, noteData) {
 
 // ===== LOGOUT =====
 window.logout = async function () {
-    if (await LRDialogo.confirmar('Você volta para a tela de entrada.',
+    if (await confirmar('Você volta para a tela de entrada.',
         { titulo: '🚪 Sair da conta?', ok: 'Sair' })) {
         try {
             await signOut(auth);
@@ -489,7 +490,7 @@ onAuthStateChanged(auth, async (user) => {
                         }
                     }
                     if (!isMestreOfMesa) {
-                        LRDialogo.toast('🚫 ACESSO NEGADO! Esta ficha não pertence a você.', 'aviso');
+                        toast('🚫 ACESSO NEGADO! Esta ficha não pertence a você.', 'aviso');
                         window.location.href = '../menu/menu.html';
                         return;
                     }

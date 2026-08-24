@@ -30,6 +30,7 @@ import { getFirestore, collection, getDocs, query, where, doc, updateDoc, setDoc
     from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { blocoDeCombate } from '../../shared/runa-em-jogo.js?v=1';
 import { instanciarDoModelo } from '../../shared/equip-campos.js?v=14';
+import { toast, confirmar, perguntar } from '../../shared/dialogo.js?v=1';
 
 const LabBancada = (() => {
 
@@ -339,7 +340,7 @@ const LabBancada = (() => {
 
     /* Desconta o que a gravação usa. Escritas mínimas e explícitas. */
     async function consumir() {
-        if (!await LRDialogo.confirmar('Consumir os materiais selecionados?\n(desconta consumíveis, +1 desgaste nas ferramentas, debita Lunis)')) return;
+        if (!await confirmar('Consumir os materiais selecionados?\n(desconta consumíveis, +1 desgaste nas ferramentas, debita Lunis)')) return;
         const db = window.LabFB.db || getFirestore();
         const escritas = [];
         for (const i of state.instancias) {
@@ -457,12 +458,12 @@ const LabBancada = (() => {
     async function escolherBase() {
         const opts = basesPossiveis();
         if (!opts.length) {
-            LRDialogo.toast('Nenhuma peça no inventário para gravar.\n\nA runa precisa de uma superfície: papel e pergaminho na Escripta, pedra, osso ou metal na Talha.', 'aviso');
+            toast('Nenhuma peça no inventário para gravar.\n\nA runa precisa de uma superfície: papel e pergaminho na Escripta, pedra, osso ou metal na Talha.', 'aviso');
             return null;
         }
         if (opts.length === 1) return opts[0];
         const lista = opts.map((i, k) => (k + 1) + '. ' + (i.nome || i.cat?.nome)).join('\n');
-        const r = await LRDialogo.perguntar('Em que peça a runa vai ser gravada?\n\n' + lista + '\n\nDigite o número:', { valor: '1' });
+        const r = await perguntar('Em que peça a runa vai ser gravada?\n\n' + lista + '\n\nDigite o número:', { valor: '1' });
         if (r === null) return null;
         return opts[parseInt(r, 10) - 1] || null;
     }
@@ -491,12 +492,12 @@ const LabBancada = (() => {
         const b = blocoDaRuna(runa);
 
         if (b.problemas.length) {
-            const seguir = await LRDialogo.confirmar('⚠️ Este circuito não fecha como runa de combate:\n\n· ' + b.problemas.join('\n· ')
+            const seguir = await confirmar('⚠️ Este circuito não fecha como runa de combate:\n\n· ' + b.problemas.join('\n· ')
                 + '\n\nEmitir assim mesmo? A peça existe, mas o Tabuleiro não vai saber resolvê-la sozinho.');
             if (!seguir) return;
         }
         if (b.periciaExigida && !achaDot(norm(b.periciaExigida).replace(/[^a-z0-9]/g, ''))) {
-            LRDialogo.toast('🚫 ' + b.nucleo.aspectus + ' exige a perícia ' + b.periciaExigida + ' para ser gravado.', 'aviso');
+            toast('🚫 ' + b.nucleo.aspectus + ' exige a perícia ' + b.periciaExigida + ' para ser gravado.', 'aviso');
             return;
         }
 
@@ -508,7 +509,7 @@ const LabBancada = (() => {
         const cabeca = state.ramo === 'tatuagem'
             ? 'Tatuar "' + runa.nome + '" como Peculiaridade?'
             : 'Gravar "' + runa.nome + '" em ' + (base.nome || base.cat?.nome) + '?';
-        if (!await LRDialogo.confirmar(cabeca + '\n(' + ramoNome + ')\n\n' + resumoDoBloco(b))) return;
+        if (!await confirmar(cabeca + '\n(' + ramoNome + ')\n\n' + resumoDoBloco(b))) return;
 
         try {
             if (state.ramo === 'tatuagem') {
@@ -592,7 +593,7 @@ const LabBancada = (() => {
         const fb = window.LabFB;
         if (!fb?.charId) { toast?.('❌ Abra o Laboratorium pela ficha para enviar runas.'); return; }
         const ramoNome = { escripta: 'Escripta', talha: 'Talha', tatuagem: 'Tatuagem' }[state.ramo];
-        if (!await LRDialogo.confirmar('Anotar "' + runa.nome + '" no Cartucho Rúnico da ficha?\n\nSó registra o projeto — para criar a peça, use "Gravar".')) return;
+        if (!await confirmar('Anotar "' + runa.nome + '" no Cartucho Rúnico da ficha?\n\nSó registra o projeto — para criar a peça, use "Gravar".')) return;
         try {
             await registrarNoCartucho(runa, blocoDaRuna(runa), ramoNome, fb.db || getFirestore(), fb);
             toast?.('🜃 "' + runa.nome + '" anotada no Cartucho (' + ramoNome + '). Recarregue a ficha.');

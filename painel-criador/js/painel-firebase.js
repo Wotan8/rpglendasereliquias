@@ -27,6 +27,7 @@ import {
     deleteDoc, updateDoc, doc, orderBy, limit, getCountFromServer, Timestamp, addDoc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -853,7 +854,7 @@ async function findUserDoc(user) {
 // ===== NAVIGATION =====
 window.goToMenu = () => { window.location.href = '../menu/menu.html'; };
 window.logout = async function () {
-    if (await LRDialogo.confirmar('🚪 Tem certeza que deseja sair?')) {
+    if (await confirmar('🚪 Tem certeza que deseja sair?')) {
         try { await signOut(auth); window.location.href = '../index.html'; }
         catch (e) { showAlert('❌ Erro ao sair: ' + e.message, 'danger'); }
     }
@@ -5686,7 +5687,7 @@ function truncate(str, maxLen) {
 // ᛟ RUNOMANCIA — Importação do Compêndio (5 Artus + 14 Aspectus + 45 Sigilus)
 // =====================================================================
 window.runicImportSeed = async function () {
-    if (!await LRDialogo.confirmar('Importar os 64 Elementos Rúnicos do Compêndio da Magia Rúnica?\n(Reimportar sobrescreve os elementos importados anteriormente, preservando os criados manualmente.)')) return;
+    if (!await confirmar('Importar os 64 Elementos Rúnicos do Compêndio da Magia Rúnica?\n(Reimportar sobrescreve os elementos importados anteriormente, preservando os criados manualmente.)')) return;
     const btn = document.getElementById('runicSeedBtn');
     try {
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Importando…'; }

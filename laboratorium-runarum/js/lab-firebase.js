@@ -8,6 +8,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, updateDoc, setDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { toast } from '../../shared/dialogo.js?v=1';
 
 const firebaseConfig = {
     apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -152,7 +153,7 @@ onAuthStateChanged(auth, async (user) => {
             if (snap.exists()) {
                 const data = snap.data();
                 if (data.ownerUid && data.ownerUid !== user.uid) {
-                    LRDialogo.toast('🚫 Esta ficha não pertence a você.', 'aviso');
+                    toast('🚫 Esta ficha não pertence a você.', 'aviso');
                     window.location.href = '../menu/menu.html';
                     return;
                 }

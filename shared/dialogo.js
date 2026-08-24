@@ -181,8 +181,13 @@ export function perguntar(msg, opts = {}) {
     return abrir(html, (d) => d.querySelector('.lr-dialogo-input').value, null);
 }
 
-/* Ponte para os scripts classicos (a Ficha e o Tabuleiro carregam boa parte do
-   codigo fora de modulo). Quem e modulo importa direto. */
+/* Ponte para os scripts CLASSICOS, que nao tem como importar: os doze da
+   Ficha, da Criacao, do Laboratorium e do hexmap.js. Todo arquivo que e modulo
+   importa direto — modulo nao deve depender de global que outro modulo
+   plantou, porque a ordem de carga vira requisito invisivel.
+
+   Quem entra aqui precisa que a pagina carregue este modulo antes:
+       <script type="module">import '../shared/dialogo.js?v=1';</script> */
 if (typeof window !== 'undefined') {
     window.LRDialogo = { toast, confirmar, perguntar };
 }

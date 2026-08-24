@@ -4,6 +4,7 @@
 import { db, collection, getDocs, doc, updateDoc } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 window._loadMesaNotas = loadMesaNotas;
 
@@ -207,7 +208,7 @@ window.editSingleNote = function(charId, noteId) {
 
 // Delete a specific note
 window.deleteSingleNote = async function(charId, noteId) {
-    if (!await LRDialogo.confirmar('Excluir esta nota?', { perigo: true })) return;
+    if (!await confirmar('Excluir esta nota?', { perigo: true })) return;
     const chars = S.mesaCharacters || [];
     const c = chars.find(x => x.id === charId);
     if (!c) return;

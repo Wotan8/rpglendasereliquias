@@ -14,6 +14,7 @@ import { comCena, comCenaNova } from '../../shared/combate-cenas.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { computeAvanco } from './area-mesas-frentes.js';
 import { carregarCharsMesa, logCamposHtml, coletarLogCampos, gravarSessionLog } from './area-mesas-sessoes.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 window._loadMesaSessao = loadMesaSessao;
 
@@ -425,7 +426,7 @@ window.sesEncontroSalvar = async function() {
 };
 
 window.sesEncontroExcluir = async function(encId) {
-    if (!await LRDialogo.confirmar('Excluir este encontro?', { perigo: true })) return;
+    if (!await confirmar('Excluir este encontro?', { perigo: true })) return;
     if (_sessao.fase === 'preparo') await window.sesSalvarPreparo(true);
     const encontros = (_sessao.encontros || []).filter(x => x.id !== encId);
     try {
@@ -437,7 +438,7 @@ window.sesEncontroExcluir = async function(encId) {
 
 window.sesEncontroIniciar = async function(encId) {
     const enc = (_sessao.encontros || []).find(x => x.id === encId); if (!enc) return;
-    if (!await LRDialogo.confirmar(`Iniciar "${enc.nome}"? Isto abre uma cena de combate com o nome do encontro.`)) return;
+    if (!await confirmar(`Iniciar "${enc.nome}"? Isto abre uma cena de combate com o nome do encontro.`)) return;
     try {
         // O encontro vira uma CENA nova (as outras continuam armadas). Precisa do
         // doc atual para não derrubar as cenas existentes — uma leitura, e só

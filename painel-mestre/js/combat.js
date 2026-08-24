@@ -5,6 +5,7 @@ import { db, collection, getDocs, getDoc, setDoc, updateDoc, doc, onSnapshot, qu
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena } from '../../shared/combate-cenas.js';
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
 
 let combatListeners = {};
 
@@ -68,19 +69,19 @@ async function salvarCenas(novo) {
 
 window.combatCenaTrocar = (id) => salvarCenas(comTrocaDeCena(_docCombate, id));
 window.combatCenaNova = async () => {
-    const nome = await LRDialogo.perguntar('Nome da cena de combate:', { valor: 'Cena ' + (cenasDoDoc(_docCombate).length + 1) });
+    const nome = await perguntar('Nome da cena de combate:', { valor: 'Cena ' + (cenasDoDoc(_docCombate).length + 1) });
     if (nome === null) return;
     salvarCenas(comCenaNova(_docCombate, 'c' + Date.now().toString(36), nome.trim() || 'Nova cena'));
 };
 window.combatCenaRenomear = async () => {
     const atual = cenaAtiva(_docCombate);
-    const nome = await LRDialogo.perguntar('Nome da cena:', { valor: atual.nome || '' });
+    const nome = await perguntar('Nome da cena:', { valor: atual.nome || '' });
     if (nome === null) return;
     salvarCenas(comCenaAtivaPatch(_docCombate, { nome: nome.trim() || 'Cena' }));
 };
 window.combatCenaApagar = async () => {
     const atual = cenaAtiva(_docCombate);
-    if (!await LRDialogo.confirmar(`Apagar a cena "${atual.nome}" e os participantes dela?`, { perigo: true })) return;
+    if (!await confirmar(`Apagar a cena "${atual.nome}" e os participantes dela?`, { perigo: true })) return;
     salvarCenas(semCena(_docCombate, atual.id));
 };
 
@@ -386,7 +387,7 @@ window.adjustCombatStat = function(pid, stat, amt, ev) {
 window.restoreCombatStats = async function(pid, ev) {
     if (ev) ev.stopPropagation();
     const p = S.combatParticipants.find(x => x.id === pid); if (!p) return;
-    if (!await LRDialogo.confirmar(`Restaurar ❤️ VIT, 🔥 ENER e 🧠 SAN de "${p.name}" ao máximo?`)) return;
+    if (!await confirmar(`Restaurar ❤️ VIT, 🔥 ENER e 🧠 SAN de "${p.name}" ao máximo?`)) return;
     window.adjustCombatStat(pid, 'vit', (p.hpMax || 0) - (p.hpCurrent || 0));
     window.adjustCombatStat(pid, 'ener', (p.enerMax || 0) - (p.enerCurrent || 0));
     window.adjustCombatStat(pid, 'san', (p.sanMax || 0) - (p.sanCurrent || 0));
@@ -399,7 +400,7 @@ window.updateCustomAbilities = function(pid, v) { const p = S.combatParticipants
 window.sortCombatByInitiative = function() { S.combatParticipants.sort((a, b) => b.initiative - a.initiative); renderCombatList(); showAlert('✅ Ordenado!', 'success'); };
 
 window.clearCombat = async function() {
-    if (!await LRDialogo.confirmar('Limpar toda a lista de combate?', { perigo: true })) return;
+    if (!await confirmar('Limpar toda a lista de combate?', { perigo: true })) return;
     Object.values(combatListeners).forEach(u => { if (typeof u === 'function') u(); }); combatListeners = {};
     S.setCombatParticipants([]); renderCombatList(); showAlert('✅ Limpo!', 'success');
 };

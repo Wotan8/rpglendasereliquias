@@ -5,6 +5,11 @@ console.log("🧩 painel-mechanics v2.1 — múltiplos booleanos ATIVOS");
 //          MechanicSelector component
 // =============================================
 
+// O diálogo da mesa entra por import: este arquivo é módulo (o Painel do
+// Criador, a Ficha e o Painel do Mestre o importam), e módulo não deve
+// depender de global que outro módulo plantou.
+import { perguntar } from '../../shared/dialogo.js?v=1';
+
 // --- Shared state (set by painel-firebase.js) ---
 // window._mechState = { db, collection, getDocs, addDoc, updateDoc, doc, Timestamp, currentUser, ... }
 
@@ -1341,7 +1346,7 @@ window._mechEquipReqAdd = async function (select, containerId) {
         // Tag ainda não usada por nenhum equipamento (ex: cadastrar a regra das
         // adagas antes de criar as adagas) — digita na hora.
         if (dupValue === '__nova__') {
-            dupValue = (await LRDialogo.perguntar('Tag do equipamento (escreva igual à do cadastro):') || '').trim();
+            dupValue = (await perguntar('Tag do equipamento (escreva igual à do cadastro):') || '').trim();
             if (!dupValue) { select.value = ''; return; }
         }
         req = { targetTipo: 'tag', tag: dupValue, formasEquip: [] };

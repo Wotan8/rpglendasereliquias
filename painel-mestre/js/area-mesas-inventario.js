@@ -19,6 +19,7 @@ import {
     desgastarConteiner, GATILHO,
 } from '../../shared/inventario-motor.js?v=7';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML, modeloDoItem } from '../../shared/restaurar-item.js?v=1';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 
 const _catalogoMestre = () => (window._systemData?.equipment || window._mestreCatalog || [])
@@ -793,7 +794,7 @@ window._restaurarMestreItem = async function() {
         const tpl = modeloDoItem(item, _catalogoMestre());
         const patch = patchRestauracao(tpl);
         if (!patch) { showAlert('⚠️ Este item não veio do catálogo — não há cadastro a restaurar.', 'warning'); return; }
-        if (!await LRDialogo.confirmar(textoConfirmacao(item, tpl))) return;
+        if (!await confirmar(textoConfirmacao(item, tpl))) return;
 
         await setDoc(doc(db, 'items', editId), patch, { merge: true });
         if (window.addLog) {
@@ -948,7 +949,7 @@ window._saveMestreItem = async function() {
 };
 
 window._deleteMestreItem = async function(itemId) {
-    if (!await LRDialogo.confirmar('Excluir este item?', { perigo: true })) return;
+    if (!await confirmar('Excluir este item?', { perigo: true })) return;
     try {
         // Capturar dados do item ANTES de deletar (para o log)
         let itemInfo = null;
@@ -1145,7 +1146,7 @@ window._filterMestreTransfer = function() {
 };
 
 window._executeMestreTransfer = async function(itemId, targetCharId, targetOwnerUid, isNpc = false) {
-    if (!await LRDialogo.confirmar('Transferir este item para o destino selecionado?')) return;
+    if (!await confirmar('Transferir este item para o destino selecionado?')) return;
     try {
         // Capturar item ANTES da transferência (para o log)
         let itemInfo = null;
@@ -1219,7 +1220,7 @@ window._executeMestreTransfer = async function(itemId, targetCharId, targetOwner
 };
 
 window._transferCharacterLooseItems = async function(charId) {
-    if (!await LRDialogo.confirmar('Transferir todos os itens soltos deste personagem para a Caixa do Mestre?')) return;
+    if (!await confirmar('Transferir todos os itens soltos deste personagem para a Caixa do Mestre?')) return;
     try {
         const allItems = await _fetchAllItems();
         const charItems = allItems.filter(it => it.characterId === charId && !it.parentItemId && !it.equipado);
@@ -1249,7 +1250,7 @@ window._transferCharacterLooseItems = async function(charId) {
 };
 
 window._transferAllLooseItems = async function() {
-    if (!await LRDialogo.confirmar('Transferir todos os itens soltos de TODOS os personagens para a Caixa do Mestre?')) return;
+    if (!await confirmar('Transferir todos os itens soltos de TODOS os personagens para a Caixa do Mestre?')) return;
     try {
         const allItems = await _fetchAllItems();
         const chars = S.mesaCharacters || [];

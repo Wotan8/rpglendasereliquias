@@ -6,6 +6,7 @@
 import { db, collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
+import { confirmar, perguntar } from '../../shared/dialogo.js?v=1';
 
 window._loadMesaFrentes = loadMesaFrentes;
 
@@ -108,7 +109,7 @@ export function computeAvanco(f, delta, motivo) {
 
 window.frenteAvancar = async function(id, delta) {
     const f = _frentes.find(x => x.id === id); if (!f) return;
-    const motivo = await LRDialogo.perguntar(delta > 0 ? 'Motivo do avanço (uma linha):' : 'Motivo do recuo (uma linha):');
+    const motivo = await perguntar(delta > 0 ? 'Motivo do avanço (uma linha):' : 'Motivo do recuo (uma linha):');
     if (motivo === null) return;
     const mov = computeAvanco(f, delta, motivo);
     if (!mov) return;
@@ -227,7 +228,7 @@ window.saveFrente = async function(id) {
 };
 
 window.deleteFrente = async function(id) {
-    if (!await LRDialogo.confirmar('Excluir esta frente e todo o histórico do relógio?', { perigo: true })) return;
+    if (!await confirmar('Excluir esta frente e todo o histórico do relógio?', { perigo: true })) return;
     try {
         await deleteDoc(doc(refFrentes(), id));
         showAlert('🗑️ Frente excluída', 'success');

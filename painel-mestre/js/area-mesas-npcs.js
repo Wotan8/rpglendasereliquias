@@ -5,6 +5,7 @@ import { db, collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc } fr
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { npcNaMesa, patchVinculoMesa } from '../../shared/npc-mesas.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
 window._loadMesaNpcs = loadMesaNpcs;
 
@@ -73,7 +74,7 @@ window.linkNpcToMesa = async function() {
 };
 
 window.unlinkNpcFromMesa = async function(npcId) {
-    if (!await LRDialogo.confirmar('Desvincular este NPC da mesa?')) return;
+    if (!await confirmar('Desvincular este NPC da mesa?')) return;
     try {
         await _setVinculo(npcId, false);
         showAlert('✅ NPC desvinculado', 'success');

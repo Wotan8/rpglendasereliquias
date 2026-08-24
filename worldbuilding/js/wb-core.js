@@ -10,6 +10,7 @@ import {
     collection, doc, getDocs, getDoc, setDoc, addDoc,
     updateDoc, deleteDoc, query, orderBy, where
 } from './firebase-config.js';
+import { confirmar } from '../../shared/dialogo.js?v=1';
 
         let currentUser = null;
         let currentCategory = 'dashboard';
@@ -106,7 +107,7 @@ import {
 
         // Logout function
         window.logout = async function () {
-            if (await LRDialogo.confirmar('🚪 Tem certeza que deseja sair?')) {
+            if (await confirmar('🚪 Tem certeza que deseja sair?')) {
                 try {
                     await signOut(auth);
                     window.location.href = '../index.html';
@@ -1468,7 +1469,7 @@ import {
         window.deleteFeira = async function () {
             if (!currentEditingFeira) return;
 
-            if (!await LRDialogo.confirmar(`Tem certeza que deseja excluir a feira "${currentEditingFeira.nome}"?`, { perigo: true })) return;
+            if (!await confirmar(`Tem certeza que deseja excluir a feira "${currentEditingFeira.nome}"?`, { perigo: true })) return;
 
             try {
                 await deleteDoc(doc(db, 'worldbuilding-submundo-feiras', currentEditingFeira.id));
@@ -3356,7 +3357,7 @@ import {
         };
 
         window.deleteCurrentEntry = async function () {
-            if (!currentEditingEntry || !await LRDialogo.confirmar('Tem certeza que deseja excluir esta entrada?', { perigo: true })) return;
+            if (!currentEditingEntry || !await confirmar('Tem certeza que deseja excluir esta entrada?', { perigo: true })) return;
             const cat = currentCategory === 'dashboard' ? 'geography' : currentCategory;
             try {
                 await deleteDoc(doc(db, categoryConfig[cat].collection, currentEditingEntry.id));
@@ -4143,7 +4144,7 @@ import {
         }
 
         async function deleteCampaign(campaignId) {
-            if (!campaignId || !await LRDialogo.confirmar('Tem certeza? Isso também excluirá todas as sessões desta campanha!', { perigo: true })) return;
+            if (!campaignId || !await confirmar('Tem certeza? Isso também excluirá todas as sessões desta campanha!', { perigo: true })) return;
             try {
                 // Delete all sessions for this campaign
                 const sessionsToDelete = allSessions.filter(s => s.campaignId === campaignId);
@@ -5815,7 +5816,7 @@ import {
         }
 
         async function deleteSession(sessionId) {
-            if (!sessionId || !await LRDialogo.confirmar('Tem certeza que deseja excluir esta sessão?', { perigo: true })) return;
+            if (!sessionId || !await confirmar('Tem certeza que deseja excluir esta sessão?', { perigo: true })) return;
             try {
                 await deleteDoc(doc(db, 'session-logs', sessionId));
                 showAlert('✅ Sessão excluída!', 'success');
