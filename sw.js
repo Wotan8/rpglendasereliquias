@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v307';
+const VERSION = 'v308';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -192,6 +192,8 @@ const PRECACHE_URLS = [
   '/shared/runa-em-jogo.js',
   '/shared/dialogo.js',
   '/shared/dialogo.css',
+  '/shared/sanidade.js',
+  '/shared/parse-custo.js',
   '/shared/detalhe.js',
   '/shared/detalhe.css',
   '/shared/acervo.css',

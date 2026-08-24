@@ -1,5 +1,6 @@
 // Parse do campo de custo do cadastro -> unidades da régua (§0.6).
-// Puro, sem Firestore. Teste embutido: node functions/parse-custo.mjs
+// Puro, sem Firestore, sem DOM: roda no node (auditorias de functions/) e no
+// navegador (aba Sanidade do Painel do Criador). Teste: shared/parse-custo.test.mjs
 export const ACAO = { 'Ação Padrão': 1.0, 'Ação Livre': 0, 'Ação de Movimento': 0.333,
     'Ação Completa (turno inteiro)': 1.333, 'Sustentada (1 Padrão/turno)': 1.0,
     'Reação': 1.0, 'Fora de combate': 0 };
@@ -40,24 +41,4 @@ export function recursoDoPredef(campos, valores) {
         }
     }
     return numericos + (texto ?? 0);
-}
-
-if (/parse-custo\.mjs$/.test(process.argv[1] || '')) {
-    const { default: assert } = await import('node:assert/strict');
-    const T = (tipo, label, key) => ({ tipo, label, key });
-    const texto = [T('text', 'Custo:', '4')];
-    assert.equal(recursoDoPredef(texto, { 4: '1 Energia' }), 1.0);
-    assert.equal(recursoDoPredef(texto, { 4: '1 Energia ou 1 Graça' }), 1.0, '"ou" escolhe, não soma');
-    assert.equal(recursoDoPredef(texto, { 4: '2 Energia ou 1 Energia + 2 Sanidade' }), 1.58,
-        'a alternativa mais barata é 1 Energia + 2 Sanidade');
-    assert.equal(recursoDoPredef(texto, { 4: '3 ENER' }), 3.0, 'abreviatura do cadastro');
-    assert.equal(recursoDoPredef(texto, { 4: '2 Cargas' }), 1.742);
-    assert.equal(recursoDoPredef(texto, { 4: '2 Cargas + 1 Energia' }), 2.742, '"+" soma na mesma alternativa');
-    assert.equal(recursoDoPredef(texto, { 4: '1 Energia (raio 3m)' }), 1.0, 'parêntese não é moeda');
-    assert.equal(recursoDoPredef(texto, { 4: '' }), 0);
-    // Invocador: dois campos numéricos, somam
-    const nums = [T('number', 'Custo Sanidade:', '5'), T('number', 'Custo em Energia', '6')];
-    assert.equal(recursoDoPredef(nums, { 5: '1', 6: '2' }), 2.29, '2 Energia + 1 Sanidade');
-    assert.equal(recursoDoPredef(nums, { 5: '0', 6: '1' }), 1.0);
-    console.log('✅ parse-custo: "ou" escolhe, "+" soma, campos numéricos somam, abreviatura e parêntese OK');
 }

@@ -41,6 +41,7 @@
             <!-- Tabs -->
             <div class="tabs" id="tabBar">
                 <button class="tab active" data-module="dashboard" onclick="switchModule('dashboard', this)"><span class="emoji">📈</span><span class="text"> Dashboard</span></button>
+                <button class="tab" data-module="sanidade" onclick="switchModule('sanidade', this)" title="Roda as auditorias de regra em cima do cadastro"><span class="emoji">🩺</span><span class="text"> Sanidade</span></button>
                 <button class="tab" data-module="races" onclick="switchModule('races', this)"><span class="emoji">🧬</span><span class="text"> Raças</span></button>
                 <button class="tab" data-module="classes" onclick="switchModule('classes', this)"><span class="emoji">⚔️</span><span class="text"> Classes</span></button>
                 <button class="tab" data-module="tribes" onclick="switchModule('tribes', this)"><span class="emoji">🏕️</span><span class="text"> Tribos</span></button>
@@ -83,6 +84,10 @@
 
             <!-- Dashboard (primeira aba) — contagens por coleção + últimas edições -->
             <div id="dashboardArea"></div>
+
+            <!-- Sanidade: as auditorias de functions/ que davam para trazer
+                 para o navegador. Roda em cima do cadastro ja carregado. -->
+            <div id="sanidadeArea" style="display:none"></div>
 
             <!-- Module Content Area -->
             <div id="moduleContent" style="display:none">

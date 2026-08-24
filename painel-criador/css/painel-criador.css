@@ -3847,3 +3847,105 @@ html.dark .meta-chip.chip-tag {
     font-size: .72rem;
     margin-right: 4px;
 }
+
+/* =====================================================================
+   🩺 SANIDADE — a aba que roda as auditorias em cima do cadastro
+   Reaproveita o vocabulário do diagnóstico do Dashboard (.dash-head,
+   .dash-tab-resumo, .table-container). O que é próprio daqui: a gaveta por
+   regra, que nasce ABERTA quando é grave e fechada quando é aviso — grave
+   quer dizer "a conta já está errada agora", e isso não pode ficar escondido
+   atrás de um clique.
+   ===================================================================== */
+.san-regra {
+    border: 1px solid var(--lr-border, #333);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: var(--lr-surface-2, rgba(255, 255, 255, .02));
+    overflow: hidden;
+}
+
+.san-regra > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: var(--lr-space-3, 12px);
+    cursor: pointer;
+    font-weight: 700;
+    font-size: .88rem;
+    list-style: none;
+}
+
+.san-regra > summary::-webkit-details-marker { display: none; }
+
+/* A seta é desenhada aqui para virar junto com o estado da gaveta. */
+.san-regra > summary::after {
+    content: '▾';
+    margin-left: auto;
+    color: var(--muted, #94a3b8);
+    transition: transform .15s ease;
+}
+
+.san-regra[open] > summary::after { transform: rotate(180deg); }
+
+.san-regra.san-grave { border-color: var(--lr-blood-soft, rgba(139, 30, 45, .22)); }
+/* blood-3 e nao blood-2: no tema escuro o -2 (#C94F5C) da 3,3:1 sobre a
+   superficie da gaveta, abaixo dos 4,5 que texto normal pede. */
+.san-regra.san-grave > summary { color: var(--lr-blood-3, #E08A93); }
+.san-regra.san-aviso > summary { color: var(--lr-gold-2, #e5c558); }
+
+.san-icone { flex: none; }
+.san-titulo { min-width: 0; }
+
+/* O "porquê" da regra fica sempre visível dentro da gaveta: sem ele a linha
+   vira uma acusação sem argumento, e o criador não sabe o que consertar. */
+.san-porque {
+    margin: 0 var(--lr-space-3, 12px) var(--lr-space-3, 12px);
+    padding: var(--lr-space-3, 12px);
+    border-left: 3px solid var(--lr-border, #333);
+    /* Fundo por TOKEN, não por rgba preto: no tema claro o preto translúcido
+       escurecia o papel e derrubava o contraste do texto secundário para 2,7:1. */
+    background: var(--lr-bg-1, #12161D);
+    border-radius: 0 6px 6px 0;
+    font-size: .78rem;
+    line-height: 1.55;
+    color: var(--lr-text-2, #A8B3C2);
+}
+
+.san-regra .table-container { margin: 0 var(--lr-space-3, 12px) var(--lr-space-3, 12px); }
+.san-clicavel { cursor: pointer; }
+.san-conta-grave { color: var(--lr-blood-2, #A82C39); font-weight: 700; }
+
+.san-quebrou {
+    padding: var(--lr-space-3, 12px);
+    border: 1px solid var(--lr-blood-soft, rgba(139, 30, 45, .22));
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: .82rem;
+    color: var(--lr-blood-2, #A82C39);
+}
+
+.san-limpas {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.san-limpas li {
+    font-size: .75rem;
+    color: var(--muted, #94a3b8);
+    border: 1px solid var(--lr-border-soft, #2a2a2a);
+    border-radius: 999px;
+    padding: 3px 10px;
+}
+
+/* Em tela pequena a tabela de achados é o que estoura primeiro: a segunda
+   coluna carrega a frase inteira. Ela quebra em vez de empurrar a página. */
+@media (max-width: 640px) {
+    .san-regra > summary { font-size: .82rem; padding: 10px; }
+    .san-porque { margin: 0 10px 10px; padding: 10px; font-size: .74rem; }
+    .san-regra .table-container { margin: 0 10px 10px; }
+    .san-regra .items-table td { font-size: .74rem; white-space: normal; }
+}

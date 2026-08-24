@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — aba Sanidade</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="css/painel-criador.css">
+<script>
+  // O CSS é editado durante o trabalho; o cache do navegador devolvia a versão
+  // velha e a conferência aparecia sem cor.
+  for (const l of document.querySelectorAll('link[href*="painel-criador.css"]')) l.href += '?cb=' + Date.now();
+</script>
+<style>
+  body { margin:0; padding:16px; font:14px/1.6 Inter, system-ui, sans-serif;
+         background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table#saida { border-collapse:collapse; font:11px ui-monospace, monospace; width:100%; margin-bottom:14px; }
+  table#saida td { border:1px solid var(--lr-border); padding:2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight:700; }
+  #placar { font-weight:800; margin:8px 0 16px; padding-top:8px; border-top:1px solid var(--lr-border); }
+  h1 { font-size:1rem; margin:0 0 4px; } p.nota { margin:0 0 10px; color:var(--lr-text-2); font-size:.8rem; }
+  #alvo { max-width: 900px; }
+  .barra { display:flex; gap:8px; margin-bottom:12px; }
+</style></head>
+<body>
+<h1>🩺 Aba Sanidade — regras e desenho</h1>
+<p class="nota">As regras vêm de <code>shared/sanidade.js</code> (o mesmo módulo que o
+   Painel importa) e o HTML sai recortado de <code>painel-firebase.js</code>, com o CSS
+   real. O que o teste de node não alcança e esta página alcança: a gaveta grave nascer
+   aberta, a de aviso nascer fechada, contraste nos dois temas e a tabela não estourar
+   no celular.</p>
+
+<div class="barra">
+  <button type="button" onclick="document.documentElement.classList.toggle('dark')">🌗 Trocar tema</button>
+  <button type="button" onclick="document.getElementById('alvo').style.maxWidth =
+      document.getElementById('alvo').style.maxWidth === '360px' ? '900px' : '360px'">📱 Estreitar</button>
+</div>
+
+<table id="saida"></table>
+<div id="placar"></div>
+
+<div id="alvo"></div>
+
+<script type="module">
+import { auditar, alvosConhecidos, sugerirParecido } from '../shared/sanidade.js';
+
+const src = (await (await fetch('js/painel-firebase.js?cb=' + Date.now())).text()).replace(/\r\n/g, '\n');
+
+/* O desenho é o do arquivo real. O recorte começa em _SAN_ICONE e vai até o fim
+   de _sanRegraHTML; escapeHtml e dashOpen são de fora, entram por parâmetro. */
+const i0 = src.indexOf('const _SAN_ICONE');
+const i1 = src.indexOf('\n}\n', src.indexOf('function _sanRegraHTML')) + 3;
+if (i0 < 0 || i1 < 3) throw new Error('_sanRegraHTML mudou de forma — reveja o recorte');
+const regraHTML = new Function('escapeHtml',
+    src.slice(i0, i1) + '\nreturn _sanRegraHTML;')(
+    s => String(s ?? '').replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
+
+/* ===== um cadastro de mentirinha, com um erro de cada tipo ===== */
+const SYS = {
+    skills: [{ id: 'sk1', nome: 'Esquiva' }, { id: 'sk2', nome: 'Atletismo' }],
+    derivedValues: [{ id: 'dv1', nome: 'Defesa' }, { id: 'dv2', nome: 'Esquiva' },
+                    { id: 'dv3', nome: 'Desloc. Aquático' }],
+    vitalStats: [{ nome: 'Vitalidade' }], bodyParts: [], classes: [], runicElements: [],
+    conditions: [{ nome: 'Célere' }, { nome: 'Blindado', acumulaNiveis: true, nivelMaximo: 3 }],
+    mechanics: [
+        { id: 'm1', nome: 'Guarda Alta', config: { calculos: [{ alvo: 'Reação', equacao: [] }] } },
+        { id: 'm2', nome: 'Nado', config: { calculos: [{ alvo: 'Deslocamento Aquático', equacao: [] }] } },
+        { id: 'm3', nome: 'Ambígua', config: { calculos: [{ alvo: 'Esquiva', equacao: [] }] } },
+    ],
+    classModules: [{ id: 'mod1', titulo: 'Passos Sombrios', itensPredefinidos: [
+        { nome: 'Correr', condicoesAplicadas: [{ condicao: 'Célere', nivel: 5 }] },
+        { nome: 'Casca', descricao: 'O alvo fica Blindado 8 por 1 cena.', regua: { razao: 1.4 } },
+        { nome: 'Eco', condicoesAplicadas: [{ condicao: 'Célere' }, { condicao: 'Célere' }] },
+    ] }],
+};
+
+const { regras, total, graves } = auditar(SYS);
+document.getElementById('alvo').innerHTML =
+    regras.filter(r => r.achados.length || r.quebrou).map(regraHTML).join('');
+
+/* ===== o placar ===== */
+const linhas = [];
+const t = (nome, cond) => linhas.push(
+    `<tr><td>${nome}</td><td class="${cond ? 'ok' : 'fail'}">${cond ? 'OK' : 'FALHOU'}</td></tr>`);
+const gav = (id) => [...document.querySelectorAll('.san-regra')]
+    .find(d => d.querySelector('.san-titulo')?.textContent === id);
+const achou = (id) => regras.find(r => r.id === id)?.achados || [];
+const txt = (id) => achou(id).map(a => a.problema).join(' | ');
+
+// --- as regras encontraram o que deviam ---
+t('T01 · o cadastro sujo dá 6 achados', total === 6);
+t('T02 · 5 deles são graves', graves === 5);
+t('T03 · "Reação" é acusada como inexistente', /alvo "Reação" não existe/.test(txt('ref-quebrada')));
+t('T04 · sugere "Desloc. Aquático" para quem escreveu por extenso',
+    /Existe "Desloc\. Aquático"/.test(txt('ref-quebrada')));
+t('T05 · não sugere nada para "Reação"',
+    achou('ref-quebrada').filter(a => /Reação/.test(a.problema)).every(a => !/era esse/.test(a.problema)));
+t('T06 · perícia ambígua com VD homônimo é acusada', achou('ref-pericia').length === 1);
+t('T07 · "Célere 5" entra em 1', /Célere 5 entra em 1/.test(txt('nivel-condicao')));
+t('T08 · a prosa "Blindado 8" é cortada em 3', /promete "Blindado 8", chega 3/.test(txt('nivel-na-prosa')));
+t('T09 · condição repetida é vista', achou('condicao-repetida').length === 1);
+t('T10 · achado grave carrega endereço para abrir o registro',
+    achou('nivel-condicao').every(a => a.modulo && a.itemId));
+
+// --- o desenho ---
+t('T11 · uma gaveta por regra com achado', document.querySelectorAll('.san-regra').length === 5);
+t('T12 · gaveta GRAVE nasce aberta', gav('Referência que a ficha lê como zero')?.open === true);
+t('T13 · gaveta de AVISO nasce fechada',
+    gav('Condição declarada duas vezes na mesma habilidade')?.open === false);
+t('T14 · o "porquê" aparece dentro de toda gaveta',
+    [...document.querySelectorAll('.san-regra')].every(d => d.querySelector('.san-porque')?.textContent.trim()));
+t('T15 · a linha do achado é clicável', document.querySelectorAll('.san-clicavel').length >= 5);
+t('T16 · o clique manda para o registro certo',
+    /dashOpen\('classModules', 'mod1'\)/.test(document.getElementById('alvo').innerHTML));
+t('T17 · o texto do achado é escapado, não injetado',
+    !/<script/i.test(document.getElementById('alvo').innerHTML));
+
+// --- contraste e layout, medidos no que está na tela ---
+const corDe = (el, prop) => getComputedStyle(el)[prop];
+const lum = (c) => {
+    const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => {
+        v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+    });
+    return .2126 * r + .7152 * g + .0722 * b;
+};
+const contraste = (a, b) => {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + .05) / (y + .05);
+};
+/* O fundo de verdade é o primeiro ancestral OPACO: medir contra o do próprio
+   elemento dava rgba(0,0,0,0) e o teste mentia (dizia 2,7:1 num texto legível). */
+const fundoReal = (el) => {
+    for (let n = el; n; n = n.parentElement) {
+        const c = corDe(n, 'backgroundColor');
+        const a = Number((c.match(/[\d.]+/g) || [])[3] ?? 1);
+        if (a >= .95) return c;
+    }
+    return 'rgb(255,255,255)';
+};
+const sumGrave = gav('Referência que a ficha lê como zero').querySelector('summary');
+// 4,5:1 e nao 3:1: o titulo tem .88rem, que a WCAG nao considera texto grande.
+t('T18 · titulo grave legivel sobre o fundo (>=4,5:1)',
+    contraste(corDe(sumGrave, 'color'), fundoReal(sumGrave)) >= 4.5);
+const porque = document.querySelector('.san-porque');
+t('T19 · o "porque" legivel (>=4,5:1)',
+    contraste(corDe(porque, 'color'), fundoReal(porque)) >= 4.5);
+const sumAviso = gav('Condicao declarada duas vezes na mesma habilidade')
+    || document.querySelector('.san-aviso > summary')?.parentElement;
+t('T18b · titulo de aviso legivel (>=4,5:1)',
+    contraste(corDe(sumAviso.querySelector('summary'), 'color'), fundoReal(sumAviso)) >= 4.5);
+t('T20 · a seta da gaveta gira quando abre',
+    getComputedStyle(sumGrave, '::after').transform !== 'none');
+
+// A tabela de achados é o que estoura primeiro em tela estreita.
+document.getElementById('alvo').style.maxWidth = '360px';
+await new Promise(r => setTimeout(r, 30));
+const larguraPagina = document.documentElement.scrollWidth <= window.innerWidth + 1;
+t('T21 · em 360px nada empurra a página para o lado', larguraPagina);
+document.getElementById('alvo').style.maxWidth = '900px';
+
+/* Repete so as medidas de cor no tema escuro: e la que o vermelho quase
+   sumia no fundo de pedra, e um placar que so ve o claro nao teria pego. */
+document.documentElement.classList.add('dark');
+await new Promise(r => setTimeout(r, 30));
+t('T22 · escuro: titulo grave legivel (>=4,5:1)',
+    contraste(corDe(sumGrave, 'color'), fundoReal(sumGrave)) >= 4.5);
+t('T23 · escuro: o "porque" legivel (>=4,5:1)',
+    contraste(corDe(porque, 'color'), fundoReal(porque)) >= 4.5);
+t('T24 · escuro: titulo de aviso legivel (>=4,5:1)',
+    contraste(corDe(sumAviso.querySelector('summary'), 'color'), fundoReal(sumAviso)) >= 4.5);
+document.documentElement.classList.remove('dark');
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const falhas = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML =
+    `<span class="${falhas ? 'fail' : 'ok'}">${linhas.length - falhas}/${linhas.length}</span>`
+    + (falhas ? ` — ${falhas} falha(s)` : ' — tudo certo');
+</script>
+</body></html>

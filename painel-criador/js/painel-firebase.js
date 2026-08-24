@@ -871,13 +871,18 @@ window.switchModule = function (moduleName, btnEl) {
     if (mechArea) mechArea.style.display = 'none';
     window._mechParentFieldKey = null;
 
-    // O cabeçalho do painel vive só no Dashboard — as demais abas vão direto ao conteúdo.
+    // Duas abas não têm CRUD e têm área própria: o Dashboard e a Sanidade.
+    // O cabeçalho do painel vive só no Dashboard — as demais vão direto ao conteúdo.
     const isDash = moduleName === 'dashboard';
+    const isSan = moduleName === 'sanidade';
     const header = document.querySelector('.menu-header');
     if (header) header.style.display = isDash ? '' : 'none';
     document.getElementById('dashboardArea').style.display = isDash ? '' : 'none';
-    document.getElementById('moduleContent').style.display = isDash ? 'none' : '';
+    const sanArea = document.getElementById('sanidadeArea');
+    if (sanArea) sanArea.style.display = isSan ? '' : 'none';
+    document.getElementById('moduleContent').style.display = (isDash || isSan) ? 'none' : '';
     if (isDash) return loadDashboard();
+    if (isSan) return loadSanidade();
 
     const modDef = MODULE_DEFS[moduleName];
     const titleEl = document.getElementById('createCardTitle');
@@ -1248,6 +1253,107 @@ async function renderDiagnosticoTabuleiro() {
             <div class="dash-tab-resumo tem-falta">❌ Não foi possível rodar o diagnóstico: ${escapeHtml(String(e.message || e))}</div>`;
     }
 }
+
+/* ============================================================
+   🩺 SANIDADE DO SISTEMA
+   O projeto tem dezenas de auditorias em functions/ — todas node, todas com
+   credencial de admin, todas rodando só quando alguém as roda. O criador nunca
+   as via, e os erros que elas pegam são justamente os silenciosos: o cadastro
+   salva bonito e a régua fica torta.
+
+   As regras que dependem só do cadastro vivem em shared/sanidade.js (puras,
+   com teste). Aqui é só a tela: montar o `sys` a partir dos caches que o painel
+   já mantém e desenhar o que voltou.
+   ============================================================ */
+function _sanSys() {
+    return {
+        mechanics: mechanicsCache || [],
+        skills: skillsCache || [],
+        derivedValues: derivedValuesCache || [],
+        vitalStats: vitalStatsCache || [],
+        conditions: conditionsCache || [],
+        bodyParts: bodyPartsCache || [],
+        classes: window._classesCache || [],
+        classModules: classModulesCache || [],
+        runicElements: window._runicElementsCache || [],
+    };
+}
+
+const _SAN_ICONE = { grave: '❌', aviso: '⚠️' };
+
+function _sanRegraHTML(r) {
+    if (r.quebrou) {
+        return `<div class="san-quebrou">💥 A regra <strong>${escapeHtml(r.titulo)}</strong> estourou:
+            <code>${escapeHtml(r.quebrou)}</code></div>`;
+    }
+    const linhas = r.achados.map(a => `
+        <tr class="${a.itemId ? 'san-clicavel' : ''}"
+            ${a.itemId ? `onclick="dashOpen('${a.modulo}', '${a.itemId}')" title="Abrir o registro"` : ''}>
+            <td><strong>${escapeHtml(a.onde)}</strong></td>
+            <td>${escapeHtml(a.problema)}</td>
+        </tr>`).join('');
+
+    return `
+    <details class="san-regra san-${r.gravidade}" ${r.gravidade === 'grave' ? 'open' : ''}>
+        <summary>
+            <span class="san-icone">${_SAN_ICONE[r.gravidade] || 'ℹ️'}</span>
+            <span class="san-titulo">${escapeHtml(r.titulo)}</span>
+            <span class="skills-category-count">${r.achados.length}</span>
+        </summary>
+        <p class="san-porque">${escapeHtml(r.porque)}</p>
+        <div class="table-container">
+            <table class="users-table items-table">
+                <thead><tr><th>Onde</th><th>O que está errado</th></tr></thead>
+                <tbody>${linhas}</tbody>
+            </table>
+        </div>
+    </details>`;
+}
+
+async function loadSanidade() {
+    const area = document.getElementById('sanidadeArea');
+    if (!area) return;
+    area.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">⏳ Auscultando o cadastro...</div>';
+
+    try {
+        // O mesmo cadastro que as outras abas usam — nenhuma leitura a mais.
+        await Promise.all([
+            refreshMechanicsCache(), refreshSkillsCache(), refreshDerivedValuesCache(),
+            refreshVitalStatsCache(), refreshConditionsCache(), refreshBodyPartsCache(),
+            refreshClassesCache(), refreshClassModulesCache(), refreshRunicElementsCache(),
+        ]);
+        const { auditar } = await import('../../shared/sanidade.js?v=1');
+        const { regras, total, graves } = auditar(_sanSys());
+
+        const comAchado = regras.filter(r => r.achados.length || r.quebrou);
+        const limpas = regras.filter(r => !r.achados.length && !r.quebrou);
+
+        area.innerHTML = `
+            <div class="dash-head">
+                <div class="dash-total">🩺 <strong>${total}</strong>
+                    ${total === 1 ? 'achado' : 'achados'} em ${regras.length} regras
+                    ${graves ? ` · <span class="san-conta-grave">${graves} grave${graves > 1 ? 's' : ''}</span>` : ''}</div>
+                <button type="button" class="btn-edit" onclick="sanRefresh()" title="Rodar de novo">🔄 Rodar de novo</button>
+            </div>
+            <div class="dash-tab-resumo ${total ? 'tem-falta' : 'tudo-ok'}">
+                ${total
+                    ? '⚠️ Cada linha abaixo é um erro que o cadastro aceitou salvar e que a ficha '
+                      + 'não acusa em jogo. Clique na linha para abrir o registro.'
+                    : '✅ Nenhuma das regras encontrou problema no cadastro.'}
+            </div>
+            ${comAchado.map(_sanRegraHTML).join('')}
+            ${limpas.length ? `
+                <div class="skills-category-header">✅ Passaram
+                    <span class="skills-category-count">${limpas.length}</span></div>
+                <ul class="san-limpas">${limpas.map(r => `<li>${escapeHtml(r.titulo)}</li>`).join('')}</ul>` : ''}`;
+    } catch (e) {
+        console.error(e);
+        area.innerHTML = `<div class="dash-tab-resumo tem-falta">❌ Não foi possível auscultar:
+            ${escapeHtml(String(e.message || e))}</div>`;
+    }
+}
+
+window.sanRefresh = () => loadSanidade();
 
 window.dashRefresh = () => loadDashboard();
 
