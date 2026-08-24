@@ -29,7 +29,7 @@
 <div id="palco"></div>
 
 <script type="module">
-import { detalheHTML, indiceDeUso, equacaoEmTexto, chaveDoAlvo, ligarDetalhe, abrirDetalhe, temDetalhe } from './shared/detalhe.js?v=3';
+import { detalheHTML, indiceDeUso, equacaoEmTexto, chaveDoAlvo, ligarDetalhe, abrirDetalhe, temDetalhe, posicionarCaixa } from './shared/detalhe.js?v=4';
 
 const linhas = [];
 let ok = 0;
@@ -242,6 +242,46 @@ teste('T40 · com muita fonte, o corpo rola por dentro em vez de crescer',
 teste('T41 · e a página não ganha rolagem horizontal',
     document.documentElement.scrollWidth <= document.documentElement.clientWidth);
 jd.close();
+
+// ---- 16. a caixa do hover NUNCA sai da tela ----
+/* O bug que sobrou depois da janela: a descrição da Sanidade tem cinco
+   parágrafos, e com o rótulo perto do rodapé a caixa era jogada para cima
+   sem conferir se cabia lá — saía pelo topo e o começo do texto ficava
+   inalcançável. */
+const DESC_LONGA = ['A Sanidade mede a integridade da mente.',
+    'Quando a Sanidade Atual chega a 0, a mente cede e o personagem entra no estado "Enlouquecendo", desenvolvendo 1 transtorno psicológico.',
+    'Testes falhos de Sanidade provocam efeitos como pânico, alucinações ou paralisia temporária.',
+    'Pode ser recuperada por descanso longo, terapia, rituais de calma ou magia restauradora da mente.',
+    'Olhar além do véu cobra o seu preço.'].join(String.fromCharCode(10));
+
+const rotuloBaixo = document.createElement('div');
+rotuloBaixo.setAttribute('data-det-nome', 'Sanidade');
+rotuloBaixo.setAttribute('data-det-desc', DESC_LONGA);
+rotuloBaixo.textContent = 'Sanidade';
+rotuloBaixo.style.cssText = 'position:fixed;left:40px;bottom:24px';   // como no print
+document.body.appendChild(rotuloBaixo);
+rotuloBaixo.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+
+const cxB = $('.lr-det-caixa');
+const rb = cxB.getBoundingClientRect();
+teste(`T42 · rótulo no rodapé: a caixa não sai pelo topo (top ${Math.round(rb.top)})`, rb.top >= -1);
+teste(`T43 · nem pelo rodapé (bottom ${Math.round(rb.bottom)} de ${innerHeight})`, rb.bottom <= innerHeight + 1);
+teste('T44 · nem pelos lados', rb.left >= -1 && rb.right <= innerWidth + 1);
+teste('T45 · a descrição longa é cortada no resumo, não estica a caixa',
+    getComputedStyle($('.lr-det-desc', cxB)).overflow === 'hidden');
+
+// e no topo da tela, o inverso: não pode sair por baixo
+rotuloBaixo.style.cssText = 'position:fixed;left:40px;top:8px';
+rotuloBaixo.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+const rt = cxB.getBoundingClientRect();
+teste(`T46 · rótulo no topo: a caixa continua dentro (top ${Math.round(rt.top)}, bottom ${Math.round(rt.bottom)})`,
+    rt.top >= -1 && rt.bottom <= innerHeight + 1);
+
+// tela muito baixa: corta a altura e rola por dentro, em vez de vazar
+teste('T47 · a caixa tem teto de altura para tela baixa',
+    parseFloat(getComputedStyle(cxB).maxHeight) > 0);
+rotuloBaixo.remove();
+if (cxB) cxB.style.display = 'none';
 
 // ---- saída ----
 $('#saida').innerHTML = linhas.map(([n, p]) =>

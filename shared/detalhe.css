@@ -106,6 +106,27 @@
 
 
 
+/* ---- O RESUMO cabe em poucas linhas ----
+   A descrição da Sanidade tem cinco parágrafos. Mesmo sem a fórmula, o hover
+   com o texto inteiro ficava mais alto que a tela — e caixa flutuante não tem
+   para onde crescer. Aqui ela é cortada em seis linhas com reticências; o
+   texto inteiro fica na janela, a um clique. */
+.lr-det-resumo .lr-det-desc {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 6;
+    line-clamp: 6;
+    overflow: hidden;
+}
+
+/* Teto de segurança: valor com nome enorme, tela baixa, zoom do navegador.
+   O posicionador ainda corta a altura ao espaço real; isto é a rede. */
+.lr-det-caixa, .dv-tooltip, #npcHoverTooltip {
+    max-height: min(60vh, 420px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
 /* ---- O convite do hover ----
    O hover mostra só nome e descrição; a fórmula inteira mora na janela. */
 .lr-det-mais {

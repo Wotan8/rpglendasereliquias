@@ -108,12 +108,21 @@ window.hideNpcTooltip = function() {
         setTimeout(() => { if (npcTooltipEl.style.opacity === '0') npcTooltipEl.style.display = 'none'; }, 150);
     }
 };
+/* A caixa segue o cursor, mas nunca sai da tela: a conta é a mesma das outras
+   duas fichas (shared/detalhe.js), com um alvo de 1px no ponteiro. */
 window.moveNpcTooltip = function(event) {
     if (!npcTooltipEl || npcTooltipEl.style.display === 'none') return;
+    if (window.LRDetalhe) {
+        const x = event.clientX, y = event.clientY;
+        window.LRDetalhe.posicionarCaixa(npcTooltipEl,
+            { getBoundingClientRect: () => ({ left: x, right: x, top: y, bottom: y, width: 0, height: 0 }) },
+            { margem: 14 });
+        return;
+    }
     const rect = npcTooltipEl.getBoundingClientRect();
-    let top = event.clientY + 15; let left = event.clientX + 15;
+    let top = event.clientY + 15, left = event.clientX + 15;
     if (left + rect.width > window.innerWidth) left = window.innerWidth - rect.width - 10;
-    if (top + rect.height > window.innerHeight) top = event.clientY - rect.height - 10;
+    if (top + rect.height > window.innerHeight) top = Math.max(10, event.clientY - rect.height - 10);
     npcTooltipEl.style.top = top + 'px'; npcTooltipEl.style.left = left + 'px';
 };
 

@@ -673,21 +673,13 @@ const _DV_TOOLTIP_POR_TIPO = {
         : null,
 };
 
-/** Encosta o tooltip no label e puxa de volta se estourar a janela. */
+/** Encosta o tooltip no label sem deixar nada dele fora da tela.
+ *  A conta mora em shared/detalhe.js: as três telas tinham a mesma e as três
+ *  jogavam a caixa para cima sem conferir se cabia lá. */
 function _dvPosicionarTooltip(label) {
-    const rect = label.getBoundingClientRect();
-    _dvTooltipEl.style.left = rect.left + 'px';
-    _dvTooltipEl.style.top = (rect.bottom + 6) + 'px';
-
-    requestAnimationFrame(() => {
-        const tipRect = _dvTooltipEl.getBoundingClientRect();
-        if (tipRect.right > window.innerWidth - 10) {
-            _dvTooltipEl.style.left = (window.innerWidth - tipRect.width - 10) + 'px';
-        }
-        if (tipRect.bottom > window.innerHeight - 10) {
-            _dvTooltipEl.style.top = (rect.top - tipRect.height - 6) + 'px';
-        }
-    });
+    if (window.LRDetalhe) return window.LRDetalhe.posicionarCaixa(_dvTooltipEl, label);
+    _dvTooltipEl.style.left = label.getBoundingClientRect().left + 'px';
+    _dvTooltipEl.style.top = (label.getBoundingClientRect().bottom + 6) + 'px';
 }
 
 /* O descritor deste rótulo. Os construtores por tipo sabem ONDE mora a

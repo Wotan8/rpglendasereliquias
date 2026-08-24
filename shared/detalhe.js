@@ -179,8 +179,9 @@ export function detalheHTML(o = {}, modo = 'completo') {
     if (!nome) return '';
 
     if (modo === 'resumo') {
+        // `lr-det-resumo` é o que corta a descrição em poucas linhas (CSS)
         return `
-    <div class="lr-det">
+    <div class="lr-det lr-det-resumo">
         <div class="lr-det-nome">${o.icone ? esc(o.icone) + ' ' : ''}${esc(nome)}</div>
         ${o.descricao ? `<div class="lr-det-desc">${esc(o.descricao)}</div>` : ''}
         ${temDetalhe(o) ? '<div class="lr-det-mais">🔎 Clique para ver detalhes</div>' : ''}
@@ -273,16 +274,57 @@ const linhasDeFormula = (bruto) => String(bruto || '')
         return i < 0 ? { fonte: l, texto: '' } : { fonte: l.slice(0, i).trim(), texto: l.slice(i + 1).trim() };
     });
 
+/**
+ * Encosta a caixa no rótulo sem deixar NADA dela fora da tela.
+ *
+ * As três telas tinham cada uma a sua versão disto, e as três erravam do mesmo
+ * jeito: quando não cabia embaixo, jogavam a caixa para cima do rótulo — sem
+ * conferir se cabia LÁ. Em rótulo perto do topo (a Sanidade, no rodapé da
+ * ficha, com descrição de cinco parágrafos) ela saía pelo topo da janela e o
+ * começo do texto ficava inalcançável.
+ *
+ * Aqui a ordem é: escolhe o lado com mais espaço, corta a altura no que couber
+ * (a caixa rola por dentro), e só então prende dentro das bordas.
+ *
+ * Sem requestAnimationFrame de propósito: a medição tem de valer AGORA, e em
+ * aba de segundo plano o rAF não chega — a caixa ficava na posição de antes.
+ *
+ * @param {HTMLElement} c   a caixa
+ * @param {HTMLElement} el  o rótulo
+ * @param {{margem?:number}} [opts]
+ */
+export function posicionarCaixa(c, el, opts = {}) {
+    const margem = opts.margem ?? 8;
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+
+    // mede solta, para saber a altura natural
+    c.style.maxHeight = '';
+    c.style.left = '0px';
+    c.style.top = '0px';
+    const alturaNatural = c.offsetHeight;
+    const largura = c.offsetWidth;
+
+    const espacoAbaixo = vh - r.bottom - margem * 2;
+    const espacoAcima = r.top - margem * 2;
+    const abaixo = espacoAbaixo >= alturaNatural || espacoAbaixo >= espacoAcima;
+    const teto = Math.max(120, abaixo ? espacoAbaixo : espacoAcima);
+
+    // não cabe inteira de nenhum lado: corta e deixa rolar por dentro
+    if (alturaNatural > teto) c.style.maxHeight = teto + 'px';
+    const altura = Math.min(alturaNatural, teto);
+
+    let top = abaixo ? r.bottom + margem / 2 : r.top - altura - margem / 2;
+    let left = r.left;
+    left = Math.min(left, vw - largura - margem);
+    top = Math.min(top, vh - altura - margem);
+    c.style.left = Math.max(margem, left) + 'px';
+    c.style.top = Math.max(margem, top) + 'px';
+}
+
 /** Encosta no rótulo e puxa de volta se estourar a janela. */
 function posicionar(el) {
-    const c = caixa(), r = el.getBoundingClientRect();
-    c.style.left = r.left + 'px';
-    c.style.top = (r.bottom + 6) + 'px';
-    requestAnimationFrame(() => {
-        const b = c.getBoundingClientRect();
-        if (b.right > window.innerWidth - 10) c.style.left = Math.max(10, window.innerWidth - b.width - 10) + 'px';
-        if (b.bottom > window.innerHeight - 10) c.style.top = Math.max(10, r.top - b.height - 6) + 'px';
-    });
+    posicionarCaixa(caixa(), el);
 }
 
 export function ligarDetalhe(raiz, sysDe) {
@@ -325,5 +367,6 @@ export function ligarDetalhe(raiz, sysDe) {
 
 if (typeof window !== 'undefined') {
     /* Ponte para os scripts CLÁSSICOS da Ficha, que não importam. */
-    window.LRDetalhe = { detalheHTML, indiceDeUso, equacaoEmTexto, chaveDoAlvo, ligarDetalhe, abrirDetalhe, temDetalhe };
+    window.LRDetalhe = { detalheHTML, indiceDeUso, equacaoEmTexto, chaveDoAlvo,
+        ligarDetalhe, abrirDetalhe, temDetalhe, posicionarCaixa };
 }
