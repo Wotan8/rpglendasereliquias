@@ -44,14 +44,24 @@
 const src = (await (await fetch('js/inventory.js?cb=' + Date.now())).text()).replace(/\r\n/g, '\n');
 
 /* Recorta do arquivo real o trecho que constrói a fórmula: de _fontesDoItem
-   até o fim de _descritorDaColuna. Só `_escHtml` vem de fora. */
-const i0 = src.indexOf('function _fontesDoItem(');
-const i1 = src.indexOf('\n}\n', src.indexOf('function _descritorDaColuna(')) + 3;
+   até o fim de _linhasDotDoItem. `_escHtml`, `_SK_PREFIXO`, `TARGET_MAP` e
+   `getEffectiveDotValue` moram fora do recorte e entram por parâmetro. */
+// começa no _bagKey, não no _fontesDoItem: a const vem antes e o recorte
+// sem ela morria com "_bagKey is not defined".
+const i0 = src.indexOf('const _bagKey =');
+const i1 = src.indexOf('\n}\n', src.indexOf('function _linhasDotDoItem(')) + 3;
 if (i0 < 0 || i1 < 3) throw new Error('as funções de fórmula mudaram de forma — reveja o recorte');
-const F = new Function('_escHtml', 'window',
-    src.slice(i0, i1) + '\nreturn { _fontesDoItem, _linhasFormula, _blocoFormula, _descritorDaColuna, _linhaDet };')(
+const F = new Function('_escHtml', '_SK_PREFIXO', 'TARGET_MAP', 'getEffectiveDotValue', 'window',
+    src.slice(i0, i1)
+    + '\nreturn { _fontesDoItem, _linhasFormula, _blocoFormula, _descritorDaColuna,'
+    + ' _linhaDet, _dotInfo, _linhasDotDoItem };')(
     (t) => String(t ?? '').replace(/[&<>"']/g, c =>
         ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
+    { mental: 'sk_mental_', fisico: 'sk_fisico_', social: 'sk_social_',
+      combate: 'sk_combate_', exclusivo: 'sk_exclusivo_' },
+    { 'DES': 'attr_des', 'Destreza': 'attr_des', 'PRS': 'attr_prs', 'Perseverança': 'attr_prs',
+      'Bloquear': 'sk_combate_bloquear', 'Perícia: Bloquear': 'sk_combate_bloquear' },
+    (k) => ({ sk_combate_bloquear: 5, attr_des: 4 })[k] ?? 0,
     window);
 
 /* ===== a ficha de mentirinha ===== */
@@ -73,7 +83,20 @@ window.state = { itemBonusFontes: { adaga: {
         // aplicado por inventory.js §1c e não por uma mecânica.
         { mecanica: 'Vínculo de Adaga', op: '+', expr: '[Item: afiacao] 1', valor: 1 },
     ],
+    /* Perícia e atributo vinculados somam no bag GLOBAL do personagem: no
+       número final não sobra rastro de qual peça pôs o quê. A trilha é o
+       único jeito de a janela da peça declarar o que ela faz. */
+    'sk_combate_bloquear': [
+        { mecanica: 'Vínculo de Adaga', op: '+', expr: '[Item: qualidade] 2', valor: 2 },
+    ],
+    'attr_des': [
+        { mecanica: 'Vínculo de Adaga', op: '+', expr: '', valor: 1 },
+    ],
 } } };
+window.SKILLS = { combate: [{ id: 'sk-bloq', key: 'bloquear', name: 'Bloquear',
+    descricao: 'Aparar o golpe com o escudo.' }] };
+window.state.dots = { sk_combate_bloquear: 3, attr_des: 3 };
+window.state.mechanicLimits = {};
 window._systemData = null;
 
 const ITEM = { id: 'adaga', nome: 'Adaga' };
@@ -83,6 +106,7 @@ const PARCELA = { key: 'BONUS_DANO', nome: 'Bônus de Dano', icone: '💥', base
 
 const bloco = F._blocoFormula(COL, 'adaga');
 const parcela = F._linhasFormula(PARCELA, 'adaga', { prefixoNome: true, semCadastro: true }).join('');
+const dots = F._linhasDotDoItem(ITEM);
 
 document.getElementById('alvo').innerHTML = `
     <span class="inv-detail-label">⚔️ Com este item</span>
@@ -101,7 +125,13 @@ document.getElementById('alvo').innerHTML = `
         <span class="inv-escopo-calc">base 4 + 3 <em>(item)</em></span>
         <span class="inv-escopo-total">= 7</span>
         ${bloco}
-    </div>`;
+    </div>
+    ${dots.map(c => `<div class="inv-escopo-row">
+        <button type="button" class="inv-escopo-nome inv-escopo-abrir">${c.icone} ${c.nome}</button>
+        <span class="inv-escopo-calc">base ${c.base} ${c.bonus >= 0 ? '+' : '−'} ${Math.abs(c.bonus)} <em>(item)</em></span>
+        <span class="inv-escopo-total">= ${c.total}</span>
+        ${F._blocoFormula(c, 'adaga')}
+    </div>`).join('')}`;
 
 /* ===== o placar ===== */
 const linhas = [];
@@ -125,6 +155,32 @@ t('T09b · vínculo do cadastro do item aparece como fonte, igual a uma mecânic
     /Vínculo de Adaga \+ \[Item: afiacao\] 1 = 1/.test(txt));
 t('T10 · parcela de dano não repete o cadastro do VD (já está acima)',
     (txt.match(/Cadastro do Valor Derivado/g) || []).length === 1);
+
+// --- perícia e atributo vinculados ---
+{
+    t('T24 · a perícia vinculada vira linha própria', dots.some(c => c.nome === 'Bloquear'));
+    t('T25 · e o atributo também', dots.some(c => c.nome === 'Destreza'));
+    t('T26 · o nome do atributo sai por extenso, não pela sigla',
+        !dots.some(c => c.nome === 'DES'));
+    t('T27 · o nome do dot não vem com o prefixo "Perícia:"',
+        !dots.some(c => /^Perícia:/.test(c.nome)));
+    const bl = dots.find(c => c.nome === 'Bloquear');
+    t('T28 · o total é o valor de agora e a base é sem a peça',
+        bl.total === 5 && bl.bonus === 2 && bl.base === 3);
+    t('T29 · a fórmula da perícia mostra a equação com o valor',
+        /\[Item: qualidade\] 2 = 2/.test(F._blocoFormula(bl, 'adaga')));
+    t('T30 · linha de dot não inventa "Cadastro do Valor Derivado"',
+        !/Cadastro do Valor Derivado/.test(F._blocoFormula(bl, 'adaga')));
+    t('T31 · a descrição da perícia chega ao descritor da janela',
+        /escudo/.test(F._descritorDaColuna(bl, 'adaga', ITEM).descricao));
+    t('T32 · Valor Derivado não é confundido com dot (não duplica linha)',
+        !dots.some(c => c.key.startsWith('DERIVED:')));
+    // "raça, classe, peculiaridade" e a base de um VD calculado, nao de um
+    // nivel de pericia que o jogador comprou.
+    t('T33 · a base do dot diz de onde vem, sem copiar o texto do VD',
+        /seus pontos e o que não vem desta peça/.test(F._blocoFormula(bl, 'adaga'))
+        && !/raça, classe/.test(F._blocoFormula(bl, 'adaga')));
+}
 
 // --- vazio não vira bloco fantasma ---
 t('T11 · alvo sem fonte e sem base não desenha bloco',

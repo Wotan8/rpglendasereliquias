@@ -364,10 +364,22 @@ function _aplicarAtributosEPericias(item) {
     if (!window.state.mechanicBonuses) window.state.mechanicBonuses = {};
     const bag = window.state.mechanicBonuses;
 
+    /* O bag de atributo e perícia é o GLOBAL, não o do item: dois escudos com
+       +2 Bloquear somam 4, e é isso mesmo. Por isso a trilha importa ainda mais
+       aqui do que nos Valores Derivados — no número final não sobra rastro de
+       qual peça pôs o quê. */
+    const trilha = (chave, rotulo, equacao, mod) => {
+        if (typeof window._meRegistrarFonte === 'function') {
+            window._meRegistrarFonte(item.id, chave, { nome: rotulo }, '+', { equacao }, mod);
+        }
+    };
+    const doItem = `Vínculo de ${item.nome || 'item'}`;
+
     for (const a of _campoDoItem(item, 'atributosVinculados')) {
         const mod = Number(a?.modificador) || 0;
         if (!mod || !a.id) continue;
         bag[a.id] = (bag[a.id] || 0) + mod;
+        trilha(a.id, doItem, null, mod);
     }
 
     for (const p of _campoDoItem(item, 'periciasVinculadas')) {
@@ -380,6 +392,7 @@ function _aplicarAtributosEPericias(item) {
         const chave = _periciaDotKey(p.id);
         if (!chave) { console.warn(`⚠️ [item ${item.nome}] perícia ${p.id} não encontrada`); continue; }
         bag[chave] = (bag[chave] || 0) + mod;
+        trilha(chave, doItem, temEq ? p.equacao : null, mod);
     }
 }
 
@@ -1286,12 +1299,17 @@ function _formulaDoVD(dvKey) {
    fórmula de dois jeitos diferentes obrigam a reaprender a ler.
    ===================================================================== */
 
+/* A chave no bag. Valor Derivado mora sob "DERIVED:KEY"; atributo e perícia
+   moram sob a própria chave de dot ("attr_des", "sk_combate_bloquear"), porque
+   é ali que a ficha lê o nível. Quem já tem a chave crua passa `bagKey`. */
+const _bagKey = (c) => c.bagKey || `DERIVED:${c.key}`;
+
 /** As parcelas que ESTE item pôs neste alvo, com a conta de cada uma. */
-function _fontesDoItem(itemId, dvKey) {
+function _fontesDoItem(itemId, bagKey) {
     const porItem = (window.state && window.state.itemBonusFontes || {})[itemId] || {};
     // 'BASE:' é a mesma parcela, aplicada antes da fórmula do VD em vez de depois.
-    return [...(porItem[`DERIVED:${dvKey}`] || []),
-            ...(porItem[`BASE:DERIVED:${dvKey}`] || []).map(f => ({ ...f, naBase: true }))];
+    return [...(porItem[bagKey] || []),
+            ...(porItem[`BASE:${bagKey}`] || []).map(f => ({ ...f, naBase: true }))];
 }
 
 const _OP_SINAL = { '+': '+', '-': '−', '×': '×', '*': '×', '÷': '÷', '/': '÷', '=': '=' };
@@ -1315,11 +1333,14 @@ function _linhasFormula(c, itemId, opts = {}) {
     const rotulo = opts.prefixoNome ? `${c.icone} ${c.nome} — ` : '';
 
     if (!opts.semBase && Number(c.base) !== 0) {
+        // De onde vem a base muda com o tipo: Valor Derivado é calculado, dot
+        // é comprado. Dizer "raça, classe…" num nível de perícia seria mentira.
+        const deOnde = c.baseRotulo || 'raça, classe, peculiaridade, condição';
         linhas.push(_linhaDet(rotulo + 'Base do personagem', String(c.base),
-            opts.prefixoNome ? '' : 'raça, classe, peculiaridade, condição'));
+            opts.prefixoNome ? '' : deOnde));
     }
 
-    for (const f of _fontesDoItem(itemId, c.key)) {
+    for (const f of _fontesDoItem(itemId, _bagKey(c))) {
         const sinal = _OP_SINAL[f.op] || f.op || '+';
         // a equação já vem com o valor de cada referência ao lado
         const conta = f.expr ? `${f.expr} = ${f.valor}` : String(f.valor);
@@ -1328,7 +1349,7 @@ function _linhasFormula(c, itemId, opts = {}) {
 
     // A regra geral do cadastro fecha o bloco: é o que vale para qualquer
     // personagem, contra as linhas acima, que são desta ficha com este item.
-    if (!opts.semCadastro) {
+    if (!opts.semCadastro && !c.bagKey) {
         const dv = (window.DERIVED_VALUES || []).find(d => d.key === c.key);
         for (const p of ((dv && dv.mechPreviews) || [])) {
             linhas.push(_linhaDet(rotulo + 'Cadastro do Valor Derivado', p));
@@ -1355,7 +1376,7 @@ function _descritorDaColuna(c, itemId, item) {
     const dv = (window.DERIVED_VALUES || []).find(d => d.key === c.key);
     const formula = [];
     if (Number(c.base) !== 0) formula.push({ fonte: 'Base do personagem', texto: String(c.base) });
-    for (const f of _fontesDoItem(itemId, c.key)) {
+    for (const f of _fontesDoItem(itemId, _bagKey(c))) {
         formula.push({
             fonte: `${f.mecanica}${f.naBase ? ' (na base)' : ''}`,
             texto: `${_OP_SINAL[f.op] || f.op || '+'} ${f.expr ? `${f.expr} = ${f.valor}` : f.valor}`,
@@ -1365,10 +1386,82 @@ function _descritorDaColuna(c, itemId, item) {
         formula.push({ fonte: 'Cadastro do Valor Derivado', texto: p });
     }
     return {
-        nome: c.nome, icone: c.icone, descricao: (dv && dv.descricao) || '',
+        nome: c.nome, icone: c.icone, descricao: (dv && dv.descricao) || c.descricao || '',
         formula, sys: window._systemData || null,
         nota: `Com ${item && item.nome ? item.nome : 'este item'}: ${c.prefixo || ''}${c.total}${c.sufixo || ''}`,
     };
+}
+
+/* =====================================================================
+   ATRIBUTO E PERÍCIA VINCULADOS — a outra metade do que a peça faz
+
+   Valor Derivado ganha coluna própria em "Com este item" porque o bag dele é
+   POR ITEM. Atributo e perícia não: eles somam no bag global do personagem
+   (dois escudos com +2 Bloquear somam 4, e é assim mesmo). O efeito aparecia
+   na perícia lá na aba, sem nada ligando de volta à peça — e a janela do item
+   não citava o "+Qualidade no Bloquear" do escudo em lugar nenhum.
+
+   A trilha de `_aplicarAtributosEPericias` resolve: dá para listar aqui só o
+   que ESTE item pôs, mesmo o número final sendo compartilhado.
+   ===================================================================== */
+
+const _SK_ICONE = {
+    mental: '🧠', fisico: '💪', social: '🗣️', combate: '⚔️', exclusivo: '🌟',
+};
+
+/** Nome, ícone e descrição de uma chave de dot (`attr_des`, `sk_combate_...`). */
+function _dotInfo(chave) {
+    for (const cat of Object.keys(window.SKILLS || {})) {
+        const s = (window.SKILLS[cat] || []).find(x => (_SK_PREFIXO[cat] || '') + x.key === chave);
+        if (s) return { nome: s.name, icone: _SK_ICONE[cat] || '📚', descricao: s.descricao || '' };
+    }
+    /* Atributo: o nome vem do TARGET_MAP, que é o mapa que a ficha usa de
+       verdade para resolver referências. Uma tabela própria aqui seria a
+       terceira cópia dos nomes — e as duas que já existem discordam entre si
+       sobre o que é "PRS". */
+    const mapa = (typeof TARGET_MAP !== 'undefined') ? TARGET_MAP : (window.TARGET_MAP || {});
+    const nomes = Object.keys(mapa).filter(k => mapa[k] === chave && !/^Perícia:\s/i.test(k));
+    // o mais longo é o nome por extenso; o curto é a sigla ("DES")
+    const nome = nomes.sort((a, b) => b.length - a.length)[0];
+    if (nome) return { nome, icone: '💪', descricao: '' };
+    return { nome: chave, icone: '📊', descricao: '' };
+}
+
+/**
+ * Linhas de atributo/perícia que ESTE item move, no formato das colunas de VD
+ * (para o mesmo desenho servir aos dois).
+ */
+function _linhasDotDoItem(item) {
+    const porItem = (window.state && window.state.itemBonusFontes || {})[item.id] || {};
+    const vistos = new Set();
+    const out = [];
+
+    for (const bruta of Object.keys(porItem)) {
+        const chave = bruta.replace(/^BASE:/, '');
+        if (chave.startsWith('DERIVED:') || vistos.has(chave)) continue;
+        vistos.add(chave);
+
+        const bonus = _fontesDoItem(item.id, chave)
+            .reduce((n, f) => n + (Number(f.valor) || 0), 0);
+        if (!bonus) continue;
+
+        const total = typeof getEffectiveDotValue === 'function'
+            ? getEffectiveDotValue(chave)
+            : ((window.state.dots || {})[chave] || 0) + ((window.state.mechanicBonuses || {})[chave] || 0);
+
+        const info = _dotInfo(chave);
+        out.push({
+            key: chave, bagKey: chave,
+            nome: info.nome, icone: info.icone, descricao: info.descricao,
+            prefixo: '', sufixo: '',
+            base: total - bonus, bonus, total,
+            baseRotulo: 'seus pontos e o que não vem desta peça',
+            // Teto de mecânica corta DEPOIS da soma: aí "total − bônus" deixa de
+            // ser a conta e vira estimativa. Melhor dizer do que fingir precisão.
+            limitado: !!((window.state.mechanicLimits || {})[chave]),
+        });
+    }
+    return out.sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
 /** Guarda os descritores da janela aberta — o onclick só carrega o índice. */
@@ -2227,12 +2320,25 @@ window.openItemDetail = function(itemId) {
                 </div>
             </div>`;
 
-        if (r.dano || canaisHtml || linhas) {
+        /* Atributo e perícia vinculados: o bônus deles some no número global
+           do personagem, sem nada apontando de volta para a peça. Aqui a peça
+           declara o que faz. */
+        const dotsHtml = _linhasDotDoItem(item).map(c =>
+            `<div class="inv-escopo-row">
+                ${nomeClicavel(c)}
+                <span class="inv-escopo-calc">base ${c.base} ${c.bonus >= 0 ? '+' : '−'} ${Math.abs(c.bonus)} <em>(item)</em>${
+                    c.limitado ? ' <em title="Um teto de mecânica corta depois da soma — a base é estimada">· com teto</em>' : ''}</span>
+                <span class="inv-escopo-total">= ${c.total}</span>
+                ${_blocoFormula(c, item.id)}
+            </div>`).join('');
+
+        if (r.dano || canaisHtml || linhas || dotsHtml) {
             escopoHtml = `<div class="inv-detail-escopo${ativo ? '' : ' inv-escopo-inativo'}">
                 <span class="inv-detail-label">⚔️ Com este item${ativo ? '' : ' <em>(efeitos inativos — equipe na forma prevista)</em>'}</span>
                 ${danoHtml}
                 ${canaisHtml}
                 ${linhas}
+                ${dotsHtml}
             </div>`;
         }
     }
