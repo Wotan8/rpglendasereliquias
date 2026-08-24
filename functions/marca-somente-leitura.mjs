@@ -32,10 +32,12 @@ const ALVOS = [
 
     /* Módulos novos do Xamã/Caçador, cadastrados depois: mesma forma do
        "Espiritismo — o Eco que o Verde guardou", que trava tudo menos o botão.
-       Chave a chave, e não '*', porque cada um tem um campo que é do jogador. */
+       Chave a chave, e não '*', porque cada um tem um campo que é do jogador.
+
+       "Golpes do Verde" (mod_verde_xama) saiu do Xamã — está `publicado: false`,
+       sem classe vinculada e sem nenhum personagem com item dele. Não entra. */
     // deixa o 6 solto: "Presa atual (anotação):" é o bloco de notas do jogador
     { id: 'manobras_cacador', titulo: 'Manobras de Caçador', chaves: ['1', 'acao', '2', '3', '4', '5'] },
-    { id: 'mod_verde_xama', titulo: 'Golpes do Verde', chaves: ['1', '2', '3', '4', '5', '6'] },
     { id: 'mod_vodu', titulo: 'Voduísmo — o elo pelo que ainda vive', chaves: ['1', '2', '3', 'acao', '4', '5', '6'] },
 ];
 
