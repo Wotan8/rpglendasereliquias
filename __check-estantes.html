@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Estantes de livro, iguais em toda tela</title>
+<link rel="stylesheet" href="./shared/tokens.css">
+<link rel="stylesheet" href="./shared/lendas-reliquias.css">
+<!-- sem cache: o arnês tem de ler o CSS do disco, senão mede o de ontem -->
+<script>document.write('<link rel="stylesheet" href="./shared/acervo.css?t=' + Date.now() + '">');</script>
+<style>
+  body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table { border-collapse: collapse; font: 11px ui-monospace, monospace; width: 760px; max-width: 100%; }
+  td { border: 1px solid var(--lr-border); padding: 2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight: 700; }
+  #placar { font-weight: 800; margin: 10px 0; padding-top: 10px; border-top: 1px solid var(--lr-border); }
+  h1 { font-size: 1rem; margin: 0 0 4px; } p { margin: 0 0 10px; color: var(--lr-text-2); font-size: .8rem; }
+  #palco { max-width: 900px; margin-top: 20px; }
+</style></head>
+<body>
+<h1>📚 Estantes de livro, iguais em toda tela</h1>
+<p>O Escritório do Cronista agrupa livro em estante; as outras cinco telas
+   mostravam lista achatada. Agora todas desenham pelo mesmo
+   <code>lvEstantesHTML</code>, com o CSS de <code>shared/acervo.css</code>.
+   Aqui não há Firestore: as estantes são semeadas na mão.</p>
+<table id="saida"></table>
+<div id="placar"></div>
+<div id="palco"></div>
+
+<script src="./shared/livro-vinculado.js?v=7"></script>
+<script>
+(async () => {
+const linhas = [];
+let ok = 0;
+const teste = (nome, passou) => { linhas.push([nome, passou]); if (passou) ok++; };
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+// ---- acervo semeado ----
+const LIVROS = [
+    { id: 'b1', title: 'Régua de Balanceamento', description: 'Especificação técnica interna.',
+      versao: '3', estanteIds: ['e-sistema'] },
+    { id: 'b2', title: 'Compêndio de Fluxomancia', description: 'A doutrina da Essência.',
+      estanteIds: ['e-magia', 'e-sistema'] },                 // em DUAS estantes
+    { id: 'b3', title: 'Bestiario', description: 'fsd' },       // sem estante nenhuma
+    { id: 'b4', title: "Livro do Ka'rok", description: 'Aspas no título <b>não</b> viram HTML.',
+      estanteIds: ['e-magia'] },
+];
+const ESTANTES = [
+    { id: 'e-sistema', nome: 'Regras do sistema', icone: '⚖️' },
+    { id: 'e-magia', nome: 'Escolas de magia', icone: '✨' },
+    { id: 'e-vazia', nome: 'Estante vazia', icone: '🗂️' },
+];
+const itens = LIVROS.map((l, i) => ({ l, n: i + 1 }));
+
+teste('T1 · o renderizador compartilhado existe', typeof window.lvEstantesHTML === 'function');
+
+/* O selo de versão vem de shared/livros-pub.js por import dinâmico. Quem
+   desenha livro sem passar por lvCarregarLivros() espera isto — foi o que
+   deixava o Cronista público sem 🔖. */
+await window.lvPronto();
+teste('T1b · lvPronto() resolve antes de pintar', typeof window.lvPronto === 'function');
+
+const palco = $('#palco');
+palco.innerHTML = window.lvEstantesHTML(itens, ESTANTES);
+
+// ---- estrutura ----
+const secoes = $$('.wb-estante', palco);
+teste(`T2 · uma gaveta por estante COM livro, mais "Todos os livros" (${secoes.length})`,
+    secoes.length === 3);
+teste('T3 · estante sem livro nenhum não vira gaveta vazia',
+    !palco.textContent.includes('Estante vazia'));
+
+const nomes = $$('.wb-estante__name', palco).map(e => e.textContent.trim());
+teste('T4 · "Todos os livros" vem primeiro — é o atalho de quem não sabe a estante — ' + nomes.join(' · '),
+    nomes[0] === 'Todos os livros');
+
+// ---- estante nasce fechada, como no Escritório ----
+teste('T5 · toda estante nasce fechada (decisão de mesa)',
+    $$('details', palco).every(d => !d.open));
+
+// ---- contagem e pertencimento ----
+const gaveta = (nome) => $$('.wb-estante', palco)
+    .find(s => $('.wb-estante__name', s).textContent.trim() === nome);
+const livrosDe = (nome) => $$('.wb-book__title', gaveta(nome)).map(e => e.textContent.trim());
+
+teste('T6 · "Todos os livros" lista os quatro', livrosDe('Todos os livros').length === 4);
+teste('T7 · livro em DUAS estantes aparece nas duas',
+    livrosDe('Regras do sistema').includes('Compêndio de Fluxomancia')
+    && livrosDe('Escolas de magia').includes('Compêndio de Fluxomancia'));
+teste('T8 · livro sem estante nenhuma só aparece em "Todos os livros"',
+    livrosDe('Todos os livros').includes('Bestiario')
+    && !livrosDe('Regras do sistema').includes('Bestiario')
+    && !livrosDe('Escolas de magia').includes('Bestiario'));
+
+const badge = (nome) => $('.wb-badge', gaveta(nome)).textContent.trim();
+teste(`T9 · o contador da gaveta bate com os livros dentro (${badge('Escolas de magia')})`,
+    badge('Escolas de magia') === String(livrosDe('Escolas de magia').length));
+
+// ---- card de livro ----
+const card = $('.wb-book', gaveta('Regras do sistema'));
+teste('T10 · o card usa o desenho do Escritório (.wb-book)', !!card);
+teste('T11 · capa, título e selo de capítulos no card',
+    !!$('.wb-book__cover', card) && !!$('.wb-book__title', card) && !!$('.wb-book__badges', card));
+teste('T12 · livro com versão ganha o selo 🔖',
+    $('.wb-badge--ver', gaveta('Regras do sistema')) !== null);
+teste('T13 · livro sem versão não ganha selo mentiroso',
+    $$('.wb-book', gaveta('Escolas de magia'))
+        .filter(c => $('.wb-book__title', c).textContent.includes('Ka'))
+        .every(c => !$('.wb-badge--ver', c)));
+
+// ---- clique abre o leitor, não expande (decisão de mesa) ----
+teste('T14 · o card é botão: clicar abre o leitor, não vira accordion',
+    card.tagName === 'BUTTON' && $$('.wb-book details', palco).length === 0);
+teste('T15 · o clique chama o leitor compartilhado',
+    /lvAbrirLivroId/.test(card.getAttribute('onclick') || ''));
+
+// ---- ação customizada (o Cronista público abre por índice, não por id) ----
+palco.insertAdjacentHTML('beforeend',
+    window.lvEstantesHTML(itens, ESTANTES, (l) => `minhaAcao('${l.id}')`));
+const ultimo = $$('.wb-book', palco).pop();
+teste('T16 · quem precisa de outro clique passa a própria ação',
+    /minhaAcao/.test(ultimo.getAttribute('onclick') || ''));
+
+// ---- texto do usuário não vira HTML ----
+teste('T17 · título e descrição são escapados',
+    !$('#palco b') && palco.textContent.includes('não</b> viram HTML'));
+
+// ---- o desenho veio do CSS compartilhado, não de style inline ----
+const cs = getComputedStyle($('.wb-estante', palco));
+teste(`T18 · acervo.css está de pé (borda ${cs.borderTopWidth}, raio ${cs.borderTopLeftRadius})`,
+    cs.borderTopStyle === 'solid' && parseFloat(cs.borderTopLeftRadius) > 0);
+
+// ---- saída ----
+$('#saida').innerHTML = linhas.map(([n, p]) =>
+    `<tr><td>${n.replace(/</g, '&lt;')}</td><td class="${p ? 'ok' : 'fail'}">${p ? 'OK' : 'FAIL'}</td></tr>`).join('');
+$('#placar').textContent = `${ok === linhas.length ? '✅' : '❌'} ${ok}/${linhas.length} — estantes de livro`;
+document.title = `__check estantes ${ok}/${linhas.length}`;
+})();
+</script>
+</body></html>

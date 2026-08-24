@@ -38,12 +38,20 @@
         ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
     /* Versão do livro. Este arquivo é script CLÁSSICO, então não dá para
-       `import` no topo — vem junto do acervo, em carregar(), e todo caminho
-       que desenha livro já espera essa promise. Até lá, sem selo.
+       `import` no topo — a regra do selo mora em shared/livros-pub.js e chega
+       por import dinâmico.
        Caminho ABSOLUTO de propósito: em script clássico o especificador de
        import() resolve contra a URL da PÁGINA, e este arquivo é carregado de
-       cinco pastas diferentes. */
+       seis pastas diferentes.
+
+       ⚠️ A carga começa AQUI, não dentro de carregar(). Antes o selo só ficava
+       de pé para quem passava por carregar(), e o Cronista público busca os
+       livros por conta própria — ele desenhava a estante sem 🔖 nenhum.
+       Quem desenha livro deve esperar `lvPronto()` antes de pintar. */
     let versaoDoLivro = () => '';
+    const _pub = import('/shared/livros-pub.js')
+        .then(pub => { versaoDoLivro = pub.versaoDoLivro; return pub; })
+        .catch(e => { console.warn('📖 livros-pub:', e); return null; });
     const seloVersao = (l, estilo) => {
         const v = versaoDoLivro(l);
         return v ? `<span style="${estilo}">🔖 ${esc(v)}</span>` : '';
@@ -51,20 +59,25 @@
 
     function carregar() {
         if (!_p) _p = (async () => {
-            const [{ collection, getDocs }, pub] = await Promise.all([
+            const [{ collection, getDocs }] = await Promise.all([
                 import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'),
-                import('/shared/livros-pub.js'),
+                _pub,     // o selo já está sendo carregado desde o topo do arquivo
             ]);
-            versaoDoLivro = pub.versaoDoLivro;
-            const [bSnap, aSnap] = await Promise.all([
+            const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const [bSnap, aSnap, eSnap] = await Promise.all([
                 getDocs(collection(window.db, 'worldbuilding-books')),
                 getDocs(collection(window.db, 'worldbuilding-articles')),
+                /* As estantes moram todas num doc só, como o mural. Se ele não
+                   existir (mundo antigo), a estante única "Todos os livros" dá
+                   conta — nenhuma tela quebra por falta dele. */
+                getDoc(doc(window.db, 'worldbuilding-settings', 'estantes')).catch(() => null),
             ]);
             const livros = [], caps = [];
             bSnap.forEach(d => livros.push({ id: d.id, ...d.data() }));
             aSnap.forEach(d => caps.push({ id: d.id, ...d.data() }));
             caps.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.createdAt ?? 0) - (b.createdAt ?? 0));
-            return { livros, caps };
+            const estantes = (eSnap && eSnap.exists() ? eSnap.data().lista : null) || [];
+            return { livros, caps, estantes };
         })();
         return _p;
     }
@@ -239,22 +252,70 @@
      * inteiro. Quem monta seção própria (a estante do jogador tem a do Cronista
      * em cima da dela) reaproveita o mesmo card por aqui, via lvCardLivro.
      */
+    /**
+     * Card de livro — o mesmo desenho do Escritório do Cronista
+     * (shared/acervo.css, classes `wb-book*`). `acao` é o JS do clique; sem
+     * ele, abre o livro inteiro.
+     *
+     * Aqui o card é BOTÃO, não <details>: no Escritório o livro abre os
+     * capítulos ali mesmo porque quem está lá está editando; nas telas de
+     * leitura o clique abre o leitor, que é onde se lê. Mesmo desenho,
+     * fluxo de leitura intacto.
+     */
     function cardLivro(l, n, acao) {
+        const capa = l.cover
+            ? `style="background-image:url('${esc(l.cover)}')" data-zoom="${esc(l.cover)}" data-zoom-alt="${esc(l.title || '')}" title="Ver a capa maior"`
+            : '';
+        const selo = seloVersao(l, '');
         return `
-        <button type="button" class="lv-livro" onclick="${acao || `window.lvAbrirLivroId('${esc(l.id)}')`}"
-            style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
-                   background:var(--lr-surface-2,rgba(255,255,255,.06));color:inherit;font:inherit;
-                   border:1px solid var(--lr-border,#333);border-radius:10px;padding:10px 12px">
-            <span style="width:44px;height:60px;flex:none;border-radius:6px;display:flex;align-items:center;justify-content:center;
-                background:${l.cover ? `url('${esc(l.cover)}') center/cover` : 'var(--lr-bg-1,rgba(255,255,255,.06))'}"
-                ${l.cover ? `data-zoom="${esc(l.cover)}" data-zoom-alt="${esc(l.title || '')}" title="Ver a capa maior"` : ''}>${l.cover ? '' : '📖'}</span>
-            <span style="flex:1;min-width:0">
-                <span style="display:block;font-weight:700">${esc(l.title || 'Livro sem título')}</span>
-                ${l.description ? `<span style="display:block;opacity:.75;font-size:.85rem">${esc(l.description)}</span>` : ''}
-                <span style="display:block;opacity:.6;font-size:.78rem">${seloVersao(l, 'font-weight:700;color:var(--lr-gold,#D4AF37)') ? seloVersao(l, 'font-weight:700;color:var(--lr-gold,#D4AF37)') + ' · ' : ''}${n} ${n === 1 ? 'capítulo' : 'capítulos'}</span>
+        <button type="button" class="wb-book lv-livro" style="display:block;width:100%;text-align:left;cursor:pointer;font:inherit;color:inherit"
+            onclick="${acao || `window.lvAbrirLivroId('${esc(l.id)}')`}">
+            <span class="wb-book__head" style="align-items:center">
+                <span class="wb-book__cover" ${capa}>${l.cover ? '' : '📖'}</span>
+                <span class="wb-book__meta">
+                    <span class="wb-book__title" style="display:block">${esc(l.title || 'Livro sem título')}</span>
+                    <span class="wb-book__badges">
+                        ${selo ? `<span class="wb-badge wb-badge--ver">${selo}</span>` : ''}
+                        <span class="wb-badge wb-badge--soft">${n} ${n === 1 ? 'capítulo' : 'capítulos'}</span>
+                    </span>
+                    ${l.description ? `<span class="wb-book__desc" style="display:block">${esc(l.description)}</span>` : ''}
+                </span>
+                <span class="wb-book__caret" style="transform:none">›</span>
             </span>
-            <span style="opacity:.6">›</span>
         </button>`;
+    }
+
+    /**
+     * Os livros agrupados nas estantes do Escritório do Cronista.
+     *
+     * `itens` são {livro, n} já filtrados pela tela. Livro que está em mais de
+     * uma estante aparece nas duas — é o que o Escritório faz. Livro sem
+     * estante nenhuma cai em "Todos os livros", que também é de lá.
+     *
+     * Estante nasce FECHADA, como no Escritório: quem lê escolhe a estante.
+     */
+    function estantesHTML(itens, estantes, acaoDe) {
+        const daEstante = (b) => b.estanteIds || (b.estanteId ? [b.estanteId] : []);
+        const card = ({ l, n }) => cardLivro(l, n, acaoDe ? acaoDe(l) : null);
+
+        const bloco = (est, lista) => !lista.length ? '' : `
+            <div class="wb-estante">
+                <details class="wb-estante__det">
+                    <summary class="wb-estante__head">
+                        <span class="wb-estante__caret">▸</span>
+                        <span class="wb-estante__icon">${esc(est.icone || '🗂️')}</span>
+                        <span class="wb-estante__name">${esc(est.nome || 'Estante sem nome')}</span>
+                        <span class="wb-badge wb-badge--soft">${lista.length}</span>
+                    </summary>
+                    <div class="wb-estante__body">${lista.map(card).join('')}</div>
+                </details>
+            </div>`;
+
+        const comEstante = (estantes || [])
+            .map(e => bloco(e, itens.filter(x => daEstante(x.l).includes(e.id))))
+            .join('');
+        const todas = bloco({ nome: 'Todos os livros', icone: '📚' }, itens);
+        return `<div class="wb-estantes">${todas}${comEstante}</div>`;
     }
 
     /** Sumário do livro. Livro de um capítulo só pula direto para o texto. */
@@ -364,7 +425,7 @@
         _sum = null;
         _repintar = () => biblioteca(_bib);
         _pintar('<div style="opacity:.7;padding:10px 0">Carregando a estante…</div>');
-        carregar().then(({ livros, caps }) => {
+        carregar().then(({ livros, caps, estantes }) => {
             const estado = (c, l) => _bib.capituloEstado ? _bib.capituloEstado(c, l) : 'liberado';
             const lista = livros
                 .filter(l => !_bib.filtro || _bib.filtro(l))
@@ -372,11 +433,10 @@
                 .map(l => ({ l, n: caps.filter(c => c.bookId === l.id && estado(c, l) !== 'oculto').length }))
                 .filter(x => x.n > 0)
                 .sort((a, b) => (a.l.order ?? 0) - (b.l.order ?? 0) || (a.l.title || '').localeCompare(b.l.title || ''));
-            const cards = lista.map(({ l, n }) => cardLivro(l, n)).join('');
             _pintar(`
                 <h2 style="margin:0 0 14px">${esc(_bib.titulo || '📚 Biblioteca')}</h2>
                 ${_bib.cabecalho || ''}
-                ${cards ? `<div style="display:flex;flex-direction:column;gap:8px">${cards}</div>`
+                ${lista.length ? estantesHTML(lista, estantes)
                         : '<p style="opacity:.75">Nenhum livro publicado para esta lista.</p>'}`);
         }).catch(e => console.error('📖 Biblioteca:', e));
     }
@@ -400,6 +460,12 @@
     window.lvCardLivro = cardLivro;
     window.lvLerCapitulo = lerCapitulo;
     window.lvBiblioteca = biblioteca;
+    // Quem monta a própria lista (o Painel do Mestre, o Cronista público)
+    // desenha as MESMAS estantes por aqui.
+    window.lvEstantesHTML = estantesHTML;
+    /* Espere isto antes de desenhar livro sem passar por lvCarregarLivros():
+       é o que garante o selo de versão na primeira pintura. */
+    window.lvPronto = () => _pub;
     window.lvVoltar = voltar;
     // Redesenha a tela atual sem mudar de lugar — o mestre exibe um capítulo e
     // o botão vira "parar" ali mesmo, sem voltar para a estante.

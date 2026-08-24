@@ -1,0 +1,105 @@
+/* =============================================================
+   ACERVO — estante, livro, capítulo e selos
+
+   Saiu de worldbuilding/css/wb-ferramentas.css quando as cinco telas que
+   listam livro passaram a desenhar a MESMA coisa:
+
+     · Worldbuilding → Escritório do Cronista   (a origem deste desenho)
+     · Painel do Mestre → Livros
+     · Tabuleiro → Livros
+     · Ficha → Conhecimento
+     · Cronista público (menu)
+
+   O prefixo `wb-` ficou por herança: renomear custaria ~300 trocas em JS,
+   CSS e HTML, e o nome não vale esse risco. O que importa é ter UMA
+   definição — era ela que faltava.
+
+   Estante é <details> puro, sem JS de expansão. Nasce fechada em todo lugar,
+   como no Escritório: quem lê escolhe a estante e só então vê os livros.
+   ============================================================= */
+
+/* Estantes: fechadas são tijolinhos numa grade; abertas tomam a linha
+   inteira e mostram os livros. Só <details> — sem JS de expansão. */
+.wb-estantes {
+    display: grid; align-items: start; gap: var(--lr-space-2);
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+.wb-estante {
+    position: relative;
+    border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-lg);
+    background: var(--lr-surface); overflow: hidden;
+}
+.wb-estante:has(> details[open]) { grid-column: 1 / -1; background: var(--lr-bg-1); }
+.wb-estante__head {
+    display: flex; align-items: center; gap: var(--lr-space-2); list-style: none; cursor: pointer;
+    padding: var(--lr-space-2) var(--lr-space-3); transition: background var(--lr-t-base) var(--lr-ease);
+}
+.wb-estante__head::-webkit-details-marker { display: none; }
+.wb-estante__head:hover { background: var(--lr-surface-2); }
+.wb-estante__caret { color: var(--lr-gold); transition: transform var(--lr-t-base) var(--lr-ease); }
+.wb-estante > details[open] .wb-estante__caret { transform: rotate(90deg); }
+.wb-estante__icon { flex: 0 0 auto; }
+.wb-estante__name {
+    flex: 1; min-width: 0; font-family: var(--lr-font-title); font-size: var(--lr-fs-sm);
+    font-weight: 700; color: var(--lr-text-1);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Fora do <summary> (senão editar abriria a estante), flutuando no canto
+   do cabeçalho. O cabeçalho abre espaço para ele. */
+.wb-estante:has(> .wb-estante__cog) .wb-estante__head { padding-right: var(--lr-space-7); }
+.wb-estante__cog { position: absolute; top: var(--lr-space-2); right: var(--lr-space-2); opacity: var(--lr-op-muted); }
+.wb-estante:hover .wb-estante__cog, .wb-estante__cog:focus-visible { opacity: 1; }
+.wb-estante__body {
+    display: grid; gap: var(--lr-space-3);
+    border-top: var(--lr-border-w) solid var(--lr-border); padding: var(--lr-space-3);
+}
+
+.wb-book { border: 1px solid var(--lr-border); border-radius: var(--lr-radius-lg); background: var(--lr-bg-1); overflow: hidden; }
+.wb-book__head { display: flex; gap: var(--lr-space-3); padding: var(--lr-space-3); align-items: flex-start; cursor: pointer; list-style: none; }
+.wb-book__head::-webkit-details-marker { display: none; }
+.wb-book__head:hover { background: rgba(212,175,55,.06); }
+.wb-book__caret { flex: 0 0 auto; align-self: center; color: var(--lr-gold); transition: transform var(--lr-t-base); }
+.wb-book[open] .wb-book__caret { transform: rotate(90deg); }
+.wb-book__cover {
+    width: 60px; height: 82px; flex: 0 0 auto; border-radius: var(--lr-radius-lg);
+    background: linear-gradient(135deg, #3a2f5e, #1b1530); background-size: cover; background-position: center;
+    display: flex; align-items: center; justify-content: center; font-size: 1.8rem;
+    border: 1px solid rgba(255,255,255,.1);
+}
+.wb-book__meta { flex: 1; min-width: 0; }
+.wb-book__title { font-family: var(--lr-font-title); font-size: 1.15rem; font-weight: 700; color: var(--lr-text-1); }
+.wb-book__badges { display: flex; flex-wrap: wrap; gap: var(--lr-space-1); margin: var(--lr-space-1) 0; }
+.wb-book__desc { color: var(--lr-text-2); font-size: .85rem; margin: var(--lr-space-1) 0 0; line-height: 1.4; }
+.wb-book__actions { display: flex; flex-direction: column; gap: var(--lr-space-1); flex: 0 0 auto; }
+.wb-book__chapters { border-top: 1px solid var(--lr-border); background: var(--lr-bg-1); }
+
+.wb-loose-list { display: grid; gap: var(--lr-space-2); }
+.wb-chapter {
+    display: flex; align-items: center; gap: var(--lr-space-3); padding: var(--lr-space-2) var(--lr-space-3); cursor: pointer;
+    transition: background var(--lr-t-base); border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.wb-loose-list .wb-chapter { border: 1px solid var(--lr-border); border-radius: var(--lr-radius-lg); background: var(--lr-bg-1); }
+.wb-chapter:hover { background: rgba(212,175,55,.08); }
+.wb-chapter__num {
+    width: 26px; height: 26px; flex: 0 0 auto; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(212,175,55,.15); color: var(--lr-gold); font-weight: 700; font-size: .8rem;
+}
+.wb-chapter__body { flex: 1; min-width: 0; }
+.wb-chapter__title { font-weight: 600; color: var(--lr-text-1); }
+.wb-chapter__syn { color: var(--lr-text-2); font-size: .82rem; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-chapter__meta { display: flex; align-items: center; gap: var(--lr-space-2); flex-wrap: wrap; margin-top: var(--lr-space-1); font-size: .75rem; }
+
+.wb-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px var(--lr-space-2); border-radius: var(--lr-radius-sm); font-size: .72rem; font-weight: 600; border: 1px solid transparent; }
+/* Os tres badges tinham texto no tom CLARO do acento em cima do mesmo acento
+   a ~15%: no tema claro isso e claro sobre claro (1.38:1 a 1.54:1). Os tokens
+   acompanham o tema e ficam escuros no papel, claros no escuro. */
+.wb-badge--pub { background: rgba(58,166,255,.14); color: var(--lr-arcane); border-color: rgba(58,166,255,.35); }
+.wb-badge--priv { background: rgba(255,255,255,.06); color: var(--lr-text-2); border-color: var(--lr-border); }
+.wb-badge--soft { background: rgba(255,255,255,.05); color: var(--lr-text-2); }
+.wb-badge--draft { background: rgba(160,160,160,.14); color: var(--lr-text-2); }
+.wb-badge--rev { background: rgba(212,175,55,.16); color: var(--lr-gold); }
+.wb-badge--done { background: rgba(63,174,106,.16); color: var(--lr-nature); }
+/* Versao do livro: mesmo ouro do "em revisao", classe propria porque o
+   significado e outro (selo do livro, nao status do capitulo). */
+.wb-badge--ver { background: rgba(212,175,55,.16); color: var(--lr-gold); border-color: rgba(212,175,55,.35); }

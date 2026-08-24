@@ -14,6 +14,7 @@
 import { pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
 
 let livros = [];        // [{id, title, description, cover, capitulos:[...]}]
+let estantes = [];      // as mesmas do Escritório do Cronista (worldbuilding-settings/estantes)
 let indice = [];        // busca: {livroI, capI, titulo, texto}
 let livroAberto = null;
 let capAberto = 0;
@@ -24,13 +25,6 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-/* Selo de versão do livro, na linha de meta do card. Some quando o autor
-   não marcou versão nenhuma (ver shared/livros-pub.js). */
-const seloVersao = (l) => {
-    const v = versaoDoLivro(l);
-    return v ? '<span class="livro-versao">🔖 ' + esc(v) + '</span> · ' : '';
-};
-
 function stripHtml(html) {
     const d = document.createElement('div');
     d.innerHTML = html || '';
@@ -40,12 +34,16 @@ function stripHtml(html) {
 /* ---------- carga (uma vez por sessão logada) ---------- */
 async function carregar() {
     if (carregado) { renderEstante(); return; }
-    const { collection, getDocs } =
+    const { collection, getDocs, doc, getDoc } =
         await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const [bSnap, aSnap] = await Promise.all([
+    const [bSnap, aSnap, eSnap] = await Promise.all([
         getDocs(collection(window.db, 'worldbuilding-books')),
         getDocs(collection(window.db, 'worldbuilding-articles')),
+        /* Estantes: todas num doc só. Mundo sem esse doc cai em "Todos os
+           livros", que é a estante virtual do próprio Escritório. */
+        getDoc(doc(window.db, 'worldbuilding-settings', 'estantes')).catch(() => null),
     ]);
+    estantes = (eSnap && eSnap.exists() ? eSnap.data().lista : null) || [];
     const caps = [];
     aSnap.forEach(d => caps.push({ id: d.id, ...d.data() }));
     caps.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.createdAt ?? 0) - (b.createdAt ?? 0));
@@ -64,6 +62,9 @@ async function carregar() {
         indice.push({ livroI: li, capI: ci, titulo: c.title || '', texto: stripHtml(c.contentHTML) })));
 
     carregado = true;
+    // o selo de versão vem de shared/livros-pub.js por import dinâmico; sem
+    // esperar, a primeira pintura sairia sem 🔖
+    if (window.lvPronto) { try { await window.lvPronto(); } catch { /* segue sem selo */ } }
     renderEstante();
 }
 
@@ -84,15 +85,16 @@ function renderEstante() {
             '<p>O Cronista ainda não publicou tomos ao mundo.</p></div>';
         return;
     }
-    el.innerHTML = livros.map((l, i) =>
-        '<button class="livro-card" onclick="wikiAbrirLivro(' + i + ')">' +
-        '<div class="livro-capa">' +
-        (l.cover ? '<img src="' + esc(l.cover) + '" alt="" loading="lazy">' : '<span>📖</span>') +
-        '</div><div class="livro-info">' +
-        '<div class="livro-titulo">' + esc(l.title || 'Sem título') + '</div>' +
-        (l.description ? '<p class="livro-desc">' + esc(l.description) + '</p>' : '') +
-        '<div class="livro-caps">' + seloVersao(l) + l.capitulos.length + ' capítulo(s)</div>' +
-        '</div></button>').join('');
+    /* O MESMO desenho do Escritório do Cronista (shared/acervo.css), pelo
+       renderizador compartilhado. O índice do livro vai junto porque o leitor
+       daqui é por posição — `wikiAbrirLivro(i)`, não por id. */
+    const itens = livros.map((l, i) => ({ l, n: l.capitulos.length, i }));
+    el.innerHTML = window.lvEstantesHTML
+        ? window.lvEstantesHTML(itens, estantes, (livro) => {
+            const i = livros.indexOf(livro);
+            return 'wikiAbrirLivro(' + i + ')';
+        })
+        : '';
 }
 
 /* ---------- leitor ---------- */

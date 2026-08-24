@@ -2273,58 +2273,8 @@ html:not(.dark) .meta-card {
 
 .wiki-vazio p { margin: 0 0 var(--lr-space-3); }
 
-.livro-card {
-    display: flex;
-    flex-direction: column;
-    background: var(--lr-bg-1);
-    border: var(--lr-border-w) solid var(--lr-border-soft);
-    border-radius: var(--lr-radius-lg);
-    overflow: hidden;
-    cursor: pointer;
-    text-align: left;
-    padding: 0;
-    color: var(--lr-text-1);
-    font-family: var(--lr-font-body);
-    transition: border-color var(--lr-t-base) var(--lr-ease), box-shadow var(--lr-t-base) var(--lr-ease);
-}
-
-.livro-card:hover { border-color: var(--lr-gold); box-shadow: var(--lr-shadow-2); }
-
-.livro-capa {
-    aspect-ratio: 21 / 9;
-    background:
-        radial-gradient(ellipse at 30% 120%, var(--lr-abyssal-soft), transparent 60%),
-        radial-gradient(ellipse at 80% -20%, var(--lr-arcane-soft), transparent 55%),
-        var(--lr-surface);
-    display: grid;
-    place-items: center;
-    font-size: 1.8rem;
-    border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
-}
-
-.livro-capa img { width: 100%; height: 100%; object-fit: cover; }
-
-.livro-info { padding: var(--lr-space-4) var(--lr-space-4) var(--lr-space-5); }
-
-.livro-titulo {
-    font-family: var(--lr-font-subtitle);
-    font-weight: 600;
-    font-size: var(--lr-fs-xl);
-    line-height: var(--lr-lh-tight);
-    margin: 0 0 var(--lr-space-2);
-}
-
-.livro-desc {
-    color: var(--lr-text-2);
-    font-size: var(--lr-fs-sm);
-    line-height: var(--lr-lh-body);
-    margin: 0 0 var(--lr-space-3);
-}
-
-.livro-caps { color: var(--lr-text-2); font-size: var(--lr-fs-xs); }
-/* Versao do livro: o leitor precisa enxergar antes de abrir, entao ganha o
-   ouro em cima da linha de meta, que e cinza. */
-.livro-versao { color: var(--lr-gold); font-weight: 700; }
+/* O card de livro do Cronista público saiu daqui: a estante agora é a
+   mesma do Escritório do Cronista (shared/acervo.css). */
 
 /* ---------- leitor ---------- */
 .leitor-topo {

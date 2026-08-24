@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0E1117">
     <title>Lendas &amp; Relíquias — Portal</title>
+<link rel="stylesheet" href="../shared/acervo.css?v=1">
 <link rel="stylesheet" href="../shared/dialogo.css?v=2">
 <script type="module">import '../shared/dialogo.js?v=2';</script>
     <link rel="stylesheet" href="css/menu.css?v=16">
@@ -440,7 +441,11 @@
 
     <!-- Firebase Module -->
     <script type="module" src="js/menu-firebase.js?v=11"></script>
-    <script type="module" src="js/menu-wiki.js?v=3"></script>
+    <!-- O card de livro da estante vem daqui: o mesmo do Escritório do
+         Cronista e das telas do mestre. Script clássico, então entra ANTES
+         do módulo que o usa. -->
+    <script src="../shared/livro-vinculado.js?v=7"></script>
+    <script type="module" src="js/menu-wiki.js?v=4"></script>
     <script type="module" src="js/menu-portal-config.js?v=1"></script>
     <script src="js/menu-hero.js?v=2"></script>
 
