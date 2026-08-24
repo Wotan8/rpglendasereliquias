@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Gavetas do formulário de item</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<!-- sem cache: arnes tem de ler o CSS do disco, senao mede o de ontem -->
+<script>document.write('<link rel="stylesheet" href="shared/equip-campos.css?t=' + Date.now() + '">');</script>
+<style>
+  body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table { border-collapse: collapse; font: 11px ui-monospace, monospace; width: 640px; max-width: 100%; }
+  td { border: 1px solid var(--lr-border); padding: 2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight: 700; }
+  #placar { font-weight: 800; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--lr-border); }
+  h1 { font-size: 1rem; margin: 0 0 4px; } p { margin: 0 0 10px; color: var(--lr-text-2); font-size: .8rem; }
+  #palco { display: none; }
+</style></head>
+<body>
+<h1>🗂️ As gavetas do formulário de item</h1>
+<p>O Painel do Criador monta os campos como ELEMENTOS e o
+   <code>agruparEmSecoesDOM</code> os reempacota nas mesmas gavetas que a Ficha
+   desenha por string. O que se mede aqui é que reempacotar não perde, não
+   renomeia e não desliga campo nenhum.</p>
+<table id="saida"></table>
+<div id="placar"></div>
+<div id="palco"></div>
+
+<script type="module">
+import {
+    SECOES_EQUIPAMENTO, CAMPOS_EQUIPAMENTO, agruparEmSecoesDOM,
+} from './shared/equip-campos.js?v=13';
+
+const linhas = [];
+let ok = 0;
+const teste = (nome, passou) => { linhas.push([nome, passou]); if (passou) ok++; };
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+/** Uma grade como a que o Criador entrega: um <div data-campo> por chave. */
+function montarGrade(chaves) {
+    const g = document.createElement('div');
+    g.className = 'form-grid';
+    for (const k of chaves) {
+        const w = document.createElement('div');
+        w.className = 'form-group';
+        w.dataset.campo = k;
+        w.innerHTML = `<label>${k}</label><input id="field_${k}" value="">`;
+        g.appendChild(w);
+    }
+    document.getElementById('palco').appendChild(g);
+    return g;
+}
+
+// ---- 1. o cadastro inteiro, exatamente como o Criador o entrega ----
+const chaves = CAMPOS_EQUIPAMENTO.map(f => f.key);
+const grade = montarGrade(chaves);
+agruparEmSecoesDOM(grade, SECOES_EQUIPAMENTO, () => false, 'form-grid');
+
+teste(`T1 · virou gaveta (${$$('details.ef-sec', grade).length} seções)`,
+    $$('details.ef-sec', grade).length === SECOES_EQUIPAMENTO.length);
+
+const dentro = $$('[data-campo]', grade).map(el => el.dataset.campo);
+const perdidos = chaves.filter(k => !dentro.includes(k));
+teste('T2 · nenhum campo sumiu' + (perdidos.length ? ' — ' + perdidos.join(', ') : ''),
+    perdidos.length === 0 && dentro.length === chaves.length);
+
+teste('T3 · nenhum id mudou (a coleta lê por id)',
+    chaves.every(k => !!$(`#field_${k}`, grade)));
+
+teste('T4 · a grade externa deixou de ser grade — a de dentro de cada gaveta é que vale',
+    !grade.classList.contains('form-grid')
+    && $$('details.ef-sec > .form-grid', grade).length === SECOES_EQUIPAMENTO.length);
+
+teste('T5 · as duas primeiras gavetas nascem abertas, o resto recolhido',
+    $$('details.ef-sec', grade).filter(s => s.open).length
+        === SECOES_EQUIPAMENTO.filter(s => s.aberta).length);
+
+teste('T6 · toda gaveta tem título, dica e contador',
+    $$('details.ef-sec', grade).every(s =>
+        $('.ef-sec-tit', s).textContent.trim()
+        && $('.ef-sec-dica', s).textContent.trim()
+        && $('[data-ef-badge]', s)));
+
+// ---- 2. campo que nenhuma seção cita não pode desaparecer ----
+const g2 = montarGrade(['nome', 'campoNovoQueNinguemEncaixou']);
+agruparEmSecoesDOM(g2, SECOES_EQUIPAMENTO, () => false, 'form-grid');
+const sobra = $('details[data-secao="outros"]', g2);
+teste('T7 · chave não encaixada cai em "Outros campos" em vez de sumir',
+    !!sobra && !!$('[data-campo="campoNovoQueNinguemEncaixou"]', sobra)
+    && !!$('#field_campoNovoQueNinguemEncaixou', g2));
+
+// ---- 3. gaveta com conteúdo nasce aberta ----
+const g3 = montarGrade(chaves);
+agruparEmSecoesDOM(g3, SECOES_EQUIPAMENTO, (k) => k === 'formulaDano', 'form-grid');
+teste('T8 · a gaveta que já tem valor abre sozinha ao editar',
+    $('details[data-secao="combate"]', g3).open === true);
+
+// ---- 4. seção sem nenhum campo na grade não vira gaveta vazia ----
+const g4 = montarGrade(['nome', 'tipo']);
+agruparEmSecoesDOM(g4, SECOES_EQUIPAMENTO, () => false, 'form-grid');
+teste('T9 · seção sem campo nenhum não vira gaveta vazia',
+    $$('details.ef-sec', g4).length === 1
+    && $('details.ef-sec', g4).dataset.secao === 'identidade');
+
+// ---- 5. o aviso de busca sem resultado existe em toda grade agrupada ----
+teste('T10 · a grade ganha o aviso de "nenhum campo com esse nome"',
+    !!$('[data-ef-vazio]', grade) && $('[data-ef-vazio]', grade).hidden);
+
+// ---- saída ----
+$('#saida').innerHTML = linhas.map(([n, p]) =>
+    `<tr><td>${n}</td><td class="${p ? 'ok' : 'fail'}">${p ? 'OK' : 'FAIL'}</td></tr>`).join('');
+$('#placar').textContent = `${ok === linhas.length ? '✅' : '❌'} ${ok}/${linhas.length} — gavetas do formulário de item`;
+document.title = `__check gavetas ${ok}/${linhas.length}`;
+</script>
+</body></html>

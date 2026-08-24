@@ -9,7 +9,8 @@
 <!-- mesmas folhas do painel-mestre.html: o formulário de item depende das três -->
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="../ficha-v1.7_1/css/inventory.css">
-<link rel="stylesheet" href="../shared/equip-campos.css">
+<!-- sem cache: arnes tem de ler o CSS do disco, senao mede o de ontem -->
+<script>document.write('<link rel="stylesheet" href="../shared/equip-campos.css?t=' + Date.now() + '">');</script>
 <style>
   body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; }
   .col { display: grid; grid-template-columns: 460px 1fr; gap: 16px; align-items: start; }
@@ -42,8 +43,8 @@
 </div>
 
 <script type="module">
-import { renderNpcInventoryList } from './js/npc-inventario.js?c=8';
-import { coletarCampos, camposDaInstancia } from '../shared/equip-campos.js?v=11';
+import { renderNpcInventoryList } from './js/npc-inventario.js?c=10';
+import { coletarCampos, camposDaInstancia } from '../shared/equip-campos.js?v=13';
 
 // Cede um turno do event loop ANTES de qualquer teste.
 //

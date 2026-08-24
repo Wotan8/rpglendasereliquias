@@ -213,14 +213,175 @@ html.dark .eq-term-op {
 .inv-form-catalogo select { width: 100%; }
 .inv-form-catalogo select option { padding: 3px var(--lr-space-2); }
 
-/* O formulário de item ficou alto (30 campos + busca no catálogo). Cabeçalho e
-   rodapé fixos, corpo rolando — senão o Salvar só aparece no fim da rolagem.
-   Escopado no modal do NPC de propósito: os .inv-modal da ficha do jogador são
-   curtos e não devem mudar de comportamento por tabela. */
-#npcItemFormModal .inv-modal-content { display: flex; flex-direction: column; overflow: hidden; }
-#npcItemFormModal .inv-modal-header,
-#npcItemFormModal .inv-modal-footer { flex: 0 0 auto; }
-#npcItemFormModal .inv-modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
 /* ----- Grupo de opções múltiplas (Tipos de Golpe etc.) ----- */
 .inv-form-multi { display: flex; flex-wrap: wrap; gap: var(--lr-space-2) var(--lr-space-3); padding: 4px 0; }
+
+/* =============================================================
+   FORMULÁRIO DE ITEM — barra de ferramentas e seções
+   Os 39 campos do equipamento em sete gavetas, em vez de uma coluna
+   dupla contínua. Vale para as quatro janelas que usam CAMPOS_EQUIPAMENTO
+   (Ficha, Ficha de NPC, Inventário da Mesa e Painel do Criador) — por isso
+   mora aqui, e não no CSS de nenhuma delas.
+   ============================================================= */
+
+/* ---- Modal de formulário: cabeçalho e rodapé fixos, corpo rolando ----
+   Sem isto o "Salvar" só aparece no fim da rolagem de 39 campos. */
+.ef-form-modal .inv-modal-content {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.ef-form-modal .inv-modal-header,
+.ef-form-modal .inv-modal-footer { flex: 0 0 auto; }
+.ef-form-modal .inv-modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: var(--lr-space-4); }
+
+/* ---- Barra: buscar campo + abrir/recolher tudo ---- */
+.ef-barra {
+    position: sticky;
+    /* O recuo de cima do corpo que rola conta na trava do sticky: com top:0 a
+       barra pararia 16px abaixo da borda e deixaria uma fresta por onde o
+       formulario passa. Descontar o recuo a encosta no topo. */
+    top: calc(var(--lr-space-4) * -1);
+    z-index: var(--lr-z-sticky);
+    display: flex;
+    gap: var(--lr-space-2);
+    align-items: center;
+    /* Sangra até a borda do corpo que rola. Cada tela informa o próprio
+       recuo em --ef-pad-x; sem isso a barra ficaria com uma calha branca. */
+    margin: 0 calc(var(--ef-pad-x, var(--lr-space-4)) * -1) var(--lr-space-3);
+    padding: var(--lr-space-3) var(--ef-pad-x, var(--lr-space-4));
+    background: var(--lr-surface);
+    border-bottom: var(--lr-border-w) solid var(--lr-border);
+}
+.ef-busca {
+    flex: 1 1 auto;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: var(--lr-space-2) var(--lr-space-3);
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-1);
+    background: var(--lr-bg-0);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    transition: border-color var(--lr-t-fast) var(--lr-ease), box-shadow var(--lr-t-fast) var(--lr-ease);
+}
+.ef-busca:focus {
+    outline: none;
+    border-color: var(--lr-gold);
+    box-shadow: var(--lr-glow-gold);
+}
+.ef-barra-btn {
+    flex: 0 0 auto;
+    padding: var(--lr-space-2) var(--lr-space-3);
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    color: var(--lr-text-2);
+    background: transparent;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    cursor: pointer;
+    transition: color var(--lr-t-fast) var(--lr-ease), border-color var(--lr-t-fast) var(--lr-ease);
+}
+.ef-barra-btn:hover { color: var(--lr-text-1); border-color: var(--lr-gold); }
+.ef-barra-btn:focus-visible { outline: none; box-shadow: var(--lr-glow-gold); }
+
+/* ---- Seção recolhível ---- */
+.ef-sec {
+    margin-bottom: var(--lr-space-3);
+    background: var(--lr-surface);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    overflow: hidden;
+}
+.ef-sec[hidden] { display: none; }
+
+.ef-sec-head {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-3);
+    padding: var(--lr-space-3) var(--lr-space-4);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    background: var(--lr-surface-2);
+    transition: background var(--lr-t-fast) var(--lr-ease);
+}
+.ef-sec-head::-webkit-details-marker { display: none; }
+.ef-sec-head:hover { background: var(--lr-bg-1); }
+.ef-sec-head:focus-visible { outline: none; box-shadow: var(--lr-glow-gold); }
+
+.ef-sec-ico { flex: 0 0 auto; font-size: var(--lr-fs-md); line-height: 1; }
+.ef-sec-tit {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-family: var(--lr-font-subtitle);
+    font-size: var(--lr-fs-lg);
+    font-weight: 700;
+    line-height: var(--lr-lh-tight);
+    color: var(--lr-text-1);
+}
+.ef-sec-badge {
+    flex: 0 0 auto;
+    padding: 2px var(--lr-space-2);
+    font-family: var(--lr-font-body);
+    font-size: var(--lr-fs-xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--lr-text-2);
+    background: var(--lr-bg-1);
+    border-radius: var(--lr-radius-sm);
+}
+.ef-sec-badge-cheio { color: var(--lr-gold-2); background: var(--lr-gold-soft); font-weight: 700; }
+
+/* Seta: um chevron desenhado com borda, girando 45° ao abrir. */
+.ef-sec-seta {
+    flex: 0 0 auto;
+    width: 7px;
+    height: 7px;
+    margin-right: var(--lr-space-1);
+    border-right: 2px solid var(--lr-text-2);
+    border-bottom: 2px solid var(--lr-text-2);
+    transform: rotate(-45deg);
+    transition: transform var(--lr-t-fast) var(--lr-ease);
+}
+.ef-sec[open] > .ef-sec-head > .ef-sec-seta { transform: rotate(45deg); }
+.ef-sec[open] > .ef-sec-head { border-bottom: var(--lr-border-w) solid var(--lr-border); }
+
+.ef-sec-dica {
+    margin: 0;
+    padding: var(--lr-space-3) var(--lr-space-4) 0;
+    font-size: var(--lr-fs-xs);
+    line-height: var(--lr-lh-body);
+    color: var(--lr-text-2);
+}
+.ef-sec > .inv-form-grid,
+.ef-sec > .form-grid { padding: var(--lr-space-3) var(--lr-space-4) var(--lr-space-4); }
+
+/* Campo cortado pela busca continua no DOM — a coleta lê por id. */
+[data-fora-busca] { display: none !important; }
+
+.ef-sem-resultado {
+    margin: 0;
+    padding: var(--lr-space-5) var(--lr-space-4);
+    text-align: center;
+    font-size: var(--lr-fs-sm);
+    color: var(--lr-text-2);
+}
+
+/* Asterisco do campo obrigatório — o único vermelho do formulário. */
+.inv-form-label .required { color: var(--lr-blood-2); font-weight: 700; }
+
+@media (max-width: 600px) {
+    .ef-sec-tit { font-size: var(--lr-fs-md); }
+    .ef-barra { flex-wrap: wrap; }
+    .ef-busca { flex: 1 1 100%; }
+}
+
+/* Encostada no topo do corpo, a barra come o recuo de cima também. Quando vem
+   depois do picker de catálogo, o recuo dela é o espaço normal entre blocos. */
+.ef-barra:first-child { margin-top: calc(var(--lr-space-4) * -1); }
+
+/* Painel do Criador: o corpo do formulário recua 24px, não 16px. */
+.form-body { --ef-pad-x: var(--lr-space-5); }

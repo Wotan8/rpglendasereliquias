@@ -19,9 +19,9 @@ import {
     desgastarConteiner, GATILHO,
 } from '../../shared/inventario-motor.js?v=7';
 import {
-    camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
-    instanciarDoModelo,
-} from '../../shared/equip-campos.js?v=11';
+    camposDaInstancia, valorDoItem, coletarCampos, aplicarVisibilidade,
+    instanciarDoModelo, htmlFormulario, htmlBarraFerramentas, ligarFormulario,
+} from '../../shared/equip-campos.js?v=13';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML } from '../../shared/restaurar-item.js?v=1';
 
 // Estado local. `abertos`/`contAbertos` são do motor de inventário
@@ -433,12 +433,12 @@ export function linhasDeDisparoNpc() {
 /** Redesenha os campos do formulário para um item (ou semente de modelo). */
 function _pintarCamposItem(item, modelo) {
     const corpoEl = document.querySelector('#npcItemFormModal .inv-modal-body');
-    const grade = corpoEl?.querySelector('.inv-form-grid');
+    const grade = corpoEl?.querySelector('[data-ef-form]');
     if (!grade) return;
     const caches = _cachesDoForm();
     window._mechCache = caches.mechanics;   // os construtores de seletor leem daqui
-    grade.innerHTML = camposDaInstancia()
-        .map(f => htmlCampo(f, valorDoItem(item, f), { sel: SEL, caches, modelo })).join('');
+    grade.innerHTML = htmlFormulario(camposDaInstancia(),
+        f => valorDoItem(item, f), { sel: SEL, caches, modelo });
 
     const nota = corpoEl.querySelector('[data-nota-modelo]');
     nota.innerHTML = modelo
@@ -490,18 +490,19 @@ window.openNpcItemForm = function(editItemId) {
 
     document.getElementById('npcItemFormModal')?.remove();
     const modal = document.createElement('div');
-    modal.className = 'inv-modal active';
+    modal.className = 'inv-modal active ef-form-modal';
     modal.id = 'npcItemFormModal';
     modal.style.zIndex = '10001';
-    modal.innerHTML = `<div class="inv-modal-content" style="max-width:760px">
+    modal.innerHTML = `<div class="inv-modal-content" style="max-width:860px">
         <div class="inv-modal-header">
             <span class="inv-modal-title">${isEdit ? '✏️ Editar Item' : '➕ Criar Item'} — ${escapeHtml(_npcNome())}</span>
             <button class="inv-modal-close" onclick="this.closest('.inv-modal').remove()">✕</button>
         </div>
         <div class="inv-modal-body">
             ${buscaHtml}
+            ${htmlBarraFerramentas()}
             <div data-nota-modelo></div>
-            <div class="inv-form-grid"></div>
+            <div data-ef-form></div>
             <input type="hidden" id="nif_modeloId" value="${escapeHtml(item?.modeloId || '')}">
             <input type="hidden" id="nif_qtdInicial" value="${escapeHtml(String(item?.quantidade ?? ''))}">
             ${isEdit ? `<input type="hidden" id="nif_editId" value="${escapeHtml(item.id)}">` : ''}
@@ -517,11 +518,8 @@ window.openNpcItemForm = function(editItemId) {
     _pintarCamposItem(item, modelo);
     if (!isEdit && cat.length) window._npcFiltrarCatalogo();
 
-    // Tipo e "É Container?" abrem/fecham os campos dependentes
-    const corpoEl = modal.querySelector('.inv-modal-body');
-    corpoEl.addEventListener('change', e => {
-        if (e.target.id === 'field_tipo' || e.target.id === 'field_ehContainer') aplicarVisibilidade(corpoEl);
-    });
+    // Busca de campo, abrir/recolher seções, campos condicionais e contadores
+    ligarFormulario(modal.querySelector('.inv-modal-body'));
 };
 
 /** Filtra o catálogo por nome, tipo ou tag. Sem busca, mostra tudo. */

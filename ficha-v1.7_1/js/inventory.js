@@ -2593,13 +2593,13 @@ function _cachesDoForm() {
 /** Redesenha os campos para um item (ou para a semente de um modelo). */
 function _pintarCamposItem(item, modelo) {
     const corpoEl = document.querySelector('#invFormModal .inv-modal-body');
-    const grade = corpoEl?.querySelector('.inv-form-grid');
+    const grade = corpoEl?.querySelector('[data-ef-form]');
     if (!grade) return;
     const EC = window.EquipCampos;
     const caches = _cachesDoForm();
     window._mechCache = caches.mechanics;   // os construtores de seletor leem daqui
-    grade.innerHTML = EC.camposDaInstancia()
-        .map(f => EC.htmlCampo(f, EC.valorDoItem(item, f), { sel: window.EquipSel, caches, modelo })).join('');
+    grade.innerHTML = EC.htmlFormulario(EC.camposDaInstancia(),
+        f => EC.valorDoItem(item, f), { sel: window.EquipSel, caches, modelo });
 
     const nota = corpoEl.querySelector('[data-nota-modelo]');
     if (nota) nota.innerHTML = modelo
@@ -2672,17 +2672,18 @@ window.openItemFormModal = function(title, item, containerId) {
         </label>` : '';
 
     const modal = document.createElement('div');
-    modal.className = 'inv-modal active';
+    modal.className = 'inv-modal active ef-form-modal';
     modal.id = 'invFormModal';
-    modal.innerHTML = `<div class="inv-modal-content" style="max-width:760px">
+    modal.innerHTML = `<div class="inv-modal-content" style="max-width:860px">
         <div class="inv-modal-header">
             <span class="inv-modal-title">${_escHtml(title || (isEdit ? 'Editar Item' : 'Criar Item'))}</span>
             <button class="inv-modal-close" onclick="closeItemFormModal()">✕</button>
         </div>
         <div class="inv-modal-body">
             ${buscaHtml}
+            ${window.EquipCampos.htmlBarraFerramentas()}
             <div data-nota-modelo></div>
-            <div class="inv-form-grid"></div>
+            <div data-ef-form></div>
             ${catalogoHtml}
             <input type="hidden" id="invFormContainerId" value="${_escHtml(containerId || '')}">
             <input type="hidden" id="invFormModeloId" value="${_escHtml(item?.modeloId || '')}">
@@ -2700,13 +2701,8 @@ window.openItemFormModal = function(title, item, containerId) {
     _pintarCamposItem(item, modelo);
     if (!isEdit && catalog.length) window._fichaFiltrarCatalogo();
 
-    // Tipo e "É Container?" abrem/fecham os campos dependentes
-    const corpoEl = modal.querySelector('.inv-modal-body');
-    corpoEl.addEventListener('change', e => {
-        if (e.target.id === 'field_tipo' || e.target.id === 'field_ehContainer') {
-            window.EquipCampos.aplicarVisibilidade(corpoEl);
-        }
-    });
+    // Busca de campo, abrir/recolher seções, campos condicionais e contadores
+    window.EquipCampos.ligarFormulario(modal.querySelector('.inv-modal-body'));
 };
 
 /** Filtra o catálogo por nome, tipo ou tag. Sem busca, mostra tudo. */

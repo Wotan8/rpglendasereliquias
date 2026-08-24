@@ -396,6 +396,171 @@ export function coletarCampos(campos, prefixo = '') {
 }
 
 /** Campos que só aparecem sob condição (Categoria da Arma, campos de Container). */
+/* =============================================================
+   SEÇÕES DO FORMULÁRIO
+   Os mesmos campos de CAMPOS_EQUIPAMENTO, agrupados pela PERGUNTA que o
+   criador faz — em vez de uma coluna dupla com 39 rótulos seguidos. A lista
+   acima continua sendo a única fonte da verdade: aqui só se diz em que gaveta
+   cada chave aparece. Chave que ninguém citar cai sozinha em "Outros campos",
+   então esquecer de encaixar um campo novo não esconde ele de ninguém.
+   ============================================================= */
+export const SECOES_EQUIPAMENTO = [
+    {
+        id: 'identidade', icone: '📜', titulo: 'Identidade', aberta: true,
+        dica: 'O que é a peça e como ela aparece na lista.',
+        campos: ['nome', 'tipo', 'tags', 'descricao', 'imagemUrl'],
+    },
+    {
+        id: 'fisico', icone: '⚖️', titulo: 'Física e preço', aberta: true,
+        dica: 'Quanto a peça pesa, quanto ocupa e quanto custa.',
+        campos: ['peso', 'tamanho', 'pressaoBase', 'preco', 'quantidade'],
+    },
+    {
+        id: 'qualidade', icone: '⚒️', titulo: 'Qualidade e durabilidade',
+        dica: 'A Liga é o teto e a Qualidade nunca passa dela. Afiação e Reforço são o acabamento pago.',
+        campos: ['liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'integridadeBase'],
+    },
+    {
+        id: 'equipar', icone: '🧍', titulo: 'Como se veste',
+        dica: 'Onde a peça entra no corpo e o que ela ocupa. Segurar não aciona efeito nenhum.',
+        campos: ['formaEquipar', 'categoriaArma', 'equipavelEm', 'equipavelEmGuardado', 'slotsAdicionais'],
+    },
+    {
+        id: 'combate', icone: '⚔️', titulo: 'Combate',
+        dica: 'Dado, alcance e munição. Só preencha o que a peça realmente faz.',
+        campos: ['formulaDano', 'formulaDano2Maos', 'tipoGolpe', 'alcanceM', 'alcanceFator',
+            'ignoraLimiteForDisparo', 'tipoProjetil', 'chanceRecuperar'],
+    },
+    {
+        id: 'conteiner', icone: '📦', titulo: 'Contêiner',
+        dica: 'Só vale para peça que guarda outras dentro.',
+        campos: ['ehContainer', 'multiplicadorPressao', 'pesoMaximoContainer', 'capacidadeContainer'],
+    },
+    {
+        id: 'efeitos', icone: '✨', titulo: 'Efeitos e vínculos',
+        dica: 'O que a peça faz em quem a usa. Preencher qualquer um aqui obriga a forma Empunhar.',
+        campos: ['mecanicaIds', 'valoresDerivadosVinculados', 'statusVitaisVinculados',
+            'atributosVinculados', 'periciasVinculadas', 'condicaoIds'],
+    },
+];
+
+const SECAO_SOBRA = {
+    id: 'outros', icone: '🗂️', titulo: 'Outros campos',
+    dica: 'Campos ainda não encaixados em nenhuma seção.',
+};
+
+/** Um valor conta como "preenchido"? Checkbox só marcado; zero conta. */
+const preenchido = (f, v) => f.type === 'boolean' ? v === true : !vazio(v);
+
+/** Distribui os campos recebidos pelas seções, sem perder nenhum. */
+function agruparCampos(campos) {
+    const porChave = new Map(campos.map(f => [f.key, f]));
+    const usados = new Set();
+    const grupos = SECOES_EQUIPAMENTO.map(s => {
+        const meus = s.campos.map(k => porChave.get(k)).filter(Boolean);
+        meus.forEach(f => usados.add(f.key));
+        return { s, meus };
+    }).filter(g => g.meus.length);
+    const sobra = campos.filter(f => !usados.has(f.key));
+    if (sobra.length) grupos.push({ s: SECAO_SOBRA, meus: sobra });
+    return grupos;
+}
+
+/**
+ * O formulário inteiro, em seções recolhíveis.
+ *
+ * `valorDe(campo)` devolve o valor atual daquele campo — quem chama passa
+ * `f => valorDoItem(item, f)`, que é o de-para da instância. `opts` é o mesmo
+ * objeto de htmlCampo ({ sel, caches, modelo, prefixo }).
+ *
+ * A seção abre sozinha quando é essencial OU quando já tem algo preenchido: ao
+ * editar, o que existe fica à vista; ao criar, só as duas primeiras.
+ */
+export function htmlFormulario(campos, valorDe, opts = {}) {
+    const secoes = agruparCampos(campos).map(({ s, meus }) => {
+        const vals = meus.map(f => valorDe(f));
+        const cheios = meus.filter((f, i) => preenchido(f, vals[i])).length;
+        const aberta = s.aberta || cheios > 0;
+        return `<details class="ef-sec" data-secao="${esc(s.id)}"${aberta ? ' open' : ''}>
+            <summary class="ef-sec-head">
+                <span class="ef-sec-ico" aria-hidden="true">${s.icone}</span>
+                <span class="ef-sec-tit">${esc(s.titulo)}</span>
+                <span class="ef-sec-badge" data-ef-badge>${cheios}/${meus.length}</span>
+                <span class="ef-sec-seta" aria-hidden="true"></span>
+            </summary>
+            <p class="ef-sec-dica">${esc(s.dica)}</p>
+            <div class="inv-form-grid">${meus.map((f, i) => htmlCampo(f, vals[i], opts)).join('')}</div>
+        </details>`;
+    }).join('');
+    return secoes + '<p class="ef-sem-resultado" data-ef-vazio hidden>Nenhum campo com esse nome.</p>';
+}
+
+/** Barra do topo do formulário: buscar campo e abrir/recolher tudo. */
+export function htmlBarraFerramentas() {
+    return `<div class="ef-barra">
+        <input type="search" class="ef-busca" data-ef-busca autocomplete="off"
+            placeholder="🔍 Buscar campo (ex: dano, peso, alcance)" aria-label="Buscar campo do formulário">
+        <button type="button" class="ef-barra-btn" data-ef-toggle="abrir">Abrir tudo</button>
+        <button type="button" class="ef-barra-btn" data-ef-toggle="fechar">Recolher</button>
+    </div>`;
+}
+
+/**
+ * A mesma divisão em gavetas, mas para quem já construiu os campos como
+ * ELEMENTOS — o Painel do Criador monta o formulário com createElement, não
+ * com string. Só move nós de lugar: nenhum campo é recriado, nenhum id muda.
+ *
+ * `grade` é o contêiner com um filho por campo, cada um marcado com
+ * `data-campo="<chave>"`. `temValor(chave)` diz se a gaveta nasce aberta.
+ * `classeGrade` é a classe da grade interna de cada gaveta, porque o Criador
+ * chama a dele de `form-grid` e as janelas de item, de `inv-form-grid`.
+ *
+ * Chave que nenhuma seção citar cai em "Outros campos" — esquecer de encaixar
+ * um campo novo não some com ele.
+ */
+export function agruparEmSecoesDOM(grade, secoes, temValor = () => false, classeGrade = 'inv-form-grid') {
+    const frag = document.createDocumentFragment();
+    const usados = new Set();
+
+    const gaveta = (s, campos) => {
+        const det = document.createElement('details');
+        det.className = 'ef-sec';
+        det.dataset.secao = s.id;
+        det.open = !!s.aberta || campos.some(el => temValor(el.dataset.campo));
+        det.innerHTML = '<summary class="ef-sec-head">'
+            + '<span class="ef-sec-ico" aria-hidden="true"></span>'
+            + '<span class="ef-sec-tit"></span>'
+            + '<span class="ef-sec-badge" data-ef-badge>0/0</span>'
+            + '<span class="ef-sec-seta" aria-hidden="true"></span></summary>'
+            + '<p class="ef-sec-dica"></p><div class="' + classeGrade + '"></div>';
+        det.querySelector('.ef-sec-ico').textContent = s.icone || '';
+        det.querySelector('.ef-sec-tit').textContent = s.titulo;
+        det.querySelector('.ef-sec-dica').textContent = s.dica || '';
+        const dentro = det.querySelector('.' + classeGrade);
+        campos.forEach(el => dentro.appendChild(el));
+        frag.appendChild(det);
+    };
+
+    for (const s of secoes) {
+        const campos = s.campos
+            .map(k => grade.querySelector('[data-campo="' + k + '"]'))
+            .filter(Boolean);
+        if (!campos.length) continue;
+        campos.forEach(el => usados.add(el));
+        gaveta(s, campos);
+    }
+
+    const sobra = [...grade.children].filter(el => el.dataset.campo && !usados.has(el));
+    if (sobra.length) gaveta({ ...SECAO_SOBRA }, sobra);
+
+    grade.replaceChildren(frag);
+    grade.classList.remove(classeGrade);   // as gavetas trazem a grade dentro
+    grade.insertAdjacentHTML('beforeend',
+        '<p class="ef-sem-resultado" data-ef-vazio hidden>Nenhum campo com esse nome.</p>');
+    return grade;
+}
+
+/** Campos que só aparecem sob condição (Categoria da Arma, campos de Container). */
 export function aplicarVisibilidade(raiz, prefixo = '') {
     const val = (k) => document.getElementById(`field_${prefixo}${k}`);
     for (const f of CAMPOS_EQUIPAMENTO) {
@@ -406,4 +571,72 @@ export function aplicarVisibilidade(raiz, prefixo = '') {
         if (f.showWhenBoolean) mostra = !!val(f.showWhenBoolean)?.checked;
         grupo.style.display = mostra ? '' : 'none';
     }
+    atualizarResumo(raiz, prefixo);
+}
+
+/** Grupo que o usuário enxerga agora: nem escondido por regra, nem cortado pela busca. */
+const grupoVisivel = (g) => g.style.display !== 'none' && !g.hasAttribute('data-fora-busca');
+
+/**
+ * Reconta o "3/5" de cada seção e some com a seção que ficou sem campo nenhum.
+ * Conta só o visível: escolher Arma faz o contador de Combate crescer, e uma
+ * peça que não é contêiner não fica devendo 4 campos que nem existem para ela.
+ */
+export function atualizarResumo(raiz, prefixo = '') {
+    let algum = false;
+    raiz.querySelectorAll('details.ef-sec').forEach(sec => {
+        const grupos = [...sec.querySelectorAll('[data-campo]')].filter(grupoVisivel);
+        sec.hidden = grupos.length === 0;
+        if (!sec.hidden) algum = true;
+        const badge = sec.querySelector('[data-ef-badge]');
+        if (!badge) return;
+        const cheios = grupos.filter(g => {
+            const f = CAMPOS_EQUIPAMENTO.find(x => x.key === g.dataset.campo);
+            if (!f) return false;
+            try { return preenchido(f, coletarCampo(f, prefixo)); } catch { return false; }
+        }).length;
+        badge.textContent = `${cheios}/${grupos.length}`;
+        badge.classList.toggle('ef-sec-badge-cheio', cheios > 0);
+    });
+    const aviso = raiz.querySelector('[data-ef-vazio]');
+    if (aviso) aviso.hidden = algum;
+}
+
+/** Busca por nome do campo: corta o que não casa e abre as seções que sobraram. */
+export function filtrarCampos(raiz, termo, prefixo = '') {
+    const q = String(termo || '').trim().toLowerCase();
+    raiz.querySelectorAll('[data-campo]').forEach(g => {
+        const alvo = (g.textContent + ' ' + (g.dataset.campo || '')).toLowerCase();
+        if (!q || alvo.includes(q)) g.removeAttribute('data-fora-busca');
+        else g.setAttribute('data-fora-busca', '');
+    });
+    atualizarResumo(raiz, prefixo);
+    if (q) raiz.querySelectorAll('details.ef-sec').forEach(s => { if (!s.hidden) s.open = true; });
+}
+
+/**
+ * Liga o formulário: busca, abrir/recolher tudo, campos condicionais e o
+ * contador das seções. Substitui o listener de `change` que cada tela repetia
+ * só para o Tipo e o "É Container?".
+ */
+export function ligarFormulario(raiz, prefixo = '', { visibilidade = true } = {}) {
+    // `visibilidade: false` = o Painel do Criador, que já tem o wiring dele
+    // para showWhen/showWhenBoolean/showWhenNotNull. Ligar os dois faria o
+    // mesmo campo ser mostrado e escondido duas vezes por tecla.
+    const repintar = () => visibilidade ? aplicarVisibilidade(raiz, prefixo) : atualizarResumo(raiz, prefixo);
+    raiz.addEventListener('input', e => {
+        if (e.target.matches('[data-ef-busca]')) filtrarCampos(raiz, e.target.value, prefixo);
+        else atualizarResumo(raiz, prefixo);
+    });
+    raiz.addEventListener('change', repintar);
+    raiz.addEventListener('click', e => {
+        const btn = e.target.closest('[data-ef-toggle]');
+        if (!btn) return;
+        const abrir = btn.dataset.efToggle === 'abrir';
+        raiz.querySelectorAll('details.ef-sec').forEach(s => { s.open = abrir; });
+    });
+    // o wiring do Criador se resolve num setTimeout(0); recontar antes disso
+    // marcaria como visível o campo que ele ainda vai esconder.
+    if (visibilidade) aplicarVisibilidade(raiz, prefixo);
+    else setTimeout(() => atualizarResumo(raiz, prefixo), 0);
 }

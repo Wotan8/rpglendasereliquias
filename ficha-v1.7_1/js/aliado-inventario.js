@@ -269,7 +269,7 @@
 
         document.getElementById('aliadoItemFormModal')?.remove();
         const modal = document.createElement('div');
-        modal.className = 'inv-modal active';
+        modal.className = 'inv-modal active ef-form-modal';
         modal.id = 'aliadoItemFormModal';
         modal.style.zIndex = '10001';
         modal.innerHTML = `<div class="inv-modal-content" style="max-width:600px">

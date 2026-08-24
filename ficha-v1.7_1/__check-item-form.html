@@ -5,7 +5,8 @@
 <link rel="stylesheet" href="../shared/tokens.css">
 <!-- sem cache: arnês tem de ler o CSS do disco, senão mede o de ontem -->
 <script>document.write('<link rel="stylesheet" href="css/inventory.css?t=' + Date.now() + '">');</script>
-<link rel="stylesheet" href="../shared/equip-campos.css">
+<!-- sem cache: arnes tem de ler o CSS do disco, senao mede o de ontem -->
+<script>document.write('<link rel="stylesheet" href="../shared/equip-campos.css?t=' + Date.now() + '">');</script>
 <style>
   body { margin: 0; padding: 16px; font: 14px/1.6 Inter, system-ui, sans-serif; background: var(--lr-bg-0); color: var(--lr-text-1); }
   table { border-collapse: collapse; font: 11px ui-monospace, monospace; width: 620px; }
@@ -28,7 +29,7 @@
 <script src="js/inventory.js?c=2"></script>
 <script type="module">
 import * as InvMotor from '../shared/inventario-motor.js?v=7';
-import * as EquipCampos from '../shared/equip-campos.js?v=11';
+import * as EquipCampos from '../shared/equip-campos.js?v=13';
 import * as EquipSel from '../painel-criador/js/painel-mechanics.js?v=16';
 window.InvMotor = InvMotor;
 window.EquipCampos = EquipCampos;
@@ -162,13 +163,62 @@ teste('T23 · ao EDITAR, o botão Restaurar aparece',
     const c = md.querySelector('.inv-modal-content');
     const larguraOriginal = c.style.maxWidth;
     c.style.maxWidth = '360px'; c.style.width = '360px';
-    md.querySelector('.inv-form-grid').style.gridTemplateColumns = '1fr';
+    // campo dentro de <details> fechado mede 0: sem abrir tudo, o teste
+    // passaria sem ter olhado para nada.
+    $$('details.ef-sec', md).forEach(s => { s.open = true; });
+    $$('.inv-form-grid', md).forEach(g => g.style.gridTemplateColumns = '1fr');
     const r = c.getBoundingClientRect();
-    const estoura = $$('input,select,textarea', md).filter(e => e.getBoundingClientRect().right > r.right + 1);
-    teste(`T24 · a 360px nenhum campo estoura a janela${estoura.length ? ' — ' + estoura.slice(0, 3).map(e => e.id).join(', ') : ''}`,
+    const estoura = $$('input,select,textarea,.ef-sec-head', md)
+        .filter(e => e.getBoundingClientRect().width && e.getBoundingClientRect().right > r.right + 1);
+    teste(`T24 · a 360px nenhum campo estoura a janela${estoura.length ? ' — ' + estoura.slice(0, 3).map(e => e.id || e.className).join(', ') : ''}`,
         estoura.length === 0);
     c.style.maxWidth = larguraOriginal; c.style.width = '';
-    md.querySelector('.inv-form-grid').style.gridTemplateColumns = '';
+    $$('.inv-form-grid', md).forEach(g => g.style.gridTemplateColumns = '');
+})();
+
+// ---- as gavetas: agrupar não pode esconder nem desligar campo ----
+(() => {
+    const md = $('#invFormModal'), corpo2 = $('.inv-modal-body', md);
+    const secs = $$('details.ef-sec', md);
+    teste(`T25 · os campos vêm em gavetas (${secs.length} seções)`, secs.length >= 6);
+
+    // nenhuma chave da spec pode ficar de fora de alguma gaveta
+    const dentro = new Set($$('details.ef-sec [data-campo]', md).map(g => g.dataset.campo));
+    const orfaos = EquipCampos.camposDaInstancia().map(f => f.key).filter(k => !dentro.has(k));
+    teste('T26 · nenhum campo ficou fora das gavetas' + (orfaos.length ? ' — ' + orfaos.join(', ') : ''),
+        orfaos.length === 0);
+
+    // recolhido continua no DOM: a coleta lê por id, não por pixel
+    $('[data-ef-toggle="fechar"]', md).click();
+    const comFechado = EquipCampos.coletarCampos(EquipCampos.camposDaInstancia());
+    teste('T27 · com tudo recolhido a coleta ainda devolve os campos',
+        Object.keys(comFechado).length === EquipCampos.camposDaInstancia().length
+        && comFechado.nome === 'Colar');
+    $('[data-ef-toggle="abrir"]', md).click();
+
+    // busca por nome de campo
+    const busca = $('[data-ef-busca]', md);
+    busca.value = 'dano';
+    busca.dispatchEvent(new Event('input', { bubbles: true }));
+    const sobrou = $$('[data-campo]', md)
+        .filter(g => !g.hasAttribute('data-fora-busca') && g.style.display !== 'none')
+        .map(g => g.dataset.campo);
+    teste('T28 · buscar "dano" deixa só os campos de dano — ' + sobrou.join(', '),
+        sobrou.length > 0 && sobrou.every(k => /dano/i.test(k)));
+    teste('T29 · a busca esconde as gavetas que ficaram sem campo',
+        $$('details.ef-sec', md).filter(s => !s.hidden).length === 1);
+    busca.value = '';
+    busca.dispatchEvent(new Event('input', { bubbles: true }));
+    teste('T30 · limpar a busca traz todas as gavetas de volta',
+        $$('details.ef-sec', md).filter(s => !s.hidden).length === secs.length);
+
+    // contador da gaveta acompanha o que foi preenchido
+    const idBadge = () => $('details[data-secao="identidade"] [data-ef-badge]', md).textContent;
+    const antes = idBadge();
+    $('#field_descricao').value = 'uma joia';
+    $('#field_descricao').dispatchEvent(new Event('input', { bubbles: true }));
+    teste(`T31 · o contador da gaveta sobe ao preencher (${antes} → ${idBadge()})`,
+        idBadge() !== antes);
 })();
 
 // ---- saída ----

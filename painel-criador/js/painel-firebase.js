@@ -4,7 +4,16 @@
 // =============================================
 
 import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=16';
-import { CAMPOS_EQUIPAMENTO, normalizaFormaEquipar } from '../../shared/equip-campos.js?v=11';
+import {
+    CAMPOS_EQUIPAMENTO, normalizaFormaEquipar,
+    SECOES_EQUIPAMENTO, htmlBarraFerramentas, ligarFormulario, agruparEmSecoesDOM,
+} from '../../shared/equip-campos.js?v=13';
+
+/** Gaveta nasce aberta quando o registro já tem algo dentro dela. */
+const _preenchidoNoDado = (dado, k) => {
+    const v = dado ? dado[k] : undefined;
+    return !(v === undefined || v === null || v === '' || v === false || (Array.isArray(v) && !v.length));
+};
 import { RUNIC_MODULE_DEF, buildRunicField, collectRunicField, importRunicSeed } from './painel-runic.js?v=1';
 import { versaoDoLivro } from '../../shared/livros-pub.js';
 
@@ -228,6 +237,9 @@ const MODULE_DEFS = {
         // Mesma lista que a Ficha de NPC usa para editar UMA instância
         // (shared/equip-campos.js). Campo novo aqui aparece nos dois.
         fields: CAMPOS_EQUIPAMENTO,
+        // ...e as mesmas gavetas do formulário de item da Ficha: 39 campos
+        // numa coluna só ninguém varre. Único módulo que declara seções.
+        sections: SECOES_EQUIPAMENTO,
     },
     conditions: {
         name: 'Condição', namePlural: 'Condições', icon: '💀',
@@ -2433,6 +2445,7 @@ window.openForm = function (itemId) {
             value = true;
         }
         const el = buildField(field, value, existingData);
+        el.dataset.campo = field.key;   // o agrupador em seções acha o campo por aqui
         formGrid.appendChild(el);
     });
 
@@ -2442,6 +2455,10 @@ window.openForm = function (itemId) {
         pubField.checked = existingData ? !!existingData.publicado : false;
     }
 
+    if (modDef.sections) {
+        container.insertAdjacentHTML('beforeend', htmlBarraFerramentas());
+        agruparEmSecoesDOM(formGrid, modDef.sections, (k) => _preenchidoNoDado(existingData, k), 'form-grid');
+    }
     container.appendChild(formGrid);
 
     // Wire up showWhen visibility for conditional fields
@@ -2452,6 +2469,13 @@ window.openForm = function (itemId) {
 
     // Wire up showWhenNotNull visibility
     _wireShowWhenNotNullFields(modDef, formGrid);
+
+    // Busca de campo, abrir/recolher seções e o contador de cada uma. Só uma
+    // vez por container: openForm reusa o MESMO #formFields a cada abertura.
+    if (!container.dataset.efLigado) {
+        ligarFormulario(container, '', { visibilidade: false });
+        container.dataset.efLigado = '1';
+    }
 
     const formModal = document.getElementById('formModal');
     formModal.classList.add('active');

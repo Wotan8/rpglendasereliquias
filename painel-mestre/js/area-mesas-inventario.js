@@ -9,9 +9,9 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 // mostra exatamente os mesmos controles do cadastro de Equipamento.
 import * as SEL from '../../painel-criador/js/painel-mechanics.js';
 import {
-    camposDaInstancia, valorDoItem, htmlCampo, coletarCampos, aplicarVisibilidade,
-    instanciarDoModelo, modeloDaInstancia,
-} from '../../shared/equip-campos.js?v=11';
+    camposDaInstancia, valorDoItem, coletarCampos, aplicarVisibilidade,
+    instanciarDoModelo, modeloDaInstancia, htmlFormulario, htmlBarraFerramentas, ligarFormulario,
+} from '../../shared/equip-campos.js?v=13';
 import { ensureNpcSystemData } from './npc-system-data.js';
 import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
@@ -663,12 +663,12 @@ async function _ensureCachesDoForm() {
 /** Redesenha os campos do formulário para um item (ou semente de um modelo). */
 function _pintarCamposMestre(item, modelo) {
     const corpoEl = document.querySelector('#invFormModal .inv-modal-body');
-    const grade = corpoEl?.querySelector('.inv-form-grid');
+    const grade = corpoEl?.querySelector('[data-ef-form]');
     if (!grade) return;
     const caches = _cachesDoForm();
     window._mechCache = caches.mechanics;   // os construtores de seletor leem daqui
-    grade.innerHTML = camposDaInstancia()
-        .map(f => htmlCampo(f, valorDoItem(item, f), { sel: SEL, caches, modelo })).join('');
+    grade.innerHTML = htmlFormulario(camposDaInstancia(),
+        f => valorDoItem(item, f), { sel: SEL, caches, modelo });
 
     const nota = corpoEl.querySelector('[data-nota-modelo]');
     if (nota) nota.innerHTML = modelo
@@ -724,17 +724,18 @@ window._openMestreItemFormModal = async function(mesaId, editItemId, targetCharI
         </label>`;
 
     const modal = document.createElement('div');
-    modal.className = 'inv-modal active';
+    modal.className = 'inv-modal active ef-form-modal';
     modal.id = 'invFormModal';
-    modal.innerHTML = `<div class="inv-modal-content" style="max-width:760px">
+    modal.innerHTML = `<div class="inv-modal-content" style="max-width:860px">
         <div class="inv-modal-header">
             <span class="inv-modal-title">${isEdit ? '✏️ Editar Item' : '➕ Criar Item'}</span>
             <button class="inv-modal-close" onclick="this.closest('.inv-modal').remove()">✕</button>
         </div>
         <div class="inv-modal-body">
             ${buscaHtml}
+            ${htmlBarraFerramentas()}
             <div data-nota-modelo></div>
-            <div class="inv-form-grid"></div>
+            <div data-ef-form></div>
             ${catalogoHtml}
             <input type="hidden" id="mif_mesaId" value="${escapeHtml(mesaId || '')}">
             <input type="hidden" id="mif_targetCharId" value="${escapeHtml(targetCharId || '')}">
@@ -753,11 +754,8 @@ window._openMestreItemFormModal = async function(mesaId, editItemId, targetCharI
     _pintarCamposMestre(item, modelo);
     if (!isEdit && cat.length) window._mestreFiltrarCatalogo();
 
-    // Tipo e "É Container?" abrem/fecham os campos dependentes
-    const corpoEl = modal.querySelector('.inv-modal-body');
-    corpoEl.addEventListener('change', e => {
-        if (e.target.id === 'field_tipo' || e.target.id === 'field_ehContainer') aplicarVisibilidade(corpoEl);
-    });
+    // Busca de campo, abrir/recolher seções, campos condicionais e contadores
+    ligarFormulario(modal.querySelector('.inv-modal-body'));
 };
 
 /** Filtra o catálogo por nome, tipo ou tag. Sem busca, mostra tudo. */
