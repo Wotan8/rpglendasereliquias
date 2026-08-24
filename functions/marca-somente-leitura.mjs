@@ -29,11 +29,19 @@ const ALVOS = [
     { id: 'oWJHvVaZZctpOdFyeZXx', titulo: 'Círculo do Sábio da Luz', chaves: ['8'] },
     { id: 'WxIUefCzMIAcupHjqqxw', titulo: 'Receita de Loções Ofensiva', chaves: '*' },
     { id: 'gX31tLk7vRsTPDuay4h9', titulo: 'Receita de Loções Defensiva', chaves: '*' },
+
+    /* Módulos novos do Xamã/Caçador, cadastrados depois: mesma forma do
+       "Espiritismo — o Eco que o Verde guardou", que trava tudo menos o botão.
+       Chave a chave, e não '*', porque cada um tem um campo que é do jogador. */
+    // deixa o 6 solto: "Presa atual (anotação):" é o bloco de notas do jogador
+    { id: 'manobras_cacador', titulo: 'Manobras de Caçador', chaves: ['1', 'acao', '2', '3', '4', '5'] },
+    { id: 'mod_verde_xama', titulo: 'Golpes do Verde', chaves: ['1', '2', '3', '4', '5', '6'] },
+    { id: 'mod_vodu', titulo: 'Voduísmo — o elo pelo que ainda vive', chaves: ['1', '2', '3', 'acao', '4', '5', '6'] },
 ];
 
 /* Tipo que não guarda dado do jogador nem é preenchido por ele: travar não muda
    nada, mas também não custa. Fica de fora só o que o motor calcula sozinho. */
-const NUNCA_TRAVAR = new Set(['valor_derivado']);
+const NUNCA_TRAVAR = new Set(['valor_derivado', 'botao']);
 
 let erros = 0;
 for (const alvo of ALVOS) {
