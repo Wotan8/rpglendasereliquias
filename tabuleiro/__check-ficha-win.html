@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="../shared/inventario-motor.css">
 <!-- sem cache: arnes tem de ler o arquivo do disco, senao testa o de ontem -->
 <script>document.write('<script src="../shared/equip-slots.js?t=' + Date.now() + '"><\/script>');</script>
+<script>document.write('<script src="../shared/predef-campos.js?t=' + Date.now() + '"><\/script>');</script>
 <style>
   html,body{margin:0;min-height:100%;background:#0b0e14;color:#e6e8ef;font:14px/1.6 Inter,system-ui,sans-serif}
   #saida{position:fixed;inset:12px auto 12px 12px;width:540px;z-index:210;background:#12161f;
@@ -49,11 +50,15 @@ const dv = (id, nome, extra) => ({ id, key: id, nome, icone: extra.icone || '�
     blocoId: extra.bloco || 'geral', blocoNome: extra.bloco || 'Geral', blocoOrdem: extra.ordem ?? 999,
     escopoItem: extra.escopo || '', statusCombate: false, arredondaMesa: extra.mesa || false, espelhaVD: extra.espelha || '' });
 const modManobras = { id: 'm1', tipo: 'lista', titulo: 'Manobras', icone: '🌀', permitirCriacaoJogador: true,
-    itensPredefinidos: [],
+    // Pré-cadastrado com o efeito TRAVADO (🔒 no Painel do Criador): quem já
+    // adquiriu a manobra tem de ver o texto do cadastro, não a cópia congelada.
+    // `usos` fica destravado de propósito — é o contador de mesa do jogador.
+    itensPredefinidos: [{ id: 'pdi_truque', nome: 'Truque da Fumaça',
+        valores: { custo: '1 Ação', usos: '0', desc: 'Some numa nuvem de fumaça densa.' } }],
     schema: [
-        { key: 'custo', label: 'Custo', tipo: 'text' },
+        { key: 'custo', label: 'Custo', tipo: 'text', somenteLeitura: true },
         { key: 'usos', label: 'Usos', tipo: 'contador' },
-        { key: 'desc', label: 'Efeito', tipo: 'textarea' },
+        { key: 'desc', label: 'Efeito', tipo: 'textarea', somenteLeitura: true },
     ] };
 const RACA = { id: 'r1', nome: 'Humana', derivedValueIds: ['dv_perc'], peculiaridadeIds: [],
     partesDoCorpo: [{ id: 'mao', slots: 2 }, { id: 'torso', slots: 1 }] };
@@ -116,7 +121,8 @@ function semear() {
         derivedTotals: { BLINDAGEM: 2.2, BLINDAGEM_CORTANTE: 2.2, PERCEPCAO: 5, DANO_FISICO: 2, GOLPE_IGNEO: 1.5, ACERTO: 7, FOLEGO: 4 },
         dots: { attr_for: 3, attr_des: 2, attr_vig: 2, sk_fisicas_l_minas: 2, sk_mentais_observa__o: 3 },
         classModuleData: {
-            m1: [{ _predefNome: 'Truque da Fumaça', custo: '1 Ação', usos: 2, desc: 'Some numa nuvem.' }],
+            // Cópia congelada: o cadastro já mudou o efeito e o nome do item.
+            m1: [{ _predefId: 'pdi_truque', _predefNome: 'Truque de Fumaça', custo: '1 Ação', usos: 2, desc: 'Some numa nuvem.' }],
             mx_legado: [{ nome: 'Golpe Sombrio', custo: '2 ENER' }],
         } }];
     VITAIS.set('c1', { hp: 12, hpMax: 18, ener: 5, enerMax: 7, san: 88, sanMax: 100,
@@ -373,6 +379,13 @@ async function rodar() {
         txt(wc).includes('Truque da Fumaça') &&
         $$('[data-mod][data-mkey="usos"]', wc).some(i => i.value === '2') &&
         txt(wc).includes('Golpe Sombrio'));
+    // A habilidade foi copiada para a ficha quando o jogador a adquiriu. Editar
+    // o pré-cadastro tem de chegar nela — sem zerar o contador de usos dele.
+    teste('T23b · pré-cadastro editado atualiza a cópia da ficha (nome e campo 🔒), contador do jogador fica',
+        txt(wc).includes('Truque da Fumaça') &&
+        !txt(wc).includes('Truque de Fumaça') &&
+        txt(wc).includes('Some numa nuvem de fumaça densa.') &&
+        $$('[data-mod][data-mkey="usos"]', wc).some(i => i.value === '2'));
     const secoes = $$('.tb-fwin-sec > summary', wc).map(txt);
     teste('T24 · ordem: Ataques → Habilidades & Módulos → Atributos',
         secoes.findIndex(s => s.includes('Ataques')) < secoes.findIndex(s => s.includes('Habilidades')) &&

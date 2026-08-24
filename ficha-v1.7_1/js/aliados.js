@@ -510,6 +510,8 @@ async function renderAliadoClassModules(npc) {
     wrap.innerHTML = vincs.map((vinc, mi) => {
         const def = _alResolveModDef(vinc, defs);
         if (!def) return `<div class="al-empty">⚠️ Módulo não encontrado no registro.</div>`;
+        // Campos 🔒 seguem o pré-cadastro (shared/predef-campos.js)
+        window.PredefCampos?.sincronizarItens(def, vinc.itens);
         const itens = (vinc.itens || []).map((item, ii) => `
             <div class="al-mod-item">
                 <div class="al-mod-item-head">

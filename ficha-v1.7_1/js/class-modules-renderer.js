@@ -492,6 +492,11 @@ function renderClassModules(classeNome) {
     const resSection = document.getElementById('classModulesSection');
     if (resSection) resSection.style.display = '';
 
+    /* Habilidade pré-cadastrada é copiada para a ficha ao ser adquirida. Antes
+       de desenhar, os campos 🔒 voltam a seguir o cadastro — assim uma correção
+       no Painel do Criador chega a quem já tem a habilidade. */
+    modules.forEach(mod => window.PredefCampos?.sincronizarItens(mod, state.classModuleData?.[mod.id]));
+
     modules.forEach(mod => {
         const section = _buildModuleSection(mod);
         container.appendChild(section);

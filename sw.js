@@ -214,6 +214,7 @@ const PRECACHE_URLS = [
   '/shared/alcance-disparo.js',
   '/shared/projeteis.js',
   '/shared/equip-slots.js',
+  '/shared/predef-campos.js',
   '/shared/ficha-aliado.css',
   '/shared/imagem-zoom.js',
   '/shared/lendas-reliquias.css',

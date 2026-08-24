@@ -1324,6 +1324,9 @@ function campoModHtml(ctx, ii, f, item) {
 }
 
 function blocoModulo(def, itens, ctx) {
+    // Campos 🔒 seguem o pré-cadastro (shared/predef-campos.js): a janela não
+    // pode mostrar uma versão da habilidade diferente da que a ficha mostra.
+    window.PredefCampos?.sincronizarItens(def, itens);
     const linhas = itens.map((item, ii) => `<div class="tb-fwin-mod-item">
         <div class="tb-fwin-mod-nome">${esc(item._predefNome || item.nome || `${def.titulo} #${ii + 1}`)}</div>
         ${def.schema.map(f => campoModHtml(ctx, ii, f, item)).join('')}

@@ -1387,6 +1387,8 @@ function renderNpcClassModules() {
                     <button class="npcv2-pec-del" onclick="removeNpcClassModule(${mi})" title="Desvincular">✕</button>
                 </div></div>`;
             }
+            // Campos 🔒 seguem o pré-cadastro (shared/predef-campos.js)
+            window.PredefCampos?.sincronizarItens(def, vinc.itens);
             const fonte = vinc.fonte === 'classe' ? '<span class="npcv2-pec-fonte">classe</span>' : '<span class="npcv2-pec-fonte">manual</span>';
             const itens = (vinc.itens || []).map((item, ii) => `
                 <div class="npcv2-mod-item">
