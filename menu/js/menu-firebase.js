@@ -496,26 +496,25 @@ async function loadInventory() {
                        </div>`
                     : `<div class="loja-card-media inventory-media-fallback"></div>`;
 
-                let tagsHtml = '';
-                if (item.isExp) tagsHtml += `<span class="loja-tag" style="background:#6E5413;">⭐ EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
-                if (item.isRoleta) tagsHtml += `<span class="loja-tag" style="background:#382678;">🎰 Roleta: ${item.roletaGiros}x</span>`;
-                if (item.isRerolagem) tagsHtml += `<span class="loja-tag" style="background:#B45309;">🎲 Re-roll: ${item.rerolagensAmount}x</span>`;
-                if (item.isNarrativo) tagsHtml += `<span class="loja-tag" style="background:#047857;">📜 Benefício Narrativo</span>`;
-                if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span class="loja-tag" style="background:var(--lr-abyssal);">🎒 Equipamentos Especiais</span>`;
+                const tagsHtml = etiquetasDoItem(item);
 
+                /* A quantidade vai NA ARTE, como o número numa etiqueta de
+                   prateleira: no título ela disputava a linha e empurrava o
+                   nome do item. Só aparece a partir de 2 — "x1" é ruído. */
+                const qtd = Number(item.quantidade) || 0;
                 return `
                 <div class="loja-card">
-                    ${imgHtml}
+                    <div class="loja-card-arte">
+                        ${imgHtml}
+                        ${qtd > 1 ? `<span class="rep-qtd" title="Você tem ${qtd}">×${qtd}</span>` : ''}
+                    </div>
                     <div class="loja-card-body">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                            <div class="loja-card-title" style="margin-bottom: 0;">${escapeHtml(item.nome || 'Item sem nome')}</div>
-                            <div class="inventory-item-quantity" style="margin-left: 8px; flex-shrink: 0; background: #6E5413; color: #fff; padding: 2px 10px; border-radius: 20px; font-weight: 700; font-size: 0.8rem;">x${item.quantidade || 0}</div>
-                        </div>
-                        ${item.descricao || item['descrição'] ? `<div class="loja-card-desc" style="margin-bottom: 8px;">${escapeHtmlWithBreaks(item.descricao || item['descrição'])}</div>` : ''}
-                        ${tagsHtml ? `<div class="loja-card-tags" style="margin-bottom: 12px;">${tagsHtml}</div>` : ''}
-                        <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
-                            <div style="font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 800; margin-bottom: 2px;">Forma de Recebimento</div>
-                            <div style="font-size: 0.82rem; font-weight: 600; color: var(--ink);">${escapeHtml(item.formaRecebimento || 'Não especificado')}</div>
+                        <div class="loja-card-title">${escapeHtml(item.nome || 'Item sem nome')}</div>
+                        ${item.descricao || item['descrição'] ? `<div class="loja-card-desc">${escapeHtmlWithBreaks(item.descricao || item['descrição'])}</div>` : ''}
+                        ${tagsHtml ? `<div class="loja-card-tags">${tagsHtml}</div>` : ''}
+                        <div class="rep-recebimento">
+                            <span>Recebimento</span>
+                            <strong>${escapeHtml(item.formaRecebimento || 'a combinar')}</strong>
                         </div>
                     </div>
                 </div>
@@ -528,6 +527,28 @@ async function loadInventory() {
         document.getElementById('totalApoios').textContent = 'Erro';
         showAlert('❌ Erro ao carregar inventário: ' + error.message, 'danger');
     }
+}
+
+/* As cinco etiquetas do item da Loja e do Repertório.
+   Eram cinco `background:` em hexadecimal INLINE, um por tipo — cinco cores
+   saturadas fora da paleta, repetidas em dois lugares do arquivo. Agora é uma
+   classe por tipo, tingida com o token do próprio significado (ouro para EXP,
+   abissal para a roleta, sangue para o re-roll, natureza para o narrativo). */
+const ETIQUETAS = [
+    { quando: (i) => i.isExp, classe: 'exp', texto: (i) => `⭐ ${i.expAmount} EXP${i.isExpVip ? ' · VIP' : ''}` },
+    { quando: (i) => i.isRoleta, classe: 'roleta', texto: (i) => `🎰 Roleta ${i.roletaGiros}×` },
+    { quando: (i) => i.isRerolagem, classe: 'reroll', texto: (i) => `🎲 Re-roll ${i.rerolagensAmount}×` },
+    { quando: (i) => i.isNarrativo, classe: 'narrativo', texto: () => '📜 Benefício narrativo' },
+    {
+        quando: (i) => i.isItemPersonagem && i.personagemItensVinculados?.length,
+        classe: 'equip', texto: () => '🎒 Equipamentos especiais',
+    },
+];
+
+function etiquetasDoItem(item) {
+    return ETIQUETAS.filter(e => e.quando(item))
+        .map(e => `<span class="loja-tag loja-tag--${e.classe}">${escapeHtml(e.texto(item))}</span>`)
+        .join('');
 }
 
 // ===== NOTIFICAÇÕES =====
@@ -1017,12 +1038,7 @@ function renderLojaItens() {
     let html = '';
 
     lojaItensData.forEach(item => {
-        let tagsHtml = '';
-        if (item.isExp) tagsHtml += `<span class="loja-tag" style="background:#6E5413;">⭐ EXP: ${item.expAmount}${item.isExpVip ? ' (VIP)' : ''}</span>`;
-        if (item.isRoleta) tagsHtml += `<span class="loja-tag" style="background:#382678;">🎰 Roleta: ${item.roletaGiros}x</span>`;
-        if (item.isRerolagem) tagsHtml += `<span class="loja-tag" style="background:#B45309;">🎲 Re-roll: ${item.rerolagensAmount}x</span>`;
-        if (item.isNarrativo) tagsHtml += `<span class="loja-tag" style="background:#047857;">📜 Benefício Narrativo</span>`;
-        if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span class="loja-tag" style="background:var(--lr-abyssal);">🎒 Equipamentos Especiais</span>`;
+        const tagsHtml = etiquetasDoItem(item);
 
         let metasLabel = 'Nenhuma meta vinculada';
         if (item.modoSelecaoMeta) {

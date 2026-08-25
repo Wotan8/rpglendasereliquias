@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Repertório e Loja</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/lendas-reliquias.css">
+<link rel="stylesheet" href="menu/css/menu.css">
+<script>
+  for (const l of document.querySelectorAll('link[href*="menu.css"]')) l.href += '?cb=' + Date.now();
+</script>
+<style>
+  body { margin:0; padding:16px; font:14px/1.6 Inter, system-ui, sans-serif;
+         background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table#saida { border-collapse:collapse; font:11px ui-monospace, monospace; width:100%; margin-bottom:14px; }
+  table#saida td { border:1px solid var(--lr-border); padding:2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight:700; }
+  #placar { font-weight:800; margin:8px 0 16px; padding-top:8px; border-top:1px solid var(--lr-border); }
+  h1 { font-size:1rem; margin:0 0 4px; } h2 { font-size:.85rem; margin:20px 0 6px; }
+  p.nota { margin:0 0 10px; color:var(--lr-text-2); font-size:.8rem; }
+  .palco { border:1px dashed var(--lr-border); border-radius:8px; padding:14px; max-width:1000px; }
+  .barra { display:flex; gap:8px; margin-bottom:12px; }
+</style></head>
+<body>
+<h1>🎒 Repertório · 🛒 Loja</h1>
+<p class="nota">As cinco etiquetas do item eram <code>background:#hex</code> INLINE no JS — cinco
+   cores saturadas fora da paleta, repetidas nos dois lugares. Aqui se confere que viraram a mesma
+   pílula tingida dos selos de livro, que a quantidade saiu do título, e que os dois topos pararam
+   de repetir o nome da própria aba.</p>
+
+<div class="barra">
+  <button type="button" onclick="document.documentElement.classList.toggle('dark')">🌗 Trocar tema</button>
+  <button type="button" onclick="document.querySelectorAll('.palco').forEach(p=>
+      p.style.maxWidth = p.style.maxWidth === '360px' ? '1000px' : '360px')">📱 Estreitar</button>
+</div>
+
+<table id="saida"></table>
+<div id="placar"></div>
+
+<h2>Repertório</h2>
+<div class="palco">
+  <div class="rep-topo">
+    <div class="rep-total">
+      <span class="rep-total-num" id="totalApoios">7</span>
+      <span class="rep-total-rot">apoios ao mundo</span>
+    </div>
+    <p class="rep-explica">O que você recebeu por apoiar Vasteluna. Cada peça diz como chega às
+       suas mãos.</p>
+  </div>
+  <div class="inventory-grid" id="grid-rep"></div>
+</div>
+
+<h2>Loja</h2>
+<div class="palco">
+  <div class="rep-topo">
+    <p class="rep-explica">Troque <strong>Fragmentos</strong> ou pague em dinheiro (PIX, ou em mãos
+       com o mestre) para adquirir peças e fortalecer suas histórias.</p>
+  </div>
+  <div class="inventory-grid" id="grid-loja"></div>
+</div>
+
+<script type="module">
+if (document.readyState !== 'complete') {
+    await new Promise(r => window.addEventListener('load', r, { once: true }));
+}
+
+const linhas = [];
+const t = (nome, cond) => linhas.push(
+    `<tr><td>${nome}</td><td class="${cond ? 'ok' : 'fail'}">${cond ? 'OK' : 'FALHOU'}</td></tr>`);
+const cx = (e) => e.getBoundingClientRect();
+const cs = (e) => getComputedStyle(e);
+const esc = (x) => String(x ?? '');
+
+/* As MESMAS etiquetas do arquivo real, recortadas dele — se alguém acrescentar
+   um tipo lá sem classe aqui, este teste vê. */
+const src = (await (await fetch('/menu/js/menu-firebase.js?cb=' + Date.now())).text()).replace(/\r\n/g, '\n');
+const i0 = src.indexOf('const ETIQUETAS = [');
+const i1 = src.indexOf('\n}\n', src.indexOf('function etiquetasDoItem')) + 3;
+if (i0 < 0 || i1 < 3) throw new Error('as etiquetas mudaram de forma — reveja o recorte');
+const etiquetasDoItem = new Function('escapeHtml', src.slice(i0, i1) + '\nreturn etiquetasDoItem;')(esc);
+
+const ITENS = [
+    { nome: 'Frasco de Éter Bruto', quantidade: 3, imagem: '', formaRecebimento: 'Entregue na sessão',
+      descricao: 'Um vidro grosso, lacrado com cera preta.',
+      isExp: true, expAmount: 20, isNarrativo: true },
+    { nome: 'Selo do Cronista', quantidade: 1, imagem: '', formaRecebimento: 'Digital, na ficha',
+      isRoleta: true, roletaGiros: 2, isRerolagem: true, rerolagensAmount: 1,
+      isItemPersonagem: true, personagemItensVinculados: [1] },
+];
+
+const cartao = (item) => {
+    const qtd = Number(item.quantidade) || 0;
+    return `
+    <div class="loja-card">
+        <div class="loja-card-arte">
+            <div class="loja-card-media inventory-media-fallback"></div>
+            ${qtd > 1 ? `<span class="rep-qtd">×${qtd}</span>` : ''}
+        </div>
+        <div class="loja-card-body">
+            <div class="loja-card-title">${item.nome}</div>
+            ${item.descricao ? `<div class="loja-card-desc">${item.descricao}</div>` : ''}
+            <div class="loja-card-tags">${etiquetasDoItem(item)}</div>
+            <div class="rep-recebimento"><span>Recebimento</span><strong>${item.formaRecebimento}</strong></div>
+        </div>
+    </div>`;
+};
+document.getElementById('grid-rep').innerHTML = ITENS.map(cartao).join('');
+
+document.getElementById('grid-loja').innerHTML = `
+    <div class="loja-card">
+        <div class="loja-card-arte"><div class="loja-card-media loja-media-fallback"></div></div>
+        <div class="loja-card-body">
+            <div class="loja-card-title">Página Arrancada</div>
+            <div class="loja-card-desc">Uma folha do Cânone que o Cronista negou ter escrito.</div>
+            <div class="loja-card-meta">🎯 Pode ser atrelado a até 2 Meta(s)</div>
+            <div class="loja-card-tags">${etiquetasDoItem({ isExp: true, expAmount: 40, isNarrativo: true })}</div>
+            <div class="loja-card-actions">
+                <button class="loja-btn loja-btn-frag"><span>💎 120 Frag$</span><small>Comprar com Fragmentos</small></button>
+                <button class="loja-btn loja-btn-real"><span>💵 R$ 25,00</span><small>Pagar direto ao mestre</small></button>
+            </div>
+            <div class="loja-card-secure">🤝 Você combina o pagamento com o mestre</div>
+        </div>
+    </div>`;
+
+/* ===== as etiquetas ===== */
+{
+    const tags = [...document.querySelectorAll('.loja-tag')];
+    t('T01 · toda etiqueta tem classe de tipo, nenhuma cor inline',
+        tags.length > 0 && tags.every(x => /loja-tag--/.test(x.className) && !x.getAttribute('style')));
+    t('T02 · os cinco tipos estão cobertos',
+        ['exp', 'roleta', 'reroll', 'narrativo', 'equip']
+            .every(k => document.querySelector(`.loja-tag--${k}`)));
+    // Era bloco de cor sólida; agora é pílula tingida, como o selo do livro.
+    const exp = document.querySelector('.loja-tag--exp');
+    const alpha = Number((cs(exp).backgroundColor.match(/[\d.]+/g) || [])[3] ?? 1);
+    t(`T03 · a etiqueta é tingida, não um bloco sólido (alfa ${alpha})`, alpha < .5);
+    t('T04 · com borda do próprio tom, para não sumir no fundo',
+        parseFloat(cs(exp).borderTopWidth) >= 1);
+    t('T05 · e é pílula, como os selos de livro',
+        parseFloat(cs(exp).borderRadius) > 20);
+}
+
+/* ===== a quantidade ===== */
+{
+    const comQtd = document.querySelectorAll('.rep-qtd');
+    t('T06 · a quantidade sai do título e vai para a arte', comQtd.length === 1);
+    t('T07 · e só aparece a partir de 2 — "×1" é ruído',
+        comQtd.length === 1 && comQtd[0].textContent === '×3');
+    const arte = document.querySelector('.loja-card-arte');
+    t('T08 · ela paira sobre a arte, no canto',
+        cx(comQtd[0]).bottom <= cx(arte).bottom + 1 && cx(comQtd[0]).right <= cx(arte).right + 1);
+    t('T09 · o título ganhou a linha inteira de volta',
+        cx(document.querySelector('.loja-card-title')).width > cx(arte).width * 0.7);
+}
+
+/* ===== os topos ===== */
+{
+    /* Lê o ARQUIVO, não esta página: o título deste harness também diz
+       "Repertório" e "Loja", e o teste acusava a si mesmo. */
+    const html = await (await fetch('/index.html', { cache: 'no-store' })).text();
+    t('T10 · nenhum dos dois topos repete o nome da aba',
+        !/Repertório de Jogador|Loja de Recompensas/.test(html)
+        && !/class="inventory-title"/.test(html));
+    t('T11 · o total de apoios é o número, não uma caixa com borda',
+        parseFloat(cs(document.querySelector('.rep-total-num')).fontSize) > 24
+        && !document.querySelector('.inventory-header'));
+    t('T12 · e o topo cabe numa faixa, não em dois blocos empilhados',
+        cx(document.querySelector('.rep-topo')).height < 90);
+}
+
+/* ===== o cartão ===== */
+{
+    const card = document.querySelector('#grid-loja .loja-card');
+    t('T13 · o título do item usa a fonte de título do projeto',
+        /Cinzel/i.test(cs(card.querySelector('.loja-card-title')).fontFamily));
+    t('T14 · a nota das metas deixou de ser uma caixa cinza',
+        cs(card.querySelector('.loja-card-meta')).backgroundColor === 'rgba(0, 0, 0, 0)');
+    const btns = [...card.querySelectorAll('.loja-btn')];
+    /* Num cartão de 285px eles EMPILHAM, e é o certo: lado a lado sobraria
+       ~138px para "💎 120 Frag$ / Comprar com Fragmentos". O que mudou é que
+       agora eles se acomodam — antes eram uma coluna cravada. */
+    const acoes = card.querySelector('.loja-card-actions');
+    t('T15 · os botões se acomodam à largura, em vez de coluna cravada',
+        cs(acoes).flexWrap === 'wrap' && cs(acoes).flexDirection === 'row');
+    t('T15b · e num cartão estreito empilham, sem espremer o rótulo',
+        cx(btns[0]).top < cx(btns[1]).top && cx(btns[0]).width > 200);
+    t('T16 · e continuam sendo dois: pagar em Frag$ e em dinheiro são decisões diferentes',
+        btns.length === 2);
+}
+
+/* ===== contraste nos dois temas ===== */
+const lum = (c) => {
+    const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => {
+        v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+    });
+    return .2126 * r + .7152 * g + .0722 * b;
+};
+const contraste = (a, b) => {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + .05) / (y + .05);
+};
+const fundoReal = (e) => {
+    for (let n = e; n; n = n.parentElement) {
+        const c = cs(n).backgroundColor;
+        if (Number((c.match(/[\d.]+/g) || [])[3] ?? 1) >= .95) return c;
+    }
+    return cs(document.documentElement).getPropertyValue('--lr-bg-0').trim() || 'rgb(255,255,255)';
+};
+const medir = (nome) => {
+    for (const [rot, sel] of [['etiqueta EXP', '.loja-tag--exp'], ['etiqueta roleta', '.loja-tag--roleta'],
+        ['etiqueta re-roll', '.loja-tag--reroll'], ['etiqueta narrativa', '.loja-tag--narrativo'],
+        ['etiqueta equip', '.loja-tag--equip'], ['total de apoios', '.rep-total-num'],
+        ['recebimento', '.rep-recebimento strong']]) {
+        const e = document.querySelector(sel);
+        t(`${nome}: ${rot} legível (≥4,5:1)`, contraste(cs(e).color, fundoReal(e)) >= 4.5);
+    }
+};
+medir('claro');
+document.documentElement.classList.add('dark');
+await new Promise(r => setTimeout(r, 250));
+medir('escuro');
+document.documentElement.classList.remove('dark');
+await new Promise(r => setTimeout(r, 80));
+
+/* ===== celular ===== */
+{
+    document.querySelectorAll('.palco').forEach(p => p.style.maxWidth = '360px');
+    await new Promise(r => setTimeout(r, 120));
+    t('a página não rola para o lado em 360px',
+        document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
+    t('as etiquetas quebram em linhas em vez de vazar',
+        [...document.querySelectorAll('.loja-tag')].every(x => cx(x).right <= cx(x.parentElement).right + 1));
+    document.querySelectorAll('.palco').forEach(p => p.style.maxWidth = '1000px');
+}
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const falhas = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML =
+    `<span class="${falhas ? 'fail' : 'ok'}">${linhas.length - falhas}/${linhas.length}</span>`
+    + (falhas ? ` — ${falhas} falha(s)` : ' — tudo certo');
+</script>
+</body></html>

@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="/shared/texto-mundo.css?v=1">
 <link rel="stylesheet" href="/shared/dialogo.css?v=2">
 <script type="module">import '/shared/dialogo.js?v=2';</script>
-    <link rel="stylesheet" href="/menu/css/menu.css?v=24">
+    <link rel="stylesheet" href="/menu/css/menu.css?v=25">
     <link rel="stylesheet" href="/shared/tokens.css?v=11">
     <script src="/shared/theme.js"></script>
     <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout PagBank contra bots/abuso. -->
@@ -301,12 +301,18 @@
 
             <!-- ======== ABA REPERTÓRIO ======== -->
             <div class="tab-content" id="tab-inventario">
-                <div class="inventory-header">
-                    <div class="total-apoios-label">Total de Apoios</div>
-                    <div class="total-apoios" id="totalApoios">0</div>
+                <!-- A aba já se chama Repertório: o título "🎒 Repertório de
+                     Jogador" repetia o nome logo abaixo dele. E o total de
+                     apoios ocupava uma caixa de 1,2rem de altura com borda —
+                     virou uma faixa, com o número onde o olho procura. -->
+                <div class="rep-topo">
+                    <div class="rep-total">
+                        <span class="rep-total-num" id="totalApoios">0</span>
+                        <span class="rep-total-rot">apoios ao mundo</span>
+                    </div>
+                    <p class="rep-explica">O que você recebeu por apoiar Vasteluna. Cada peça diz
+                        como chega às suas mãos.</p>
                 </div>
-
-                <div class="inventory-title">🎒 Repertório de Jogador</div>
 
                 <div class="inventory-grid" id="inventoryGrid"></div>
 
@@ -319,12 +325,13 @@
 
             <!-- ======== ABA LOJA ======== -->
             <div class="tab-content" id="tab-loja">
-                <div class="menu-header" style="margin-bottom:10px">
-                    <h1 style="font-size:1.2rem">🛒 Loja de Recompensas</h1>
+                <!-- Sem <h1> repetindo o nome da aba. Fica a frase que explica
+                     COMO se compra, que é o que não está no rótulo. -->
+                <div class="rep-topo">
+                    <p class="rep-explica">Troque <strong>Fragmentos</strong> ou pague em dinheiro
+                        (PIX, ou em mãos com o mestre) para adquirir peças e fortalecer suas
+                        histórias.</p>
                 </div>
-                <p class="notifications-info" style="margin-bottom:20px;">Use seus Fragmentos ou pague com dinheiro real
-                    (PIX ou em mãos, combinado direto com o mestre) para adquirir itens e fortalecer suas
-                    histórias.</p>
 
                 <div class="inventory-grid" id="lojaGrid"></div>
 
@@ -519,7 +526,7 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="/menu/js/menu-firebase.js?v=15"></script>
+    <script type="module" src="/menu/js/menu-firebase.js?v=16"></script>
     <!-- O card de livro da estante vem daqui: o mesmo do Escritório do
          Cronista e das telas do mestre. Script clássico, então entra ANTES
          do módulo que o usa. -->
