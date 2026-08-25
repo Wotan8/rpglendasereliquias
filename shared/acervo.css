@@ -133,3 +133,118 @@
     .wb-capnav__btn--next { text-align: left; align-items: flex-start; }
     .wb-capnav__vazio { display: none; }
 }
+
+/* =====================================================================
+   PRATELEIRA DE CAPAS — a estante pública do Cânone
+
+   A ficha em linha (capa pequena, título, descrição) é a do Escritório do
+   Cronista, onde se EDITA e a descrição importa. Quem folheia o cânone procura
+   o tomo pela lombada: uma parede de capas diz "biblioteca" antes de qualquer
+   texto. Mesmo dado, leitura diferente.
+   ===================================================================== */
+.wb-estante__body--capas {
+    display: grid;
+    /* 130px de largura dá 195px de altura no 2:3 — lombada legível sem virar
+       pôster. Medida FIXA, não `vw`: a estante aparece na coluna estreita do
+       Portal e em modal largo, e um `vw` mede a janela, não o espaço que ela
+       tem. Com `vw` a estante caía para uma coluna só de 308px num quadro de
+       332px — uma capa gigante por linha. */
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: var(--lr-space-4);
+    align-items: start;
+}
+
+.wb-capa {
+    display: grid;
+    gap: 6px;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.wb-capa__arte {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--lr-radius);
+    background-size: cover;
+    background-position: center;
+    background-color: var(--lr-bg-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    /* A lombada: sombra à esquerda, luz na direita — o volume que faz uma
+       imagem chapada parecer um objeto na prateleira. */
+    box-shadow:
+        inset 6px 0 10px -6px rgba(0, 0, 0, .75),
+        inset -1px 0 0 rgba(255, 255, 255, .06),
+        0 6px 18px rgba(0, 0, 0, .35);
+    transition: transform var(--lr-t-base) var(--lr-ease),
+                box-shadow var(--lr-t-base) var(--lr-ease);
+}
+
+.wb-capa:hover .wb-capa__arte,
+.wb-capa:focus-visible .wb-capa__arte {
+    transform: translateY(-4px);
+    box-shadow:
+        inset 6px 0 10px -6px rgba(0, 0, 0, .75),
+        0 10px 26px rgba(0, 0, 0, .45),
+        0 0 0 1px var(--lr-gold);
+}
+
+.wb-capa:focus-visible { outline: none; }
+
+/* Sem capa cadastrada, a lombada é desenhada com o próprio título — melhor que
+   um retângulo vazio, e evita exigir arte para publicar. */
+.wb-capa__arte--sem {
+    background-image:
+        linear-gradient(115deg, rgba(255, 255, 255, .05), transparent 40%),
+        linear-gradient(160deg, var(--lr-abyssal, #2b2350), var(--lr-bg-0));
+    padding: var(--lr-space-3);
+}
+
+.wb-capa__lombada {
+    font-family: var(--lr-font-title);
+    font-size: .82rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    color: var(--lr-gold);
+    /* corta o título comprido em vez de estourar a capa */
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.wb-capa__nome {
+    font-family: var(--lr-font-title);
+    font-size: var(--lr-fs-sm);
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--lr-text-1);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.wb-capa:hover .wb-capa__nome { color: var(--lr-gold); }
+
+.wb-capa__pe {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+}
+
+.wb-capa__caps { white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+    .wb-capa__arte { transition: none; }
+    .wb-capa:hover .wb-capa__arte { transform: none; }
+}

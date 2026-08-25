@@ -262,6 +262,34 @@
      * leitura o clique abre o leitor, que é onde se lê. Mesmo desenho,
      * fluxo de leitura intacto.
      */
+    /**
+     * O livro como CAPA, para a estante pública do Cânone.
+     *
+     * A ficha em linha (capa pequena + título + descrição) é a do Escritório do
+     * Cronista, onde se EDITA e a descrição importa. Quem folheia o cânone
+     * procura o tomo pela lombada, e uma prateleira de capas diz "biblioteca"
+     * antes de qualquer texto. Sem capa cadastrada, a lombada é desenhada com o
+     * próprio título.
+     */
+    function cardCapa(l, n, acao) {
+        const selo = seloVersao(l, '');
+        const arte = l.cover
+            ? `<span class="wb-capa__arte" style="background-image:url('${esc(l.cover)}')"></span>`
+            : `<span class="wb-capa__arte wb-capa__arte--sem">
+                   <span class="wb-capa__lombada">${esc(l.title || 'Sem título')}</span>
+               </span>`;
+        return `
+        <button type="button" class="wb-capa lv-livro" title="${esc(l.title || '')}"
+            onclick="${acao || `window.lvAbrirLivroId('${esc(l.id)}')`}">
+            ${arte}
+            <span class="wb-capa__nome">${esc(l.title || 'Livro sem título')}</span>
+            <span class="wb-capa__pe">
+                ${selo ? `<span class="wb-badge wb-badge--ver">${selo}</span>` : ''}
+                <span class="wb-capa__caps">${n} ${n === 1 ? 'capítulo' : 'capítulos'}</span>
+            </span>
+        </button>`;
+    }
+
     function cardLivro(l, n, acao) {
         const capa = l.cover
             ? `style="background-image:url('${esc(l.cover)}')" data-zoom="${esc(l.cover)}" data-zoom-alt="${esc(l.title || '')}" title="Ver a capa maior"`
@@ -294,20 +322,29 @@
      *
      * Estante nasce FECHADA, como no Escritório: quem lê escolhe a estante.
      */
-    function estantesHTML(itens, estantes, acaoDe) {
+    /**
+     * @param {object} [opts]
+     * @param {boolean} [opts.capas]  prateleira de capas (Cânone) em vez da
+     *   lista em linha (Escritório do Cronista)
+     * @param {boolean} [opts.abrir]  as estantes nascem abertas
+     */
+    function estantesHTML(itens, estantes, acaoDe, opts = {}) {
         const daEstante = (b) => b.estanteIds || (b.estanteId ? [b.estanteId] : []);
-        const card = ({ l, n }) => cardLivro(l, n, acaoDe ? acaoDe(l) : null);
+        const desenhar = opts.capas ? cardCapa : cardLivro;
+        const card = ({ l, n }) => desenhar(l, n, acaoDe ? acaoDe(l) : null);
+        const corpo = 'wb-estante__body' + (opts.capas ? ' wb-estante__body--capas' : '');
+        const aberto = opts.abrir ? ' open' : '';
 
         const bloco = (est, lista) => !lista.length ? '' : `
             <div class="wb-estante">
-                <details class="wb-estante__det">
+                <details class="wb-estante__det"${aberto}>
                     <summary class="wb-estante__head">
                         <span class="wb-estante__caret">▸</span>
                         <span class="wb-estante__icon">${esc(est.icone || '🗂️')}</span>
                         <span class="wb-estante__name">${esc(est.nome || 'Estante sem nome')}</span>
                         <span class="wb-badge wb-badge--soft">${lista.length}</span>
                     </summary>
-                    <div class="wb-estante__body">${lista.map(card).join('')}</div>
+                    <div class="${corpo}">${lista.map(card).join('')}</div>
                 </details>
             </div>`;
 
@@ -489,7 +526,7 @@
             _pintar(`
                 <h2 style="margin:0 0 14px">${esc(_bib.titulo || '📚 Biblioteca')}</h2>
                 ${_bib.cabecalho || ''}
-                ${lista.length ? estantesHTML(lista, estantes)
+                ${lista.length ? estantesHTML(lista, estantes, null, { capas: true, abrir: true })
                         : '<p style="opacity:.75">Nenhum livro publicado para esta lista.</p>'}`);
         }).catch(e => console.error('📖 Biblioteca:', e));
     }

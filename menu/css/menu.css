@@ -2662,12 +2662,16 @@ html:not(.dark) .meta-card {
 
 .cfg-grade {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--lr-space-3);
+    /* 260px, não 220: com 220 o rótulo mais longo não cabia no <select> e o
+       texto passava por baixo da setinha, com cara de campo sobreposto.
+       `<select>` nativo não quebra linha nem reticencia sozinho — quem dá a
+       folga é a coluna. */
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--lr-space-3) var(--lr-space-4);
     margin-bottom: var(--lr-space-4);
 }
 
-.cfg-campo { display: grid; gap: 4px; }
+.cfg-campo { display: grid; gap: 4px; min-width: 0; }
 
 .cfg-campo > span {
     font-size: var(--lr-fs-xs);
@@ -2678,7 +2682,10 @@ html:not(.dark) .meta-card {
 }
 
 .cfg-campo select {
-    padding: 8px 10px;
+    width: 100%;
+    /* espaço à direita para a seta do próprio <select> não pisar no texto */
+    padding: 8px 30px 8px 10px;
+    text-overflow: ellipsis;
     border: var(--lr-border-w) solid var(--lr-border);
     border-radius: var(--lr-radius-sm);
     background: var(--lr-surface);

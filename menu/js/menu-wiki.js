@@ -89,11 +89,16 @@ function renderEstante() {
        renderizador compartilhado. O índice do livro vai junto porque o leitor
        daqui é por posição — `wikiAbrirLivro(i)`, não por id. */
     const itens = livros.map((l, i) => ({ l, n: l.capitulos.length, i }));
+    /* `capas`: aqui se LÊ o cânone, e uma parede de capas diz "biblioteca"
+       antes de qualquer texto. A ficha em linha continua no Escritório do
+       Cronista, onde a descrição importa porque se está editando.
+       `abrir`: a estante do leitor nasce aberta — ele veio ver os livros, não
+       abrir gavetas. */
     el.innerHTML = window.lvEstantesHTML
         ? window.lvEstantesHTML(itens, estantes, (livro) => {
             const i = livros.indexOf(livro);
             return 'wikiAbrirLivro(' + i + ')';
-        })
+        }, { capas: true, abrir: true })
         : '';
 }
 

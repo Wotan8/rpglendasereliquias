@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — aba Cânone (prateleira de capas)</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/lendas-reliquias.css">
+<link rel="stylesheet" href="shared/acervo.css">
+<link rel="stylesheet" href="shared/sanfona.css">
+<link rel="stylesheet" href="menu/css/menu.css">
+<script>
+  for (const l of document.querySelectorAll('link[href*="acervo.css"], link[href*="menu.css"]'))
+      l.href += '?cb=' + Date.now();
+</script>
+<style>
+  body { margin:0; padding:16px; font:14px/1.6 Inter, system-ui, sans-serif;
+         background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table#saida { border-collapse:collapse; font:11px ui-monospace, monospace; width:100%; margin-bottom:14px; }
+  table#saida td { border:1px solid var(--lr-border); padding:2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight:700; }
+  #placar { font-weight:800; margin:8px 0 16px; padding-top:8px; border-top:1px solid var(--lr-border); }
+  h1 { font-size:1rem; margin:0 0 4px; } p.nota { margin:0 0 10px; color:var(--lr-text-2); font-size:.8rem; }
+  .palco { border:1px dashed var(--lr-border); border-radius:8px; padding:12px; max-width:960px; }
+  .barra { display:flex; gap:8px; margin-bottom:12px; }
+</style></head>
+<body>
+<h1>📚 Aba Cânone — a estante como prateleira de capas</h1>
+<p class="nota">A ficha em linha (capa pequena + título + descrição) é a do Escritório do Cronista,
+   onde se <em>edita</em>. Quem folheia o cânone procura o tomo pela lombada — aqui se confere a
+   variante de capas do MESMO renderizador (<code>shared/livro-vinculado.js</code>), com o CSS real,
+   inclusive o livro <strong>sem capa cadastrada</strong>, que ganha a lombada desenhada.</p>
+
+<div class="barra">
+  <button type="button" onclick="document.documentElement.classList.toggle('dark')">🌗 Trocar tema</button>
+  <button type="button" onclick="const p=document.querySelector('.palco');
+      p.style.maxWidth = p.style.maxWidth === '360px' ? '960px' : '360px'">📱 Estreitar</button>
+</div>
+
+<table id="saida"></table>
+<div id="placar"></div>
+
+<div class="palco"><div id="alvo"></div></div>
+
+<!-- Com URL fixa o navegador devolvia a versão anterior do renderizador e o
+     teste media a estante velha. -->
+<script>document.write('<script src="shared/livro-vinculado.js?t=' + Date.now() + '"><\/script>');</script>
+<script type="module">
+if (document.readyState !== 'complete') {
+    await new Promise(r => window.addEventListener('load', r, { once: true }));
+}
+
+const linhas = [];
+const t = (nome, cond) => linhas.push(
+    `<tr><td>${nome}</td><td class="${cond ? 'ok' : 'fail'}">${cond ? 'OK' : 'FALHOU'}</td></tr>`);
+
+/* Uma capa de mentira em SVG: nada de rede, e a proporção é a do cadastro. */
+const capaFalsa = (cor) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300">
+       <rect width="200" height="300" fill="${cor}"/>
+       <circle cx="100" cy="150" r="55" fill="none" stroke="#d4af37" stroke-width="3"/>
+     </svg>`);
+
+const LIVROS = [
+    { id: 'l1', title: 'Livro de Regras do Jogador', cover: capaFalsa('#241c3f'),
+      versao: '2.1', estanteIds: ['e1'], description: 'As regras como estão no site.' },
+    { id: 'l2', title: 'Compêndio de Runomancia', cover: capaFalsa('#123028'), estanteIds: ['e1'] },
+    // sem capa: a lombada tem de ser desenhada com o título
+    { id: 'l3', title: 'Crônicas da Alta Era e do que veio depois dela', estanteIds: ['e2'] },
+    { id: 'l4', title: 'Bestiário', cover: capaFalsa('#3a1a1a'), estanteIds: ['e2'] },
+];
+const ESTANTES = [
+    { id: 'e1', nome: 'Regras', icone: '⚙️' },
+    { id: 'e2', nome: 'Mundo', icone: '🌍' },
+];
+const itens = LIVROS.map((l, i) => ({ l, n: 3 + i, i }));
+
+t('T01 · o renderizador compartilhado existe', typeof window.lvEstantesHTML === 'function');
+
+const alvo = document.getElementById('alvo');
+alvo.innerHTML = window.lvEstantesHTML(itens, ESTANTES,
+    (l) => `abrir('${l.id}')`, { capas: true, abrir: true });
+
+const capas = [...alvo.querySelectorAll('.wb-capa')];
+const cx = (e) => e.getBoundingClientRect();
+
+// ===== a prateleira =====
+t('T02 · cada livro virou uma capa, não uma linha',
+    capas.length === 8 && !alvo.querySelector('.wb-book'));
+t('T03 · as estantes nascem abertas para quem vem ler',
+    [...alvo.querySelectorAll('details')].every(d => d.open));
+t('T04 · as capas ficam lado a lado, em grade',
+    alvo.querySelector('.wb-estante__body--capas')
+    && getComputedStyle(alvo.querySelector('.wb-estante__body--capas')).display === 'grid');
+{
+    const primeira = alvo.querySelector('.wb-estante__body--capas');
+    const filhas = [...primeira.children];
+    t('T05 · e mais de uma por linha (é prateleira, não lista)',
+        filhas.length > 1 && cx(filhas[0]).top === cx(filhas[1]).top);
+}
+
+// ===== a capa =====
+{
+    const arte = capas[0].querySelector('.wb-capa__arte');
+    const r = cx(arte);
+    t(`T06 · a capa tem proporção de livro, 2:3 (${Math.round(r.width)}×${Math.round(r.height)})`,
+        Math.abs((r.height / r.width) - 1.5) < 0.06);
+    t('T07 · e volume de lombada, não um retângulo chapado',
+        /inset/.test(getComputedStyle(arte).boxShadow));
+    t('T08 · o título aparece embaixo da capa',
+        cx(capas[0].querySelector('.wb-capa__nome')).top > r.bottom - 1);
+    t('T09 · com o selo de versão e a contagem de capítulos',
+        /2\.1/.test(capas[0].textContent) && /3 capítulos/.test(capas[0].textContent));
+    t('T10 · o clique leva ao livro certo',
+        capas[0].getAttribute('onclick') === "abrir('l1')");
+}
+
+// ===== livro sem capa cadastrada =====
+{
+    const semCapa = capas.find(c => c.querySelector('.wb-capa__arte--sem'));
+    t('T11 · livro sem capa não vira retângulo vazio', !!semCapa);
+    const lombada = semCapa.querySelector('.wb-capa__lombada');
+    t('T12 · a lombada é desenhada com o próprio título',
+        /Crônicas da Alta Era/.test(lombada.textContent));
+    t('T13 · e o título comprido é cortado, não estoura a capa',
+        cx(lombada).bottom <= cx(semCapa.querySelector('.wb-capa__arte')).bottom + 1);
+}
+
+// ===== título comprido no pé da capa =====
+{
+    const comprido = capas.find(c => /Crônicas/.test(c.querySelector('.wb-capa__nome').textContent));
+    const nome = comprido.querySelector('.wb-capa__nome');
+    t('T14 · o nome embaixo também é cortado em duas linhas',
+        nome.scrollHeight <= nome.clientHeight + 2 || getComputedStyle(nome).overflow === 'hidden');
+}
+
+// ===== contraste nos dois temas =====
+const lum = (c) => {
+    const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => {
+        v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+    });
+    return .2126 * r + .7152 * g + .0722 * b;
+};
+const contraste = (a, b) => {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + .05) / (y + .05);
+};
+const fundoReal = (e) => {
+    for (let n = e; n; n = n.parentElement) {
+        const c = getComputedStyle(n).backgroundColor;
+        if (Number((c.match(/[\d.]+/g) || [])[3] ?? 1) >= .95) return c;
+    }
+    return 'rgb(255,255,255)';
+};
+const medir = (nome) => {
+    const n = capas[0].querySelector('.wb-capa__nome');
+    const pe = capas[0].querySelector('.wb-capa__caps');
+    t(`${nome}: o título do livro é legível (≥4,5:1)`, contraste(getComputedStyle(n).color, fundoReal(n)) >= 4.5);
+    t(`${nome}: a contagem de capítulos é legível (≥4,5:1)`, contraste(getComputedStyle(pe).color, fundoReal(pe)) >= 4.5);
+};
+medir('T15/T16 · claro');
+document.documentElement.classList.add('dark');
+await new Promise(r => setTimeout(r, 250));
+medir('T17/T18 · escuro');
+document.documentElement.classList.remove('dark');
+await new Promise(r => setTimeout(r, 100));
+
+// ===== celular =====
+{
+    const palco = document.querySelector('.palco');
+    palco.style.maxWidth = '360px';
+    await new Promise(r => setTimeout(r, 60));
+    const filhas = [...alvo.querySelector('.wb-estante__body--capas').children];
+    t('T19 · em 360px ainda cabem pelo menos duas capas por linha',
+        cx(filhas[0]).top === cx(filhas[1]).top);
+    t('T20 · e a página não rola para o lado',
+        document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
+    palco.style.maxWidth = '960px';
+}
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const falhas = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML =
+    `<span class="${falhas ? 'fail' : 'ok'}">${linhas.length - falhas}/${linhas.length}</span>`
+    + (falhas ? ` — ${falhas} falha(s)` : ' — tudo certo');
+</script>
+</body></html>
