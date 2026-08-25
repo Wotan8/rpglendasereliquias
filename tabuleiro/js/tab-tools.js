@@ -5,6 +5,7 @@
 // Cursores/Pings, Menu radial, Undo/Redo, Atalhos e toque.
 // =============================================
 import { setDoc, deleteDoc } from '../../painel-mestre/js/firebase-config.js';
+import { zoomParaCurso, cursoParaZoom } from './tab-zoom-curso.js';
 import { T, esc, toast, markDirty, gridSize, can, camadasVisiveis, objVisivel, tokenDoUsuario, pxParaUnidades, fmtDist, fmtViagem, getCamada, cfgGrid, upcEm, unidadeEm, sincLarguraReal, selecionar, CENARIO_INTERATIVO,
          deveAtualizarPasso, DRAG_WRITE_MS, DRAG_PASSO_CELULA, limiteDeslocamento, deslocamentosDoToken } from './tab-state.js';
 import { refReguas, abrirModal, fecharModal } from './tab-main.js';
@@ -599,6 +600,10 @@ function onMove(e) {
         const txt = `${Math.round(w.x)}, ${Math.round(w.y)} · ${Math.round(T.cam.z * 100)}%`;
         if (txt !== ultCoords) { elCoords.textContent = txt; ultCoords = txt; }
     }
+    /* Rede de segurança: centralizar e o foco do mestre mexem na câmera de
+       outros módulos. O guarda de "mudou?" faz disto uma comparação de número
+       por movimento, não uma escrita no DOM. */
+    tbSyncZoom();
 
     // Cursor ao vivo (F2.4)
     publicarCursor(w);
@@ -614,7 +619,7 @@ function onMove(e) {
             T.cam.z = Math.max(0.04, Math.min(6, pinch.z0 * (d / Math.max(20, pinch.d0))));
             T.cam.x = alvo0.x - (c.x - cv.getBoundingClientRect().width/2) / T.cam.z;
             T.cam.y = alvo0.y - (c.y - cv.getBoundingClientRect().height/2) / T.cam.z;
-            clampCamera(); markDirty();
+            clampCamera(); markDirty(); tbSyncZoom();
         }
         return;
     }
@@ -1035,6 +1040,7 @@ function onWheel(e) {
     T.cam.y += antes.y - depois.y;
     clampCamera();
     markDirty();
+    tbSyncZoom();
 }
 
 function onDblClick(e) {
@@ -1371,5 +1377,24 @@ function renderMenuContexto(menu, itens, x, y) {
 // Zoom por botões
 window.tbZoom = (f) => {
     T.cam.z = Math.max(0.04, Math.min(6, T.cam.z * f));
+    clampCamera(); markDirty(); tbSyncZoom();
+};
+
+/* Barra de zoom (só em tela larga — no celular o pinça já faz isso melhor).
+   A conta do curso mora em tab-zoom-curso.js, com teste ao lado. */
+window.tbZoomBarra = (v) => {
+    T.cam.z = cursoParaZoom(v);
     clampCamera(); markDirty();
+};
+
+/* Escreve no DOM só quando o número muda de verdade — mesma disciplina do
+   `ultCoords` lá em cima, que existe porque isto roda no caminho do arrasto.
+   Enquanto o dedo/mouse está NA barra, quem manda é o usuário: reescrever o
+   valor no meio do arrasto faz o botão da barra pular para trás. */
+let elZoomBarra, ultCurso = -1;
+window.tbSyncZoom = () => {
+    if (elZoomBarra === undefined) elZoomBarra = document.getElementById('tbZoomBarra') || null;
+    if (!elZoomBarra || document.activeElement === elZoomBarra) return;
+    const v = zoomParaCurso(T.cam.z);
+    if (v !== ultCurso) { elZoomBarra.value = ultCurso = v; }
 };

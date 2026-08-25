@@ -83,6 +83,9 @@ html, body {
        repetir 60px na mão. */
     --tb-bar-h: 48px;
     --tb-abaixo-da-barra: calc(var(--tb-bar-h) + var(--lr-space-3));
+    /* Altura do que mora colado no canto de baixo à direita (a barra de zoom):
+       coordenadas e painel de propriedades sobem isso para não cobri-la. */
+    --tb-rodape-dir: 48px;
     /* Largura da coluna da direita. As janelas arrastáveis (Combate, Sessão)
        nascem à ESQUERDA dela — antes as duas abriam no mesmo canto e a de
        combate cobria inteirinho o painel de Camadas. */
@@ -209,7 +212,8 @@ html, body {
 .tb-tag-live { background: var(--lr-nature); color: var(--lr-bg-0); border-radius: var(--lr-radius-sm); padding: 1px 6px; font-size: var(--lr-fs-xs); font-weight: 800; margin-left: var(--lr-space-1); }
 .tb-tag-off { background: var(--lr-surface-2); color: var(--lr-text-2); border-radius: var(--lr-radius-sm); padding: 1px 6px; font-size: var(--lr-fs-xs); font-weight: 700; margin-left: var(--lr-space-1); }
 #tbCoords {
-    position: fixed; bottom: var(--lr-space-2); right: var(--lr-space-3); z-index: 40;
+    /* Sobe a barra de zoom, que agora mora neste canto. */
+    position: fixed; bottom: calc(var(--lr-space-2) + var(--tb-rodape-dir)); right: var(--lr-space-3); z-index: 40;
     font-size: var(--lr-fs-xs); color: var(--lr-text-2); background: var(--lr-bg-1);
     border: 1px solid var(--lr-border-soft);
     padding: 2px var(--lr-space-2); border-radius: var(--lr-radius-sm);
@@ -257,9 +261,9 @@ html, body {
    barra inteira cabe até em ~500px de altura sem rolagem, sem wrap e sem mexer
    no `left` das sub-barras. */
 .tb-toolbar {
-    /* O rodapé da coluna (a barra de zoom) tem altura FIXA, não em vh. Enquanto
+    /* O rodapé da coluna (o botão de playlist) tem altura FIXA, não em vh. Enquanto
        o botão vinha só de `vh`, numa janela de ~700px a barra crescia até
-       encostar nele. Agora o tamanho sai da altura que sobra, com a conta da
+       montar nele. Agora o tamanho sai da altura que sobra, com a conta da
        própria barra: 15 botões + 20 respiros + 4 filetes de 9px ≈ 18,4 botões
        mais 36px. */
     --tb-rodape-esq: 60px;
@@ -345,7 +349,7 @@ html, body {
     display: flex; justify-content: space-between; align-items: center; gap: var(--lr-space-2);
 }
 .tb-side-body { padding: var(--lr-space-3); overflow-y: auto; }
-#tbPropsPanel { top: auto; bottom: var(--lr-space-4); max-height: 62vh; }
+#tbPropsPanel { top: auto; bottom: calc(var(--lr-space-4) + var(--tb-rodape-dir)); max-height: 58vh; }
 
 .tb-layer-row {
     display: flex; align-items: center; justify-content: space-between; gap: var(--lr-space-2);
@@ -1072,26 +1076,62 @@ body .lr-avisos {
     align-items: center;
 }
 
-/* ===== Zoom flutuante ===== */
-.tb-zoombar { position: fixed; bottom: var(--lr-space-3); left: var(--lr-space-3); z-index: 40; display: flex; gap: var(--lr-space-1); }
-.tb-zoombar button { width: 36px; height: 36px; border-radius: var(--lr-radius); background: var(--lr-surface); border: 1px solid var(--lr-border); color: var(--lr-text-1); font-size: var(--lr-fs-md); cursor: pointer; box-shadow: var(--lr-shadow-1); }
+/* ===== Zoom flutuante =====
+   Canto de baixo à DIREITA: à esquerda ele dividia a coluna com a barra de
+   ferramentas e com o player, e três coisas não cabem numa coluna só. Aqui
+   tem por vizinho só as coordenadas, que sobem o mesmo tanto. */
+.tb-zoombar {
+    position: fixed; bottom: var(--lr-space-3); right: var(--lr-space-3); z-index: 40;
+    display: flex; align-items: center; gap: var(--lr-space-1);
+}
+.tb-zoombar button { width: 36px; height: 36px; border-radius: var(--lr-radius); background: var(--lr-surface); border: 1px solid var(--lr-border); color: var(--lr-text-1); font-size: var(--lr-fs-md); cursor: pointer; box-shadow: var(--lr-shadow-1); display: flex; align-items: center; justify-content: center; }
 .tb-zoombar button:hover { background: var(--lr-surface-2); border-color: var(--lr-text-2); }
+/* O curso entre o − e o +: some em tela estreita, onde o pinça já resolve e
+   cada pixel de largura conta. */
+#tbZoomBarra { display: none; }
+@media (min-width: 1024px) {
+    #tbZoomBarra {
+        display: block; width: 132px; height: 36px; margin: 0 2px;
+        -webkit-appearance: none; appearance: none; background: none; cursor: pointer;
+    }
+    #tbZoomBarra::-webkit-slider-runnable-track,
+    #tbZoomBarra::-moz-range-track {
+        height: 4px; border-radius: var(--lr-radius-sm);
+        background: var(--lr-surface-2); border: 1px solid var(--lr-border);
+    }
+    /* -16px = metade do polegar menos metade do trilho: é o que o alinha no
+       meio da linha no WebKit (o Firefox centraliza sozinho). */
+    #tbZoomBarra::-webkit-slider-thumb {
+        -webkit-appearance: none; appearance: none;
+        width: 14px; height: 14px; border-radius: 50%; margin-top: -6px;
+        background: var(--lr-gold); border: 1px solid var(--lr-bg-0); cursor: grab;
+    }
+    #tbZoomBarra::-moz-range-thumb {
+        width: 14px; height: 14px; border-radius: 50%;
+        background: var(--lr-gold); border: 1px solid var(--lr-bg-0); cursor: grab;
+    }
+    #tbZoomBarra:focus-visible { outline: none; }
+    #tbZoomBarra:focus-visible::-webkit-slider-thumb { box-shadow: var(--lr-glow-gold); }
+}
 
 /* ===== Player de música (modo secreto) ===== */
 .tb-form-grid .tb-form-full { grid-column: 1 / -1; }
 
-/* `left: 68px` e não `var(--lr-space-3)`: no canto de baixo à esquerda o player
-   dividia a coluna com a barra de ferramentas, e numa janela alta a barra
-   crescia até passar por baixo dele — o botão de playlist saía montado em cima
-   do último ícone. Ao lado da coluna, e não dentro dela, os dois nunca mais se
-   encontram, em altura nenhuma. (É o mesmo 68px das sub-barras.) */
+/* Duas moradas, porque são duas coisas de tamanho muito diferente:
+   o BOTÃO recolhido fica no canto de baixo à esquerda (é a regra logo abaixo),
+   que é o lugar de um controle; o PAINEL aberto sobe ao lado da coluna de
+   ferramentas (o mesmo 68px das sub-barras), porque dentro da coluna ele
+   cobriria os últimos ícones — foi exatamente o defeito que apareceu antes. */
 .tb-musica {
-    position: fixed; bottom: 60px; left: 68px; z-index: 44; width: 232px;
+    position: fixed; bottom: var(--lr-space-3); left: 68px; z-index: 44; width: 232px;
     background: var(--lr-surface); border: 1px solid var(--lr-border);
     border-radius: var(--lr-radius-lg);
     box-shadow: var(--lr-shadow-3); overflow: hidden;
 }
-.tb-musica.recolhida { width: auto; background: none; border: none; box-shadow: none; }
+.tb-musica.recolhida {
+    width: auto; background: none; border: none; box-shadow: none;
+    left: var(--lr-space-3);   /* o botão volta para o canto, onde ficava o + */
+}
 .tb-musica.oculta { display: none; }
 .tb-musica-jogador { width: 180px; }
 .tb-mus-pe { display: flex; align-items: center; gap: var(--lr-space-2); padding: var(--lr-space-1) var(--lr-space-2); border-top: 1px solid var(--lr-border-soft); }
@@ -1166,8 +1206,12 @@ body .lr-avisos {
     .tb-toolbar .tb-sep { display: none; }
     .tb-subbar { left: 84px; max-width: min(280px, calc(100vw - 100px)); }
     /* com duas colunas a barra desce até o rodapé e engolia a pilha do player
-       (que fica no canto de baixo à esquerda): ela troca de canto */
-    .tb-musica { left: auto; right: var(--lr-space-3); bottom: var(--lr-space-3); }
+       (que fica no canto de baixo à esquerda): ela troca de canto — e sobe a
+       barra de zoom, que agora mora no canto para onde ela está indo */
+    .tb-musica, .tb-musica.recolhida {
+        left: auto; right: var(--lr-space-3);
+        bottom: calc(var(--lr-space-3) + var(--tb-rodape-dir));
+    }
 }
 
 @media (max-width: 720px) {

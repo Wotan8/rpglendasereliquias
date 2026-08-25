@@ -40,7 +40,7 @@
    cópia continua bonita enquanto a página de verdade muda sozinha. */
 const doc = new DOMParser().parseFromString(
     await (await fetch('tabuleiro.html?cb=' + Date.now())).text(), 'text/html');
-const CHROME = ['.tb-topbar', '.tb-toolbar', '#tbDrawBar', '#tbCamadasPanel', '#tbPropsPanel', '.tb-zoombar'];
+const CHROME = ['.tb-topbar', '.tb-toolbar', '#tbDrawBar', '#tbCamadasPanel', '#tbPropsPanel', '.tb-zoombar', '#tbCoords'];
 for (const sel of CHROME) document.body.appendChild(doc.querySelector(sel));
 
 window.abrirTudo = () => {
@@ -97,12 +97,58 @@ t('T06 · a toolbar cabe na altura sem rolar', cx('.tb-toolbar').bottom <= inner
 
     t('T07 · o ícone de playlist é o traço do sprite, não emoji',
         !!document.querySelector('#i-musica') && !!player.querySelector('use[href="#i-musica"]'));
-    t('T08 · o botão de playlist não monta na barra de ferramentas',
+    /* Numa janela baixa a barra de ferramentas quebra em duas colunas e toma o
+       canto esquerdo inteiro — aí o botão troca de lado, de propósito. O que
+       vale nos dois arranjos é: colado num canto de baixo, e longe da barra. */
+    const canto = cx('.tb-musica').left < innerWidth / 2 ? 'esquerdo' : 'direito';
+    t(`T08 · o botão de playlist fica colado no canto de baixo ${canto}`,
+        cx('.tb-musica').bottom > innerHeight - 120);
+    t(`T09 · e não monta na barra de ferramentas (janela de ${innerHeight}px)`,
         !sobrepoe(cx('.tb-musica'), cx('.tb-toolbar')));
-    t('T09 · nem na barra de zoom', !sobrepoe(cx('.tb-musica'), cx('.tb-zoombar')));
-    t(`T10 · a barra de ferramentas para antes do zoom (janela de ${innerHeight}px)`,
-        cx('.tb-toolbar').bottom <= cx('.tb-zoombar').top);
-    t('T11 · a coluna inteira cabe na tela', cx('.tb-toolbar').bottom <= innerHeight);
+    t('T10 · a coluna inteira cabe na tela', cx('.tb-toolbar').bottom <= innerHeight);
+
+    /* Aberto, o player é grande demais para a coluna: sai de lado, senão volta
+       a cobrir os últimos ícones — que foi o defeito que trouxe ele para cá. */
+    player.className = 'tb-musica';
+    player.style.height = '260px';
+    await new Promise(r => setTimeout(r, 40));
+    t('T11 · aberto, o player não cobre a barra de ferramentas',
+        !sobrepoe(cx('.tb-musica'), cx('.tb-toolbar')));
+    player.className = 'tb-musica recolhida';
+    player.style.height = '';
+}
+
+/* ===== o zoom no canto oposto ===== */
+{
+    await new Promise(r => setTimeout(r, 40));
+    const zb = cx('.tb-zoombar');
+    t('T12 · o zoom mudou para o canto de baixo à direita',
+        zb.left > innerWidth / 2 && zb.bottom > innerHeight - 60);
+    t('T13 · o zoom não divide mais canto com o player',
+        !sobrepoe(zb, cx('.tb-musica')));
+    t('T14 · as coordenadas sobem em vez de ficar debaixo do zoom',
+        !sobrepoe(zb, cx('#tbCoords')) && cx('#tbCoords').bottom <= zb.top);
+    const barra = document.getElementById('tbZoomBarra');
+    const larga = innerWidth >= 1024;
+    t(`T15 · o curso do zoom ${larga ? 'aparece' : 'some'} em ${innerWidth}px`,
+        (getComputedStyle(barra).display !== 'none') === larga);
+    if (larga) t('T16 · e fica ENTRE o − e o +', (() => {
+        const b = barra.getBoundingClientRect(), bs = [...document.querySelectorAll('.tb-zoombar button')];
+        return bs.length === 2 && bs[0].getBoundingClientRect().right <= b.left
+            && bs[1].getBoundingClientRect().left >= b.right;
+    })());
+    /* O curso é logarítmico: o meio da barra tem de cair perto de 50%, não em
+       (4%+600%)/2. Com passo linear, 100% ficava a 16% do curso. */
+    /* tab-tools.js não roda aqui (precisa de Firestore), então o que dá para
+       trancar é o fio: o nome no `oninput` tem de existir do outro lado. Um
+       rename de um lado só some com o zoom em silêncio. */
+    const fonte = await (await fetch('js/tab-tools.js?cb=' + Date.now())).text();
+    const chamada = (barra.getAttribute('oninput') || '').match(/(\w+)\s*\(/);
+    t(`T17 · o curso está ligado no motor (${chamada?.[1]})`,
+        !!chamada && new RegExp(String.raw`window\.${chamada[1]}\s*=`).test(fonte));
+    /* A curva em si tem teste próprio, em tab-zoom-curso.test.mjs. */
+    t('T18 · e a curva vem do módulo testado, não de conta solta aqui',
+        /from '\.\/tab-zoom-curso\.js'/.test(fonte));
 }
 
 /* ===== os grupos da barra do topo ===== */
@@ -111,7 +157,7 @@ t('T06 · a toolbar cabe na altura sem rolar', cx('.tb-toolbar').bottom <= inner
         const b = document.getElementById(id);
         return getComputedStyle(b, '::before').width;
     };
-    t('T12 · a barra do topo vem repartida em grupos',
+    t('T19 · a barra do topo vem repartida em grupos',
         ['btnRelogio', 'btnCombate', 'btnCanvases'].every(id => fio(id) === '1px'));
     /* O jogador não vê preparo do mestre nem gerência de canvas. O fio some
        COM o botão — senão sobra um risco no meio da barra, apontando nada. */
@@ -119,7 +165,7 @@ t('T06 · a toolbar cabe na altura sem rolar', cx('.tb-toolbar').bottom <= inner
         document.getElementById(id).style.display = 'none';
     const risco = [...document.querySelectorAll('.tb-topbar .tb-grupo')]
         .filter(b => getComputedStyle(b).display !== 'none');
-    t('T13 · na visão do jogador nenhum fio fica pendurado',
+    t('T20 · na visão do jogador nenhum fio fica pendurado',
         risco.length === 1 && risco[0].id === 'btnCombate');
     for (const id of ['btnRelogio', 'btnTeleprompter', 'btnSessao', 'btnCanvases'])
         document.getElementById(id).style.display = '';
@@ -129,7 +175,7 @@ t('T06 · a toolbar cabe na altura sem rolar', cx('.tb-toolbar').bottom <= inner
 {
     const b = document.getElementById('tbBtnAbrirPublico');
     b.style.display = '';
-    t('T14 · "Abrir Público" fica grudado na borda quando a barra rola',
+    t('T21 · "Abrir Público" fica grudado na borda quando a barra rola',
         getComputedStyle(b).position === 'sticky'
         && Math.round(cx('.tb-topbar').right - b.getBoundingClientRect().right) <= 16);
 }
@@ -167,7 +213,7 @@ document.body.appendChild(mapa);
 const comVeu = await quadros(true), semVeu = await quadros(false);
 mapa.remove();
 if (!comVeu || !semVeu) {
-    linhas.push('<tr><td>T15 · custo do véu</td><td class="ok">'
+    linhas.push('<tr><td>T22 · custo do véu</td><td class="ok">'
         + 'não medido — esta aba não compõe quadros; abra a página numa janela real</td></tr>');
 } else {
     t(`T07 · sem o blur o quadro não fica mais caro `

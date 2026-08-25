@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v322';
+const VERSION = 'v323';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -183,6 +183,7 @@ const PRECACHE_URLS = [
   '/tabuleiro/js/tab-girar.js',
   '/tabuleiro/js/tab-perf.js',
   '/tabuleiro/js/tab-write-queue.js',
+  '/tabuleiro/js/tab-zoom-curso.js',
   '/tabuleiro/js/tab-ficha-win.js',
   '/shared/campo-imagem.js',
   '/shared/combate-cenas.js',

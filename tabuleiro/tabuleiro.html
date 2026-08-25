@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="../shared/detalhe.css?v=4">
 <script type="module">import '../shared/detalhe.js?v=4';</script>
 <link rel="stylesheet" href="../shared/acervo.css?v=3">
-    <link rel="stylesheet" href="css/tabuleiro.css?v=30">
+    <link rel="stylesheet" href="css/tabuleiro.css?v=31">
     <script type="module" src="/js/global-favicon.js"></script>
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -195,8 +195,12 @@
 
     <!-- Zoom -->
     <div class="tb-zoombar">
-        <button onclick="tbZoom(1.2)" title="Aproximar"><svg class="tb-ico"><use href="#i-mais"/></svg></button>
         <button onclick="tbZoom(1/1.2)" title="Afastar"><svg class="tb-ico"><use href="#i-linha"/></svg></button>
+        <!-- A barra entre os dois só aparece em tela larga: no celular o pinça
+             já faz o mesmo, e melhor. Curso logarítmico (ver tab-tools.js). -->
+        <input type="range" id="tbZoomBarra" min="0" max="1000" step="1" value="500"
+               aria-label="Zoom" title="Zoom" oninput="tbZoomBarra(this.value)">
+        <button onclick="tbZoom(1.2)" title="Aproximar"><svg class="tb-ico"><use href="#i-mais"/></svg></button>
     </div>
 
     <!-- FX de cena (F6): fade de transição + teleprompter -->
