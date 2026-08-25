@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="app-canvas"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Chat da mesa e Janela de Ficha</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/lendas-reliquias.css">
+<link rel="stylesheet" href="../shared/sanfona.css">
+<link rel="stylesheet" href="css/tabuleiro.css">
+<script>for (const l of document.querySelectorAll('link[href*="tabuleiro.css"]')) l.href += '?cb=' + Date.now();</script>
+<style>
+  body.app-canvas { margin:0; overflow:hidden;
+      background: repeating-conic-gradient(#161b22 0 25%, #10141a 0 50%) 0 0 / 96px 96px; }
+  #saida { position:fixed; inset:auto 0 0 0; max-height:42vh; overflow:auto; z-index:9000;
+      background:var(--lr-bg-0); border-top:2px solid var(--lr-gold);
+      font:11px ui-monospace,monospace; padding:8px 12px; color:var(--lr-text-1); }
+  #saida table { border-collapse:collapse; width:100%; }
+  #saida td { border:1px solid var(--lr-border); padding:1px 6px; }
+  .ok { color:var(--lr-nature); } .fail { color:var(--lr-blood-2); font-weight:700; }
+  #placar { font-weight:800; margin-top:6px; }
+  #ctrl { position:fixed; right:8px; bottom:44vh; z-index:9001; }
+  #ctrl button { font:11px system-ui; padding:4px 8px; }
+  body.limpo #saida, body.limpo #ctrl { display:none; }
+</style></head>
+<body class="app-canvas">
+<div id="ctrl"><button onclick="document.body.classList.toggle('limpo')">🖼️ Só a arte</button></div>
+<table id="saida"></table><div id="placar"></div>
+<script src="../shared/lr-icones.js"></script>
+
+<!-- Cópia da marcação de tab-chat.js e tab-ficha-win.js (os dois dependem de
+     Firestore e não dão para importar). T01 confere que as classes ainda
+     existem lá, senão isto vira uma bancada medindo um fantasma. -->
+<div class="tb-window tb-chat open" id="tbChatWin">
+  <div class="tb-win-head">💬 Chat da mesa <button class="tb-mini-btn">✕</button></div>
+  <div class="tb-win-body tb-chat-lista" id="tbChatLista">
+    <div class="tb-chat-log">Rakhar Sombra entrou no canvas</div>
+    <div class="tb-chat-msg"><span class="tb-chat-hora">21:04</span> <b>Mestre</b>: A porta range e o corredor exala um cheiro de ferro velho.</div>
+    <div class="tb-chat-msg"><span class="tb-chat-hora">21:04</span> <b>Rakhar</b>: Eu encosto na parede e escuto antes de abrir.</div>
+    <div class="tb-chat-log">Mestre moveu a cena para Cripta de Vaelthorn</div>
+    <div class="tb-chat-msg"><span class="tb-chat-hora">21:05</span> <b>Mestre</b>: Rola Percepção.</div>
+  </div>
+  <div class="tb-chat-input">
+    <select><option>Todos</option><option>Mestre</option></select>
+    <input placeholder="Falar com a mesa…">
+    <button class="tb-btn tb-btn-small tb-btn-primary">➤</button>
+  </div>
+</div>
+
+<div class="tb-fwin" id="tbFwin" style="left:340px;top:24px">
+  <div class="tb-fwin-head">
+    <span class="tb-fwin-titulo"><span class="tb-fwin-avatar" style="background:#3a2a4a"></span>
+      <b>Rakhar Sombra</b><span class="tb-fwin-meta">Ladino · nv 4</span></span>
+    <button class="tb-mini-btn">✕</button>
+  </div>
+  <div class="tb-fwin-abas">
+    <button class="tb-fwin-aba ativa">Combate</button>
+    <button class="tb-fwin-aba">Perícias</button>
+    <button class="tb-fwin-aba">Inventário <span class="tb-fwin-inv-n">12</span></button>
+  </div>
+  <div class="tb-fwin-body">
+    <div class="tb-fwin-vitais">
+      <div class="tb-fwin-vital"><span class="tb-fwin-vlb">VIT</span>
+        <button class="tb-cstat-btn" data-vdelta="-1">−</button>
+        <div class="tb-fwin-vwrap"><div class="tb-fwin-vbar"><i style="width:64%;background:var(--lr-blood-2)"></i></div></div>
+        <input class="tb-fwin-vcur" value="23"><span class="tb-fwin-vmax">/ 36</span>
+        <button class="tb-cstat-btn" data-vdelta="1">+</button></div>
+      <div class="tb-fwin-vital"><span class="tb-fwin-vlb">ENE</span>
+        <button class="tb-cstat-btn" data-vdelta="-1">−</button>
+        <div class="tb-fwin-vwrap"><div class="tb-fwin-vbar"><i style="width:30%;background:var(--lr-arcane)"></i></div></div>
+        <input class="tb-fwin-vcur" value="6"><span class="tb-fwin-vmax">/ 20</span>
+        <button class="tb-cstat-btn" data-vdelta="1">+</button></div>
+    </div>
+    <div class="tb-conds"><span class="tb-cond">🩸 Sangrando <b>✕</b></span>
+      <button class="tb-cond-add">➕ condição</button></div>
+
+    <details class="tb-fwin-sec lr-sanfona" open><summary>Ataques</summary>
+      <div class="tb-fwin-sec-body">
+        <div class="tb-fwin-atk eq">
+          <div class="tb-fwin-atk-l1"><span class="tb-fwin-atk-nome">✊ Adaga de Osso</span>
+            <span class="tb-fwin-atk-chips"><span class="tb-fwin-canal">🎯 <span class="tb-fwin-chip-nome">Acerto Leve</span> <b>8</b></span></span></div>
+          <div class="tb-fwin-atk-l2"><i class="tb-fwin-atk-est">empunhada</i>
+            <span class="tb-fwin-atk-fim"><b class="tb-fwin-atk-dano">💥 1d6+3</b>
+              <i class="tb-fwin-tg">🛡️ <span class="tb-fwin-tg-nome">Corte</span></i></span></div>
+        </div>
+        <div class="tb-fwin-atk off">
+          <div class="tb-fwin-atk-l1"><span class="tb-fwin-atk-nome">Besta Leve <i class="tb-fwin-atk-est">guardada</i></span>
+            <b class="tb-fwin-atk-dano">💥 1d8</b></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="tb-fwin-sec lr-sanfona"><summary>Valores de Combate</summary>
+      <div class="tb-fwin-sec-body">
+        <details class="tb-fwin-bloco lr-sanfona" open><summary>Defesas<span class="tb-fwin-bloco-n">3</span></summary>
+          <div class="tb-fwin-chips">
+            <span class="tb-fwin-chip">🛡️ Blindagem <b>4</b></span>
+            <span class="tb-fwin-chip">💨 Esquiva <b>7</b></span>
+          </div>
+        </details>
+      </div>
+    </details>
+
+    <details class="tb-fwin-sec lr-sanfona" open><summary>Atributos</summary>
+      <div class="tb-fwin-sec-body">
+        <div class="tb-fwin-atrs">
+          <div class="tb-fwin-atr"><span>FOR</span><b>3</b></div>
+          <div class="tb-fwin-atr"><span>AGI</span><b>5</b></div>
+          <div class="tb-fwin-atr"><span>INT</span><b>4</b></div>
+        </div>
+        <div class="tb-fwin-per"><span>Furtividade</span><b>7</b></div>
+        <div class="tb-fwin-per"><span>Percepção</span><b>5</b></div>
+      </div>
+    </details>
+  </div>
+</div>
+
+<script type="module">
+await new Promise(r => setTimeout(r, 90));
+const linhas = [];
+const t = (n, c) => linhas.push(`<tr><td>${n}</td><td class="${c ? 'ok' : 'fail'}">${c ? 'OK' : 'FALHOU'}</td></tr>`);
+const nota = (x) => linhas.push(`<tr><td colspan="2" style="color:var(--lr-text-2)">${x}</td></tr>`);
+const q = (s) => document.querySelector(s);
+const cx = (s) => q(s).getBoundingClientRect();
+const est = (s, p) => getComputedStyle(q(s))[p];
+
+// ===== a bancada corresponde ao código real? =====
+{
+    const fontes = (await Promise.all(['js/tab-chat.js', 'js/tab-ficha-win.js']
+        .map(f => fetch(f + '?cb=' + Date.now()).then(r => r.text())))).join('\n');
+    const usadas = [...new Set([...document.querySelectorAll('[class]')]
+        .flatMap(e => [...e.classList]).filter(c => /^tb-(chat|fwin)/.test(c)))];
+    const orfas = usadas.filter(c => !fontes.includes(c));
+    t(`T01 · toda classe da bancada existe na fonte real (${usadas.length})`, orfas.length === 0);
+    if (orfas.length) nota(`órfãs: ${orfas.join(', ')}`);
+}
+
+// ===== nenhum token fantasma (foi assim que --lr-bg e --lr-gold-3 apareceram) =====
+const cssFonte = await (await fetch('css/tabuleiro.css?cb=' + Date.now())).text();
+{
+    const css = cssFonte;
+    const tk = await (await fetch('../shared/tokens.css?cb=' + Date.now())).text();
+    const faltando = [...new Set([...css.matchAll(/var\((--lr-[a-z0-9-]+)/g)].map(m => m[1]))]
+        .filter(v => !tk.includes(v + ':'));
+    t('T02 · nenhum var(--lr-…) inexistente', faltando.length === 0);
+    if (faltando.length) nota(`não existem: ${faltando.join(', ')}`);
+}
+
+// ===== CHAT: fala e sala não são a mesma coisa =====
+t('T03 · a linha de sistema se distingue da fala sem depender de cor',
+    est('.tb-chat-log', 'borderLeftWidth') !== '0px' || est('.tb-chat-log', 'fontStyle') === 'italic');
+t('T04 · a hora não compete com o texto',
+    parseFloat(est('.tb-chat-hora', 'fontSize')) < parseFloat(est('.tb-chat-msg', 'fontSize')));
+t('T05 · a hora tem largura estável (números tabulares)',
+    /tabular-nums/.test(est('.tb-chat-hora', 'fontVariantNumeric')));
+{
+    /* Sem recuo, a linha que quebra volta para debaixo da hora e a coluna da
+       esquerda vira um zigue-zague de horas e palavras. */
+    const m = q('.tb-chat-msg');
+    t('T06 · a linha que quebra alinha pelo texto, não pela hora',
+        parseFloat(getComputedStyle(m).paddingLeft) > 0 && parseFloat(getComputedStyle(m).textIndent) < 0);
+}
+t('T07 · o campo de falar acende ao receber o foco',
+    !!getComputedStyle(q('.tb-chat-input input')).getPropertyValue('transition'));
+
+// ===== FICHA: mesma peça, mesmo desenho =====
+t('T08 · a barra de vital da ficha tem o mesmo sulco da do combate',
+    est('.tb-fwin-vbar', 'boxShadow') !== 'none');
+t('T09 · e é a mesma regra da do combate, não uma cópia parecida',
+    /\.tb-cstat-bar,\s*\.tb-fwin-vbar\s*\{/.test(cssFonte));
+t('T10 · a cabeça da ficha leva o mesmo fio de ouro da janela de combate',
+    est('.tb-fwin-head', 'boxShadow') === est('.tb-win-head', 'boxShadow'));
+t('T11 · as seções dobráveis usam a seta compartilhada',
+    getComputedStyle(q('.tb-fwin-sec > summary'), '::before').content.includes('▸'));
+t('T12 · e a seta gira quando a seção abre',
+    getComputedStyle(q('.tb-fwin-sec[open] > summary'), '::before').transform !== 'none');
+t('T13 · o summary responde ao passar o mouse',
+    est('.tb-fwin-sec > summary', 'transition') !== 'all 0s ease 0s');
+{
+    const b = cx('.tb-fwin .tb-cstat-btn');
+    t(`T14 · o ± de vital da ficha também dá para acertar (${Math.round(b.width)}px)`,
+        Math.min(b.width, b.height) >= 24);
+}
+t('T15 · nada estoura a janela pela direita',
+    document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
+
+// ===== contraste do que se lê o tempo todo =====
+const lum = (c) => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => {
+    v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+    return .2126 * r + .7152 * g + .0722 * b; };
+const contraste = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, r) => r - p);
+    return (x + .05) / (y + .05); };
+const fundoReal = (e) => { for (let n = e; n; n = n.parentElement) {
+    const c = getComputedStyle(n).backgroundColor;
+    if (Number((c.match(/[\d.]+/g) || [])[3] ?? 1) >= .95) return c; } return 'rgb(10, 13, 18)'; };
+for (const [id, sel] of [['T16', '.tb-chat-msg b'], ['T17', '.tb-chat-log'],
+                         ['T18', '.tb-chat-hora'], ['T19', '.tb-fwin-meta'],
+                         ['T20', '.tb-fwin-atk-dano'], ['T21', '.tb-fwin-chip b']]) {
+    const e = q(sel), r = contraste(getComputedStyle(e).color, fundoReal(e));
+    t(`${id} · ${sel} legível (${r.toFixed(2)}:1)`, r >= 4.5);
+}
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const total = linhas.filter(l => />OK<|FALHOU/.test(l)).length;
+const f = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML =
+    `<span class="${f ? 'fail' : 'ok'}">${total - f}/${total}</span>`
+    + (f ? ` — ${f} falha(s)` : ' — tudo certo');
+</script>
+</body></html>

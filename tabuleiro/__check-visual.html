@@ -153,6 +153,19 @@ t('T06 · a toolbar cabe na altura sem rolar', cx('.tb-toolbar').bottom <= inner
     t('T18 · e a curva vem do módulo testado, não de conta solta aqui',
         /from '\.\/tab-zoom-curso\.js'/.test(fonte));
 
+    /* O mesmo botão abre e fecha: clicar na ferramenta já ativa volta para a
+       seta, que é o que recolhe a sub-barra dela. Sem isso, quem abria o painel
+       de Iluminação só o fechava escolhendo outra ferramenta qualquer.
+       tab-tools.js não roda aqui (Firestore), então o que dá para trancar é a
+       presença da comparação com a ferramenta atual no ouvinte de clique. */
+    t('T18b · o clique na ferramenta ativa volta para a seta (fecha a sub-barra)',
+        /alvo === T\.tool && alvo !== 'select'/.test(fonte));
+    t('T18c · e a dica não fica por cima da sub-barra que ela abriu',
+        [...document.styleSheets]
+            .filter(f => /tabuleiro\.css/.test(f.href || ''))
+            .flatMap(f => [...f.cssRules])
+            .some(r => r.selectorText === '.tb-tool.active[data-tip]::after'));
+
     /* `getComputedStyle(barra, '::-webkit-slider-runnable-track')` NÃO serve:
        o Chrome devolve o estilo do próprio input, então a medição dava
        "transparente" com a regra funcionando e "transparente" com ela quebrada.

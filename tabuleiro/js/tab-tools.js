@@ -57,8 +57,17 @@ export function initTools() {
         if (cv) cv.style.cursor = T.tool === 'move' ? 'grab' : '';
     });
 
+    /* O mesmo botão abre e FECHA. Clicar de novo na ferramenta que já está
+       ativa volta para a seta — o que também recolhe a sub-barra dela, que era
+       o pedido: quem abriu o painel de Iluminação não tinha como fechá-lo
+       senão escolhendo outra ferramenta qualquer.
+       `select` fica de fora porque é o estado de repouso: alternar com ele
+       mesmo não teria para onde ir. */
     document.querySelectorAll('.tb-tool[data-tool]').forEach(b => {
-        b.addEventListener('click', () => setTool(b.dataset.tool));
+        b.addEventListener('click', () => {
+            const alvo = b.dataset.tool;
+            setTool(alvo === T.tool && alvo !== 'select' ? 'select' : alvo);
+        });
     });
     // Sub-barra de desenho
     document.querySelectorAll('[data-shape]').forEach(b => b.addEventListener('click', () => {
