@@ -154,7 +154,7 @@ onAuthStateChanged(auth, async (user) => {
                 const data = snap.data();
                 if (data.ownerUid && data.ownerUid !== user.uid) {
                     toast('🚫 Esta ficha não pertence a você.', 'aviso');
-                    window.location.href = '../menu/menu.html';
+                    window.location.href = '/';
                     return;
                 }
                 LabFB.charData = data;

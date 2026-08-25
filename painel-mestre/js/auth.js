@@ -48,13 +48,13 @@ export function initAuth(onReady) {
         // Check role — must be "mestre" or "criador"
         const userDoc = await findUserDoc(user);
         if (!userDoc) {
-            window.location.href = '../menu/menu.html';
+            window.location.href = '/';
             return;
         }
 
         const role = userDoc.data().role;
         if (role !== 'mestre' && role !== 'criador') {
-            window.location.href = '../menu/menu.html';
+            window.location.href = '/';
             return;
         }
         /* Quem é criador publica direto no catálogo; quem é só mestre grava
@@ -82,7 +82,7 @@ export function initAuth(onReady) {
 }
 
 // ===== NAVIGATION =====
-window.goToMenu = () => { window.location.href = '../menu/menu.html'; };
+window.goToMenu = () => { window.location.href = '/'; };
 window.goToWorldbuilding = () => { window.location.href = '../worldbuilding/worldbuilding.html'; };
 window.goToHexmap = () => { window.location.href = '../hexmap.html'; };
 

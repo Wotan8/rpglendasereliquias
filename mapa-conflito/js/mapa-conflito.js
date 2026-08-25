@@ -186,7 +186,7 @@ $('fichasNenhuma').addEventListener('click', () => { noRadar = new Set(); gravar
 
 /* Firestore só libera system/data para quem está logado (firestore.rules). */
 onAuthStateChanged(auth, user => {
-    if (!user) { location.href = '../menu/menu.html'; return; }
+    if (!user) { location.href = '/'; return; }
     iniciar().catch(e => {
         console.error(e);
         $('colunas').innerHTML = '<p class="mc-vazio">Não foi possível carregar os cadastros.</p>';

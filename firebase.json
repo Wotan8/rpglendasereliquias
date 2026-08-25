@@ -15,6 +15,15 @@
       "temp_path.txt",
       "*.rules"
     ],
+    "redirects": [
+      {
+        "//": "O Portal saiu de /menu/menu.html para a raiz. 301 permanente para tudo que ficou apontando para o endereço antigo: links de retorno do PagBank (functions/index.js), favoritos e páginas em cache.",
+        "source": "/menu/menu.html",
+        "destination": "/",
+        "type": 301
+      },
+      { "source": "/menu", "destination": "/", "type": 301 }
+    ],
     "rewrites": [
       {
         "source": "/",

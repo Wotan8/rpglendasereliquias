@@ -3,6 +3,9 @@
    ============================================= */
 
 :root {
+    /* Altura do cabeçalho do Portal — a barra de abas gruda logo abaixo. */
+    --portal-topo-h: 54px;
+
     --bg: var(--lr-bg-0);
     --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
     --paper: var(--lr-divine);
@@ -267,14 +270,26 @@ body {
     border-radius: 14px;
     padding: 18px;
     box-shadow: 0 18px 60px rgba(0, 0, 0, .35);
-    overflow: hidden;
+    /* `clip` e não `hidden`: os dois cortam o canto arredondado igual, mas
+       `hidden` cria um contêiner de rolagem, e aí a barra de abas nunca gruda
+       no topo — ela grudaria na borda invisível deste cartão. */
+    overflow: clip;
 }
 
 /* ===== TABS ===== */
+/* A barra de abas é a primeira coisa do Portal de quem entrou, e continua à
+   vista enquanto se rola — a animação de entrada agora vive DENTRO da Home, e
+   sem isto ela empurraria as abas para fora da tela em toda visita.
+   `top` sai da altura do cabeçalho, declarada uma vez em .portal-topo. */
 .tabs {
+    position: sticky;
+    top: var(--portal-topo-h);
+    z-index: 5;
     display: flex;
     gap: 8px;
-    margin-bottom: 14px;
+    margin: calc(var(--lr-space-3) * -1) calc(var(--lr-space-3) * -1) 14px;
+    padding: var(--lr-space-3);
+    background: var(--paper);
     flex-wrap: wrap;
 }
 
@@ -1828,7 +1843,8 @@ html:not(.dark) .meta-card {
     display: flex;
     align-items: center;
     gap: var(--lr-space-2);
-    min-height: 54px;
+    /* A barra de abas gruda logo abaixo: as duas leem a mesma medida. */
+    min-height: var(--portal-topo-h);
     padding: 0 var(--lr-space-4);
     background: var(--lr-surface);
     border-bottom: var(--lr-border-w) solid var(--lr-border-soft);

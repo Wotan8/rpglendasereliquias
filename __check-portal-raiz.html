@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Portal na raiz</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<style>
+  body { margin:0; padding:16px; font:14px/1.6 Inter, system-ui, sans-serif;
+         background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table#saida { border-collapse:collapse; font:11px ui-monospace, monospace; width:100%; margin-bottom:14px; }
+  table#saida td { border:1px solid var(--lr-border); padding:2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight:700; }
+  #placar { font-weight:800; margin:8px 0 16px; padding-top:8px; border-top:1px solid var(--lr-border); }
+  h1 { font-size:1rem; margin:0 0 4px; } p.nota { margin:0 0 10px; color:var(--lr-text-2); font-size:.8rem; }
+  iframe { width: 1100px; height: 700px; border:1px dashed var(--lr-border); border-radius:8px; }
+</style></head>
+<body>
+<h1>🏠 Portal na raiz — endereço e ordem da tela</h1>
+<p class="nota">O Portal saiu de <code>/menu/menu.html</code> para a raiz. Como o arquivo mudou de
+   pasta, todo caminho relativo dentro dele passou a mentir — este teste carrega a página de
+   verdade e confere que <strong>nenhum recurso 404</strong>, que os ícones SVG continuam
+   resolvendo, e que a barra de abas fica acima da animação de entrada.</p>
+
+<table id="saida"></table>
+<div id="placar"></div>
+<iframe id="palco" src="/?cb=1"></iframe>
+
+<script type="module">
+const linhas = [];
+const t = (nome, cond) => linhas.push(
+    `<tr><td>${nome}</td><td class="${cond ? 'ok' : 'fail'}">${cond ? 'OK' : 'FALHOU'}</td></tr>`);
+
+/* ===== A) o endereço serve o Portal, e o antigo não some ===== */
+{
+    const r = await fetch('/', { cache: 'no-store' });
+    const html = await r.text();
+    t('T01 · a raiz responde 200', r.ok);
+    t('T02 · e o que ela serve é o Portal', /Lendas &amp; Relíquias — Portal/.test(html));
+    t('T03 · a raiz não é mais uma página de redirect',
+        !/http-equiv="refresh"/.test(html));
+
+    // Todo caminho de dentro tem de ser absoluto: relativo a partir da raiz
+    // subiria para fora do site.
+    const refs = [...html.matchAll(/(?:href|src)="((?!https?:|#|data:)[^"]+)"/g)].map(m => m[1]);
+    const relativos = refs.filter(u => !u.startsWith('/'));
+    t(`T04 · nenhum caminho relativo sobrou${relativos.length ? ' — ' + relativos.join(', ') : ''}`,
+        relativos.length === 0);
+
+    // Cada um deles precisa existir de verdade.
+    const mortos = [];
+    for (const u of refs) {
+        const res = await fetch(u, { method: 'GET', cache: 'no-store' });
+        if (!res.ok) mortos.push(`${u} (${res.status})`);
+    }
+    t(`T05 · todos os ${refs.length} recursos do Portal respondem${mortos.length ? ' — ' + mortos.join(', ') : ''}`,
+        mortos.length === 0);
+}
+
+/* ===== B) o JS do Portal não ficou apontando para fora ===== */
+{
+    const js = await (await fetch('/menu/js/menu-firebase.js', { cache: 'no-store' })).text();
+    /* `location.href` resolve contra o endereço do DOCUMENTO, que agora é a
+       raiz — `../ficha-...` sairia do site. Já o `import()` resolve contra o
+       MÓDULO, então `../../shared/` continua certo e deve permanecer. */
+    t('T06 · navegação do Portal não usa ../ (o documento é a raiz)',
+        !/location\.href\s*=\s*[`'"]\.\./.test(js));
+    t('T07 · mas o import dinâmico continua relativo ao módulo',
+        /import\([`'"]\.\.\/\.\.\/shared\//.test(js) || /from '\.\.\/\.\.\/shared\//.test(js));
+}
+
+/* ===== C) ninguém no projeto ficou apontando para o endereço velho ===== */
+{
+    const paginas = ['/ficha-v1.7_1/ficha-v1.7_1.html', '/painel-mestre/painel-mestre.html',
+        '/painel-criador/painel-criador.html', '/worldbuilding/worldbuilding.html',
+        '/tabuleiro/tabuleiro.html', '/criar-personagem/criacao.html',
+        '/laboratorium-runarum/laboratorium.html', '/mapa-conflito/mapa-conflito.html'];
+    const js = ['/painel-mestre/js/auth.js', '/ficha-v1.7_1/js/firebase.js',
+        '/painel-criador/js/painel-firebase.js', '/worldbuilding/js/wb-core.js',
+        '/laboratorium-runarum/js/lab-firebase.js', '/mapa-conflito/js/mapa-conflito.js'];
+    const presos = [];
+    for (const u of [...paginas, ...js]) {
+        const txt = await (await fetch(u, { cache: 'no-store' })).text();
+        if (/menu\/menu\.html/.test(txt)) presos.push(u);
+    }
+    t(`T08 · nenhum "Voltar ao menu" ficou no endereço antigo${presos.length ? ' — ' + presos.join(', ') : ''}`,
+        presos.length === 0);
+
+    const sw = await (await fetch('/sw.js', { cache: 'no-store' })).text();
+    t('T09 · o service worker não pré-carrega mais o arquivo que saiu',
+        !/menu\/menu\.html/.test(sw));
+    t('T10 · e continua pré-carregando a raiz', /'\/index\.html'/.test(sw));
+
+    // O 301 é o que salva favorito e link de retorno do PagBank.
+    // firebase.json não vai ao ar (fica no `ignore`); no servidor local ele
+    // existe e dá para conferir o 301.
+    const rf = await fetch('/firebase.json', { cache: 'no-store' });
+    const fb = rf.ok ? await rf.text() : '';
+    t('T11 · o endereço antigo ganhou redirect 301',
+        !fb || (/"\/menu\/menu\.html"/.test(fb) && /"type": 301/.test(fb)));
+}
+
+/* ===== D) a página viva: recursos, ícones e ordem ===== */
+const fr = document.getElementById('palco');
+await new Promise(r => { fr.onload = r; setTimeout(r, 8000); });
+await new Promise(r => setTimeout(r, 1500));
+const d = fr.contentDocument;
+const w = fr.contentWindow;
+
+{
+    t('T12 · a folha do Portal aplicou (o cabeçalho tem altura declarada)',
+        w.getComputedStyle(d.documentElement).getPropertyValue('--portal-topo-h').trim() === '54px');
+
+    // Ícone é <use href="#i-*"> num sprite: é o que <base href> teria quebrado.
+    const usos = [...d.querySelectorAll('svg use')];
+    const quebrados = usos.filter(u => {
+        const id = (u.getAttribute('href') || '').replace('#', '');
+        return id && !d.getElementById(id);
+    });
+    t(`T13 · os ${usos.length} ícones do sprite continuam resolvendo`, quebrados.length === 0);
+
+    t('T14 · a barra de abas existe e está no cartão da mesa', !!d.getElementById('tabBar'));
+    t('T15 · a animação de entrada existe', !!d.getElementById('heroTrilho'));
+
+    /* Visitante (é o estado deste teste, sem login): a animação é o cartão de
+       visita e fica FORA das abas — `.wrap` está escondido para ele. */
+    const hero = d.getElementById('heroTrilho');
+    const home = d.getElementById('tab-home');
+    t('T16 · deslogado, a animação fica fora da aba Home', !home.contains(hero));
+    t('T17 · e logo abaixo do cabeçalho',
+        d.querySelector('header.portal-topo')?.nextElementSibling === hero);
+
+    // Logado: a barra de abas vem primeiro e a animação abre a Home.
+    w.heroNoLugar?.(true) ?? (function () {
+        // a função é de módulo; reproduz o movimento para medir a ordem
+        home.prepend(hero);
+    })();
+    d.querySelector('.wrap').style.display = '';
+    await new Promise(r => setTimeout(r, 60));
+
+    t('T18 · logado, a animação passa a ser o topo da aba Home',
+        home.contains(hero) && home.firstElementChild === hero);
+    const abas = d.getElementById('tabBar');
+    t('T19 · e as abas ficam ACIMA da animação',
+        abas.getBoundingClientRect().top < hero.getBoundingClientRect().top);
+    t('T20 · as abas grudam no topo enquanto se rola',
+        w.getComputedStyle(abas).position === 'sticky');
+    t('T21 · o cartão da mesa não estraga o grude (overflow: clip, não hidden)',
+        w.getComputedStyle(d.querySelector('.sheet')).overflow !== 'hidden');
+    t('T22 · e elas param logo abaixo do cabeçalho, sem sobrepor',
+        w.getComputedStyle(abas).top === w.getComputedStyle(d.querySelector('.portal-topo')).minHeight);
+}
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const falhas = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML =
+    `<span class="${falhas ? 'fail' : 'ok'}">${linhas.length - falhas}/${linhas.length}</span>`
+    + (falhas ? ` — ${falhas} falha(s)` : ' — tudo certo');
+</script>
+</body></html>

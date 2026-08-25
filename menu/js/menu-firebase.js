@@ -145,6 +145,7 @@ onAuthStateChanged(auth, async (user) => {
         if (btnEntrar) btnEntrar.hidden = true;
         document.body.classList.add('portal-logado');
         document.body.classList.remove('portal-deslogado');
+        heroNoLugar(true);
         document.dispatchEvent(new CustomEvent('portal:logado'));
     } else {
         // Não autenticado → SEM redirect: a própria página vira o login.
@@ -158,9 +159,31 @@ onAuthStateChanged(auth, async (user) => {
         if (btnEntrar) btnEntrar.hidden = false;
         document.body.classList.add('portal-deslogado');
         document.body.classList.remove('portal-logado');
+        heroNoLugar(false);
         document.dispatchEvent(new CustomEvent('portal:deslogado'));
     }
 });
+
+/**
+ * Onde a animação de entrada mora, conforme quem está olhando.
+ *
+ * Visitante: logo abaixo do topo, ocupando a tela — é o cartão de visita, e
+ * precisa estar fora das abas porque `.wrap` está escondido para ele.
+ * Logado: primeira coisa da aba Home, com as abas acima dela. Assim a barra de
+ * abas é o que se vê ao entrar, e a animação não empurra a mesa para baixo em
+ * toda visita.
+ *
+ * MOVE o nó, não duplica: são dois `<canvas>` animando ao mesmo tempo se
+ * houver duas cópias.
+ */
+function heroNoLugar(logado) {
+    const hero = document.getElementById('heroTrilho');
+    const home = document.getElementById('tab-home');
+    const topo = document.querySelector('header.portal-topo');
+    if (!hero || !home || !topo) return;
+    if (logado) home.prepend(hero);
+    else topo.after(hero);
+}
 
 // ===== CARREGAR PERSONAGENS (coleção 'char') =====
 async function loadCharacters() {
@@ -368,7 +391,7 @@ window.createNewCharacter = async function () {
     } catch (error) {
         console.error('Erro ao buscar mesas:', error);
         // Fallback: redirect directly
-        window.location.href = '../criar-personagem/criacao.html';
+        window.location.href = '/criar-personagem/criacao.html';
     }
 };
 
@@ -377,9 +400,9 @@ window.selectMesaForCreation = function (mesaId) {
     if (modal) modal.remove();
 
     if (mesaId) {
-        window.location.href = `../criar-personagem/criacao.html?mesaId=${mesaId}`;
+        window.location.href = `/criar-personagem/criacao.html?mesaId=${mesaId}`;
     } else {
-        window.location.href = '../criar-personagem/criacao.html';
+        window.location.href = '/criar-personagem/criacao.html';
     }
 };
 
@@ -407,7 +430,7 @@ window.createBlankCharacter = async function () {
         console.log('✅ Ficha em branco criada:', docRef.id);
 
         // Redirecionar diretamente para a ficha v1.7
-        window.location.href = `../ficha-v1.7_1/ficha-v1.7_1.html?id=${docRef.id}`;
+        window.location.href = `/ficha-v1.7_1/ficha-v1.7_1.html?id=${docRef.id}`;
     } catch (error) {
         console.error('❌ Erro ao criar ficha em branco:', error);
         showAlert('❌ Erro ao criar ficha: ' + error.message, 'danger');
@@ -416,7 +439,7 @@ window.createBlankCharacter = async function () {
 
 // ===== SELECIONAR PERSONAGEM =====
 window.selectCharacter = function (characterId) {
-    window.location.href = `../ficha-v1.7_1/ficha-v1.7_1.html?id=${characterId}`;
+    window.location.href = `/ficha-v1.7_1/ficha-v1.7_1.html?id=${characterId}`;
 };
 
 // ===== CARREGAR INVENTÁRIO =====

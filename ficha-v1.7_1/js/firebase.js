@@ -491,7 +491,7 @@ onAuthStateChanged(auth, async (user) => {
                     }
                     if (!isMestreOfMesa) {
                         toast('🚫 ACESSO NEGADO! Esta ficha não pertence a você.', 'aviso');
-                        window.location.href = '../menu/menu.html';
+                        window.location.href = '/';
                         return;
                     }
                 }

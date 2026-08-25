@@ -90,7 +90,7 @@ import { confirmar, toast } from '../../shared/dialogo.js?v=2';
                 currentUser = user;
                 const isCriador = await checkRole();
                 if (!isCriador) {
-                    window.location.href = '../menu/menu.html';
+                    window.location.href = '/';
                     return;
                 }
                 const displayNameEl = document.getElementById('userDisplayName');

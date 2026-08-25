@@ -813,7 +813,7 @@ onAuthStateChanged(auth, async (user) => {
     // Check role
     const userDoc = await findUserDoc(user);
     if (!userDoc || userDoc.data().role !== 'criador') {
-        window.location.href = '../menu/menu.html';
+        window.location.href = '/';
         return;
     }
 
@@ -852,7 +852,7 @@ async function findUserDoc(user) {
 }
 
 // ===== NAVIGATION =====
-window.goToMenu = () => { window.location.href = '../menu/menu.html'; };
+window.goToMenu = () => { window.location.href = '/'; };
 window.logout = async function () {
     if (await confirmar('🚪 Tem certeza que deseja sair?')) {
         try { await signOut(auth); window.location.href = '../index.html'; }
