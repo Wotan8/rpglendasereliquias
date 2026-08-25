@@ -399,17 +399,56 @@ html, body {
     border-radius: var(--lr-radius-lg);
     width: 100%; max-width: 560px; max-height: 88vh; display: flex; flex-direction: column;
     box-shadow: var(--lr-shadow-3);
-    /* o filete dourado no topo vem de lendas-reliquias.css ([class*=modal-content]) */
+    /* filete dourado no topo: declarado no fim deste arquivo, junto das
+       outras caixas — ver "A moldura como uma peça só". */
 }
-.tb-modal-header { display: flex; justify-content: space-between; align-items: center; gap: var(--lr-space-3); padding: var(--lr-space-3) var(--lr-space-4); border-bottom: 1px solid var(--lr-border); }
+/* O cabeçalho tinha o MESMO fundo do corpo, então o título boiava em cima do
+   conteúdo em vez de coroar a caixa. Agora é a mesma cabeça das janelas do
+   Tabuleiro (.tb-win-head, .tb-fwin-head): fundo um degrau abaixo e o fio de
+   ouro embaixo. Vale para os modais injetados de outros módulos também — são
+   a mesma peça na tela do mestre. */
+.tb-modal-header,
+.modal .modal-header,
+.inv-modal .inv-modal-header {
+    display: flex; justify-content: space-between; align-items: center; gap: var(--lr-space-3);
+    padding: var(--lr-space-3) var(--lr-space-4);
+    border-bottom: 1px solid var(--lr-border);
+    background: var(--lr-bg-1);
+    box-shadow: 0 1px 0 rgba(212, 175, 55, .16);
+}
 .tb-modal-title {
     font-family: var(--lr-font-title); font-weight: 600; letter-spacing: var(--lr-track-title);
     font-size: var(--lr-fs-md); color: var(--lr-text-1);
 }
-.tb-modal-close { background: none; border: none; color: var(--lr-text-2); font-size: var(--lr-fs-lg); cursor: pointer; line-height: 1; }
-.tb-modal-close:hover { color: var(--lr-blood-3); }
+/* Era um × solto de 20px: alvo pequeno demais para o dedo e sem retorno
+   nenhum antes do clique. Vira caixa, como todo botão de fechar do projeto. */
+.tb-modal-close, .modal .modal-close {
+    background: none; border: 1px solid transparent; color: var(--lr-text-2);
+    font-size: var(--lr-fs-lg); cursor: pointer; line-height: 1;
+    width: 30px; height: 30px; border-radius: var(--lr-radius-sm);
+    display: flex; align-items: center; justify-content: center; flex: none;
+    transition: background-color var(--lr-t-fast) var(--lr-ease), color var(--lr-t-fast) var(--lr-ease);
+}
+.tb-modal-close:hover, .modal .modal-close:hover {
+    color: var(--lr-blood-3); background: var(--lr-blood-soft);
+}
 .tb-modal-body { padding: var(--lr-space-4); overflow-y: auto; }
 .tb-modal-actions { display: flex; gap: var(--lr-space-3); justify-content: flex-end; margin-top: var(--lr-space-4); }
+
+/* A caixa aparecia estalando no meio da tela. Um passo curto de escala diz de
+   onde ela veio e para onde o olho tem de ir. É `transform`+`opacity`, que o
+   compositor resolve sozinho, e roda UMA vez na abertura — nada por quadro.
+   Sem guarda de movimento reduzido aqui: tokens.css já zera toda animação do
+   projeto nessa preferência. */
+@keyframes tbModalEntra {
+    from { opacity: 0; transform: translateY(8px) scale(.985); }
+}
+.tb-modal.active > .tb-modal-content,
+.modal.active > .modal-content,
+.inv-modal.active > .inv-modal-content,
+.tb-cond-picker-overlay > .tb-cond-picker {
+    animation: tbModalEntra var(--lr-t-base) var(--lr-ease);
+}
 
 /* ===== Listas ===== */
 .tb-list-row {
@@ -1145,24 +1184,38 @@ html, body {
 }
 
 /* ===== Menu de contexto ===== */
+/* `max-width` para o rótulo comprido virar reticências em vez de uma faixa
+   atravessando o mapa; a posição quem calcula é tab-tools.js, medindo a caixa
+   depois de abrir. */
 .tb-ctx {
-    position: fixed; z-index: 110; min-width: 220px;
+    position: fixed; z-index: 110; min-width: 220px; max-width: min(320px, 86vw);
     background: var(--lr-surface); border: 1px solid var(--lr-border);
     border-radius: var(--lr-radius); padding: var(--lr-space-1);
     display: none; box-shadow: var(--lr-shadow-3);
+    animation: tbCtxEntra var(--lr-t-fast) var(--lr-ease);
 }
-.tb-ctx.open { display: block; }
+/* Abre a partir do ponto clicado, e não do nada — é a diferença entre "o menu
+   é DESTE objeto" e "apareceu uma caixa". */
+@keyframes tbCtxEntra { from { opacity: 0; transform: scale(.96); } }
+.tb-ctx.open { display: block; transform-origin: top left; }
 .tb-ctx-title {
     font-size: var(--lr-fs-xs); font-weight: 700; color: var(--lr-text-2);
     text-transform: uppercase; letter-spacing: .06em;
     padding: var(--lr-space-2) var(--lr-space-3) var(--lr-space-1);
+    border-bottom: 1px solid var(--lr-border-soft);
+    margin-bottom: var(--lr-space-1);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.tb-ctx-item { padding: var(--lr-space-2) var(--lr-space-3); border-radius: var(--lr-radius-sm); font-size: var(--lr-fs-sm); cursor: pointer; }
-.tb-ctx-item:hover { background: var(--lr-surface-2); }
+.tb-ctx-item, .tb-ctx-check {
+    padding: var(--lr-space-2) var(--lr-space-3); border-radius: var(--lr-radius-sm);
+    font-size: var(--lr-fs-sm); cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: background-color var(--lr-t-fast) var(--lr-ease);
+}
+.tb-ctx-check { display: flex; align-items: center; gap: var(--lr-space-2); }
+.tb-ctx-item:hover, .tb-ctx-check:hover { background: var(--lr-surface-2); }
 .tb-ctx-item.tb-danger { color: var(--lr-blood-3); }
 .tb-ctx-item.tb-danger:hover { background: var(--lr-blood-soft); }
-.tb-ctx-check { display: flex; align-items: center; gap: var(--lr-space-2); padding: var(--lr-space-2) var(--lr-space-3); font-size: var(--lr-fs-sm); cursor: pointer; border-radius: var(--lr-radius-sm); }
-.tb-ctx-check:hover { background: var(--lr-surface-2); }
 
 /* ===== Popup alfinete ===== */
 #tbPinPopup {
@@ -1529,6 +1582,18 @@ body .lr-avisos {
 .modal .modal-content, .inv-modal .inv-modal-content {
     border-color: var(--tb-borda);
     box-shadow: var(--tb-relevo);
+}
+/* ⚠️ A regra acima zera a cor do filete de ouro do topo, e a de baixo devolve.
+   O filete vinha de `[class*="modal-content"]` em lendas-reliquias.css, que
+   carrega DEPOIS deste arquivo — mas `.modal .modal-content` tem dois níveis
+   de especificidade e vence a folha compartilhada de qualquer jeito. Resultado
+   antigo: o modal do próprio Tabuleiro tinha o filete e os injetados pelo
+   Painel do Mestre não, na mesma tela do mestre. Declarado aqui, os três ficam
+   iguais sem depender de quem carrega primeiro. */
+.tb-modal-content, .tb-cond-picker, .tb-fwin,
+.modal .modal-content, .inv-modal .inv-modal-content,
+#tbPinPopup {
+    border-top: 2px solid var(--lr-gold);
 }
 /* A barra do topo é o único plano colado na borda da tela: em vez de relevo
    nas quatro quinas, um fio de ouro por baixo — a mesma assinatura que o

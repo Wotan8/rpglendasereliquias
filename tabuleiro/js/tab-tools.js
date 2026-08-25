@@ -1375,9 +1375,20 @@ function abrirMenuContexto(o, x, y) {
 function renderMenuContexto(menu, itens, x, y) {
     menu.innerHTML = itens.map((it, i) => `<div class="tb-ctx-item ${it.danger?'tb-danger':''}" data-i="${i}">${it.t}</div>`).join('');
     menu.querySelectorAll('.tb-ctx-item').forEach(el => el.onclick = () => { itens[+el.dataset.i].fn(); menu.classList.remove('open'); });
-    menu.style.left = Math.min(x, window.innerWidth - 240) + 'px';
-    menu.style.top = Math.min(y, window.innerHeight - itens.length * 38 - 12) + 'px';
+    /* Abre PRIMEIRO, mede depois. Antes o encaixe vinha de dois palpites — 240px
+       de largura e 38px por item — e os dois erram: um rótulo comprido
+       ("Abrir janela (deixa passar)") passa dos 240 e vaza pela direita, e
+       qualquer mudança de respiro no CSS desalinha a conta da altura. O
+       navegador já sabe o tamanho de verdade; é só perguntar.
+       A caixa nasce invisível para a medição não piscar na tela. */
+    menu.style.visibility = 'hidden';
+    menu.style.left = menu.style.top = '0px';
     menu.classList.add('open');
+    const cx = menu.getBoundingClientRect();
+    const folga = 8;
+    menu.style.left = Math.max(folga, Math.min(x, window.innerWidth - cx.width - folga)) + 'px';
+    menu.style.top = Math.max(folga, Math.min(y, window.innerHeight - cx.height - folga)) + 'px';
+    menu.style.visibility = '';
     setTimeout(() => document.addEventListener('pointerdown', function fecha(ev) {
         if (!menu.contains(ev.target)) { menu.classList.remove('open'); document.removeEventListener('pointerdown', fecha); }
     }), 10);

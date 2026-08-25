@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="app-canvas"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Modais e menu de contexto</title>
+<link rel="stylesheet" href="css/tabuleiro.css">
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/lendas-reliquias.css">
+<script>for (const l of document.querySelectorAll('link[href*="tabuleiro.css"]')) l.href += '?cb=' + Date.now();</script>
+<style>
+  body.app-canvas { margin:0; overflow:hidden;
+      background: repeating-conic-gradient(#161b22 0 25%, #10141a 0 50%) 0 0 / 96px 96px; }
+  #saida { position:fixed; inset:auto 0 0 0; max-height:42vh; overflow:auto; z-index:9000;
+      background:var(--lr-bg-0); border-top:2px solid var(--lr-gold);
+      font:11px ui-monospace,monospace; padding:8px 12px; color:var(--lr-text-1); }
+  #saida table { border-collapse:collapse; width:100%; }
+  #saida td { border:1px solid var(--lr-border); padding:1px 6px; }
+  .ok { color:var(--lr-nature); } .fail { color:var(--lr-blood-2); font-weight:700; }
+  #placar { font-weight:800; margin-top:6px; }
+  #ctrl { position:fixed; right:8px; bottom:44vh; z-index:9001; display:flex; gap:6px; }
+  #ctrl button { font:11px system-ui; padding:4px 8px; }
+  body.limpo #saida, body.limpo #ctrl { display:none; }
+  /* O véu cobre a tela inteira: sem isto o menu de contexto ficaria por baixo
+     dele e a medição pegaria um elemento que ninguém consegue clicar. */
+  .tb-modal { z-index: 100; }
+</style></head>
+<body class="app-canvas">
+<div id="ctrl"><button onclick="document.body.classList.toggle('limpo')">🖼️ Só a arte</button></div>
+<table id="saida"></table><div id="placar"></div>
+
+<!-- Modal do próprio Tabuleiro -->
+<div class="tb-modal active" id="tbModal">
+  <div class="tb-modal-content">
+    <div class="tb-modal-header">
+      <span class="tb-modal-title">Configurações do canvas</span>
+      <button class="tb-modal-close">✕</button>
+    </div>
+    <div class="tb-modal-body">
+      <div class="tb-form-grid">
+        <label>Nome<input class="tb-input" value="Cripta de Vaelthorn"></label>
+        <label>Escala (m)<input class="tb-input" type="number" value="1.5"></label>
+      </div>
+      <div class="tb-modal-actions">
+        <button class="tb-btn">Cancelar</button>
+        <button class="tb-btn tb-btn-primary">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal INJETADO pelo Painel do Mestre (mesma peça na tela do mestre) -->
+<div class="modal active" id="modalInjetado" style="z-index:101">
+  <div class="modal-content" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-title">Ficha do NPC</span>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">Guarda da Cripta — Vitalidade 28, Blindagem 4.</div>
+  </div>
+</div>
+
+<!-- Menu de contexto, com o rótulo mais comprido que existe hoje -->
+<div class="tb-ctx open" id="tbCtxMenu" style="left:40px;top:40px;z-index:200">
+  <div class="tb-ctx-title">Janela de vitral do salão leste</div>
+  <div class="tb-ctx-item">👁️ Exibir ao público</div>
+  <div class="tb-ctx-item">🪟 Abrir janela (deixa passar a luz e a visão)</div>
+  <div class="tb-ctx-check"><input type="checkbox" checked> Trava o arrasto</div>
+  <div class="tb-ctx-item tb-danger">🗑️ Apagar objeto</div>
+</div>
+
+<script type="module">
+await new Promise(r => setTimeout(r, 90));
+const linhas = [];
+const t = (n, c) => linhas.push(`<tr><td>${n}</td><td class="${c ? 'ok' : 'fail'}">${c ? 'OK' : 'FALHOU'}</td></tr>`);
+const nota = (x) => linhas.push(`<tr><td colspan="2" style="color:var(--lr-text-2)">${x}</td></tr>`);
+const q = (s) => document.querySelector(s);
+const cx = (s) => q(s).getBoundingClientRect();
+const est = (s, p) => getComputedStyle(q(s))[p];
+
+const cssFonte = await (await fetch('css/tabuleiro.css?cb=' + Date.now())).text();
+const toolsFonte = await (await fetch('js/tab-tools.js?cb=' + Date.now())).text();
+
+// ===== token fantasma =====
+{
+    const tk = await (await fetch('../shared/tokens.css?cb=' + Date.now())).text();
+    const faltando = [...new Set([...cssFonte.matchAll(/var\((--lr-[a-z0-9-]+)/g)].map(m => m[1]))]
+        .filter(v => !tk.includes(v + ':'));
+    t('T01 · nenhum var(--lr-…) inexistente', faltando.length === 0);
+    if (faltando.length) nota(`não existem: ${faltando.join(', ')}`);
+}
+
+// ===== toda caixa do Tabuleiro tem a MESMA cabeça =====
+t('T02 · a cabeça do modal se separa do corpo (fundo próprio)',
+    est('.tb-modal-header', 'backgroundColor') !== est('.tb-modal-body', 'backgroundColor'));
+t('T03 · e leva o fio de ouro das outras cabeças',
+    /rgba\(212, 175, 55/.test(est('.tb-modal-header', 'boxShadow')));
+t('T04 · o modal injetado de outro módulo segue a mesma cabeça',
+    est('.modal .modal-header', 'boxShadow') === est('.tb-modal-header', 'boxShadow')
+    && est('.modal .modal-header', 'backgroundColor') === est('.tb-modal-header', 'backgroundColor'));
+/* O filete de ouro é a assinatura de "caixa do sistema" no projeto inteiro, e
+   TODAS as caixas do Tabuleiro têm de levá-lo — inclusive as injetadas pelo
+   Painel do Mestre, que aparecem na mesma tela. A ordem das folhas nesta
+   bancada é a MESMA da página real (tabuleiro.css antes de tokens.css e de
+   lendas-reliquias.css); invertida, este teste media outra cascata e passava
+   com o filete ausente na tela de verdade. */
+for (const [id, sel] of [['T05a', '.tb-modal-content'], ['T05b', '.modal .modal-content']]) {
+    const g = getComputedStyle(q(sel));
+    t(`${id} · ${sel} leva o filete de ouro (${g.borderTopWidth})`,
+        parseFloat(g.borderTopWidth) >= 2 && /212, 175, 55/.test(g.borderTopColor));
+}
+
+// ===== fechar é um botão, não um caractere solto =====
+for (const [id, sel] of [['T06', '.tb-modal-close'], ['T07', '.modal .modal-close']]) {
+    const b = q(sel).getBoundingClientRect();
+    t(`${id} · ${sel} dá para acertar (${Math.round(b.width)}×${Math.round(b.height)}px)`,
+        Math.min(b.width, b.height) >= 28);
+}
+
+// ===== entrada =====
+t('T08 · a caixa entra em vez de estalar na tela',
+    est('.tb-modal.active > .tb-modal-content', 'animationName') === 'tbModalEntra');
+t('T09 · a entrada é só transform/opacity (o compositor resolve sozinho)',
+    /@keyframes tbModalEntra \{[^}]*from \{ opacity[^}]*transform/.test(cssFonte));
+/* tokens.css zera toda animação em prefers-reduced-motion; o que se tranca
+   aqui é que ninguém pôs um `!important` que escapasse dessa regra. */
+t('T10 · e nenhuma animação daqui escapa do movimento reduzido',
+    !/animation[^;]*!important/.test(cssFonte));
+
+// ===== menu de contexto =====
+t('T11 · o rótulo comprido vira reticências, não uma faixa no mapa',
+    est('.tb-ctx-item', 'textOverflow') === 'ellipsis' && cx('.tb-ctx').width <= 320);
+t('T12 · o título do menu se separa dos itens',
+    parseFloat(est('.tb-ctx-title', 'borderBottomWidth')) > 0);
+t('T13 · o menu abre a partir do canto clicado',
+    est('.tb-ctx.open', 'transformOrigin').startsWith('0px 0px'));
+t('T14 · item comum e item destrutivo não se confundem',
+    est('.tb-ctx-item', 'color') !== est('.tb-ctx-item.tb-danger', 'color'));
+/* O encaixe do menu era dois palpites (240px de largura, 38px por item) e os
+   dois erram com rótulo comprido. Agora a caixa é medida depois de abrir —
+   tab-tools.js não roda aqui, então o que dá para trancar é isso. */
+t('T15 · a posição do menu vem da medida, não de 38px por item',
+    /getBoundingClientRect\(\)/.test(toolsFonte.slice(toolsFonte.indexOf('function renderMenuContexto')))
+    && !/itens\.length \* 38/.test(toolsFonte));
+t('T16 · e ele nunca começa fora da tela pela esquerda/topo',
+    /Math\.max\(folga,\s*Math\.min\(/.test(toolsFonte));
+
+// ===== nada estoura =====
+t('T17 · nada estoura a janela pela direita',
+    document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
+
+// ===== contraste =====
+const lum = (c) => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => {
+    v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+    return .2126 * r + .7152 * g + .0722 * b; };
+const contraste = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, r) => r - p);
+    return (x + .05) / (y + .05); };
+const fundoReal = (e) => { for (let n = e; n; n = n.parentElement) {
+    const c = getComputedStyle(n).backgroundColor;
+    if (Number((c.match(/[\d.]+/g) || [])[3] ?? 1) >= .95) return c; } return 'rgb(10, 13, 18)'; };
+for (const [id, sel] of [['T18', '.tb-modal-title'], ['T19', '.tb-modal-close'],
+                         ['T20', '.tb-ctx-title'], ['T21', '.tb-ctx-item'],
+                         ['T22', '.tb-ctx-item.tb-danger']]) {
+    const e = q(sel), r = contraste(getComputedStyle(e).color, fundoReal(e));
+    t(`${id} · ${sel} legível (${r.toFixed(2)}:1)`, r >= 4.5);
+}
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const total = linhas.filter(l => />OK<|FALHOU/.test(l)).length;
+const f = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML =
+    `<span class="${f ? 'fail' : 'ok'}">${total - f}/${total}</span>`
+    + (f ? ` — ${f} falha(s)` : ' — tudo certo');
+</script>
+</body></html>
