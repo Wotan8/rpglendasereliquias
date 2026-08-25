@@ -1094,16 +1094,23 @@ body .lr-avisos {
         display: block; width: 132px; height: 36px; margin: 0 2px;
         -webkit-appearance: none; appearance: none; background: none; cursor: pointer;
     }
-    #tbZoomBarra::-webkit-slider-runnable-track,
-    #tbZoomBarra::-moz-range-track {
-        height: 4px; border-radius: var(--lr-radius-sm);
+    /* ⚠️ Uma regra por navegador, NUNCA os dois pseudo-elementos no mesmo
+       seletor: pseudo-elemento que o navegador não conhece invalida a LISTA
+       inteira, e aí nem o trilho que ele conhecia é pintado. Foi assim que a
+       barra virou só uma bolinha de ouro flutuando no vazio. */
+    #tbZoomBarra::-webkit-slider-runnable-track {
+        height: 6px; border-radius: var(--lr-radius-sm);
         background: var(--lr-surface-2); border: 1px solid var(--lr-border);
     }
-    /* -16px = metade do polegar menos metade do trilho: é o que o alinha no
-       meio da linha no WebKit (o Firefox centraliza sozinho). */
+    #tbZoomBarra::-moz-range-track {
+        height: 6px; border-radius: var(--lr-radius-sm);
+        background: var(--lr-surface-2); border: 1px solid var(--lr-border);
+    }
+    /* margem = (altura do trilho − altura do polegar) / 2 = (8 − 16) / 2.
+       É o que centra o polegar na linha no WebKit; o Firefox centra sozinho. */
     #tbZoomBarra::-webkit-slider-thumb {
         -webkit-appearance: none; appearance: none;
-        width: 14px; height: 14px; border-radius: 50%; margin-top: -6px;
+        width: 14px; height: 14px; border-radius: 50%; margin-top: -4px;
         background: var(--lr-gold); border: 1px solid var(--lr-bg-0); cursor: grab;
     }
     #tbZoomBarra::-moz-range-thumb {

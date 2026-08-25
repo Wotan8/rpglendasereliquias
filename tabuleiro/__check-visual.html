@@ -149,6 +149,34 @@ t('T06 · a toolbar cabe na altura sem rolar', cx('.tb-toolbar').bottom <= inner
     /* A curva em si tem teste próprio, em tab-zoom-curso.test.mjs. */
     t('T18 · e a curva vem do módulo testado, não de conta solta aqui',
         /from '\.\/tab-zoom-curso\.js'/.test(fonte));
+
+    /* `getComputedStyle(barra, '::-webkit-slider-runnable-track')` NÃO serve:
+       o Chrome devolve o estilo do próprio input, então a medição dava
+       "transparente" com a regra funcionando e "transparente" com ela quebrada.
+       O que ele responde de verdade é o CSSOM — e é a resposta certa, porque
+       seletor inválido é DESCARTADO na análise: a regra some da folha. */
+    const folha = [...document.styleSheets].find(f => /tabuleiro\.css/.test(f.href || ''));
+    const regras = [...folha.cssRules].flatMap(r => r.media ? [...r.cssRules] : [r]);
+    const trilho = regras.find(r => /::-webkit-slider-runnable-track/.test(r.selectorText || ''));
+    /* `style.backgroundColor` não serve: o valor é `var(--lr-surface-2)`, e
+       enquanto a variável não é resolvida a longa fica vazia. O que se pergunta
+       é se a DECLARAÇÃO está lá. */
+    t('T19 · a regra do trilho sobreviveu à análise e pinta fundo',
+        !!trilho && /background\s*:/.test(trilho.style.cssText));
+
+    /* E o motivo de ele ter sumido: juntar ::-webkit-… com ::-moz-… no MESMO
+       seletor invalida a lista inteira nos dois navegadores. O Firefox não
+       roda aqui, então quem guarda a regra dele é esta varredura. */
+    const css = await (await fetch('css/tabuleiro.css?cb=' + Date.now())).text();
+    const misturados = [...css.matchAll(/([^{}]+)\{/g)]
+        .map(m => m[1]).filter(sel => /::-webkit-/.test(sel) && /::-moz-/.test(sel));
+    t(`T20 · nenhum seletor mistura ::-webkit- com ::-moz- (${misturados.length})`,
+        misturados.length === 0);
+    /* O trilho do Firefox não existe neste navegador, então quem o guarda é a
+       fonte: precisa ter regra PRÓPRIA, e ela precisa pintar fundo. */
+    const moz = css.match(/#tbZoomBarra::-moz-range-track\s*\{([^}]*)\}/);
+    t('T21 · o Firefox tem trilho próprio, com fundo',
+        !!moz && /background\s*:/.test(moz[1]));
 }
 
 /* ===== os grupos da barra do topo ===== */
@@ -157,7 +185,7 @@ t('T06 · a toolbar cabe na altura sem rolar', cx('.tb-toolbar').bottom <= inner
         const b = document.getElementById(id);
         return getComputedStyle(b, '::before').width;
     };
-    t('T19 · a barra do topo vem repartida em grupos',
+    t('T22 · a barra do topo vem repartida em grupos',
         ['btnRelogio', 'btnCombate', 'btnCanvases'].every(id => fio(id) === '1px'));
     /* O jogador não vê preparo do mestre nem gerência de canvas. O fio some
        COM o botão — senão sobra um risco no meio da barra, apontando nada. */
@@ -165,7 +193,7 @@ t('T06 · a toolbar cabe na altura sem rolar', cx('.tb-toolbar').bottom <= inner
         document.getElementById(id).style.display = 'none';
     const risco = [...document.querySelectorAll('.tb-topbar .tb-grupo')]
         .filter(b => getComputedStyle(b).display !== 'none');
-    t('T20 · na visão do jogador nenhum fio fica pendurado',
+    t('T23 · na visão do jogador nenhum fio fica pendurado',
         risco.length === 1 && risco[0].id === 'btnCombate');
     for (const id of ['btnRelogio', 'btnTeleprompter', 'btnSessao', 'btnCanvases'])
         document.getElementById(id).style.display = '';
@@ -175,7 +203,7 @@ t('T06 · a toolbar cabe na altura sem rolar', cx('.tb-toolbar').bottom <= inner
 {
     const b = document.getElementById('tbBtnAbrirPublico');
     b.style.display = '';
-    t('T21 · "Abrir Público" fica grudado na borda quando a barra rola',
+    t('T24 · "Abrir Público" fica grudado na borda quando a barra rola',
         getComputedStyle(b).position === 'sticky'
         && Math.round(cx('.tb-topbar').right - b.getBoundingClientRect().right) <= 16);
 }
@@ -213,7 +241,7 @@ document.body.appendChild(mapa);
 const comVeu = await quadros(true), semVeu = await quadros(false);
 mapa.remove();
 if (!comVeu || !semVeu) {
-    linhas.push('<tr><td>T22 · custo do véu</td><td class="ok">'
+    linhas.push('<tr><td>T25 · custo do véu</td><td class="ok">'
         + 'não medido — esta aba não compõe quadros; abra a página numa janela real</td></tr>');
 } else {
     t(`T07 · sem o blur o quadro não fica mais caro `
