@@ -41,6 +41,7 @@
         '<symbol id="i-mochila" viewBox="0 0 24 24"><path d="M6 21.5V9.5a6 6 0 0112 0v12z"/><path d="M9 9.5v-3a3 3 0 016 0v3M9 14.5h6"/></symbol>' +
         '<symbol id="i-pessoas" viewBox="0 0 24 24"><path d="M16 20.5V19a4 4 0 00-4-4H6.5a4 4 0 00-4 4v1.5"/><path d="M13 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0"/><path d="M21.5 20.5V19a4 4 0 00-3-3.87M15.5 3.9a4 4 0 010 7.25"/></symbol>' +
         '<symbol id="i-relogio" viewBox="0 0 24 24"><path d="M21 13.5a9 9 0 11-18 0 9 9 0 0118 0"/><path d="M12 9v4.5l3 1.8M9.5 2.5h5M12 2.5v2"/></symbol>' +
+        '<symbol id="i-musica" viewBox="0 0 24 24"><path d="M9 17V5.5l10-2V15"/><path d="M9 17a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0M19 15a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0"/><path d="M9 9.5l10-2"/></symbol>' +
         '<symbol id="i-legenda" viewBox="0 0 24 24"><path d="M3.5 5.5h17v13h-17z"/><path d="M6.5 14.5h5M14 14.5h3.5"/></symbol>' +
         '<symbol id="i-prancheta" viewBox="0 0 24 24"><path d="M9 4.5H7.5A1.5 1.5 0 006 6v13.5A1.5 1.5 0 007.5 21h9a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H15"/><path d="M9 2.5h6v4H9z"/><path d="M9 11.5h6M9 15.5h4"/></symbol>' +
         '<symbol id="i-espadas" viewBox="0 0 24 24"><path d="M20 4v3.5M20 4h-3.5M20 4L9 15M4 4v3.5M4 4h3.5M4 4l11 11"/><path d="M14.5 15.5l4.5 4.5M9.5 15.5L5 20"/></symbol>' +

@@ -128,7 +128,7 @@ html, body {
    a altura da janela (`--tb-tool-size` e `font-size` em clamp). */
 .tb-tool .tb-ico { width: 1.25em; height: 1.25em; }
 .tb-btn-icon .tb-ico { width: 17px; height: 17px; }
-.tb-mini-btn .tb-ico, .tb-modal-close .tb-ico { width: 14px; height: 14px; }
+.tb-mini-btn .tb-ico, .tb-modal-close .tb-ico, .tb-mus-head .tb-ico { width: 14px; height: 14px; }
 .tb-radial-item .tb-ico { width: 17px; height: 17px; }
 #tbLockBtn .tb-ico { width: 18px; height: 18px; }
 .tb-section-title .tb-ico, .tb-danger-link .tb-ico { width: 14px; height: 14px; }
@@ -179,6 +179,14 @@ html, body {
 }
 .tb-topbar::-webkit-scrollbar { display: none; }
 .tb-topbar > * { flex: 0 0 auto; }
+/* A barra rola nela mesma quando os treze controles não cabem — e quem sumia
+   pela direita era justo o "Abrir Público", a única ação primária daqui.
+   Grudado na borda, ele fica sempre à mão e o resto rola por baixo. */
+#tbBtnAbrirPublico {
+    position: sticky; right: 0;
+    margin-left: var(--lr-space-2);
+    box-shadow: -10px 0 12px -6px var(--lr-bg-1);
+}
 .tb-topbar .tb-spacer { flex: 1 1 auto; min-width: var(--lr-space-2); }
 .tb-mode-badge {
     padding: var(--lr-space-1) var(--lr-space-2); border-radius: var(--lr-radius-sm);
@@ -249,8 +257,15 @@ html, body {
    barra inteira cabe até em ~500px de altura sem rolagem, sem wrap e sem mexer
    no `left` das sub-barras. */
 .tb-toolbar {
-    --tb-tool-size: clamp(24px, 4.4vh, 40px);
-    --tb-tool-gap: clamp(2px, .6vh, 6px);
+    /* O rodapé da coluna (a barra de zoom) tem altura FIXA, não em vh. Enquanto
+       o botão vinha só de `vh`, numa janela de ~700px a barra crescia até
+       encostar nele. Agora o tamanho sai da altura que sobra, com a conta da
+       própria barra: 15 botões + 20 respiros + 4 filetes de 9px ≈ 18,4 botões
+       mais 36px. */
+    --tb-rodape-esq: 60px;
+    --tb-tool-size: clamp(24px,
+        calc((100vh - var(--tb-abaixo-da-barra) - var(--tb-rodape-esq) - 36px) / 18.4), 40px);
+    --tb-tool-gap: clamp(2px, calc(var(--tb-tool-size) / 6), 6px);
     position: fixed; left: var(--lr-space-3); top: var(--tb-abaixo-da-barra); z-index: 45;
     display: flex; flex-direction: column; gap: var(--tb-tool-gap);
     background: var(--lr-surface); border: 1px solid var(--lr-border);
@@ -778,7 +793,7 @@ html, body {
 
 /* Celular DEITADO: a barra de ferramentas quebra em DUAS colunas (regra lá em
    cima) e fica mais larga — os painéis começam depois dela também aqui. */
-@media (max-height: 460px) {
+@media (max-height: 600px) {
     .tb-turno, .tb-conflito { left: 84px; }
 }
 
@@ -1065,8 +1080,13 @@ body .lr-avisos {
 /* ===== Player de música (modo secreto) ===== */
 .tb-form-grid .tb-form-full { grid-column: 1 / -1; }
 
+/* `left: 68px` e não `var(--lr-space-3)`: no canto de baixo à esquerda o player
+   dividia a coluna com a barra de ferramentas, e numa janela alta a barra
+   crescia até passar por baixo dele — o botão de playlist saía montado em cima
+   do último ícone. Ao lado da coluna, e não dentro dela, os dois nunca mais se
+   encontram, em altura nenhuma. (É o mesmo 68px das sub-barras.) */
 .tb-musica {
-    position: fixed; bottom: 60px; left: var(--lr-space-3); z-index: 44; width: 232px;
+    position: fixed; bottom: 60px; left: 68px; z-index: 44; width: 232px;
     background: var(--lr-surface); border: 1px solid var(--lr-border);
     border-radius: var(--lr-radius-lg);
     box-shadow: var(--lr-shadow-3); overflow: hidden;
@@ -1085,6 +1105,7 @@ body .lr-avisos {
 }
 .tb-mus-destravar:hover { background: var(--lr-gold-2); }
 .tb-mus-pill {
+    display: flex; align-items: center; justify-content: center;
     width: 36px; height: 36px; border-radius: var(--lr-radius); background: var(--lr-surface);
     border: 1px solid var(--lr-border); color: var(--lr-text-1); font-size: var(--lr-fs-md);
     cursor: pointer; position: relative; box-shadow: var(--lr-shadow-1);
@@ -1140,8 +1161,8 @@ body .lr-avisos {
    coluna única cabe — 14 botões pedem ~380px e sobra menos que isso. Aí a barra
    quebra em duas colunas (os separadores saem, senão brigam pelo lugar) e as
    sub-barras andam para a direita para não ficar por baixo. */
-@media (max-height: 460px) {
-    .tb-toolbar { flex-wrap: wrap; max-height: calc(100vh - var(--tb-abaixo-da-barra) - var(--lr-space-2)); align-content: flex-start; }
+@media (max-height: 600px) {
+    .tb-toolbar { flex-wrap: wrap; max-height: calc(100vh - var(--tb-abaixo-da-barra) - var(--tb-rodape-esq)); align-content: flex-start; }
     .tb-toolbar .tb-sep { display: none; }
     .tb-subbar { left: 84px; max-width: min(280px, calc(100vw - 100px)); }
     /* com duas colunas a barra desce até o rodapé e engolia a pilha do player
@@ -1357,7 +1378,7 @@ body .lr-avisos {
    junto, em vez de sobrar pendurado no meio da barra.
    Fio desenhado, não `border-left`: o botão de Combate tem rótulo e moldura
    própria, e uma borda esquerda de outra cor nele viraria defeito, não grupo. */
-.tb-topbar .tb-grupo { position: relative; margin-left: var(--lr-space-4); }
+.tb-topbar .tb-grupo { position: relative; margin-left: var(--lr-space-3); }
 .tb-topbar .tb-grupo::before {
     content: ''; position: absolute; left: calc(var(--lr-space-2) * -1);
     top: 20%; bottom: 20%; width: 1px; background: var(--tb-borda);

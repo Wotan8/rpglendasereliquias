@@ -283,7 +283,7 @@ function render() {
     if (recolhida) {
         barra.className = 'tb-musica recolhida';
         caixaUI.innerHTML = `<button class="tb-mus-pill ${ativos ? 'on' : ''}" onclick="tbMusRecolher()" title="Abrir o player">
-            🎵${ativos ? `<span class="tb-mus-badge">${ativos}</span>` : ''}</button>`;
+            <svg class="tb-ico"><use href="#i-musica"/></svg>${ativos ? `<span class="tb-mus-badge">${ativos}</span>` : ''}</button>`;
         return;
     }
 
@@ -291,7 +291,7 @@ function render() {
     const faixas = pl?.faixas || [];
     caixaUI.innerHTML = `
         <div class="tb-mus-head">
-            <span title="Playlists da mesa">🎵</span>
+            <svg class="tb-ico"><title>Playlists da mesa</title><use href="#i-musica"/></svg>
             <select class="tb-mus-sel" onchange="tbMusPlaylist(this.value)" title="Playlist ativa">
                 ${dados.playlists.length
                     ? dados.playlists.map(p => `<option value="${p.id}" ${p.id === pl?.id ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')

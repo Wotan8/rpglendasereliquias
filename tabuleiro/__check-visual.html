@@ -29,6 +29,8 @@
 <div id="ctrl">
   <button onclick="document.body.classList.toggle('limpo')">🖼️ Só a arte</button>
   <button onclick="abrirTudo()">📂 Abrir painéis</button>
+  <span style="font:11px system-ui;color:var(--lr-text-2);align-self:center">
+    ↕️ a coluna da esquerda muda com a ALTURA — reteste em ~700, ~620 e ~500px</span>
 </div>
 <table id="saida"></table>
 <div id="placar"></div>
@@ -38,7 +40,7 @@
    cópia continua bonita enquanto a página de verdade muda sozinha. */
 const doc = new DOMParser().parseFromString(
     await (await fetch('tabuleiro.html?cb=' + Date.now())).text(), 'text/html');
-const CHROME = ['.tb-topbar', '.tb-toolbar', '#tbDrawBar', '#tbCamadasPanel', '#tbPropsPanel'];
+const CHROME = ['.tb-topbar', '.tb-toolbar', '#tbDrawBar', '#tbCamadasPanel', '#tbPropsPanel', '.tb-zoombar'];
 for (const sel of CHROME) document.body.appendChild(doc.querySelector(sel));
 
 window.abrirTudo = () => {
@@ -70,9 +72,9 @@ const cx = (s) => document.querySelector(s).getBoundingClientRect();
 t('T01 · a moldura real carregou', document.querySelectorAll('.tb-tool').length > 10);
 t('T02 · a barra não cobre a de ferramentas', cx('.tb-toolbar').top >= cx('.tb-topbar').bottom);
 t('T03 · a sub-barra não cobre a de ferramentas', cx('#tbDrawBar').left >= cx('.tb-toolbar').right);
-/* No PC o painel fica à direita da sub-barra; no celular ele desce e vira
-   gaveta. Os dois arranjos passam pela MESMA pergunta — os retângulos se
-   tocam? —, então o teste não precisa saber qual layout está valendo. */
+/* Vários testes fazem a MESMA pergunta — os retângulos se tocam? — e a
+   resposta não depende de qual arranjo está valendo (no PC o painel fica à
+   direita da sub-barra; no celular desce e vira gaveta). */
 const sobrepoe = (a, b) => !(a.right <= b.left || b.right <= a.left
                           || a.bottom <= b.top || b.bottom <= a.top);
 t(`T04 · painel e sub-barra não se cobrem (${innerWidth}px de janela)`,
@@ -82,13 +84,34 @@ t('T05 · nada estoura a janela pela direita',
 t('T06 · a toolbar cabe na altura sem rolar', cx('.tb-toolbar').bottom <= innerHeight);
 
 
+/* ===== a coluna da esquerda: barra, player e zoom no mesmo canto =====
+   O player é injetado por tab-musica.js, que precisa de Firestore. Aqui entra
+   só a casca com a MESMA classe: o que se mede é a posição, e a posição é do
+   CSS. */
+{
+    const player = document.createElement('div');
+    player.className = 'tb-musica recolhida';
+    player.innerHTML = `<button class="tb-mus-pill"><svg class="tb-ico"><use href="#i-musica"/></svg></button>`;
+    document.body.appendChild(player);
+    await new Promise(r => setTimeout(r, 40));
+
+    t('T07 · o ícone de playlist é o traço do sprite, não emoji',
+        !!document.querySelector('#i-musica') && !!player.querySelector('use[href="#i-musica"]'));
+    t('T08 · o botão de playlist não monta na barra de ferramentas',
+        !sobrepoe(cx('.tb-musica'), cx('.tb-toolbar')));
+    t('T09 · nem na barra de zoom', !sobrepoe(cx('.tb-musica'), cx('.tb-zoombar')));
+    t(`T10 · a barra de ferramentas para antes do zoom (janela de ${innerHeight}px)`,
+        cx('.tb-toolbar').bottom <= cx('.tb-zoombar').top);
+    t('T11 · a coluna inteira cabe na tela', cx('.tb-toolbar').bottom <= innerHeight);
+}
+
 /* ===== os grupos da barra do topo ===== */
 {
     const fio = (id) => {
         const b = document.getElementById(id);
         return getComputedStyle(b, '::before').width;
     };
-    t('T07 · a barra do topo vem repartida em grupos',
+    t('T12 · a barra do topo vem repartida em grupos',
         ['btnRelogio', 'btnCombate', 'btnCanvases'].every(id => fio(id) === '1px'));
     /* O jogador não vê preparo do mestre nem gerência de canvas. O fio some
        COM o botão — senão sobra um risco no meio da barra, apontando nada. */
@@ -96,10 +119,19 @@ t('T06 · a toolbar cabe na altura sem rolar', cx('.tb-toolbar').bottom <= inner
         document.getElementById(id).style.display = 'none';
     const risco = [...document.querySelectorAll('.tb-topbar .tb-grupo')]
         .filter(b => getComputedStyle(b).display !== 'none');
-    t('T08 · na visão do jogador nenhum fio fica pendurado',
+    t('T13 · na visão do jogador nenhum fio fica pendurado',
         risco.length === 1 && risco[0].id === 'btnCombate');
     for (const id of ['btnRelogio', 'btnTeleprompter', 'btnSessao', 'btnCanvases'])
         document.getElementById(id).style.display = '';
+}
+
+/* ===== a ação primária não é quem sai da tela ===== */
+{
+    const b = document.getElementById('tbBtnAbrirPublico');
+    b.style.display = '';
+    t('T14 · "Abrir Público" fica grudado na borda quando a barra rola',
+        getComputedStyle(b).position === 'sticky'
+        && Math.round(cx('.tb-topbar').right - b.getBoundingClientRect().right) <= 16);
 }
 
 /* ===== custo do véu, medido =====
@@ -135,7 +167,7 @@ document.body.appendChild(mapa);
 const comVeu = await quadros(true), semVeu = await quadros(false);
 mapa.remove();
 if (!comVeu || !semVeu) {
-    linhas.push('<tr><td>T09 · custo do véu</td><td class="ok">'
+    linhas.push('<tr><td>T15 · custo do véu</td><td class="ok">'
         + 'não medido — esta aba não compõe quadros; abra a página numa janela real</td></tr>');
 } else {
     t(`T07 · sem o blur o quadro não fica mais caro `
