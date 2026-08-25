@@ -162,18 +162,20 @@ teste('T12 · soltar a Poção na Bolsa pede para mover para dentro dela',
 $('#corpoModal').scrollTop = 0;
 
 // ---- T13: bloco de anatomia recolhido por padrão ----
+// Espelha o markup real de area-npcs.js: desde a reforma da sanfona a dobra
+// leva lr-sanfona e o glifo é ▸ fixo girando 90° (o giro é assunto do
+// __check-sanfona; aqui se confere que a dobra nasce fechada, tem seta e abre).
 const dobra = document.createElement('details');
-dobra.className = 'npcv2-card npcv2-dobra';
+dobra.className = 'npcv2-card npcv2-dobra lr-sanfona';
 dobra.innerHTML = '<summary class="npcv2-block-title">🦴 Partes do Corpo</summary><div id="alvoDobra">x</div>';
 document.body.appendChild(dobra);
 // details fechado no Chrome usa content-visibility, não display:none —
 // offsetParent mente aqui, checkVisibility() é quem diz a verdade.
 const fechado = !$('#alvoDobra').checkVisibility();
-const marcadorFechado = getComputedStyle($('summary', dobra), '::before').content;
+const marcador = getComputedStyle($('summary', dobra), '::before').content;
 $('summary', dobra).click();
 teste('T13 · 🦴 Partes do Corpo nasce recolhido e o clique no título abre',
-    fechado && dobra.open && $('#alvoDobra').checkVisibility()
-    && marcadorFechado.includes('▸') && getComputedStyle($('summary', dobra), '::before').content.includes('▾'));
+    fechado && dobra.open && $('#alvoDobra').checkVisibility() && marcador.includes('▸'));
 dobra.remove();
 
 // ---- T14: um único botão "Criar Item" (o do cabeçalho; a lista não emite o seu) ----
