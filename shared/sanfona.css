@@ -22,6 +22,7 @@
     list-style: none;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;   /* sem espaço, o botão desce em vez de espremer o título */
     gap: var(--lr-space-2, 8px);
 }
 
@@ -65,23 +66,35 @@
 .lr-seta.aberta { transform: rotate(90deg); }
 
 /* ---------- o botão de tudo ---------- */
-/* O container medido é o BLOCO, não a janela. */
+/* `cqi` = 1% da largura do BLOCO. É o que faz o botão acompanhar o espaço que
+   tem sem régua de tamanho nenhuma. */
 [data-sanfona] { container-type: inline-size; }
+
+/* `display` de autor vence o `display:none` que o navegador dá a [hidden]:
+   com um módulo só, o botão sumia do JS e aparecia como uma pílula vazia. */
+.lr-sanf-tudo[hidden] { display: none; }
 
 .lr-sanf-tudo {
     appearance: none;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: .45em;
     margin-left: auto;
     flex: none;
-    padding: 2px 8px;
+    /* Uma medida só governa tudo: a fonte acompanha a largura do bloco e o resto
+       vem em `em`. Numa coluna estreita do Painel do Mestre encolhe, num modal
+       largo cresce, e não há faixa de tamanho para acertar.
+
+       Base + taxa, não `cqi` puro: `cqi` sozinho é proporcional à largura, e
+       dobrar o bloco dobrava a fonte. Assim, de 300px a 900px de bloco o botão
+       vai de ~10px a ~14px — cresce o quanto se nota, e nada além disso. */
+    font-size: clamp(.6rem, .55rem + .55cqi, .85rem);
+    padding: .25em .8em;
     border: 1px solid var(--lr-border, rgba(128, 128, 128, .35));
     border-radius: 999px;
     background: var(--lr-surface, transparent);
     color: var(--lr-text-2);
-    font: inherit;
-    font-size: var(--lr-fs-xs, .72rem);
+    font-family: inherit;
     font-weight: 700;
     letter-spacing: .02em;
     line-height: 1.6;
@@ -101,16 +114,3 @@
 
 .lr-sanf-ico { font-size: .95em; line-height: 1; }
 
-/* Bloco estreito: o rótulo sai, o ícone fica. O nome continua no `title` e no
-   `aria-label`, então quem usa leitor de tela não perde nada. */
-@container (max-width: 340px) {
-    .lr-sanf-txt { display: none; }
-    .lr-sanf-tudo { padding: 2px 6px; }
-}
-
-/* Navegador sem @container: o viewport é a melhor aproximação que resta. */
-@supports not (container-type: inline-size) {
-    @media (max-width: 480px) {
-        .lr-sanf-txt { display: none; }
-    }
-}

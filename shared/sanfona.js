@@ -65,13 +65,17 @@ function pintar(botao, bloco) {
     botao.hidden = dobras.length < 2;
     if (botao.hidden) return;
 
-    const algumFechado = dobras.some(d => !d.aberto);
-    const m = algumFechado ? ABRIR : FECHAR;
+    /* Basta UMA aberta para o botão virar "recolher"; ele só oferece expandir
+       quando não há nada aberto. O contrário — expandir enquanto sobrar uma
+       fechada — obrigava dois cliques para limpar a tela, que é o motivo de
+       alguém procurar este botão. */
+    const algumAberto = dobras.some(d => d.aberto);
+    const m = algumAberto ? FECHAR : ABRIR;
     botao.querySelector('.lr-sanf-ico').textContent = m.ico;
     botao.querySelector('.lr-sanf-txt').textContent = m.txt;
     botao.title = `${m.txt} (${dobras.filter(d => d.aberto).length}/${dobras.length} abertos)`;
     botao.setAttribute('aria-label', m.txt);
-    botao.dataset.acao = algumFechado ? 'abrir' : 'fechar';
+    botao.dataset.acao = algumAberto ? 'fechar' : 'abrir';
 }
 
 /**

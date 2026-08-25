@@ -104,10 +104,14 @@ const rel = (p) => relative(raiz, p).replace(/\\/g, '/');
         'a ficha de NPC e o inventário são scripts clássicos: sem a ponte, o botão some');
 
     const css = ler(join(raiz, 'shared', 'sanfona.css'));
-    assert.match(css, /@container \(max-width/,
-        'o botão se mede pelo BLOCO; um @media do viewport erraria nas colunas estreitas');
+    assert.match(css, /\dcqi\b/,
+        'o botão se mede pelo BLOCO em unidade de contêiner; um @media do viewport erraria');
     assert.match(css, /\[data-sanfona\] \{ container-type: inline-size; \}/,
-        'sem container-type o @container nunca casa e o rótulo nunca some');
+        'sem container-type a unidade cqi não resolve e o botão fica no tamanho mínimo');
+    assert.ok(!/@container \(/.test(css),
+        'nada de faixa de tamanho: o botão escala contínuo, não em degraus');
+    assert.match(css, /\.lr-sanf-tudo\[hidden\] \{ display: none; \}/,
+        'display de autor vence [hidden] — sem esta linha o botão vira pílula vazia');
     // `(?<![-\w])` para não casar com `border-color`, que pode transicionar.
     assert.ok(!/transition:[^;]*(?<![-\w])color\b/.test(css),
         'color na transição dentro de um contêiner de @container fica preso no valor do outro tema');

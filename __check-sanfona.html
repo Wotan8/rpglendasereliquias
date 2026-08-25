@@ -115,24 +115,28 @@ const caixasC = () => [...C.querySelectorAll('.caixa')];
 {
     const b = botaoDe('blocoA');
     t('T06 · o bloco ganha o botão de tudo', !!b && !b.hidden);
-    t('T07 · com uma dobra fechada, o botão oferece EXPANDIR',
-        b.dataset.acao === 'abrir' && /Expandir/.test(b.textContent));
+    /* Basta UMA aberta para o botão virar "recolher". Com 2 de 3 abertas, o
+       critério antigo ("alguma fechada → expandir") pedia dois cliques para
+       limpar a tela — que é justamente o motivo de procurar o botão. */
+    t('T07 · com 2 de 3 abertas, o botão oferece RECOLHER',
+        b.dataset.acao === 'fechar' && /Recolher/.test(b.textContent));
     t('T08 · e diz quantas estão abertas', /2\/3/.test(b.title));
 
     b.click();
-    t('T09 · o clique abre todas', dobrasA().every(d => d.open));
-    t('T10 · e o botão vira RECOLHER',
-        b.dataset.acao === 'fechar' && /Recolher/.test(b.textContent));
+    t('T09 · um clique só recolhe todas', dobrasA().every(d => !d.open));
+    t('T10 · e aí o botão vira EXPANDIR',
+        b.dataset.acao === 'abrir' && /Expandir/.test(b.textContent));
 
     b.click();
-    t('T11 · o clique de novo fecha todas', dobrasA().every(d => !d.open));
+    t('T11 · o clique de novo abre todas', dobrasA().every(d => d.open));
     t('T12 · o bloco de fora continua aberto — o botão não é o do bloco', A.open);
 
-    // Quem abre uma dobra na mão: o rótulo tem de acompanhar.
+    // Uma só aberta já basta para o botão oferecer recolher.
+    dobrasA().forEach(d => { d.open = false; });
     dobrasA()[0].open = true;
     await new Promise(r => setTimeout(r, 10));
-    t('T13 · abrir uma dobra na mão volta o rótulo para EXPANDIR',
-        b.dataset.acao === 'abrir' && /1\/3/.test(b.title));
+    t('T13 · com UMA aberta o botão já oferece RECOLHER',
+        b.dataset.acao === 'fechar' && /1\/3/.test(b.title));
 }
 
 // ===== dobra por classe =====
@@ -141,44 +145,67 @@ const caixasC = () => [...C.querySelectorAll('.caixa')];
     t('T14 · bloco que dobra por classe também ganha o botão', !!b && !b.hidden);
     t('T15 · e conta certo o que está aberto', /2\/3/.test(b.title));
     b.click();
-    t('T16 · o clique abre todas as caixas',
-        caixasC().every(c => !c.classList.contains('fechadinha')));
-    b.click();
-    t('T17 · e fecha todas',
+    t('T16 · o clique fecha todas as caixas',
         caixasC().every(c => c.classList.contains('fechadinha')));
+    b.click();
+    t('T17 · e abre todas',
+        caixasC().every(c => !c.classList.contains('fechadinha')));
 
     // Sem evento `toggle` numa dobra por classe: o rótulo se atualiza pelo clique.
+    caixasC().forEach(c => c.classList.add('fechadinha'));
     caixasC()[0].classList.remove('fechadinha');
     C.dispatchEvent(new Event('click', { bubbles: true }));
     await new Promise(r => setTimeout(r, 20));
     t('T18 · classe mexida na mão também repinta o rótulo', /1\/3/.test(b.title));
 }
 
-// ===== o botão some quando não há "tudo" =====
-t('T19 · com uma dobra só, o botão some em vez de mentir', botaoDe('blocoD').hidden);
-
-// ===== responsivo: mede o BLOCO, não a janela =====
+// ===== o botão some de verdade quando não há "tudo" =====
 {
-    const largo = botaoDe('blocoA').querySelector('.lr-sanf-txt');
-    const estreito = botaoDe('blocoB').querySelector('.lr-sanf-txt');
-    t('T20 · no bloco largo o rótulo aparece', getComputedStyle(largo).display !== 'none');
-    // Os dois blocos estão na MESMA janela: se o critério fosse @media, os dois
-    // teriam o mesmo resultado e este teste passaria por acidente nos dois lados.
-    t('T21 · no bloco estreito, na mesma janela, o rótulo sai',
-        getComputedStyle(estreito).display === 'none');
-    t('T22 · mas o ícone fica',
-        getComputedStyle(botaoDe('blocoB').querySelector('.lr-sanf-ico')).display !== 'none');
-    t('T23 · e o nome continua no title e no aria-label',
-        /Expandir|Recolher/.test(botaoDe('blocoB').title)
-        && /Expandir|Recolher/.test(botaoDe('blocoB').getAttribute('aria-label')));
+    const d = botaoDe('blocoD');
+    t('T19 · com uma dobra só o botão é marcado como escondido', d.hidden);
+    /* Era o bug do print: `display: inline-flex` de autor vence o
+       `display:none` que o navegador dá a [hidden], e o botão aparecia como
+       uma pílula vazia no bloco de um módulo só. */
+    t('T19b · e realmente não ocupa espaço na tela',
+        getComputedStyle(d).display === 'none' && d.offsetParent === null);
+}
 
-    // Estreitar o bloco largo prova que é o bloco, não a janela.
+// ===== tamanho: acompanha o bloco, sem régua =====
+{
+    const medir = (id) => parseFloat(getComputedStyle(botaoDe(id)).fontSize);
     const palco = A.closest('.palco');
-    palco.style.maxWidth = '260px';
-    await new Promise(r => setTimeout(r, 30));
-    t('T24 · estreitar só o bloco já esconde o rótulo dele',
-        getComputedStyle(largo).display === 'none');
+
+    t('T20 · o rótulo NUNCA some — ele encolhe junto',
+        getComputedStyle(botaoDe('blocoA').querySelector('.lr-sanf-txt')).display !== 'none'
+        && getComputedStyle(botaoDe('blocoB').querySelector('.lr-sanf-txt')).display !== 'none');
+
+    // Dois blocos de larguras diferentes na MESMA janela: prova que a medida é
+    // do bloco. Com @media os dois teriam o mesmo tamanho.
+    t('T21 · bloco largo tem botão maior que bloco estreito', medir('blocoA') > medir('blocoB'));
+
+    /* Continuidade: sem faixa de tamanho, cada largura dá um tamanho seu. Três
+       larguras seguidas têm de dar três valores crescentes — um breakpoint
+       daria dois valores repetidos e um salto. */
+    const tamanhos = [];
+    for (const w of ['280px', '420px', '560px']) {
+        palco.style.maxWidth = w;
+        await new Promise(r => setTimeout(r, 20));
+        tamanhos.push(medir('blocoA'));
+    }
+    t(`T22 · a fonte cresce a cada largura, sem degrau (${tamanhos.join(' → ')})`,
+        tamanhos[0] < tamanhos[1] && tamanhos[1] < tamanhos[2]);
     palco.style.maxWidth = '';
+    await new Promise(r => setTimeout(r, 20));
+
+    // Mas com teto e piso: nem ilegível num painel apertado, nem gigante num monitor.
+    palco.style.maxWidth = '120px';
+    await new Promise(r => setTimeout(r, 20));
+    t('T23 · num bloco minúsculo ainda é legível (≥9px)', medir('blocoA') >= 9);
+    palco.style.maxWidth = '2000px';
+    await new Promise(r => setTimeout(r, 20));
+    t('T24 · e num bloco enorme não vira outdoor (≤14px)', medir('blocoA') <= 14);
+    palco.style.maxWidth = '';
+    await new Promise(r => setTimeout(r, 20));
 }
 
 // ===== idempotência =====
