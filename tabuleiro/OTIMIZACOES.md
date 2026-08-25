@@ -16,7 +16,7 @@ consertos que não cabiam no escopo da vez.
   `criarMemoPorVersao` já serve. Não muda regra nenhuma.
 - **Risco:** baixo. Errar a invalidação = token aparecendo/sumindo com atraso.
 
-## 2. `backdrop-filter: blur()` nos modais injetados
+## 2. ~~`backdrop-filter: blur()` nos modais injetados~~ — RESOLVIDO em 25/08/2026
 
 - **Local:** `css/tabuleiro.css` → `.modal`, `.inv-modal`, `.detail-modal`,
   `.tb-cond-picker-overlay`.
@@ -30,6 +30,11 @@ consertos que não cabiam no escopo da vez.
   aplicar o blur só no cartão do modal. Nenhuma regra muda.
 - **Risco:** baixo — é puramente estético.
 - **Achado em:** varredura de UI de 03/08/2026 (não foi introduzido por ela).
+- **Feito:** o passe visual do Tabuleiro tirou os quatro `backdrop-filter` e
+  fechou o `--tb-scrim` de 72% para 86%. O véu separa o cartão do mapa
+  sozinho, e o compositor não toca mais no bitmap. Guardado por
+  `__check-visual.html` (T07 mede com e sem o blur — rode NO CELULAR, no
+  desktop os dois números empatam).
 
 ## 3. Espelho da cena ativa no doc de combate
 

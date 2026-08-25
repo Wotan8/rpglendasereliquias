@@ -61,8 +61,24 @@ html, body {
     --lr-glow-gold: 0 0 0 3px rgba(212, 175, 55, 0.22);
 
     /* Véu dos modais. rgba não se deriva de um token hex, então o valor
-       mora aqui, num lugar só: é --lr-bg-0 a 72%. */
-    --tb-scrim: rgba(10, 13, 18, .72);
+       mora aqui, num lugar só: é --lr-bg-0 a 86%.
+       Era 72% + `backdrop-filter: blur(3px)`. O blur cobria a viewport
+       inteira, então o compositor borrava o #tbCanvas com o bitmap do mapa
+       a cada quadro em que o modal estivesse aberto (OTIMIZACOES.md §2).
+       Véu mais fechado faz o mesmo trabalho — separar o cartão do mapa —
+       sem pedir nada ao compositor. */
+    --tb-scrim: rgba(10, 13, 18, .86);
+
+    /* MATERIAL DA MOLDURA — tudo que flutua sobre o mapa (barra, ferramentas,
+       sub-barras, painéis, janelas, menus, player) usa estes dois, e só estes.
+       Sem eles cada painel era um retângulo cinza chapado; com eles a luz
+       pega na quina de cima e a peça ganha espessura. É sombra, não fundo:
+       o fundo continua sendo `--lr-surface` chapado, que é onde
+       shared/contraste.test.mjs sabe medir. */
+    --tb-relevo: var(--lr-shadow-3), inset 0 1px 0 rgba(255, 255, 255, .055);
+    /* A borda fria (#30363D) fazia a moldura parecer emprestada de outro app.
+       Um oitavo de bronze e ela pertence a esta mesa, sem virar dourado. */
+    --tb-borda: color-mix(in srgb, var(--lr-border) 82%, var(--lr-bronze));
     /* Barra superior: as barras flutuantes se penduram nela em vez de
        repetir 60px na mão. */
     --tb-bar-h: 48px;
@@ -131,10 +147,20 @@ html, body {
     gap: var(--lr-space-3);
     color: var(--lr-text-2); font-size: var(--lr-fs-md);
 }
+/* Primeiro quadro da mesa: era um anel cinza sobre preto. O disco de ouro
+   girando dentro do anel de bronze é a mesma runa que o resto do projeto usa
+   para "carregando", e custa o mesmo `transform` de antes — uma propriedade
+   composta, sem repintura. */
 .tb-spinner {
-    width: 42px; height: 42px;
-    border: 3px solid var(--lr-border); border-top-color: var(--lr-gold);
-    border-radius: 50%; animation: tbspin 1s linear infinite;
+    width: 54px; height: 54px;
+    border: 2px solid var(--lr-border-soft);
+    border-top-color: var(--lr-gold); border-right-color: var(--lr-bronze);
+    border-radius: 50%; animation: tbspin 1.1s linear infinite;
+    box-shadow: 0 0 24px rgba(212, 175, 55, .10), inset 0 0 18px rgba(212, 175, 55, .06);
+}
+#tbLoading > div:last-child {
+    font-family: var(--lr-font-title); letter-spacing: var(--lr-track-title);
+    color: var(--lr-text-2);
 }
 @keyframes tbspin { to { transform: rotate(360deg); } }
 
@@ -241,7 +267,7 @@ html, body {
 }
 .tb-tool:hover { background: var(--lr-surface-2); border-color: var(--lr-border); }
 .tb-tool.active { background: var(--lr-gold-soft); border-color: var(--lr-gold); color: var(--lr-gold-2); }
-.tb-tool[data-tip]:hover::after {
+.tb-tool[data-tip]::after {
     content: attr(data-tip);
     position: absolute; left: calc(100% + var(--lr-space-3)); top: 50%; transform: translateY(-50%);
     background: var(--lr-bg-0); border: 1px solid var(--lr-border); color: var(--lr-text-1);
@@ -503,7 +529,6 @@ html, body {
     position: fixed; inset: 0; z-index: 200;
     background: var(--tb-scrim);
     display: flex; align-items: center; justify-content: center; padding: var(--lr-space-4);
-    backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
 }
 .tb-cond-picker {
     background: var(--lr-surface); border: 1px solid var(--lr-border);
@@ -1186,7 +1211,6 @@ body .lr-avisos {
     position: fixed; inset: 0; z-index: 1000;
     background: var(--tb-scrim);
     display: none; align-items: center; justify-content: center; padding: var(--lr-space-4);
-    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
 }
 .modal.active { display: flex; }
 .modal .modal-content {
@@ -1215,7 +1239,6 @@ body .lr-avisos {
     position: fixed; inset: 0; z-index: 1000;
     background: var(--tb-scrim);
     display: none; align-items: center; justify-content: center; padding: var(--lr-space-4);
-    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
 }
 .inv-modal.active { display: flex; }
 .inv-modal .inv-modal-content {
@@ -1236,7 +1259,6 @@ body .lr-avisos {
     position: fixed; inset: 0; z-index: 1000;
     background: var(--tb-scrim);
     display: flex; align-items: center; justify-content: center; padding: var(--lr-space-4);
-    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
 }
 .detail-modal:not(#aliadoNpcModal).hidden { display: none; }
 
@@ -1291,4 +1313,70 @@ body .lr-avisos {
     font-size: .72rem;
     font-weight: 700;
     color: var(--lr-gold-2);
+}
+
+/* ===== A moldura como uma peça só =====
+   Vem no FIM do arquivo de propósito: cada painel já declara o seu
+   `box-shadow: var(--lr-shadow-3)` lá em cima, e a ordem é o que faz o
+   relevo vencer sem precisar de `!important` nem de mexer nas nove regras.
+   Nada aqui pinta fundo — só a quina e a borda —, então a medição de
+   contraste continua enxergando a superfície de cada painel.
+   Custo por quadro: zero. É pintura única de elemento fixo, não filtro. */
+.tb-topbar, .tb-toolbar, .tb-subbar, .tb-side-panel, .tb-window,
+.tb-ctx, #tbPinPopup, .tb-musica:not(.recolhida), .tb-zoombar button,
+.tb-modal-content, .tb-cond-picker, .tb-fwin,
+.modal .modal-content, .inv-modal .inv-modal-content {
+    border-color: var(--tb-borda);
+    box-shadow: var(--tb-relevo);
+}
+/* A barra do topo é o único plano colado na borda da tela: em vez de relevo
+   nas quatro quinas, um fio de ouro por baixo — a mesma assinatura que o
+   filete dos modais do resto do projeto. */
+.tb-topbar {
+    box-shadow: 0 1px 0 rgba(212, 175, 55, .16), var(--lr-shadow-2);
+}
+/* Ferramenta ativa: o preenchimento de ouro já existia, mas some de canto de
+   olho no meio de quinze botões. O trilho na quina esquerda é o que se enxerga
+   sem olhar — e é sombra interna, então não desloca nada no layout. */
+.tb-tool.active { box-shadow: inset 3px 0 0 var(--lr-gold); }
+
+/* A dica da ferramenta abria no mesmo instante do hover: passar o mouse ao
+   longo da coluna disparava quinze balões em sequência. Espera curta e
+   aparece amortecida — só quem parou no botão vê. */
+.tb-tool[data-tip]::after {
+    opacity: 0; pointer-events: none;
+    transition: opacity var(--lr-t-fast) var(--lr-ease) .34s;
+}
+.tb-tool[data-tip]:hover::after { opacity: 1; }
+
+/* Treze controles em fila viravam uma parede: dá para achar o botão, mas só
+   lendo um a um. O fio marca onde começa cada grupo — falar com a mesa ·
+   preparo do mestre · o que vai à mesa · o mapa.
+   O fio é borda do PRÓPRIO primeiro botão do grupo, não um <div> separado:
+   quando o grupo inteiro some para o jogador (tab-main.js `show`), o fio some
+   junto, em vez de sobrar pendurado no meio da barra.
+   Fio desenhado, não `border-left`: o botão de Combate tem rótulo e moldura
+   própria, e uma borda esquerda de outra cor nele viraria defeito, não grupo. */
+.tb-topbar .tb-grupo { position: relative; margin-left: var(--lr-space-4); }
+.tb-topbar .tb-grupo::before {
+    content: ''; position: absolute; left: calc(var(--lr-space-2) * -1);
+    top: 20%; bottom: 20%; width: 1px; background: var(--tb-borda);
+}
+
+/* ===== Celular: o painel da direita vira gaveta de baixo =====
+   Numa janela de 375px o painel (270px, colado à direita) começava em 133px
+   e a sub-barra de desenho acabava em 327px: uma cobria a outra, e o mestre
+   escolhia a cor da caneta às cegas. Encostado embaixo, o painel usa a
+   largura inteira e a coluna de ferramentas continua livre — que é como
+   qualquer app do celular resolve isso. */
+@media (max-width: 720px) {
+    .tb-side-panel {
+        left: var(--lr-space-2); right: var(--lr-space-2);
+        top: auto; bottom: 0; width: auto;
+        max-height: min(46vh, 340px);
+        border-radius: var(--lr-radius-lg) var(--lr-radius-lg) 0 0;
+        border-bottom: none;
+    }
+    /* A sub-barra encurta para não passar por baixo da gaveta. */
+    .tb-subbar { max-height: calc(54vh - var(--tb-abaixo-da-barra)); }
 }

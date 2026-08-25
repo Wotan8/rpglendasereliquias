@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="../shared/detalhe.css?v=4">
 <script type="module">import '../shared/detalhe.js?v=4';</script>
 <link rel="stylesheet" href="../shared/acervo.css?v=3">
-    <link rel="stylesheet" href="css/tabuleiro.css?v=28">
+    <link rel="stylesheet" href="css/tabuleiro.css?v=29">
     <script type="module" src="/js/global-favicon.js"></script>
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -59,13 +59,13 @@
         <button class="tb-btn tb-btn-small tb-btn-icon" id="btnChat" title="Chat da mesa (deste canvas)" style="position:relative"><svg class="tb-ico"><use href="#i-balao"/></svg><span id="tbChatBadge" class="tb-chat-badge" style="display:none"></span></button>
         <button class="tb-btn tb-btn-small tb-btn-icon" id="btnDados" onclick="tbAbrirDados()" title="Rolador de dados"><svg class="tb-ico"><use href="#i-dado"/></svg></button>
         <button class="tb-btn tb-btn-small tb-btn-icon" id="btnCursores" title="Cursores ao vivo"><svg class="tb-ico"><use href="#i-pessoas"/></svg></button>
-        <button class="tb-btn tb-btn-small tb-btn-icon" id="btnRelogio" onclick="tbNovoRelogio()" title="Relógio de progresso"><svg class="tb-ico"><use href="#i-relogio"/></svg></button>
+        <button class="tb-grupo tb-btn tb-btn-small tb-btn-icon" id="btnRelogio" onclick="tbNovoRelogio()" title="Relógio de progresso"><svg class="tb-ico"><use href="#i-relogio"/></svg></button>
         <button class="tb-btn tb-btn-small tb-btn-icon" id="btnTeleprompter" title="Teleprompter / Legendas"><svg class="tb-ico"><use href="#i-legenda"/></svg></button>
         <button class="tb-btn tb-btn-small tb-btn-icon" id="btnSessao" title="Painel da Sessão (preparo do mestre)"><svg class="tb-ico"><use href="#i-prancheta"/></svg></button>
-        <button class="tb-btn tb-btn-small" id="btnCombate" onclick="tbToggleCombate()" title="Janela de Combate"><svg class="tb-ico"><use href="#i-espadas"/></svg> Combate</button>
+        <button class="tb-grupo tb-btn tb-btn-small" id="btnCombate" onclick="tbToggleCombate()" title="Janela de Combate"><svg class="tb-ico"><use href="#i-espadas"/></svg> Combate</button>
         <button class="tb-btn tb-btn-small" id="btnMostrar" onclick="tbAbrirMostrar()" title="Mostrar NPC / Item"><svg class="tb-ico"><use href="#i-mostrar"/></svg> Mostrar</button>
         <button class="tb-btn tb-btn-small" id="btnLivros" onclick="tbAbrirLivros()" title="Livros — o mestre exibe para a mesa; o jogador lê os do personagem"><svg class="tb-ico"><use href="#i-livro"/></svg> Livros</button>
-        <button class="tb-btn tb-btn-small tb-btn-icon" id="btnCanvases" onclick="tbAbrirCanvases()" title="Gerenciar canvases"><svg class="tb-ico"><use href="#i-pastas"/></svg></button>
+        <button class="tb-grupo tb-btn tb-btn-small tb-btn-icon" id="btnCanvases" onclick="tbAbrirCanvases()" title="Gerenciar canvases"><svg class="tb-ico"><use href="#i-pastas"/></svg></button>
         <button class="tb-btn tb-btn-small" id="btnCamadas" onclick="tbToggleCamadas()" title="Camadas"><svg class="tb-ico"><use href="#i-camadas"/></svg> Camadas</button>
         <button class="tb-btn tb-btn-small tb-btn-icon" id="btnPerms" onclick="tbAbrirPermissoes()" title="Permissões dos jogadores"><svg class="tb-ico"><use href="#i-chave"/></svg></button>
         <button class="tb-btn tb-btn-small tb-btn-icon" id="btnConfig" onclick="tbAbrirConfig()" title="Configurações do canvas"><svg class="tb-ico"><use href="#i-engrenagem"/></svg></button>
