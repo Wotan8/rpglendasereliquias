@@ -82,6 +82,39 @@ const IDEIAS = [
             + '— criando a dualidade do nome: Bufão com buff.',
         notas: [],
     },
+    {
+        nome: 'Nobre',
+        texto: 'Sabe usar só Esgrima e tem skills de ordem.',
+        complemento: 'O poder dele são as ações dos outros: reposiciona, concede ataque, segura a linha '
+            + 'que ia quebrar. Não conjura, não cura e não bate melhor que o Guerreiro.',
+        notas: [
+            'O parágrafo em itálico é a proposta de “comandante” aceita na conversa, não escrita pelo '
+            + 'autor — está aqui porque foi o que o nome veio responder.',
+            'A perícia <strong>Liderança</strong> já existe e já serve: “inspiração e comando sobre grupos, '
+            + 'aliados ou subordinados… usar para: comandar tropa”. As ordens podem sair dela em vez de '
+            + 'uma perícia nova. <em>(cadastro, perícia social)</em>',
+            '<strong>Esgrima não existe</strong> no cadastro. As perícias de combate são as onze de defesa '
+            + 'e manobra (Aparar, Bloquear, Contra-Ataque…); quem acerta o golpe é a perícia <strong>Arma'
+            + '</strong>. Já as armas existem: <strong>Estoque</strong> (1d6) e <strong>Sabre</strong> (1d8) '
+            + 'estão no catálogo. <em>(cadastro)</em>',
+            '<strong>Atrito:</strong> “sabe usar só Esgrima” esbarra numa decisão já tomada — '
+            + '“especializações de equipamento foram removidas: não existe mais redutor por falta de '
+            + 'treino”. Hoje ninguém é proibido de pegar uma arma. A restrição precisa virar outra coisa '
+            + '(perícia exclusiva da classe, manobra que só funciona com lâmina leve, ou sabor puro). '
+            + '<em>(Livro de Regras, cap. 1)</em>',
+            '<strong>Moral</strong> e <strong>Lealdade</strong> já são régua no sistema, mas de criatura e '
+            + 'de NPC — nenhuma classe de jogador os toca. <em>(Bestiário, “Como se lê uma fera”)</em>',
+            '<strong>Em aberto:</strong> numa mesa de quatro aventureiros, quem ele comanda? Se for os '
+            + 'outros jogadores, a classe rouba turno alheio. Só fecha se o alvo forem os aliados e NPCs '
+            + 'que a ficha já sustenta.',
+            '<strong>Em aberto (mundo):</strong> Vasteluna não tem nobreza feudal escrita — tem tribos, e '
+            + 'o Conselho de Sábios Ganute. O que encosta em “nobre” é a raça <strong>Karu-Real</strong> '
+            + '(“presença aristocrática, chifres discretos como coroa natural; há algo antigo e nobre '
+            + 'nesse sangue”) e o padrão de vida <strong>Aristocrático</strong> (1.000+ L$). O título '
+            + 'precisa de uma casa: sangue Karu-Real, ou dinheiro de Sereni? '
+            + '<em>(Livro de Regras, caps. 3 e 5)</em>',
+        ],
+    },
 ];
 
 function montarHTML() {
@@ -98,6 +131,7 @@ function montarHTML() {
     for (const i of IDEIAS) {
         p.push(`<h2>${esc(i.nome)}</h2>`);
         p.push(`<p>${esc(i.texto)}</p>`);
+        if (i.complemento) p.push(`<p><em>${esc(i.complemento)}</em></p>`);
         if (i.notas.length) {
             p.push(`<blockquote><p><strong>Cânone</strong></p><ul>`
                 + i.notas.map(n => `<li>${n}</li>`).join('') + `</ul></blockquote>`);
