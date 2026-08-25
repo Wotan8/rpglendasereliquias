@@ -209,6 +209,84 @@ const w = fr.contentWindow;
     }
 }
 
+/* ===== E) o cabeçalho: duas faixas, nada amontoado ===== */
+{
+    const conta = d.querySelector('.portal-topo-conta');
+    const abas = d.getElementById('tabBar');
+    const topo = d.querySelector('.portal-topo');
+
+    // Estado de quem entrou, que é onde o cabeçalho fica cheio.
+    d.body.classList.remove('portal-deslogado');
+    d.body.classList.add('portal-logado');
+    d.querySelector('.toolbar').style.display = '';
+    for (const id of ['btnPainelMestre', 'btnPainelCriador', 'btnWorldbuilding']) {
+        d.getElementById(id).style.display = '';
+    }
+    d.getElementById('userDisplayName').textContent = 'Fulano de Tal';
+    d.getElementById('btnEntrarTop').hidden = true;
+    w.atalhosNoLugar?.();
+    await new Promise(r => setTimeout(r, 60));
+
+    const cx = (e) => e.getBoundingClientRect();
+    t('T32 · o cabeçalho tem duas faixas: conta em cima, navegação embaixo',
+        !!conta && cx(abas).top >= cx(conta).bottom - 1);
+    t('T33 · a faixa da conta cabe numa linha só',
+        [...conta.children].filter(e => e.offsetParent).every(e => Math.abs(cx(e).top - cx(conta).top) < 30));
+
+    /* Era o defeito do print: com tudo na mesma faixa, o grupo da conta caía
+       sozinho para a segunda linha, encostado na esquerda. */
+    const ultimo = [...conta.children].filter(e => e.offsetParent).pop();
+    t(`T34 · e nada dela vaza pela direita (${Math.round(cx(ultimo).right)} de ${d.documentElement.clientWidth}px)`,
+        cx(ultimo).right <= d.documentElement.clientWidth);
+    t('T35 · a página não ganhou rolagem lateral',
+        d.documentElement.scrollWidth <= d.documentElement.clientWidth + 1);
+
+    t('T36 · a aba ativa é sublinhada, não uma pílula preenchida',
+        /inset/.test(w.getComputedStyle(abas.querySelector('.tab.active')).boxShadow)
+        && w.getComputedStyle(abas.querySelector('.tab.active')).backgroundColor === 'rgba(0, 0, 0, 0)');
+    t('T37 · os atalhos de cargo não têm moldura parada (só no hover)',
+        w.getComputedStyle(d.querySelector('.portal-atalhos .portal-cargo')).borderTopColor
+            === 'rgba(0, 0, 0, 0)');
+
+    /* ---- celular: o cabeçalho tem de continuar inteiro ---- */
+    const antes = fr.style.width;
+    fr.style.width = '375px';
+    // O `matchMedia` do iframe lê a largura do ELEMENTO: estreitar o quadro é
+    // estreitar o "celular". Espera o media query disparar antes de medir.
+    await new Promise(r => setTimeout(r, 250));
+    t('T37b · o media query do celular chegou ao iframe',
+        w.matchMedia('(max-width: 640px)').matches);
+    if (typeof w.atalhosNoLugar !== 'function') {
+        t('T37c · atalhosNoLugar exposto pelo Portal', false);
+    } else {
+        w.atalhosNoLugar();
+    }
+    await new Promise(r => setTimeout(r, 80));
+
+    t('T38 · em 375px a marca continua inteira, sem virar "Lend…"',
+        cx(d.querySelector('.portal-marca')).width > 100);
+    t('T39 · os atalhos de cargo mudam para a faixa de navegação, que rola',
+        d.querySelector('.portal-atalhos').parentElement === abas);
+    const ult2 = [...conta.children].filter(e => e.offsetParent).pop();
+    t(`T40 · e a faixa da conta cabe em 375px (termina em ${Math.round(cx(ult2).right)})`,
+        cx(ult2).right <= 376);
+    t('T41 · sem rolagem lateral no celular',
+        d.documentElement.scrollWidth <= d.documentElement.clientWidth + 1);
+    /* O piso de 40px vem de `@media (pointer: coarse)`, e este navegador é
+       `fine` — a regra não aplica aqui. Dá para conferir as duas coisas que
+       importam mesmo assim: a folha ainda promete o piso, e o CSS do celular
+       não encolheu o botão por baixo dele (foi por isso que os atalhos mudaram
+       de faixa em vez de virarem 28px). */
+    const folha = await (await fetch('/menu/css/menu.css', { cache: 'no-store' })).text();
+    t('T42 · a folha mantém o piso de toque de 40px',
+        /@media \(pointer: coarse\)[\s\S]{0,400}min-width:\s*40px/.test(folha));
+    t('T42b · e o CSS do celular não encolhe o atalho por baixo disso',
+        !/@media \(max-width: 640px\)[\s\S]{0,900}portal-cargo\s*\{[^}]*width:\s*[123]?\dpx/.test(folha));
+
+    fr.style.width = antes;
+    await new Promise(r => setTimeout(r, 60));
+}
+
 document.getElementById('saida').innerHTML = linhas.join('');
 const falhas = linhas.filter(l => l.includes('FALHOU')).length;
 document.getElementById('placar').innerHTML =

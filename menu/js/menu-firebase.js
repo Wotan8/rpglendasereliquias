@@ -145,6 +145,7 @@ onAuthStateChanged(auth, async (user) => {
         if (btnEntrar) btnEntrar.hidden = true;
         document.body.classList.add('portal-logado');
         document.body.classList.remove('portal-deslogado');
+        atalhosNoLugar();
         document.dispatchEvent(new CustomEvent('portal:logado'));
     } else {
         // Não autenticado → SEM redirect: a própria página vira o login.
@@ -161,6 +162,29 @@ onAuthStateChanged(auth, async (user) => {
         document.dispatchEvent(new CustomEvent('portal:deslogado'));
     }
 });
+
+/* Os atalhos de cargo (Mapa, Mestre, Criador, Worldbuilding) não cabem na linha
+   da conta num celular: com o alvo de toque de 40px que a folha garante, quatro
+   deles mais a marca, a carteira, o tema e o sair passam de 375px — e o flex
+   esmagava a MARCA até virar "Lend…". No estreito eles vão para o fim da faixa
+   de navegação, que já rola por dentro. */
+const _estreito = window.matchMedia('(max-width: 640px)');
+
+function atalhosNoLugar() {
+    const grupo = document.querySelector('.portal-atalhos');
+    const abas = document.getElementById('tabBar');
+    const barra = document.querySelector('.portal-topo .toolbar');
+    if (!grupo || !abas || !barra) return;
+    const destino = _estreito.matches ? abas : barra;
+    // Na barra da conta ele volta para antes do nome, não para o fim.
+    if (grupo.parentElement === destino) return;
+    if (destino === barra) barra.insertBefore(grupo, document.getElementById('userDisplayName'));
+    else destino.appendChild(grupo);
+}
+
+_estreito.addEventListener('change', atalhosNoLugar);
+// exposto para a conferência de layout (__check-portal-raiz.html)
+window.atalhosNoLugar = atalhosNoLugar;
 
 // ===== CARREGAR PERSONAGENS (coleção 'char') =====
 async function loadCharacters() {

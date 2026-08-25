@@ -281,17 +281,21 @@ body {
    vista enquanto se rola — a animação de entrada agora vive DENTRO da Home, e
    sem isto ela empurraria as abas para fora da tela em toda visita.
    `top` sai da altura do cabeçalho, declarada uma vez em .portal-topo. */
-/* As abas vivem no cabeçalho. Nada de `sticky` próprio: o cabeçalho já gruda,
-   e elas vão junto. `min-width: 0` para a faixa poder rolar na horizontal em
-   tela estreita em vez de espremer a marca. */
+/* Faixa de navegação, largura toda. Nada de `sticky` próprio: o cabeçalho já
+   gruda e ela vai junto. Rola por dentro quando não couber — é a única coisa
+   aqui que pode rolar sem esconder informação de identidade. */
 .tabs {
     display: flex;
     align-items: center;
-    gap: 6px;
-    min-width: 0;
-    flex: 1 1 auto;
+    gap: 2px;
+    padding: 0 var(--lr-space-4) 6px;
     overflow-x: auto;
     scrollbar-width: none;
+    /* Sombra interna nas beiradas dizendo que há mais aba fora da vista. */
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px,
+        #000 calc(100% - 12px), transparent 100%);
+            mask-image: linear-gradient(90deg, transparent 0, #000 12px,
+        #000 calc(100% - 12px), transparent 100%);
 }
 
 .tabs::-webkit-scrollbar { display: none; }
@@ -329,15 +333,33 @@ body {
 
 /* No cabeçalho a aba ativa é marcada por dentro, não por um bloco invertido:
    ao lado da marca e dos botões de conta, um retângulo cheio pesa demais. */
-.portal-topo .tab.active {
-    background: var(--lr-gold-soft, rgba(212, 175, 55, .14));
-    color: var(--lr-gold);
-    border-color: var(--lr-gold);
+/* Na faixa de navegação a aba ativa é SUBLINHADA, não uma pílula: pílula é o
+   idioma de filtro; sublinhado é o de navegação de topo, e some no ruído bem
+   menos quando são sete lado a lado. */
+.portal-topo .tab {
+    border: none;
+    border-radius: 0;
+    padding: 8px 12px;
+    box-shadow: inset 0 -2px 0 transparent;
 }
 
-.portal-topo .tab:hover { background: var(--lr-surface-2); color: var(--lr-text-1); }
-.portal-topo .tab.active:hover { color: var(--lr-gold); }
-.portal-topo .frag-wallet { flex: none; }
+/* `.tabs` a mais no seletor de propósito: `html.dark .tab.active` pinta a aba
+   de ouro CHEIO, e com duas classes contra duas classes + um elemento ela
+   ganhava — no tema escuro o sublinhado virava pílula sólida. */
+.portal-topo .tabs .tab.active {
+    background: transparent;
+    color: var(--lr-gold);
+    box-shadow: inset 0 -2px 0 var(--lr-gold);
+}
+
+.portal-topo .tabs .tab:hover { background: var(--lr-surface-2); color: var(--lr-text-1); }
+.portal-topo .tabs .tab.active:hover { color: var(--lr-gold); background: transparent; }
+
+/* Nas outras telas a .tab continua sendo pílula — a folha é compartilhada. */
+.portal-topo-conta .frag-wallet { flex: none; }
+
+/* Os quatro atalhos de cargo andam juntos: é um nó só para mudar de faixa. */
+.portal-atalhos { display: flex; align-items: center; gap: var(--lr-space-2); flex: none; }
 
 .tab-content {
     display: none
@@ -1857,22 +1879,24 @@ html:not(.dark) .meta-card {
    ===================================================================== */
 
 /* ---------- topo ---------- */
-/* O cabeçalho carrega a marca, as abas e os botões de conta. Em tela estreita
-   ele QUEBRA em duas linhas em vez de rolar: rolagem horizontal esconde aba, e
-   aba escondida é navegação perdida. `overflow` some junto — quem rola agora é
-   a faixa de abas, por dentro. */
+/* DUAS FAIXAS declaradas — nada de `flex-wrap` decidindo por conta própria.
+   Com marca, abas e conta na mesma linha, os três disputavam espaço e o grupo
+   da conta caía sozinho para baixo, desalinhado. Em cima quem você é; embaixo
+   para onde ir. */
 .portal-topo {
     position: sticky;
     top: 0;
     z-index: var(--lr-z-sticky);
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--lr-space-2) var(--lr-space-3);
-    min-height: var(--portal-topo-h);
-    padding: var(--lr-space-1) var(--lr-space-4);
     background: var(--lr-surface);
     border-bottom: var(--lr-border-w) solid var(--lr-border-soft);
+}
+
+.portal-topo-conta {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-2);
+    min-height: var(--portal-topo-h);
+    padding: 0 var(--lr-space-4);
 }
 
 .portal-topo .spacer { flex: 1; }
@@ -1941,26 +1965,28 @@ html:not(.dark) .meta-card {
     align-items: center;
 }
 
-/* botões de cargo: quadrados fantasma com ícone do sprite — nada de
-   blocos coloridos com emoji */
+/* Botões de cargo: fantasmas de verdade. Com borda, quatro deles viravam uma
+   fileira de caixas vazias ao lado da marca — a moldura pesava mais que o
+   ícone. A moldura só aparece sob o ponteiro. */
 .portal-topo .toolbar .portal-cargo {
     display: inline-grid;
     place-items: center;
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     padding: 0;
     background: transparent;
-    border: var(--lr-border-w) solid var(--lr-border);
+    border: var(--lr-border-w) solid transparent;
     border-radius: var(--lr-radius);
     color: var(--lr-text-2);
     cursor: pointer;
     transition: border-color var(--lr-t-base) var(--lr-ease), color var(--lr-t-base) var(--lr-ease);
 }
 
-.portal-topo .toolbar .portal-cargo:hover {
+.portal-topo .toolbar .portal-cargo:hover,
+.portal-topo .toolbar .portal-cargo:focus-visible {
     border-color: var(--lr-gold);
     color: var(--lr-gold-2);
-    background: transparent;
+    background: var(--lr-surface-2);
 }
 
 .portal-topo .toolbar .portal-cargo .lr-ico { width: 17px; height: 17px; }
@@ -2659,4 +2685,43 @@ html:not(.dark) .meta-card {
     color: var(--lr-text-1);
     font: inherit;
     font-size: var(--lr-fs-sm);
+}
+
+
+/* ---------- cabeçalho no celular ----------
+   A linha da conta tem largura fixa (a da tela) e conteúdo que não cabe: marca
+   + carteira + tema + cinco atalhos passam de 375px. Sem apertar cada um, o
+   flex esmagava a MARCA até 0 e o resto vazava pela direita. A ordem do que
+   cede é declarada aqui, do menos essencial para o mais. */
+@media (max-width: 640px) {
+    .portal-topo-conta { min-height: 46px; padding: 0 var(--lr-space-3); gap: 4px; }
+
+    /* 1º a ceder: o nome do jogador. Quem é você já está na sua conta. */
+    .portal-topo .toolbar #userDisplayName { display: none; }
+
+    /* 2º: o rótulo "Frag$" — a gema e o número dizem o mesmo em menos espaço. */
+    .portal-topo-conta .frag-label { display: none; }
+
+    /* 3º: os atalhos de cargo MUDAM DE FAIXA — vão para o fim da navegação
+       (menu-firebase.js). Encolhê-los seria furar o alvo de toque de 40px que
+       a folha garante logo acima; melhor movê-los para onde há rolagem. */
+    .portal-topo .toolbar { gap: 4px; }
+    #tabBar .portal-atalhos {
+        margin-left: auto;
+        padding-left: var(--lr-space-3);
+        border-left: var(--lr-border-w) solid var(--lr-border-soft);
+    }
+
+    /* A marca é a última: encolhe a fonte e, no pior caso, corta com reticências
+       — mas não desaparece, que é a identidade do site. */
+    .portal-marca {
+        font-size: var(--lr-fs-sm);
+        min-width: 3.5em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .tabs { padding: 0 var(--lr-space-3) 5px; }
+    .portal-topo .tab { padding: 7px 9px; font-size: 10px; }
 }
