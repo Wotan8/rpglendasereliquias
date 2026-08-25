@@ -75,6 +75,11 @@ const itens = LIVROS.map((l, i) => ({ l, n: 3 + i, i }));
 
 t('T01 · o renderizador compartilhado existe', typeof window.lvEstantesHTML === 'function');
 
+/* `versaoDoLivro` chega por import dinâmico: sem esperar, a primeira pintura
+   sai sem o 🔖 e o teste do selo passava ou falhava por sorte de relógio.
+   `lvPronto()` é a mesma espera que menu-wiki.js faz antes de pintar. */
+if (window.lvPronto) { try { await window.lvPronto(); } catch { /* segue sem selo */ } }
+
 const alvo = document.getElementById('alvo');
 alvo.innerHTML = window.lvEstantesHTML(itens, ESTANTES,
     (l) => `abrir('${l.id}')`, { capas: true, abrir: true });

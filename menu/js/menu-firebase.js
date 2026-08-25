@@ -240,40 +240,39 @@ function renderCharacters() {
         // Imagem: campo characterImage ou charImg (base64)
         const imgSrc = char.characterImage || char.charImg || '';
 
+        /* O RETRATO manda no cartão, e o nome vive por cima dele, num véu —
+           é a mesma leitura da capa de livro na estante do Cânone: a arte é o
+           que se reconhece, o texto só confirma. Sem retrato, a inicial no
+           lugar; nada de cartão meio vazio. */
+        const inicial = escapeHtml(nome.trim().charAt(0).toUpperCase() || '?');
+        const retrato = imgSrc
+            ? `<img class="pj-retrato" src="${imgSrc}" alt="" loading="lazy">`
+            : `<div class="pj-retrato pj-retrato--sem"><span>${inicial}</span></div>`;
+
         return `
-            <div class="character-card" onclick="selectCharacter('${char.id}')">
-                ${imgSrc ? `<img class="card-img" src="${imgSrc}" alt="${escapeHtml(nome)}">` : ''}
-                <div class="card-body">
-                    <div class="character-header">
-                        <div>
-                            <div class="character-name">${escapeHtml(nome)}</div>
-                            <div class="character-class">${escapeHtml(raca)} - ${escapeHtml(classe)}</div>
-                        </div>
-                        <button class="btn-delete" onclick="event.stopPropagation(); openDeleteModal('${char.id}', '${escapeHtml(nome).replace(/'/g, "\\'")}')" title="Apagar personagem">
-                            🗑️
-                        </button>
+            <article class="character-card" onclick="selectCharacter('${char.id}')"
+                title="Abrir a ficha de ${escapeHtml(nome)}">
+                <div class="pj-arte">
+                    ${retrato}
+                    <div class="pj-veu"></div>
+                    <div class="pj-identidade">
+                        <div class="character-name">${escapeHtml(nome)}</div>
+                        <div class="character-class">${escapeHtml(raca)} · ${escapeHtml(classe)}</div>
                     </div>
-
-                    <div class="character-info">
-                        <div class="info-item">
-                            <div class="info-label">Experiência Total</div>
-                            <div class="info-value">${expTotal}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Sessões</div>
-                            <div class="info-value">${sessoes}</div>
-                        </div>
-                    </div>
-
-                    <button class="btn-play" onclick="event.stopPropagation(); selectCharacter('${char.id}')">
-                        ▶️ JOGAR
-                    </button>
-
-                    <div class="character-footer">
-                        <span>Última atualização: ${lastUpdate}</span>
-                    </div>
+                    <button class="pj-apagar" title="Apagar personagem"
+                        onclick="event.stopPropagation(); openDeleteModal('${char.id}', '${escapeHtml(nome).replace(/'/g, "\'")}')">
+                        <svg class="lr-ico"><use href="#i-lixeira" /></svg></button>
                 </div>
-            </div>
+
+                <div class="pj-pe">
+                    <div class="pj-numeros">
+                        <span title="Experiência total"><b>${expTotal}</b> EXP</span>
+                        <span title="Sessões jogadas"><b>${sessoes}</b> ${sessoes === 1 ? 'sessão' : 'sessões'}</span>
+                    </div>
+                    <button class="btn-play" onclick="event.stopPropagation(); selectCharacter('${char.id}')">Jogar</button>
+                    <div class="character-footer">Última atualização: ${lastUpdate}</div>
+                </div>
+            </article>
         `;
     }).join('');
 

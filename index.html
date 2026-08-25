@@ -11,9 +11,13 @@
          caminho ABSOLUTO. Relativo mentiria a partir daqui, e <base href>
          quebraria os <use href="#i-*"> dos ícones. -->
 <link rel="stylesheet" href="/shared/acervo.css?v=3">
+<!-- A tipografia do que o Cronista diagramou vem de UMA folha só: o mesmo
+     capítulo tem de sair igual aqui, no Worldbuilding, na ficha e no
+     Laboratorium. Ver o cabeçalho de shared/texto-mundo.css. -->
+<link rel="stylesheet" href="/shared/texto-mundo.css?v=1">
 <link rel="stylesheet" href="/shared/dialogo.css?v=2">
 <script type="module">import '/shared/dialogo.js?v=2';</script>
-    <link rel="stylesheet" href="/menu/css/menu.css?v=23">
+    <link rel="stylesheet" href="/menu/css/menu.css?v=24">
     <link rel="stylesheet" href="/shared/tokens.css?v=11">
     <script src="/shared/theme.js"></script>
     <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout PagBank contra bots/abuso. -->
@@ -257,7 +261,7 @@
 
                         <div class="leitor-grade">
                             <aside class="leitor-toc" id="leitorToc" aria-label="Capítulos"></aside>
-                            <article class="leitor-corpo" id="leitorCorpo"></article>
+                            <article class="leitor-corpo texto-mundo" id="leitorCorpo"></article>
                         </div>
 
                         <nav class="leitor-nav">
@@ -515,7 +519,7 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="/menu/js/menu-firebase.js?v=14"></script>
+    <script type="module" src="/menu/js/menu-firebase.js?v=15"></script>
     <!-- O card de livro da estante vem daqui: o mesmo do Escritório do
          Cronista e das telas do mestre. Script clássico, então entra ANTES
          do módulo que o usa. -->

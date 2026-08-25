@@ -3,8 +3,10 @@
    ============================================= */
 
 :root {
-    /* Altura do cabeçalho do Portal — a barra de abas gruda logo abaixo. */
+    /* As duas faixas do cabeçalho. Quem precisa grudar logo abaixo dele soma
+       as duas, em vez de cravar um número que envelhece. */
     --portal-topo-h: 54px;
+    --portal-abas-h: 34px;
 
     --bg: var(--lr-bg-0);
     --bg-gradient: linear-gradient(180deg, var(--lr-bg-0), var(--lr-bg-1));
@@ -75,26 +77,6 @@ html.dark .character-card:hover {
 html.dark .info-item {
     background: var(--lr-surface);
     border-color: var(--line)
-}
-
-html.dark .create-card {
-    border-color: var(--line);
-    background: rgba(63, 174, 106, .06)
-}
-
-html.dark .create-card:hover {
-    border-color: var(--success);
-    background: rgba(63, 174, 106, .14)
-}
-
-html.dark .create-card-blank {
-    background: rgba(212, 175, 55, .08);
-    border-color: var(--line)
-}
-
-html.dark .create-card-blank:hover {
-    border-color: var(--primary);
-    background: rgba(212, 175, 55, .15)
 }
 
 html.dark .inventory-item {
@@ -411,14 +393,18 @@ body {
     margin-bottom: 14px;
 }
 
+/* Era verde: a única cor fora da paleta na tela inteira, e o bloco mais alto
+   dela — o convite gritava mais que os personagens, que são o assunto. Agora é
+   discreto, no ouro do projeto, e cabe numa faixa. */
 .create-card {
-    border: 3px dashed var(--soft);
-    border-radius: var(--radius);
-    padding: 2rem;
+    border: var(--lr-border-w) dashed var(--lr-border);
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-4);
     text-align: center;
     cursor: pointer;
-    transition: all .2s;
-    background: rgba(63, 174, 106, .03);
+    transition: border-color var(--lr-t-base) var(--lr-ease),
+                background var(--lr-t-base) var(--lr-ease);
+    background: transparent;
 }
 
 .create-card-main {
@@ -429,15 +415,13 @@ body {
 .create-card-blank {
     flex: 1 1 0;
     min-width: 60px;
-    max-width: 90px;
-    padding: 0.6rem 0.3rem;
+    max-width: 110px;
+    padding: var(--lr-space-3) var(--lr-space-2);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    border-color: var(--line);
-    background: rgba(212, 175, 55, .04);
+    gap: 2px;
 }
 
 .create-card-blank .icon {
@@ -452,31 +436,28 @@ body {
 }
 
 .create-card-blank:hover {
-    border-color: var(--primary);
-    background: rgba(212, 175, 55, .1);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(212, 175, 55, .15);
+    border-color: var(--lr-gold);
+    background: var(--lr-gold-soft, rgba(212, 175, 55, .08));
 }
 
 .create-card:hover {
-    border-color: var(--success);
-    background: rgba(63, 174, 106, .07);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(63, 174, 106, .12);
+    border-color: var(--lr-gold);
+    background: var(--lr-gold-soft, rgba(212, 175, 55, .08));
 }
 
 .create-card .icon {
-    font-size: 2.5rem;
-    margin-bottom: 8px
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+    color: var(--lr-gold);
 }
 
 .create-card .title {
-    font-size: .95rem;
+    font-size: var(--lr-fs-sm);
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: .3px;
-    color: var(--success);
-    margin-bottom: 4px;
+    letter-spacing: .06em;
+    color: var(--lr-gold);
+    margin-bottom: 2px;
 }
 
 .create-card .desc {
@@ -503,101 +484,169 @@ body {
     position: relative;
 }
 
-.character-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
-}
-
+/* A barra colorida no topo saiu: era o único degradê da tela e não dizia nada.
+   O realce agora é o mesmo da capa de livro — sobe e ganha o fio de ouro. */
 .character-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 12px 35px rgba(0, 0, 0, .15);
-    border-color: var(--primary);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .38);
+    border-color: var(--lr-gold);
 }
 
-.character-card .card-img {
+@media (prefers-reduced-motion: reduce) {
+    .character-card:hover { transform: none; }
+    .character-card:hover .pj-retrato { transform: none; }
+}
+
+/* =====================================================================
+   CARTÃO DE PERSONAGEM
+
+   Era retrato em cima, e embaixo um bloco de rótulos: nome, "Raça - Classe",
+   duas caixinhas com EXP e Sessões, o botão e a data. Cinco níveis de texto
+   competindo, e o retrato — a única coisa que se reconhece de relance — virava
+   ilustração de cabeçalho.
+
+   Agora o retrato É o cartão, com o nome por cima num véu. É a mesma leitura da
+   capa de livro na estante do Cânone: a arte identifica, o texto confirma.
+   ===================================================================== */
+.pj-arte {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: var(--lr-bg-1);
+}
+
+.pj-retrato {
     width: 100%;
-    height: 300px;
+    height: 100%;
     object-fit: cover;
-    object-position: top;
+    /* o rosto costuma estar no terço de cima do retrato */
+    object-position: center 18%;
     display: block;
+    transition: transform var(--lr-t-base) var(--lr-ease);
 }
 
-.card-body {
-    padding: 14px
+.character-card:hover .pj-retrato { transform: scale(1.04); }
+
+/* Sem retrato, a inicial — melhor que um cartão pela metade, e evita exigir
+   arte para o personagem existir. */
+.pj-retrato--sem {
+    display: grid;
+    place-items: center;
+    background:
+        linear-gradient(120deg, rgba(255, 255, 255, .05), transparent 45%),
+        linear-gradient(160deg, var(--lr-abyssal, #2b2350), var(--lr-bg-0));
 }
 
-.character-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 10px;
+.pj-retrato--sem span {
+    font-family: var(--lr-font-title);
+    font-size: 3.4rem;
+    font-weight: 700;
+    color: var(--lr-gold);
+    opacity: .75;
 }
 
+/* O véu existe para o nome ser legível sobre QUALQUER retrato — inclusive um
+   claro. Por isso vai quase ao opaco no pé.
+
+   Preto LITERAL, não `--lr-bg-0`: o cartão é superfície escura nos dois temas
+   (é `--chip`, que o menu mantém escuro também no papel), e o token viraria um
+   véu BRANCO no tema claro, apagando o nome que ele existe para sustentar. */
+.pj-veu {
+    position: absolute;
+    inset: 40% 0 0;
+    background: linear-gradient(180deg,
+            transparent 0%,
+            rgba(10, 13, 18, .55) 55%,
+            rgba(10, 13, 18, .92) 100%);
+    pointer-events: none;
+}
+
+.pj-identidade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: var(--lr-space-3);
+}
+
+/* O que está SOBRE O RETRATO usa claro literal, não token de tema: o véu
+   embaixo é escuro nos dois temas (ele existe justamente para isso), então a
+   tinta por cima também tem de ser. Com `--lr-text-1` o nome virava tinta
+   escura sobre véu escuro no tema claro — invisível, e o teste pegou. */
 .character-name {
-    font-size: 1.1rem;
-    font-weight: 900;
-    color: var(--ink);
-    letter-spacing: -.2px;
+    font-family: var(--lr-font-title);
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: var(--lr-lh-tight);
+    color: var(--lr-divine);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
 }
 
 .character-class {
-    font-size: .78rem;
-    color: var(--primary);
+    font-size: var(--lr-fs-xs);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .2px;
+    letter-spacing: .06em;
+    color: var(--lr-gold);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
 }
 
-.btn-delete {
-    background: transparent;
-    border: 2px solid var(--danger);
-    color: var(--danger);
-    padding: 4px 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: all .2s;
-    line-height: 1;
-}
-
-.btn-delete:hover {
-    background: var(--danger);
-    color: var(--lr-divine);
-    transform: scale(1.05);
-}
-
-.character-info {
+/* Apagar é destrutivo e raro: só aparece quando o ponteiro está no cartão. No
+   toque não há hover, então ali ele fica sempre visível. */
+.pj-apagar {
+    position: absolute;
+    top: var(--lr-space-2);
+    right: var(--lr-space-2);
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin-bottom: 10px;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    border-radius: var(--lr-radius);
+    /* Mesma razão do nome: fica sobre o retrato, então a escuridão e a tinta
+       são literais, não tokens que invertem. */
+    background: rgba(10, 13, 18, .78);
+    color: var(--lr-divine);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--lr-t-base), color var(--lr-t-base);
 }
 
-.info-item {
-    background: var(--lr-bg-1);
-    padding: 8px;
-    border-radius: 8px;
-    border: 1px solid var(--soft);
+.character-card:hover .pj-apagar,
+.pj-apagar:focus-visible { opacity: 1; }
+.pj-apagar:hover { color: var(--lr-blood-2); }
+.pj-apagar .lr-ico { width: 15px; height: 15px; }
+
+@media (pointer: coarse) {
+    .pj-apagar { opacity: 1; width: 40px; height: 40px; }
 }
 
-.info-label {
-    font-size: 9px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .4px;
-    font-weight: 800;
-    margin-bottom: 2px;
+.pj-pe {
+    display: grid;
+    gap: var(--lr-space-2);
+    padding: var(--lr-space-3);
 }
 
-.info-value {
-    font-size: .9rem;
-    font-weight: 700;
+/* EXP e sessões eram duas caixas com rótulo em cima do número. Viraram uma
+   linha: o número é o dado, a palavra só diz do que ele é. */
+.pj-numeros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-space-1) var(--lr-space-3);
+    font-size: var(--lr-fs-xs);
+    /* `--muted` NÃO inverte com o tema (é sempre `--lr-text-2`, escuro no
+       papel) e este cartão é escuro nos dois. O secundário aqui é o próprio
+       `--ink` rebaixado — inverte junto e continua legível. */
     color: var(--ink);
+    opacity: .72;
+}
+
+.pj-numeros b {
+    font-size: var(--lr-fs-md);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    margin-right: 3px;
 }
 
 /* ===== CP BADGE ===== */
@@ -615,36 +664,28 @@ body {
 
 .btn-play {
     width: 100%;
-    padding: 10px;
-    background: var(--primary);
+    padding: 9px;
+    background: var(--lr-gold);
+    /* tinta escura sobre o ouro: o mesmo par do botão Entrar */
     color: var(--lr-bg-0);
     border: none;
-    border-radius: 8px;
+    border-radius: var(--lr-radius);
     font-weight: 800;
-    font-size: .8rem;
+    font-size: .78rem;
     text-transform: uppercase;
-    letter-spacing: .4px;
+    letter-spacing: .06em;
     cursor: pointer;
-    transition: all .2s;
+    transition: background var(--lr-t-base) var(--lr-ease);
     font-family: var(--font);
 }
 
-.btn-play:hover {
-    background: #3b5ae6;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(212, 175, 55, .35);
-}
+/* `#3b5ae6` era um azul solto no meio do dourado — sem token e sem tema. */
+.btn-play:hover { background: var(--lr-gold-2); }
 
 .character-footer {
-    padding-top: 8px;
-    margin-top: 10px;
-    border-top: 1px solid var(--soft);
-    font-size: .7rem;
-    color: var(--muted);
-    font-weight: 600;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    font-size: var(--lr-fs-xs);
+    color: var(--ink);
+    opacity: .55;
 }
 
 /* ===== EMPTY STATE ===== */
@@ -2357,6 +2398,11 @@ html:not(.dark) .meta-card {
     gap: var(--lr-space-4);
 }
 
+/* `display` de autor vence o `display:none` que o navegador dá a [hidden]:
+   abrir um livro escondia a estante no JS e ela continuava na tela, com a capa
+   pairando por cima do leitor. */
+.wiki-estante[hidden] { display: none; }
+
 .wiki-vazio {
     grid-column: 1 / -1;
     text-align: center;
@@ -2422,7 +2468,9 @@ html:not(.dark) .meta-card {
 
 .leitor-toc {
     position: sticky;
-    top: calc(54px + var(--lr-space-4));
+    /* Abaixo do cabeçalho INTEIRO: ele tem duas faixas, e o 54px cravado aqui
+       era a altura de só uma — o sumário grudava por baixo das abas. */
+    top: calc(var(--portal-topo-h) + var(--portal-abas-h) + var(--lr-space-3));
     max-height: calc(100vh - 120px);
     overflow-y: auto;
     display: flex;
@@ -2452,43 +2500,18 @@ html:not(.dark) .meta-card {
     font-weight: 600;
 }
 
+/* A TIPOGRAFIA saiu daqui. O corpo do capítulo agora é `.texto-mundo`, a folha
+   única de shared/texto-mundo.css — a mesma do Worldbuilding, da ficha e do
+   Laboratorium. Enquanto cada tela tinha a sua, o mesmo capítulo saía diferente
+   em cada lugar: aqui os títulos eram cinza e o corpo menor; lá eram ouro e o
+   texto era o do escritor.
+
+   O que fica é o que é do LEITOR, não do texto: a medida da linha. */
 .leitor-corpo {
-    max-width: 72ch;
-    line-height: var(--lr-lh-body);
-    font-size: var(--lr-fs-md);
+    /* 68 caracteres é a linha em que o olho não se perde na volta. Acima de
+       ~80 ele erra a linha seguinte; abaixo de ~50 quebra o ritmo. */
+    max-width: 68ch;
 }
-
-.leitor-corpo h1 { font-size: var(--lr-fs-2xl); margin: 0 0 var(--lr-space-4); }
-
-.leitor-corpo h2 { font-size: var(--lr-fs-xl); margin: var(--lr-space-6) 0 var(--lr-space-3); }
-
-.leitor-corpo h3, .leitor-corpo h4 { margin: var(--lr-space-5) 0 var(--lr-space-2); }
-
-.leitor-corpo p { margin: 0 0 var(--lr-space-4); }
-
-.leitor-corpo blockquote {
-    font-family: var(--lr-font-subtitle);
-    font-style: italic;
-    font-size: var(--lr-fs-lg);
-    color: var(--lr-text-2);
-    border-left: var(--lr-border-w) solid var(--lr-gold);
-    margin: var(--lr-space-5) 0;
-    padding: var(--lr-space-2) 0 var(--lr-space-2) var(--lr-space-5);
-}
-
-.leitor-corpo table {
-    width: 100%;
-    max-width: 100%;
-    display: block;
-    overflow-x: auto;
-    margin: var(--lr-space-4) 0;
-}
-
-.leitor-corpo img { max-width: 100%; border-radius: var(--lr-radius); }
-
-.leitor-corpo ul, .leitor-corpo ol { padding-left: var(--lr-space-5); margin: 0 0 var(--lr-space-4); }
-
-.leitor-corpo li { margin-bottom: var(--lr-space-2); }
 
 .leitor-nav {
     display: flex;

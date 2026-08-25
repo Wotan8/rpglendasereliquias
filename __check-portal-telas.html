@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — leitor do Cânone e cartões de Personagem</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/lendas-reliquias.css">
+<link rel="stylesheet" href="shared/texto-mundo.css">
+<link rel="stylesheet" href="menu/css/menu.css">
+<script>
+  for (const l of document.querySelectorAll('link[href*="menu.css"], link[href*="texto-mundo.css"]'))
+      l.href += '?cb=' + Date.now();
+</script>
+<style>
+  body { margin:0; padding:16px; font:14px/1.6 Inter, system-ui, sans-serif;
+         background: var(--lr-bg-0); color: var(--lr-text-1); }
+  table#saida { border-collapse:collapse; font:11px ui-monospace, monospace; width:100%; margin-bottom:14px; }
+  table#saida td { border:1px solid var(--lr-border); padding:2px 6px; }
+  .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight:700; }
+  #placar { font-weight:800; margin:8px 0 16px; padding-top:8px; border-top:1px solid var(--lr-border); }
+  h1 { font-size:1rem; margin:0 0 4px; } h2 { font-size:.85rem; margin:20px 0 6px; }
+  p.nota { margin:0 0 10px; color:var(--lr-text-2); font-size:.8rem; }
+  .palco { border:1px dashed var(--lr-border); border-radius:8px; padding:14px; max-width:1000px; }
+  .barra { display:flex; gap:8px; margin-bottom:12px; }
+</style></head>
+<body>
+<h1>📖 Leitor do Cânone · 🎭 Cartões de Personagem</h1>
+<p class="nota">O corpo do capítulo é <code>.texto-mundo</code>, a folha ÚNICA do projeto — o mesmo
+   capítulo tem de sair igual aqui, no Worldbuilding, na ficha e no Laboratorium. Enquanto cada
+   tela tinha a sua, o título era ouro lá e cinza aqui. E o cartão de personagem passou a ser o
+   RETRATO com o nome por cima, a mesma leitura da capa na estante.</p>
+
+<div class="barra">
+  <button type="button" onclick="document.documentElement.classList.toggle('dark')">🌗 Trocar tema</button>
+  <button type="button" onclick="document.querySelectorAll('.palco').forEach(p=>
+      p.style.maxWidth = p.style.maxWidth === '360px' ? '1000px' : '360px')">📱 Estreitar</button>
+</div>
+
+<table id="saida"></table>
+<div id="placar"></div>
+
+<h2>Livro aberto</h2>
+<div class="palco">
+  <div class="wiki-em-aba">
+    <div class="wiki-estante" id="estante" hidden><div>capa fantasma</div></div>
+    <div class="wiki-leitor" id="leitor">
+      <div class="leitor-topo">
+        <button class="leitor-voltar">← Estante</button>
+        <div class="leitor-livro-nome">Livro de Regras do Jogador · 🔖 v1.8</div>
+      </div>
+      <div class="leitor-grade">
+        <aside class="leitor-toc" id="toc">
+          <button class="ativo">Capítulo 1 — Introdução</button>
+          <button>Capítulo 2 — Regras Básicas</button>
+          <button>Capítulo 3 — Criação de Personagem</button>
+        </aside>
+        <article class="leitor-corpo texto-mundo" id="corpo">
+          <h1>Capítulo 1 — Introdução</h1>
+          <blockquote>Bem-vindo ao mundo de Vasteluna.</blockquote>
+          <p>Um parágrafo longo o bastante para medir a linha de leitura, porque a largura da
+             coluna é o que decide se o olho acha a linha seguinte ou se perde no caminho de
+             volta. Este texto existe só para ocupar espaço com credibilidade.</p>
+          <h2>Uma seção</h2>
+          <p>Outro parágrafo, para conferir a distância entre blocos.</p>
+          <ul><li>um item</li><li>outro item</li></ul>
+        </article>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>Personagens</h2>
+<div class="palco">
+  <div class="create-card-row">
+    <div class="create-card create-card-main"><div class="icon">➕</div>
+      <div class="title">Criar Novo Personagem</div><div class="desc">Comece uma nova aventura!</div></div>
+    <div class="create-card create-card-blank"><div class="icon">📄</div>
+      <div class="title">Nova Ficha em Branco</div></div>
+  </div>
+  <div class="characters-grid" id="grade"></div>
+</div>
+
+<script src="shared/lr-icones.js"></script>
+<script type="module">
+if (document.readyState !== 'complete') {
+    await new Promise(r => window.addEventListener('load', r, { once: true }));
+}
+
+const linhas = [];
+const t = (nome, cond) => linhas.push(
+    `<tr><td>${nome}</td><td class="${cond ? 'ok' : 'fail'}">${cond ? 'OK' : 'FALHOU'}</td></tr>`);
+const cx = (e) => e.getBoundingClientRect();
+
+/* ===== o leitor ===== */
+{
+    const corpo = document.getElementById('corpo');
+    const h1 = corpo.querySelector('h1');
+    const p = corpo.querySelector('p');
+    const cs = (e) => getComputedStyle(e);
+
+    t('T01 · o corpo do capítulo usa a folha compartilhada', corpo.classList.contains('texto-mundo'));
+    /* No Worldbuilding os títulos do que o Cronista escreveu são OURO. Aqui
+       eram cinza, porque a tela tinha a própria tipografia. */
+    /* Compara com o TOKEN, não com um valor de cor: `--lr-gold-2` é escuro no
+       papel e claro na pedra, e cravar o rgb testaria um tema só. */
+    const hex = (c) => '#' + c.match(/\d+/g).slice(0, 3)
+        .map(n => (+n).toString(16).padStart(2, '0')).join('').toUpperCase();
+    t(`T02 · o título do capítulo é ouro, como no Worldbuilding (${cs(h1).color})`,
+        hex(cs(h1).color) === cs(document.documentElement).getPropertyValue('--lr-gold-2').trim().toUpperCase());
+    t('T03 · o corpo usa a fonte de leitura, não a de interface',
+        cs(p).fontFamily === cs(corpo).fontFamily && /Cormorant|serif/i.test(cs(p).fontFamily));
+    t('T04 · a citação tem o filete de bronze do Cronista',
+        parseFloat(cs(corpo.querySelector('blockquote')).borderLeftWidth) >= 2);
+
+    // Medida da linha: o que decide se o olho acha a linha seguinte.
+    const ch = parseFloat(cs(corpo).fontSize) * 0.5;   // ~largura de caractere
+    const chars = cx(corpo).width / ch;
+    t(`T05 · a coluna de leitura fica entre 45 e 85 caracteres (~${Math.round(chars)})`,
+        chars > 45 && chars < 90);
+
+    t('T06 · o sumário acompanha a rolagem', cs(document.getElementById('toc')).position === 'sticky');
+    t('T07 · e para abaixo do cabeçalho inteiro, não de meia faixa',
+        parseFloat(cs(document.getElementById('toc')).top) >= 80);
+
+    /* Era o defeito do print: `display: grid` de autor vence o `display:none`
+       que o navegador dá a [hidden], e a estante continuava por cima do
+       leitor mesmo depois de o JS escondê-la. */
+    t('T08 · com o livro aberto, a estante realmente some',
+        cs(document.getElementById('estante')).display === 'none');
+}
+
+/* ===== os cartões de personagem ===== */
+{
+    const PJ = [
+        { nome: 'Thalion Vaerys', raca: 'Elorin', classe: 'Runimago', exp: 420, sessoes: 12, img: true },
+        { nome: 'Uqata', raca: 'Karu-Selvagem', classe: 'Xamã', exp: 180, sessoes: 1, img: false },
+    ];
+    const retratoFalso = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">
+           <rect width="400" height="500" fill="#2a2140"/>
+           <circle cx="200" cy="150" r="70" fill="#d4af37" opacity=".5"/></svg>`);
+
+    document.getElementById('grade').innerHTML = PJ.map((c, i) => `
+        <article class="character-card">
+            <div class="pj-arte">
+                ${c.img
+                    ? `<img class="pj-retrato" src="${retratoFalso}" alt="">`
+                    : `<div class="pj-retrato pj-retrato--sem"><span>${c.nome[0]}</span></div>`}
+                <div class="pj-veu"></div>
+                <div class="pj-identidade">
+                    <div class="character-name">${c.nome}</div>
+                    <div class="character-class">${c.raca} · ${c.classe}</div>
+                </div>
+                <button class="pj-apagar" title="Apagar personagem">
+                    <svg class="lr-ico"><use href="#i-lixeira" /></svg></button>
+            </div>
+            <div class="pj-pe">
+                <div class="pj-numeros">
+                    <span><b>${c.exp}</b> EXP</span>
+                    <span><b>${c.sessoes}</b> ${c.sessoes === 1 ? 'sessão' : 'sessões'}</span>
+                </div>
+                <button class="btn-play">Jogar</button>
+                <div class="character-footer">Última atualização: 24/08/2026</div>
+            </div>
+        </article>`).join('');
+
+    const cards = [...document.querySelectorAll('.character-card')];
+    const arte = cards[0].querySelector('.pj-arte');
+    const cs = (e) => getComputedStyle(e);
+
+    t('T09 · o retrato manda no cartão (4:5, não uma faixa fixa)',
+        Math.abs((cx(arte).height / cx(arte).width) - 1.25) < 0.05);
+    t('T10 · o nome fica POR CIMA do retrato, não abaixo dele',
+        cx(cards[0].querySelector('.character-name')).bottom <= cx(arte).bottom + 1);
+    t('T11 · com véu, para o nome resistir a retrato claro',
+        !!cards[0].querySelector('.pj-veu')
+        && /gradient/.test(cs(cards[0].querySelector('.pj-veu')).backgroundImage));
+    t('T12 · personagem sem retrato ganha a inicial, não um vazio',
+        cards[1].querySelector('.pj-retrato--sem span').textContent === 'U');
+    t('T13 · apagar só aparece no hover (é destrutivo e raro)',
+        cs(cards[0].querySelector('.pj-apagar')).opacity === '0');
+    t('T14 · EXP e sessões numa linha, com o número em destaque',
+        parseFloat(cs(cards[0].querySelector('.pj-numeros b')).fontSize)
+        > parseFloat(cs(cards[0].querySelector('.pj-numeros')).fontSize));
+    t('T15 · a barra colorida no topo do cartão saiu',
+        cs(cards[0], '::before').content === 'none' || !cs(cards[0], '::before').backgroundImage.includes('gradient'));
+
+    // O convite de criar era verde — a única cor fora da paleta na tela.
+    const criar = document.querySelector('.create-card-main');
+    t(`T16 · o cartão de criar está no ouro do projeto, não em verde (${cs(criar.querySelector('.title')).color})`,
+        !/63, 174, 106/.test(cs(criar.querySelector('.title')).color));
+    t('T17 · e deixou de ser o bloco mais alto da tela',
+        cx(criar).height < cx(cards[0]).height / 2);
+    t('T18 · o botão Jogar usa o ouro, não um azul solto',
+        !/59, 90, 230/.test(cs(cards[0].querySelector('.btn-play')).backgroundColor));
+}
+
+/* ===== contraste nos dois temas ===== */
+const lum = (c) => {
+    const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => {
+        v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4;
+    });
+    return .2126 * r + .7152 * g + .0722 * b;
+};
+const contraste = (a, b) => {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + .05) / (y + .05);
+};
+const fundoReal = (e) => {
+    for (let n = e; n; n = n.parentElement) {
+        const c = getComputedStyle(n).backgroundColor;
+        if (Number((c.match(/[\d.]+/g) || [])[3] ?? 1) >= .95) return c;
+    }
+    /* Nada opaco no caminho: o fundo da página vem de um GRADIENTE, e
+       `backgroundColor` não o enxerga. O token do fundo é a resposta certa —
+       antes disto o teste supunha branco e acusava o tema escuro. */
+    return getComputedStyle(document.documentElement).getPropertyValue('--lr-bg-0').trim()
+        || 'rgb(255,255,255)';
+};
+const medir = (nome) => {
+    const p = document.querySelector('#corpo p');
+    const n = document.querySelector('.pj-numeros b');
+    t(`${nome}: o texto do capítulo é legível (≥4,5:1)`, contraste(getComputedStyle(p).color, fundoReal(p)) >= 4.5);
+    t(`${nome}: o número do personagem é legível (≥4,5:1)`, contraste(getComputedStyle(n).color, fundoReal(n)) >= 4.5);
+};
+medir('T19/T20 · claro');
+document.documentElement.classList.add('dark');
+await new Promise(r => setTimeout(r, 250));
+medir('T21/T22 · escuro');
+document.documentElement.classList.remove('dark');
+await new Promise(r => setTimeout(r, 80));
+
+/* ===== celular ===== */
+{
+    document.querySelectorAll('.palco').forEach(p => p.style.maxWidth = '360px');
+    await new Promise(r => setTimeout(r, 120));
+    /* A pilha do leitor é `@media (max-width: 900px)` — do VIEWPORT. Estreitar
+       uma <div> não dispara media query nenhuma, então aqui se confere que a
+       regra EXISTE e empilha; o comportamento em tela real fica com o
+       navegador. */
+    const folha = await (await fetch('/menu/css/menu.css', { cache: 'no-store' })).text();
+    t('T23 · o leitor empilha o sumário sobre o texto em tela estreita',
+        /@media \(max-width: 900px\)[\s\S]{0,200}\.leitor-grade\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/.test(folha));
+    t('T23b · e o sumário vira trilho horizontal, em vez de coluna espremida',
+        /@media \(max-width: 900px\)[\s\S]{0,700}\.leitor-toc\s*\{[^}]*flex-direction:\s*row/.test(folha));
+    t('T24 · e a página não rola para o lado',
+        document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
+    document.querySelectorAll('.palco').forEach(p => p.style.maxWidth = '1000px');
+}
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const falhas = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML =
+    `<span class="${falhas ? 'fail' : 'ok'}">${linhas.length - falhas}/${linhas.length}</span>`
+    + (falhas ? ` — ${falhas} falha(s)` : ' — tudo certo');
+</script>
+</body></html>

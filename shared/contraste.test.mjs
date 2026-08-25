@@ -59,6 +59,12 @@ const PERMITIDAS = new Set([
     // O mesmo badge de grau de aura no painel do criador: fundo e `grau.cor`,
     // escolhido no cadastro (painel-firebase.js).
     'painel-criador/css/painel-criador.css .aura-grau-badge',
+    // Nome e raca/classe do personagem: ficam SOBRE O RETRATO, em cima de um
+    // veu (.pj-veu) que e um gradiente ate rgba(10,13,18,.92) — escuro nos dois
+    // temas de proposito, porque o retrato vem de dado e pode ser claro. Branco
+    // literal e a tinta certa ali; a medicao estatica nao le gradiente e mede o
+    // texto contra as superficies da pagina, onde ele nunca cai.
+    'menu/css/menu.css .character-name',
     // Botao da loja: o fundo vem do modificador, e as duas pernas de cada
     // gradiente sao literais escuros justamente porque o texto aqui e branco
     // fixo. Pior par: 5.87:1, igual nos dois temas.
