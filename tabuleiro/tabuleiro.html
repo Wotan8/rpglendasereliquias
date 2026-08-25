@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="../shared/detalhe.css?v=4">
 <script type="module">import '../shared/detalhe.js?v=4';</script>
 <link rel="stylesheet" href="../shared/acervo.css?v=3">
-    <link rel="stylesheet" href="css/tabuleiro.css?v=32">
+    <link rel="stylesheet" href="css/tabuleiro.css?v=33">
     <script type="module" src="/js/global-favicon.js"></script>
     <!-- Design System — Lendas & Relíquias (ver DESIGN-SYSTEM.md) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -191,9 +191,11 @@
     <!-- 🔒 F8: botão de desbloqueio de objeto bloqueado (renderizado apenas para o Mestre) -->
     <button id="tbLockBtn" title="Desbloquear objeto (Mestre)"
         onclick="if(this.dataset.id&&window.tbDesbloquearObj)tbDesbloquearObj(this.dataset.id)"><svg class="tb-ico"><use href="#i-cadeado"/></svg></button>
-    <div id="tbCoords"></div>
-
-    <!-- Zoom -->
+    <!-- Zoom + coordenadas: uma fileira só.
+         Soltas, as coordenadas eram um terceiro elemento fixo disputando o
+         canto de baixo com o zoom e com a faixa do Painel do Turno — no
+         celular as três se cobriam. Na mesma linha, o navegador resolve o
+         encaixe e não sobra conta de `bottom` para ninguém acertar. -->
     <div class="tb-zoombar">
         <button onclick="tbZoom(1/1.2)" title="Afastar"><svg class="tb-ico"><use href="#i-linha"/></svg></button>
         <!-- A barra entre os dois só aparece em tela larga: no celular o pinça
@@ -201,6 +203,7 @@
         <input type="range" id="tbZoomBarra" min="0" max="1000" step="1" value="500"
                aria-label="Zoom" title="Zoom" oninput="tbZoomBarra(this.value)">
         <button onclick="tbZoom(1.2)" title="Aproximar"><svg class="tb-ico"><use href="#i-mais"/></svg></button>
+        <div id="tbCoords"></div>
     </div>
 
     <!-- FX de cena (F6): fade de transição + teleprompter -->

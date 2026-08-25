@@ -40,7 +40,7 @@
    cópia continua bonita enquanto a página de verdade muda sozinha. */
 const doc = new DOMParser().parseFromString(
     await (await fetch('tabuleiro.html?cb=' + Date.now())).text(), 'text/html');
-const CHROME = ['.tb-topbar', '.tb-toolbar', '#tbDrawBar', '#tbCamadasPanel', '#tbPropsPanel', '.tb-zoombar', '#tbCoords'];
+const CHROME = ['.tb-topbar', '.tb-toolbar', '#tbDrawBar', '#tbCamadasPanel', '#tbPropsPanel', '.tb-zoombar'];
 for (const sel of CHROME) document.body.appendChild(doc.querySelector(sel));
 
 window.abrirTudo = () => {
@@ -126,8 +126,11 @@ t('T06 · a toolbar cabe na altura sem rolar', cx('.tb-toolbar').bottom <= inner
         zb.left > innerWidth / 2 && zb.bottom > innerHeight - 60);
     t('T13 · o zoom não divide mais canto com o player',
         !sobrepoe(zb, cx('.tb-musica')));
-    t('T14 · as coordenadas sobem em vez de ficar debaixo do zoom',
-        !sobrepoe(zb, cx('#tbCoords')) && cx('#tbCoords').bottom <= zb.top);
+    /* As coordenadas passaram para DENTRO da fileira do zoom: soltas, eram um
+       terceiro elemento fixo disputando o canto com a faixa do Painel do Turno,
+       e no celular as três se cobriam. */
+    t('T14 · as coordenadas viajam na mesma fileira do zoom',
+        document.querySelector('#tbCoords').parentElement === document.querySelector('.tb-zoombar'));
     const barra = document.getElementById('tbZoomBarra');
     const larga = innerWidth >= 1024;
     t(`T15 · o curso do zoom ${larga ? 'aparece' : 'some'} em ${innerWidth}px`,

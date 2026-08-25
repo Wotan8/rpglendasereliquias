@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="app-canvas"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Janela de Combate e Painel do Turno</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/lendas-reliquias.css">
+<link rel="stylesheet" href="css/tabuleiro.css">
+<script>for (const l of document.querySelectorAll('link[href*="tabuleiro.css"]')) l.href += '?cb=' + Date.now();</script>
+<style>
+  body.app-canvas { margin:0; overflow:hidden;
+      background: repeating-conic-gradient(#161b22 0 25%, #10141a 0 50%) 0 0 / 96px 96px; }
+  #saida { position:fixed; inset:auto 0 0 0; max-height:46vh; overflow:auto; z-index:9000;
+      background:var(--lr-bg-0); border-top:2px solid var(--lr-gold);
+      font:11px ui-monospace,monospace; padding:8px 12px; color:var(--lr-text-1); }
+  #saida table { border-collapse:collapse; width:100%; }
+  #saida td { border:1px solid var(--lr-border); padding:1px 6px; }
+  .ok { color:var(--lr-nature); } .fail { color:var(--lr-blood-2); font-weight:700; }
+  #placar { font-weight:800; margin-top:6px; }
+  #ctrl { position:fixed; right:8px; bottom:48vh; z-index:9001; display:flex; gap:6px; }
+  #ctrl button { font:11px system-ui; padding:4px 8px; }
+  body.limpo #saida, body.limpo #ctrl { display:none; }
+</style></head>
+<body class="app-canvas">
+<div id="ctrl"><button onclick="document.body.classList.toggle('limpo')">🖼️ Só a arte</button></div>
+<table id="saida"></table><div id="placar"></div>
+<script src="../shared/lr-icones.js"></script>
+
+<!-- A marcação é cópia da que tab-combat.js e tab-turno.js montam. Não dá para
+     importar: os dois dependem de Firestore. Se as classes mudarem lá, os
+     testes de posição aqui passariam a medir um fantasma — por isso T01
+     confere que cada classe usada aqui ainda aparece na fonte de verdade. -->
+<div class="tb-window open" id="tbCombatWin" style="right:16px">
+  <div class="tb-win-head">⚔️ Combate <button class="tb-mini-btn">✕</button></div>
+  <div class="tb-win-body">
+    <div class="tb-cena-abas">
+      <button class="tb-cena-aba ativa">Emboscada <span class="tb-cena-n">4</span><span class="tb-cena-x">✕</span></button>
+      <button class="tb-cena-aba">Pátio <span class="tb-cena-n">2</span><span class="tb-cena-x">✕</span></button>
+      <button class="tb-cena-aba nova">＋</button>
+    </div>
+    <div class="tb-combat-controls">
+      <button class="tb-btn tb-btn-small">⏭️ Próximo</button>
+      <span class="tb-combat-round">Rodada 3</span>
+      <button class="tb-btn tb-btn-small">⏹️</button>
+    </div>
+    <div class="tb-combat-p atual">
+      <div class="tb-combat-init">18</div>
+      <div style="flex:1;min-width:0">
+        <div class="tb-combat-nome">Rakhar Sombra <span class="tb-combat-tipo">PJ</span>
+          <span class="tb-faccao-dot">🟢</span></div>
+        <div class="tb-cstat"><span class="tb-cstat-lb">VIT</span>
+          <div class="tb-cstat-bar"><div style="width:64%;background:var(--lr-blood-2)"></div></div>
+          <span class="tb-cstat-v">23/36</span>
+          <button class="tb-cstat-btn">−</button><button class="tb-cstat-btn">+</button></div>
+        <div class="tb-cstat"><span class="tb-cstat-lb">ENE</span>
+          <div class="tb-cstat-bar"><div style="width:30%;background:var(--lr-arcane)"></div></div>
+          <span class="tb-cstat-v">6/20</span>
+          <button class="tb-cstat-btn">−</button><button class="tb-cstat-btn">+</button></div>
+        <div class="tb-testes-card">
+          <div class="tb-teste-row"><span class="tb-teste-nome">Furtividade</span>
+            <span class="tb-teste-alvo-lb">Alvo</span><input class="tb-teste-alvo" value="12">
+            <span class="tb-grau pos">+2</span></div>
+          <div class="tb-teste-row"><span class="tb-teste-nome">Percepção</span>
+            <span class="tb-teste-alvo-lb">Alvo</span><input class="tb-teste-alvo" value="9">
+            <span class="tb-grau neg">-1</span></div>
+        </div>
+        <div class="tb-conds"><span class="tb-cond">Sangrando<b>✕</b></span>
+          <span class="tb-cond">Exausto<i class="tb-cond-nv">4</i><b>✕</b></span>
+          <button class="tb-cond-add">➕ condição</button></div>
+      </div>
+      <div class="tb-combat-acoes"><button class="tb-mini-btn">⚔️</button>
+        <button class="tb-mini-btn tb-danger">🗑️</button></div>
+    </div>
+    <div class="tb-combat-p">
+      <div class="tb-combat-init">11</div>
+      <div style="flex:1;min-width:0">
+        <div class="tb-combat-nome">Guarda da Cripta <span class="tb-combat-tipo">NPC</span></div>
+        <div class="tb-cstat"><span class="tb-cstat-lb">VIT</span>
+          <div class="tb-cstat-bar"><div style="width:100%;background:var(--lr-blood-2)"></div></div>
+          <span class="tb-cstat-v">28/28</span>
+          <button class="tb-cstat-btn">−</button><button class="tb-cstat-btn">+</button></div>
+        <div class="tb-conds"><button class="tb-cond-add">➕ condição</button></div>
+      </div>
+      <div class="tb-combat-acoes"><button class="tb-mini-btn">⚔️</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="tb-turno open" id="tbTurno">
+  <div class="tb-turno-head">⚔️ <span class="tb-so-largo">Vez de </span><b class="tb-turno-nome">Rakhar Sombra</b>
+    <span class="tb-turno-hint">R3</span>
+    <span class="tb-turno-chips"><span class="tb-turno-chip on">⚡</span><span class="tb-turno-chip off">👣</span></span>
+    <div class="tb-turno-cond">Sob <b>Sangrando</b>: <i>perde 2 de Vitalidade no fim do turno</i></div>
+  </div>
+  <div class="tb-turno-acoes">
+    <button class="tb-btn tb-turno-btn">⚔️ Atacar</button>
+    <button class="tb-btn tb-turno-btn">✨ Manobra</button>
+    <button class="tb-btn tb-turno-btn tb-turno-travado">🚫 👣 Movimento</button>
+    <button class="tb-btn tb-turno-btn">🛡️ Guardar<span class="tb-so-largo"> Turno</span></button>
+    <button class="tb-btn tb-turno-btn tb-btn-primary">⏭️ Encerrar<span class="tb-so-largo"> Turno</span></button>
+  </div>
+  <div class="tb-turno-lista">
+    <button class="tb-btn tb-turno-btn">Corte de Passagem <i>1 Ação</i></button>
+    <button class="tb-btn tb-turno-btn tb-turno-sem-recurso">Golpe Cruzado <b>sem Energia</b></button>
+    <button class="tb-btn tb-turno-btn"><span class="tb-turno-multi">Investida</span> <i>2 formas</i></button>
+  </div>
+</div>
+
+<div class="tb-zoombar">
+  <button><svg class="tb-ico"><use href="#i-linha"/></svg></button>
+  <input type="range" id="tbZoomBarra" min="0" max="1000" value="500">
+  <button><svg class="tb-ico"><use href="#i-mais"/></svg></button>
+  <div id="tbCoords">1662, 3331 · 32%</div>
+</div>
+
+<script type="module">
+await new Promise(r => setTimeout(r, 80));
+const linhas = [];
+const t = (n, c) => linhas.push(`<tr><td>${n}</td><td class="${c ? 'ok' : 'fail'}">${c ? 'OK' : 'FALHOU'}</td></tr>`);
+const nota = (txt) => linhas.push(`<tr><td colspan="2" style="color:var(--lr-text-2)">${txt}</td></tr>`);
+const q = (s) => document.querySelector(s);
+const cx = (s) => q(s).getBoundingClientRect();
+const est = (s, p) => getComputedStyle(q(s))[p];
+const sobrepoe = (a, b) => !(a.right <= b.left || b.right <= a.left
+                          || a.bottom <= b.top || b.bottom <= a.top);
+
+// ===== a bancada ainda corresponde ao código de verdade? =====
+{
+    const fontes = (await Promise.all(['js/tab-combat.js', 'js/tab-turno.js']
+        .map(f => fetch(f + '?cb=' + Date.now()).then(r => r.text())))).join('\n');
+    const usadas = [...new Set([...document.querySelectorAll('[class]')]
+        .flatMap(e => [...e.classList])
+        .filter(c => /^tb-(combat|cstat|cond|turno|cena|teste|grau|faccao)/.test(c)))];
+    const orfas = usadas.filter(c => !fontes.includes(c));
+    t(`T01 · toda classe da bancada existe na fonte real (${usadas.length} classes)`, orfas.length === 0);
+    if (orfas.length) nota(`órfãs: ${orfas.join(', ')}`);
+}
+
+// ===== token que não existe: o defeito mais silencioso do CSS =====
+{
+    const css = await (await fetch('css/tabuleiro.css?cb=' + Date.now())).text();
+    const tokens = await (await fetch('../shared/tokens.css?cb=' + Date.now())).text();
+    const usados = [...new Set([...css.matchAll(/var\((--lr-[a-z0-9-]+)/g)].map(m => m[1]))];
+    const faltando = usados.filter(v => !tokens.includes(v + ':'));
+    t(`T02 · nenhum var(--lr-…) inexistente (${usados.length} usados)`, faltando.length === 0);
+    if (faltando.length) nota(`não existem: ${faltando.join(', ')}`);
+}
+
+// ===== hierarquia: o que a pessoa procura no meio do turno =====
+t('T03 · a iniciativa salta do nome no cartão',
+    parseFloat(est('.tb-combat-p.atual .tb-combat-init', 'fontSize'))
+    >= parseFloat(est('.tb-combat-p .tb-combat-nome', 'fontSize')));
+t('T04 · o ouro é só de quem está na vez',
+    est('.tb-combat-p:not(.atual) .tb-combat-init', 'color')
+    !== est('.tb-combat-p.atual .tb-combat-init', 'color'));
+t('T05 · o nome de quem joga é o maior do painel do turno',
+    parseFloat(est('.tb-turno-nome', 'fontSize')) > parseFloat(est('.tb-turno-hint', 'fontSize')));
+/* NÃO medir por `opacity`: é propriedade animada, e numa aba que não compõe
+   quadros a transição fica congelada no valor inicial — o teste dava falha com
+   a regra funcionando. A diferença tem de estar em algo estático, que é
+   também o que sustenta a leitura no sol do celular. */
+t('T06 · ação gasta e ação disponível não se confundem (aro)',
+    est('.tb-turno-chip.off', 'borderTopColor') !== est('.tb-turno-chip.on', 'borderTopColor'));
+t('T06b · e a gasta leva um risco, que não depende de cor',
+    getComputedStyle(q('.tb-turno-chip.off'), '::after').content !== 'none');
+
+// ===== alvo de toque =====
+{
+    const b = cx('.tb-cstat-btn');
+    t(`T07 · o ± de vital dá para acertar (${Math.round(b.width)}×${Math.round(b.height)}px)`,
+        Math.min(b.width, b.height) >= 24);
+}
+
+// ===== nada se cobre no rodapé =====
+t('T08 · o painel do turno não cobre o zoom', !sobrepoe(cx('.tb-turno'), cx('.tb-zoombar')));
+t('T09 · nem as coordenadas', !sobrepoe(cx('.tb-turno'), cx('#tbCoords')));
+t('T09b · as coordenadas viajam junto com o zoom, na mesma fileira',
+    q('#tbCoords').parentElement === q('.tb-zoombar'));
+t('T10 · e a janela de combate não invade o painel do turno',
+    !sobrepoe(cx('#tbCombatWin'), cx('.tb-turno')));
+t('T11 · nada estoura a janela pela direita',
+    document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
+
+// ===== contraste do que mais se lê no meio da troca de golpes =====
+const lum = (c) => {
+    const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => {
+        v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+    return .2126 * r + .7152 * g + .0722 * b;
+};
+const contraste = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, r) => r - p);
+    return (x + .05) / (y + .05); };
+/* Compõe até o primeiro ancestral opaco: medir contra um pai transparente dá
+   um número bonito e mentiroso. */
+const fundoReal = (e) => {
+    for (let n = e; n; n = n.parentElement) {
+        const c = getComputedStyle(n).backgroundColor;
+        if (Number((c.match(/[\d.]+/g) || [])[3] ?? 1) >= .95) return c;
+    }
+    return 'rgb(10, 13, 18)';
+};
+const alvos = [['T12', '.tb-combat-p.atual .tb-combat-init'], ['T13', '.tb-turno-nome'],
+               ['T14', '.tb-grau.pos'], ['T15', '.tb-grau.neg'], ['T16', '.tb-cond'],
+               ['T17', '.tb-combat-round'], ['T18', '.tb-cstat-lb']];
+for (const [id, sel] of alvos) {
+    const e = q(sel), r = contraste(getComputedStyle(e).color, fundoReal(e));
+    t(`${id} · ${sel} legível (${r.toFixed(2)}:1)`, r >= 4.5);
+}
+
+document.getElementById('saida').innerHTML = linhas.join('');
+const total = linhas.filter(l => />OK<|FALHOU/.test(l)).length;
+const f = linhas.filter(l => l.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML =
+    `<span class="${f ? 'fail' : 'ok'}">${total - f}/${total}</span>`
+    + (f ? ` — ${f} falha(s)` : ' — tudo certo');
+</script>
+</body></html>
