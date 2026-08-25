@@ -22,7 +22,9 @@
 
 <table id="saida"></table>
 <div id="placar"></div>
-<iframe id="palco" src="/?cb=1"></iframe>
+<!-- O src recebe o cache-buster no script: com um valor fixo, o navegador
+     devolvia a versão anterior da página e o teste media o Portal velho. -->
+<iframe id="palco"></iframe>
 
 <script type="module">
 const linhas = [];
@@ -100,6 +102,7 @@ const t = (nome, cond) => linhas.push(
 
 /* ===== D) a página viva: recursos, ícones e ordem ===== */
 const fr = document.getElementById('palco');
+fr.src = '/?cb=' + Date.now();
 await new Promise(r => { fr.onload = r; setTimeout(r, 8000); });
 await new Promise(r => setTimeout(r, 1500));
 const d = fr.contentDocument;
@@ -117,36 +120,93 @@ const w = fr.contentWindow;
     });
     t(`T13 · os ${usos.length} ícones do sprite continuam resolvendo`, quebrados.length === 0);
 
-    t('T14 · a barra de abas existe e está no cartão da mesa', !!d.getElementById('tabBar'));
-    t('T15 · a animação de entrada existe', !!d.getElementById('heroTrilho'));
-
-    /* Visitante (é o estado deste teste, sem login): a animação é o cartão de
-       visita e fica FORA das abas — `.wrap` está escondido para ele. */
-    const hero = d.getElementById('heroTrilho');
-    const home = d.getElementById('tab-home');
-    t('T16 · deslogado, a animação fica fora da aba Home', !home.contains(hero));
-    t('T17 · e logo abaixo do cabeçalho',
-        d.querySelector('header.portal-topo')?.nextElementSibling === hero);
-
-    // Logado: a barra de abas vem primeiro e a animação abre a Home.
-    w.heroNoLugar?.(true) ?? (function () {
-        // a função é de módulo; reproduz o movimento para medir a ordem
-        home.prepend(hero);
-    })();
-    d.querySelector('.wrap').style.display = '';
-    await new Promise(r => setTimeout(r, 60));
-
-    t('T18 · logado, a animação passa a ser o topo da aba Home',
-        home.contains(hero) && home.firstElementChild === hero);
+    /* ===== o cabeçalho é a navegação ===== */
+    const topo = d.querySelector('header.portal-topo');
     const abas = d.getElementById('tabBar');
-    t('T19 · e as abas ficam ACIMA da animação',
-        abas.getBoundingClientRect().top < hero.getBoundingClientRect().top);
-    t('T20 · as abas grudam no topo enquanto se rola',
-        w.getComputedStyle(abas).position === 'sticky');
-    t('T21 · o cartão da mesa não estraga o grude (overflow: clip, não hidden)',
-        w.getComputedStyle(d.querySelector('.sheet')).overflow !== 'hidden');
-    t('T22 · e elas param logo abaixo do cabeçalho, sem sobrepor',
-        w.getComputedStyle(abas).top === w.getComputedStyle(d.querySelector('.portal-topo')).minHeight);
+    t('T14 · a barra de abas mora DENTRO do cabeçalho', topo.contains(abas));
+    t('T15 · o botão "Buscar no cânone" saiu do cabeçalho (a Home já tem busca)',
+        !topo.querySelector('.portal-busca-atalho'));
+    t('T16 · a primeira aba é "Cânone", não "Home"',
+        /Cânone/.test(abas.querySelector('.tab').textContent)
+        && !/Home/.test(abas.textContent));
+    // Visitante não tem mesa: as abas só aparecem depois de entrar.
+    t('T17 · deslogado, as abas ficam escondidas', w.getComputedStyle(abas).display === 'none');
+    d.body.classList.remove('portal-deslogado');
+    d.body.classList.add('portal-logado');
+    await new Promise(r => setTimeout(r, 30));
+    t('T17b · logado, elas aparecem ao lado da marca, na mesma faixa',
+        abas.getBoundingClientRect().width > 0
+        && Math.abs(abas.getBoundingClientRect().top
+            - topo.querySelector('.portal-marca').getBoundingClientRect().top) < 40);
+
+    /* ===== o cartão que embrulhava tudo ===== */
+    t('T18 · o bloco com borda em volta da mesa não existe mais',
+        !d.querySelector('.wrap .sheet'));
+
+    /* ===== a animação, de ponta a ponta ===== */
+    const hero = d.getElementById('heroTrilho');
+    const wrap = d.querySelector('.wrap');
+    t('T19 · a animação é seção de topo, fora do container da mesa',
+        !!hero && !wrap.contains(hero));
+    /* É o que a deixa ir de ponta a ponta sem `100vw` — que conta a barra de
+       rolagem e criaria rolagem horizontal. */
+    const larguraJanela = d.documentElement.clientWidth;
+    t(`T20 · e ocupa a largura inteira (${Math.round(hero.getBoundingClientRect().width)}px de ${larguraJanela}px)`,
+        Math.abs(hero.getBoundingClientRect().width - larguraJanela) <= 1);
+    t('T21 · sem empurrar a página para o lado',
+        d.documentElement.scrollWidth <= larguraJanela + 1);
+    t('T22 · o palco cobre a altura da tela', hero.querySelector('.portal-hero-palco'));
+
+    /* ===== a animação some fora do Cânone ===== */
+    w.event = { currentTarget: abas.querySelectorAll('.tab')[1] };
+    w.switchTab('personagens');
+    await new Promise(r => setTimeout(r, 30));
+    t('T23 · trocar de aba esconde a animação', hero.hidden);
+    w.event = { currentTarget: abas.querySelector('.tab') };
+    w.switchTab('home');
+    await new Promise(r => setTimeout(r, 30));
+    t('T24 · e voltar ao Cânone traz de volta', !hero.hidden);
+
+    /* ===== a aba Portal: formato sugerido e posição do texto ===== */
+    {
+        t('T25 · a aba Portal diz o formato esperado das imagens',
+            /16:9/.test(d.querySelector('.cfg-formato')?.textContent || '')
+            && /1920×1080/.test(d.querySelector('.cfg-formato')?.textContent || ''));
+
+        const selects = ['cfgMostrarTitulo', 'cfgMostrarCta', 'cfgVertical', 'cfgHorizontal', 'cfgVeu'];
+        t('T26 · e traz os cinco controles do texto sobre a arte',
+            selects.every(id => d.getElementById(id)));
+
+        const palco = d.querySelector('.portal-hero-palco');
+        const texto = d.querySelector('.portal-hero-texto');
+        const cta = d.querySelector('.portal-hero-cta');
+
+        w.portalHeroAplicarTexto({ vertical: 'base', horizontal: 'esquerda' });
+        await new Promise(r => setTimeout(r, 30));
+        t('T27 · mudar a posição move o texto de verdade',
+            palco.dataset.v === 'base' && palco.dataset.h === 'esquerda'
+            && w.getComputedStyle(palco).alignItems === 'end'
+            && w.getComputedStyle(texto).textAlign === 'left');
+
+        w.portalHeroAplicarTexto({ titulo: false, cta: true });
+        await new Promise(r => setTimeout(r, 30));
+        t('T28 · esconder o título deixa o botão',
+            w.getComputedStyle(texto.querySelector('h1')).display === 'none' && !cta.hidden);
+
+        w.portalHeroAplicarTexto({ titulo: false, cta: false });
+        await new Promise(r => setTimeout(r, 30));
+        t('T29 · esconder os dois some com o bloco inteiro', texto.hidden);
+
+        w.portalHeroAplicarTexto({ veu: 'nenhum' });
+        await new Promise(r => setTimeout(r, 30));
+        t('T30 · e o véu sobre a arte também é escolha',
+            w.getComputedStyle(d.querySelector('.portal-hero-veu')).display === 'none');
+
+        w.portalHeroAplicarTexto(null);
+        await new Promise(r => setTimeout(r, 30));
+        t('T31 · sem config, volta ao padrão (centro, com título e botão)',
+            palco.dataset.v === 'centro' && !texto.hidden && !cta.hidden);
+    }
 }
 
 document.getElementById('saida').innerHTML = linhas.join('');

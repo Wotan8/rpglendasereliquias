@@ -12,6 +12,35 @@
 let imagens = [];      // [{url, nome}] na ordem da animação
 let ativo = false;
 
+/* Como o título e o botão se põem por cima da arte. Vive no mesmo doc das
+   imagens porque é a mesma decisão: uma paisagem com céu limpo em cima pede o
+   texto lá, uma com o assunto ao centro pede embaixo. */
+const TEXTO_PADRAO = { titulo: true, cta: true, vertical: 'centro', horizontal: 'centro', veu: 'medio' };
+const CAMPOS = {
+    cfgMostrarTitulo: 'titulo', cfgMostrarCta: 'cta',
+    cfgVertical: 'vertical', cfgHorizontal: 'horizontal', cfgVeu: 'veu',
+};
+
+/** Lê os selects. Os dois primeiros são "1"/"0" e viram booleano. */
+function lerTexto() {
+    const t = { ...TEXTO_PADRAO };
+    for (const [id, chave] of Object.entries(CAMPOS)) {
+        const el = $(id);
+        if (!el) continue;
+        t[chave] = (chave === 'titulo' || chave === 'cta') ? el.value === '1' : el.value;
+    }
+    return t;
+}
+
+function pintarTexto(t) {
+    const v = { ...TEXTO_PADRAO, ...(t || {}) };
+    for (const [id, chave] of Object.entries(CAMPOS)) {
+        const el = $(id);
+        if (!el) continue;
+        el.value = (chave === 'titulo' || chave === 'cta') ? (v[chave] ? '1' : '0') : v[chave];
+    }
+}
+
 const $ = (id) => document.getElementById(id);
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -63,6 +92,7 @@ async function carregarExistente() {
             imagens = (d.imagens || []).map((url, i) => ({
                 url, nome: (d.nomes && d.nomes[i]) || url.split('%2F').pop().split('?')[0]
             }));
+            pintarTexto(d.texto);
         }
     } catch (e) {
         console.warn('Config do Portal: sem doc existente.', e);
@@ -105,9 +135,13 @@ async function salvar() {
         await setDoc(doc(window.db, 'portal-config', 'hero'), {
             imagens: imagens.map(i => i.url),
             nomes: imagens.map(i => i.nome),
+            texto: lerTexto(),
             atualizadoEm: new Date().toISOString()
         });
-        status('✅ Portal salvo! Recarregue a página para ver a sequência no hero.');
+        // O texto vale na hora; a sequência de imagens já está carregada e só
+        // troca no próximo carregamento da página.
+        window.portalHeroAplicarTexto?.(lerTexto());
+        status('✅ Portal salvo! O texto já mudou; recarregue para ver a sequência.');
     } catch (e) {
         console.error('Salvar config falhou:', e);
         status('❌ Não foi possível salvar: ' + e.message);
@@ -133,6 +167,11 @@ function ligar() {
     });
 
     $('btnSalvarPortalCfg').addEventListener('click', salvar);
+
+    // Prévia ao vivo: mexer no select já mostra o resultado na animação.
+    for (const id of Object.keys(CAMPOS)) {
+        $(id)?.addEventListener('change', () => window.portalHeroAplicarTexto?.(lerTexto()));
+    }
 
     carregarExistente();
 }

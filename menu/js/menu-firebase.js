@@ -145,7 +145,6 @@ onAuthStateChanged(auth, async (user) => {
         if (btnEntrar) btnEntrar.hidden = true;
         document.body.classList.add('portal-logado');
         document.body.classList.remove('portal-deslogado');
-        heroNoLugar(true);
         document.dispatchEvent(new CustomEvent('portal:logado'));
     } else {
         // Não autenticado → SEM redirect: a própria página vira o login.
@@ -159,31 +158,9 @@ onAuthStateChanged(auth, async (user) => {
         if (btnEntrar) btnEntrar.hidden = false;
         document.body.classList.add('portal-deslogado');
         document.body.classList.remove('portal-logado');
-        heroNoLugar(false);
         document.dispatchEvent(new CustomEvent('portal:deslogado'));
     }
 });
-
-/**
- * Onde a animação de entrada mora, conforme quem está olhando.
- *
- * Visitante: logo abaixo do topo, ocupando a tela — é o cartão de visita, e
- * precisa estar fora das abas porque `.wrap` está escondido para ele.
- * Logado: primeira coisa da aba Home, com as abas acima dela. Assim a barra de
- * abas é o que se vê ao entrar, e a animação não empurra a mesa para baixo em
- * toda visita.
- *
- * MOVE o nó, não duplica: são dois `<canvas>` animando ao mesmo tempo se
- * houver duas cópias.
- */
-function heroNoLugar(logado) {
-    const hero = document.getElementById('heroTrilho');
-    const home = document.getElementById('tab-home');
-    const topo = document.querySelector('header.portal-topo');
-    if (!hero || !home || !topo) return;
-    if (logado) home.prepend(hero);
-    else topo.after(hero);
-}
 
 // ===== CARREGAR PERSONAGENS (coleção 'char') =====
 async function loadCharacters() {
@@ -859,6 +836,12 @@ window.switchTab = function (tabName) {
 
     event.currentTarget.classList.add('active');
     document.getElementById(`tab-${tabName}`).classList.add('active');
+
+    /* A animação de entrada é o topo do Cânone, mas mora FORA do container da
+       mesa — é o que a deixa ir de ponta a ponta sem truque de largura. Some
+       nas outras abas, que não são apresentação. */
+    const hero = document.getElementById('heroTrilho');
+    if (hero) hero.hidden = tabName !== 'home';
 
     if (tabName === 'notificacoes') {
         markNotificationsAsRead();

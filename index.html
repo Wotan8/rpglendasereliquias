@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="/shared/acervo.css?v=2">
 <link rel="stylesheet" href="/shared/dialogo.css?v=2">
 <script type="module">import '/shared/dialogo.js?v=2';</script>
-    <link rel="stylesheet" href="/menu/css/menu.css?v=17">
+    <link rel="stylesheet" href="/menu/css/menu.css?v=18">
     <link rel="stylesheet" href="/shared/tokens.css?v=11">
     <script src="/shared/theme.js"></script>
     <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout PagBank contra bots/abuso. -->
@@ -44,9 +44,48 @@
         <a class="portal-marca" href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false">
             Lendas <em>&amp;</em> Relíquias
         </a>
+        <!-- As abas moram no cabeçalho: é a navegação do site, e lugar de
+             navegação é o topo. Escondidas para quem não entrou (CSS). -->
+        <div class="tabs" id="tabBar">
+            <button class="tab active" onclick="switchTab('home')">
+                <svg class="lr-ico"><use href="#i-livro" /></svg> Cânone</button>
+            <button class="tab" onclick="switchTab('personagens')">
+                <svg class="lr-ico"><use href="#i-pessoas" /></svg> Personagens</button>
+            <button class="tab" onclick="switchTab('inventario')">
+                <svg class="lr-ico"><use href="#i-mochila" /></svg> Repertório</button>
+            <button class="tab" onclick="switchTab('loja')">
+                <svg class="lr-ico"><use href="#i-carrinho" /></svg> Loja</button>
+            <button class="tab" onclick="switchTab('metas')">
+                <svg class="lr-ico"><use href="#i-foco" /></svg> Metas</button>
+            <button class="tab" onclick="switchTab('notificacoes')" style="position:relative">
+                <svg class="lr-ico"><use href="#i-megafone" /></svg> Notificações
+                <span class="badge" id="notificationBadge" style="display:none">0</span>
+            </button>
+            <button class="tab" id="tabPortalCfg" onclick="switchTab('portalcfg')" style="display:none">
+                <svg class="lr-ico"><use href="#i-engrenagem" /></svg> Portal</button>
+            <div class="frag-wallet" title="Fragmentos — sua moeda para adquirir itens na Loja"
+                onclick="switchTab('loja')">
+                <svg class="frag-gem" viewBox="0 0 24 24" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="fragGemGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#a5b4fc" />
+                            <stop offset="45%" stop-color="#6366f1" />
+                            <stop offset="100%" stop-color="#4338ca" />
+                        </linearGradient>
+                    </defs>
+                    <polygon points="6,3 18,3 22,9 12,21 2,9" fill="url(#fragGemGrad)" stroke="#c7d2fe"
+                        stroke-width="0.8" stroke-linejoin="round" />
+                    <polyline points="2,9 22,9" stroke="#e0e7ff" stroke-width="0.7" opacity="0.85" />
+                    <polyline points="6,3 8.5,9 12,21 15.5,9 18,3" fill="none" stroke="#e0e7ff" stroke-width="0.7"
+                        opacity="0.7" />
+                    <polygon points="8,4.2 11,4.2 9,7" fill="#ffffff" opacity="0.55" />
+                </svg>
+                <span class="frag-amount" id="fragmentosValue">0</span>
+                <span class="frag-label">Frag$</span>
+            </div>
+        </div>
+
         <div class="spacer"></div>
-        <button class="portal-busca-atalho" onclick="portalIrBusca()" title="Buscar no cânone (atalho: /)">
-            🔎<span class="portal-busca-rotulo"> Buscar no cânone</span></button>
         <button id="btnThemeToggle" class="portal-tema" onclick="toggleTheme()" title="Alternar tema">🌙</button>
         <button id="btnEntrarTop" class="portal-entrar" onclick="portalIrLogin()" hidden>Entrar</button>
 
@@ -173,50 +212,11 @@
     </section>
 
     <!-- ================= MESA (logado — conteúdo original do menu) ===== -->
+    <!-- A mesa não mora mais num cartão: o bloco com borda e sombra em volta de
+         tudo só encolhia a área útil e competia com o cabeçalho. Cada aba
+         desenha o próprio conteúdo. -->
     <div class="wrap" style="display:none">
-        <div class="sheet">
-
-            <div id="alertArea"></div>
-
-            <!-- Tabs — Home (o Cânone) é a aba padrão -->
-            <div class="tabs" id="tabBar">
-                <button class="tab active" onclick="switchTab('home')">
-                    <svg class="lr-ico"><use href="#i-livro" /></svg> Home</button>
-                <button class="tab" onclick="switchTab('personagens')">
-                    <svg class="lr-ico"><use href="#i-pessoas" /></svg> Personagens</button>
-                <button class="tab" onclick="switchTab('inventario')">
-                    <svg class="lr-ico"><use href="#i-mochila" /></svg> Repertório</button>
-                <button class="tab" onclick="switchTab('loja')">
-                    <svg class="lr-ico"><use href="#i-carrinho" /></svg> Loja</button>
-                <button class="tab" onclick="switchTab('metas')">
-                    <svg class="lr-ico"><use href="#i-foco" /></svg> Metas</button>
-                <button class="tab" onclick="switchTab('notificacoes')" style="position:relative">
-                    <svg class="lr-ico"><use href="#i-megafone" /></svg> Notificações
-                    <span class="badge" id="notificationBadge" style="display:none">0</span>
-                </button>
-                <button class="tab" id="tabPortalCfg" onclick="switchTab('portalcfg')" style="display:none">
-                    <svg class="lr-ico"><use href="#i-engrenagem" /></svg> Portal</button>
-                <div class="frag-wallet" title="Fragmentos — sua moeda para adquirir itens na Loja"
-                    onclick="switchTab('loja')">
-                    <svg class="frag-gem" viewBox="0 0 24 24" aria-hidden="true">
-                        <defs>
-                            <linearGradient id="fragGemGrad" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stop-color="#a5b4fc" />
-                                <stop offset="45%" stop-color="#6366f1" />
-                                <stop offset="100%" stop-color="#4338ca" />
-                            </linearGradient>
-                        </defs>
-                        <polygon points="6,3 18,3 22,9 12,21 2,9" fill="url(#fragGemGrad)" stroke="#c7d2fe"
-                            stroke-width="0.8" stroke-linejoin="round" />
-                        <polyline points="2,9 22,9" stroke="#e0e7ff" stroke-width="0.7" opacity="0.85" />
-                        <polyline points="6,3 8.5,9 12,21 15.5,9 18,3" fill="none" stroke="#e0e7ff" stroke-width="0.7"
-                            opacity="0.7" />
-                        <polygon points="8,4.2 11,4.2 9,7" fill="#ffffff" opacity="0.55" />
-                    </svg>
-                    <span class="frag-amount" id="fragmentosValue">0</span>
-                    <span class="frag-label">Frag$</span>
-                </div>
-            </div>
+        <div id="alertArea"></div>
 
             <!-- ======== ABA HOME — O Cânone de Vasteluna (padrão) ======== -->
             <div class="tab-content active" id="tab-home">
@@ -372,10 +372,27 @@
                 <div class="menu-header" style="margin-bottom:10px">
                     <h1 style="font-size:1.2rem">Configurar Portal</h1>
                 </div>
-                <p class="notifications-info" style="margin-bottom:20px">
+                <p class="notifications-info">
                     As imagens abaixo viram a animação guiada pelo scroll na entrada do Portal, na ordem da
-                    lista. Sem nenhuma imagem, o selo rúnico desenhado é usado. Prefira WebP/JPEG de até
-                    ~300&nbsp;KB por quadro.</p>
+                    lista. Sem nenhuma imagem, o selo rúnico desenhado é usado.</p>
+
+                <!-- O quadro é desenhado em "cover" num palco que ocupa a tela
+                     inteira: imagem fora do formato não distorce, é CORTADA. Dizer
+                     o formato aqui evita o retrabalho de descobrir isso subindo. -->
+                <div class="cfg-formato">
+                    <strong>📐 Formato das imagens</strong>
+                    <ul>
+                        <li><b>Proporção 16:9 deitada</b> — <b>1920×1080</b> serve bem; 2560×1440 se
+                            quiser folga em monitor grande.</li>
+                        <li><b>Todas do mesmo tamanho.</b> Quadros de proporções diferentes pulam de
+                            enquadramento a cada troca.</li>
+                        <li><b>Assunto no centro.</b> A tela do visitante pode ser mais alta ou mais
+                            larga que 16:9, e a sobra é cortada pelas beiradas.</li>
+                        <li><b>WebP ou JPEG, até ~300&nbsp;KB cada.</b> A sequência inteira é baixada
+                            antes de animar.</li>
+                        <li><b>8 a 24 quadros.</b> Menos que isso a animação salta; mais só pesa.</li>
+                    </ul>
+                </div>
 
                 <div class="cfg-dropzone" id="cfgDropzone">
                     <input type="file" id="cfgArquivos" accept="image/*" multiple hidden>
@@ -387,13 +404,61 @@
 
                 <div class="cfg-seq-lista" id="cfgSeqLista"></div>
 
+                <!-- Título e botão por cima da animação. Dependem da arte: uma
+                     imagem com o assunto no meio pede o texto embaixo; uma
+                     paisagem com céu limpo em cima pede o texto lá. -->
+                <div class="menu-header" style="margin:24px 0 10px">
+                    <h1 style="font-size:1.05rem">Texto sobre a animação</h1>
+                </div>
+
+                <div class="cfg-grade">
+                    <label class="cfg-campo">
+                        <span>Título</span>
+                        <select id="cfgMostrarTitulo">
+                            <option value="1">Mostrar “Lendas &amp; Relíquias” e o lema</option>
+                            <option value="0">Esconder — só a arte</option>
+                        </select>
+                    </label>
+                    <label class="cfg-campo">
+                        <span>Botão “Explorar o cânone”</span>
+                        <select id="cfgMostrarCta">
+                            <option value="1">Mostrar</option>
+                            <option value="0">Esconder</option>
+                        </select>
+                    </label>
+                    <label class="cfg-campo">
+                        <span>Posição na vertical</span>
+                        <select id="cfgVertical">
+                            <option value="centro">Centro</option>
+                            <option value="topo">Topo</option>
+                            <option value="base">Rodapé</option>
+                        </select>
+                    </label>
+                    <label class="cfg-campo">
+                        <span>Posição na horizontal</span>
+                        <select id="cfgHorizontal">
+                            <option value="centro">Centro</option>
+                            <option value="esquerda">Esquerda</option>
+                            <option value="direita">Direita</option>
+                        </select>
+                    </label>
+                    <label class="cfg-campo">
+                        <span>Véu escuro sobre a arte</span>
+                        <select id="cfgVeu">
+                            <option value="medio">Médio — padrão</option>
+                            <option value="forte">Forte — arte clara, texto branco</option>
+                            <option value="leve">Leve — arte já escura</option>
+                            <option value="nenhum">Nenhum</option>
+                        </select>
+                    </label>
+                </div>
+
                 <div class="cfg-acoes">
                     <button class="btn-login" id="btnSalvarPortalCfg" style="width:auto;padding:10px 26px">
                         Salvar Portal</button>
                 </div>
             </div>
 
-        </div>
     </div>
 
     <footer class="portal-rodape">🜲 Lendas &amp; Relíquias</footer>
@@ -444,14 +509,14 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="/menu/js/menu-firebase.js?v=12"></script>
+    <script type="module" src="/menu/js/menu-firebase.js?v=13"></script>
     <!-- O card de livro da estante vem daqui: o mesmo do Escritório do
          Cronista e das telas do mestre. Script clássico, então entra ANTES
          do módulo que o usa. -->
     <script src="/shared/livro-vinculado.js?v=8"></script>
     <script type="module" src="/menu/js/menu-wiki.js?v=5"></script>
-    <script type="module" src="/menu/js/menu-portal-config.js?v=1"></script>
-    <script src="/menu/js/menu-hero.js?v=2"></script>
+    <script type="module" src="/menu/js/menu-portal-config.js?v=2"></script>
+    <script src="/menu/js/menu-hero.js?v=3"></script>
 
 </body>
 

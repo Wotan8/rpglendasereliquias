@@ -157,6 +157,26 @@
     var desenharSelo = desenhar;
     desenhar = function (t) { frames.length ? desenharFrames(t) : desenharSelo(t); };
 
+    /* Título e botão por cima da arte: quem manda é o Criador, na aba Portal.
+       Vira atributo no palco e o CSS posiciona — sem estilo inline, para o
+       tema e o celular continuarem tendo a palavra. */
+    var TEXTO_PADRAO = { titulo: true, cta: true, vertical: 'centro', horizontal: 'centro', veu: 'medio' };
+
+    window.portalHeroAplicarTexto = function (t) {
+        var v = Object.assign({}, TEXTO_PADRAO, t || {});
+        var palco = canvas.parentElement;
+        var texto = palco && palco.querySelector('.portal-hero-texto');
+        var cta = texto && texto.querySelector('.portal-hero-cta');
+        if (!palco || !texto) return;
+        palco.dataset.v = v.vertical;
+        palco.dataset.h = v.horizontal;
+        palco.dataset.veu = v.veu;
+        texto.hidden = !v.titulo && !v.cta;
+        // Esconder o título mas manter o botão: o h1 e o lema saem, o CTA fica.
+        texto.classList.toggle('sem-titulo', !v.titulo);
+        if (cta) cta.hidden = !v.cta;
+    };
+
     /* Sequência configurada pelo Criador (portal-config/hero — leitura
        pública). Sem doc ou sem imagens: o selo continua. */
     function carregarConfig() {
@@ -165,7 +185,9 @@
         import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js')
             .then(function (m) { return m.getDoc(m.doc(window.db, 'portal-config', 'hero')); })
             .then(function (snap) {
-                var urls = snap.exists() ? (snap.data().imagens || []) : [];
+                var d = snap.exists() ? snap.data() : {};
+                window.portalHeroAplicarTexto(d.texto);
+                var urls = d.imagens || [];
                 if (!urls.length) return;
                 return Promise.allSettled(urls.map(function (u) {
                     return new Promise(function (ok, erro) {
