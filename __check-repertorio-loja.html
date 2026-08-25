@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>__check — Repertório e Loja</title>
+<title>__check — Repertório · Loja · Metas · Notificações</title>
 <link rel="stylesheet" href="shared/tokens.css">
 <link rel="stylesheet" href="shared/lendas-reliquias.css">
+<link rel="stylesheet" href="shared/detalhe.css">
+<script type="module">import './shared/detalhe.js';</script>
 <link rel="stylesheet" href="menu/css/menu.css">
 <script>
   for (const l of document.querySelectorAll('link[href*="menu.css"]')) l.href += '?cb=' + Date.now();
@@ -21,7 +23,7 @@
   .barra { display:flex; gap:8px; margin-bottom:12px; }
 </style></head>
 <body>
-<h1>🎒 Repertório · 🛒 Loja</h1>
+<h1>🎒 Repertório · 🛒 Loja · 🎯 Metas · 🔔 Notificações</h1>
 <p class="nota">As cinco etiquetas do item eram <code>background:#hex</code> INLINE no JS — cinco
    cores saturadas fora da paleta, repetidas nos dois lugares. Aqui se confere que viraram a mesma
    pílula tingida dos selos de livro, que a quantidade saiu do título, e que os dois topos pararam
@@ -58,6 +60,67 @@
   <div class="inventory-grid" id="grid-loja"></div>
 </div>
 
+<h2>Metas</h2>
+<div class="palco">
+  <div class="rep-topo">
+    <p class="rep-explica">Cada peça adquirida na Loja vira um apoio e empurra as metas abaixo.
+       Elas são <strong>coletivas</strong>.</p>
+  </div>
+  <div class="metas-grid">
+    <article class="meta-card">
+      <header class="meta-card-head">
+        <h2 class="meta-card-titulo">Reerguer a Ponte de Tulo</h2>
+        <span class="meta-card-etapas">1/3 etapas</span>
+      </header>
+      <p class="meta-card-desc">A travessia caiu no inverno passado.</p>
+      <footer class="meta-card-foot">
+        <div class="meta-stat"><span class="meta-stat-num">12</span>
+          <span class="meta-stat-lbl">apoios da mesa</span></div>
+        <div class="meta-stat is-mine"><span class="meta-stat-num">3</span>
+          <span class="meta-stat-lbl">seus apoios</span></div>
+      </footer>
+    </article>
+    <article class="meta-card is-complete">
+      <header class="meta-card-head">
+        <h2 class="meta-card-titulo">Traduzir o Códice Abissal</h2>
+        <span class="meta-card-etapas">3/3 etapas</span>
+      </header>
+      <footer class="meta-card-foot">
+        <div class="meta-stat"><span class="meta-stat-num">40</span>
+          <span class="meta-stat-lbl">apoios da mesa</span></div>
+      </footer>
+    </article>
+  </div>
+</div>
+
+<h2>Notificações</h2>
+<div class="palco">
+  <div class="rep-topo"><p class="rep-explica">As 100 mais recentes.</p></div>
+  <div id="notificationsList">
+    <div class="notification-item new">
+      <div class="notification-content">
+        <div class="notification-message">O Cronista publicou um capítulo novo no Livro de Regras.</div>
+        <div class="notification-time">há 2 horas</div>
+      </div>
+      <div class="notification-icon master">📜</div>
+    </div>
+    <div class="notification-item">
+      <div class="notification-content">
+        <div class="notification-message">Você recebeu 20 EXP pela sessão 47.</div>
+        <div class="notification-time">ontem</div>
+      </div>
+      <div class="notification-icon up">⬆️</div>
+    </div>
+    <div class="notification-item">
+      <div class="notification-content">
+        <div class="notification-message">Uma meta da campanha foi concluída.</div>
+        <div class="notification-time">3 dias atrás</div>
+      </div>
+      <div class="notification-icon importante">🎯</div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 if (document.readyState !== 'complete') {
     await new Promise(r => window.addEventListener('load', r, { once: true }));
@@ -67,8 +130,12 @@ const linhas = [];
 const t = (nome, cond) => linhas.push(
     `<tr><td>${nome}</td><td class="${cond ? 'ok' : 'fail'}">${cond ? 'OK' : 'FALHOU'}</td></tr>`);
 const cx = (e) => e.getBoundingClientRect();
-const cs = (e) => getComputedStyle(e);
+// Aceita o pseudo-elemento: sem o segundo argumento, `cs(x, '::before')`
+// devolvia o estilo do PRÓPRIO elemento e o teste media a coisa errada.
+const cs = (e, pseudo) => getComputedStyle(e, pseudo || null);
 const esc = (x) => String(x ?? '');
+// O index.html de verdade: vários testes conferem o que ele NÃO tem mais.
+const html = await (await fetch('/index.html', { cache: 'no-store' })).text();
 
 /* As MESMAS etiquetas do arquivo real, recortadas dele — se alguém acrescentar
    um tipo lá sem classe aqui, este teste vê. */
@@ -78,26 +145,51 @@ const i1 = src.indexOf('\n}\n', src.indexOf('function etiquetasDoItem')) + 3;
 if (i0 < 0 || i1 < 3) throw new Error('as etiquetas mudaram de forma — reveja o recorte');
 const etiquetasDoItem = new Function('escapeHtml', src.slice(i0, i1) + '\nreturn etiquetasDoItem;')(esc);
 
+const FICHA_LONGA = [
+    'MEDALHÃO DO VIAJANTE ASTUTO (Amuleto +5)',
+    'Características Base', '',
+    'Tipo: Amuleto/Colar',
+    'Tamanho: 0,3 (cabe na palma da mão)',
+    'Peso: 1 (Leve)',
+    'Dureza: 2 (Bronze e vidro)',
+    'Integridade: 2,3', '',
+    'Propriedades Mágicas',
+    'Sorte do Viajante (Passivo)',
+    '+2 dados em testes de Sobrevivência em estrada.',
+].join('\n');
+
 const ITENS = [
     { nome: 'Frasco de Éter Bruto', quantidade: 3, imagem: '', formaRecebimento: 'Entregue na sessão',
       descricao: 'Um vidro grosso, lacrado com cera preta.',
       isExp: true, expAmount: 20, isNarrativo: true },
+    // Ficha de trinta linhas: era ela que esticava a coluna inteira da grade.
+    { nome: 'Medalhão do Viajante', quantidade: 1, imagem: '', formaRecebimento: 'Digital, na ficha',
+      descricao: FICHA_LONGA, isNarrativo: true },
     { nome: 'Selo do Cronista', quantidade: 1, imagem: '', formaRecebimento: 'Digital, na ficha',
       isRoleta: true, roletaGiros: 2, isRerolagem: true, rerolagensAmount: 1,
       isItemPersonagem: true, personagemItensVinculados: [1] },
 ];
 
+const _repDetalhes = [];
+window.abrirDetalheItem = (i) => window.LRDetalhe?.abrirDetalhe(_repDetalhes[i]);
+
 const cartao = (item) => {
     const qtd = Number(item.quantidade) || 0;
+    const desc = String(item.descricao || '');
+    const i = _repDetalhes.push({ nome: item.nome, icone: '🎒', descricao: desc,
+        nota: `Recebimento: ${item.formaRecebimento}` }) - 1;
+    const longa = desc.length > 180;
     return `
-    <div class="loja-card">
+    <div class="loja-card${longa ? ' rep-abrivel' : ''}"
+        ${longa ? `onclick="abrirDetalheItem(${i})"` : ''}>
         <div class="loja-card-arte">
             <div class="loja-card-media inventory-media-fallback"></div>
             ${qtd > 1 ? `<span class="rep-qtd">×${qtd}</span>` : ''}
         </div>
         <div class="loja-card-body">
             <div class="loja-card-title">${item.nome}</div>
-            ${item.descricao ? `<div class="loja-card-desc">${item.descricao}</div>` : ''}
+            ${desc ? `<div class="loja-card-desc${longa ? ' rep-desc-curta' : ''}">${desc}</div>` : ''}
+            ${longa ? '<div class="rep-mais">🔎 Clique para ver a ficha completa</div>' : ''}
             <div class="loja-card-tags">${etiquetasDoItem(item)}</div>
             <div class="rep-recebimento"><span>Recebimento</span><strong>${item.formaRecebimento}</strong></div>
         </div>
@@ -114,8 +206,8 @@ document.getElementById('grid-loja').innerHTML = `
             <div class="loja-card-meta">🎯 Pode ser atrelado a até 2 Meta(s)</div>
             <div class="loja-card-tags">${etiquetasDoItem({ isExp: true, expAmount: 40, isNarrativo: true })}</div>
             <div class="loja-card-actions">
-                <button class="loja-btn loja-btn-frag"><span>💎 120 Frag$</span><small>Comprar com Fragmentos</small></button>
-                <button class="loja-btn loja-btn-real"><span>💵 R$ 25,00</span><small>Pagar direto ao mestre</small></button>
+                <button class="loja-btn loja-btn-frag" title="Comprar com Fragmentos">💎 120 Frag$</button>
+                <button class="loja-btn loja-btn-real" title="Pagar direto ao mestre">💵 R$ 25,00</button>
             </div>
             <div class="loja-card-secure">🤝 Você combina o pagamento com o mestre</div>
         </div>
@@ -156,7 +248,6 @@ document.getElementById('grid-loja').innerHTML = `
 {
     /* Lê o ARQUIVO, não esta página: o título deste harness também diz
        "Repertório" e "Loja", e o teste acusava a si mesmo. */
-    const html = await (await fetch('/index.html', { cache: 'no-store' })).text();
     t('T10 · nenhum dos dois topos repete o nome da aba',
         !/Repertório de Jogador|Loja de Recompensas/.test(html)
         && !/class="inventory-title"/.test(html));
@@ -187,6 +278,85 @@ document.getElementById('grid-loja').innerHTML = `
         btns.length === 2);
 }
 
+/* ===== ficha longa: resumo no cartão, tudo na janela ===== */
+{
+    const cards = [...document.querySelectorAll('#grid-rep .loja-card')];
+    const curto = cards.find(c => !c.classList.contains('rep-abrivel'));
+    const longo = cards.find(c => c.classList.contains('rep-abrivel'));
+
+    t('T17 · ficha curta continua inteira no cartão, sem convite',
+        !!curto && !curto.querySelector('.rep-mais'));
+    t('T18 · ficha longa é cortada no cartão', !!longo && !!longo.querySelector('.rep-desc-curta'));
+    t('T19 · e não estica a coluna: os dois cartões têm alturas próximas',
+        Math.abs(cx(curto).height - cx(longo).height) < cx(curto).height * 0.6);
+    t('T20 · o cartão longo convida ao clique', !!longo.querySelector('.rep-mais'));
+
+    longo.click();
+    await new Promise(r => setTimeout(r, 120));
+    const janela = document.querySelector('dialog.lr-det-janela');
+    t('T21 · o clique abre a janela com a ficha', !!janela && janela.open);
+    t('T22 · com o nome do item no topo',
+        /Medalhão do Viajante/.test(janela.querySelector('.lr-det-nome')?.textContent || ''));
+    t('T23 · e a ficha INTEIRA, não o resumo',
+        /Integridade: 2,3/.test(janela.textContent) && /Sorte do Viajante/.test(janela.textContent));
+    t('T24 · com as quebras de linha do cadastro preservadas',
+        getComputedStyle(janela.querySelector('.lr-det-desc')).whiteSpace === 'pre-line');
+    janela.close();
+}
+
+/* ===== os botões de compra ===== */
+{
+    const btns = [...document.querySelectorAll('#grid-loja .loja-btn')];
+    /* "Comprar com Fragmentos" e "Pagar direto ao mestre" embaixo do preço só
+       adiavam o clique. O preço e o ícone já dizem tudo; o resto foi para o
+       `title`. */
+    t('T25 · o botão não tem mais o subtítulo embaixo do preço',
+        btns.every(b => !b.querySelector('small')));
+    t('T26 · mas a explicação continua alcançável no title',
+        btns.every(b => (b.title || '').length > 5));
+    t('T27 · e o botão virou uma linha só',
+        btns.every(b => cx(b).height < 46));
+}
+
+/* ===== Metas ===== */
+{
+    const cards = [...document.querySelectorAll('.meta-card')];
+    t('T28 · o título da meta usa a fonte de título do projeto',
+        /Cinzel/i.test(cs(cards[0].querySelector('.meta-card-titulo')).fontFamily));
+    /* A borda verde sozinha some no meio de dez cartões; o filete no topo é o
+       que se vê de relance na grade. */
+    const verde = cs(document.documentElement).getPropertyValue('--lr-nature').trim();
+    const hex = (c) => '#' + (c.match(/\d+/g) || []).slice(0, 3)
+        .map(n => (+n).toString(16).padStart(2, '0')).join('').toUpperCase();
+    t('T29 · meta cumprida se anuncia por um filete verde no topo',
+        cs(cards[1], '::before').content !== 'none'
+        && hex(cs(cards[1], '::before').backgroundColor) === verde.toUpperCase());
+    t('T30 · e a meta em andamento não tem o filete',
+        cs(cards[0], '::before').content === 'none');
+    t('T31 · nenhum dos dois topos repete o nome da aba',
+        !/Metas da Campanha|🔔 Notificações<\/h1>/.test(html));
+}
+
+/* ===== Notificações ===== */
+{
+    const itens = [...document.querySelectorAll('.notification-item')];
+    /* Era uma pilha de caixas com borda de 2px, cada uma do tamanho de um
+       cartão, para dizer uma frase. */
+    t('T32 · a fila virou lista: sem caixa por item',
+        itens.every(x => parseFloat(cs(x).borderTopWidth) === 0));
+    t('T33 · separadas por um filete entre uma e outra',
+        parseFloat(cs(itens[0]).borderBottomWidth) >= 1);
+    t('T34 · a última não deixa filete solto no fim',
+        parseFloat(cs(itens[itens.length - 1]).borderBottomWidth) === 0);
+    t('T35 · a não lida se marca com a barra de ouro na entrada',
+        /inset/.test(cs(itens[0]).boxShadow) && !/inset/.test(cs(itens[1]).boxShadow));
+    t('T36 · o ícone vem ANTES do texto, para a fila ler de relance',
+        cx(itens[0].querySelector('.notification-icon')).left
+        < cx(itens[0].querySelector('.notification-message')).left);
+    t('T37 · e a lista inteira num quadro só',
+        parseFloat(cs(document.getElementById('notificationsList')).borderTopWidth) >= 1);
+}
+
 /* ===== contraste nos dois temas ===== */
 const lum = (c) => {
     const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => {
@@ -209,7 +379,9 @@ const medir = (nome) => {
     for (const [rot, sel] of [['etiqueta EXP', '.loja-tag--exp'], ['etiqueta roleta', '.loja-tag--roleta'],
         ['etiqueta re-roll', '.loja-tag--reroll'], ['etiqueta narrativa', '.loja-tag--narrativo'],
         ['etiqueta equip', '.loja-tag--equip'], ['total de apoios', '.rep-total-num'],
-        ['recebimento', '.rep-recebimento strong']]) {
+        ['recebimento', '.rep-recebimento strong'],
+        ['título da meta', '.meta-card-titulo'], ['número da meta', '.meta-stat-num'],
+        ['notificação', '.notification-message'], ['hora da notificação', '.notification-time']]) {
         const e = document.querySelector(sel);
         t(`${nome}: ${rot} legível (≥4,5:1)`, contraste(cs(e).color, fundoReal(e)) >= 4.5);
     }

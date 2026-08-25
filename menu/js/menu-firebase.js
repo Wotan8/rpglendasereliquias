@@ -488,6 +488,7 @@ async function loadInventory() {
             emptyState.style.display = 'block';
         } else {
             emptyState.style.display = 'none';
+            _repDetalhes = [];
             grid.innerHTML = inventario.map(item => {
                 const imgHtml = item.imagem
                     ? `<div class="loja-card-media">
@@ -502,15 +503,32 @@ async function loadInventory() {
                    prateleira: no título ela disputava a linha e empurrava o
                    nome do item. Só aparece a partir de 2 — "x1" é ruído. */
                 const qtd = Number(item.quantidade) || 0;
+                const desc = String(item.descricao || item['descrição'] || '');
+                /* A ficha completa de um amuleto tem trinta linhas — tipo, peso,
+                   dureza, integridade, propriedades. Num cartão de grade isso
+                   estica a coluna inteira e afunda os vizinhos. O cartão mostra
+                   o começo; o resto abre numa janela, que é onde texto longo
+                   cabe. `_repDetalhes` guarda o descritor e o clique só carrega
+                   o índice. */
+                const i = _repDetalhes.push({
+                    nome: item.nome || 'Item sem nome',
+                    icone: '🎒',
+                    descricao: desc,
+                    nota: item.formaRecebimento ? `Recebimento: ${item.formaRecebimento}` : '',
+                }) - 1;
+                const longa = desc.length > 180;
+
                 return `
-                <div class="loja-card">
+                <div class="loja-card${longa ? ' rep-abrivel' : ''}"
+                    ${longa ? `onclick="abrirDetalheItem(${i})" title="Ver a ficha completa"` : ''}>
                     <div class="loja-card-arte">
                         ${imgHtml}
                         ${qtd > 1 ? `<span class="rep-qtd" title="Você tem ${qtd}">×${qtd}</span>` : ''}
                     </div>
                     <div class="loja-card-body">
                         <div class="loja-card-title">${escapeHtml(item.nome || 'Item sem nome')}</div>
-                        ${item.descricao || item['descrição'] ? `<div class="loja-card-desc">${escapeHtmlWithBreaks(item.descricao || item['descrição'])}</div>` : ''}
+                        ${desc ? `<div class="loja-card-desc${longa ? ' rep-desc-curta' : ''}">${escapeHtmlWithBreaks(desc)}</div>` : ''}
+                        ${longa ? '<div class="rep-mais">🔎 Clique para ver a ficha completa</div>' : ''}
                         ${tagsHtml ? `<div class="loja-card-tags">${tagsHtml}</div>` : ''}
                         <div class="rep-recebimento">
                             <span>Recebimento</span>
@@ -550,6 +568,17 @@ function etiquetasDoItem(item) {
         .map(e => `<span class="loja-tag loja-tag--${e.classe}">${escapeHtml(e.texto(item))}</span>`)
         .join('');
 }
+
+/* Fichas completas dos itens do Repertório — o clique carrega só o índice.
+   Reaproveita a janela de shared/detalhe.js, a mesma que abre a fórmula de um
+   Valor Derivado: `<dialog>` nativo, altura limitada e rolagem por dentro, que
+   é o que uma ficha de trinta linhas precisa. */
+let _repDetalhes = [];
+
+window.abrirDetalheItem = function (i) {
+    const o = _repDetalhes[i];
+    if (o && window.LRDetalhe) window.LRDetalhe.abrirDetalhe(o);
+};
 
 // ===== NOTIFICAÇÕES =====
 
@@ -1071,15 +1100,12 @@ function renderLojaItens() {
                     ${tagsHtml ? `<div class="loja-card-tags">${tagsHtml}</div>` : ''}
                     <div class="loja-card-actions">
                         ${item.valorFrag > 0 ? `
-                            <button class="loja-btn loja-btn-frag" onclick="openCheckoutFrag('${item.id}')">
-                                <span>💎 ${item.valorFrag} Frag$</span>
-                                <small>Comprar com Fragmentos</small>
-                            </button>` : ''}
+                            <button class="loja-btn loja-btn-frag" onclick="openCheckoutFrag('${item.id}')"
+                                title="Comprar com Fragmentos">💎 ${item.valorFrag} Frag$</button>` : ''}
                         ${precoReal ? `
-                            <button class="loja-btn loja-btn-real" onclick="openCheckoutReal('${item.id}')">
-                                <span>${MODO_PAGAMENTO_REAL === 'dinheiro' ? '💵' : '💳'} R$ ${precoReal}</span>
-                                <small>${MODO_PAGAMENTO_REAL === 'dinheiro' ? 'Pagar direto ao mestre' : 'PIX · Cartão · Boleto'}</small>
-                            </button>` : ''}
+                            <button class="loja-btn loja-btn-real" onclick="openCheckoutReal('${item.id}')"
+                                title="${MODO_PAGAMENTO_REAL === 'dinheiro' ? 'Pagar direto ao mestre' : 'PIX · Cartão · Boleto'}"
+                                >${MODO_PAGAMENTO_REAL === 'dinheiro' ? '💵' : '💳'} R$ ${precoReal}</button>` : ''}
                     </div>
                     ${precoReal ? `<div class="loja-card-secure">${MODO_PAGAMENTO_REAL === 'dinheiro'
                         ? '🤝 Você combina o pagamento com o mestre; o item é liberado após a confirmação dele'

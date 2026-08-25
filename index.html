@@ -15,9 +15,13 @@
      capítulo tem de sair igual aqui, no Worldbuilding, na ficha e no
      Laboratorium. Ver o cabeçalho de shared/texto-mundo.css. -->
 <link rel="stylesheet" href="/shared/texto-mundo.css?v=1">
+<!-- A janela de detalhe (a mesma da fórmula de um Valor Derivado) abre a ficha
+     completa de um item do Repertório: <dialog> nativo, com rolagem por dentro. -->
+<link rel="stylesheet" href="/shared/detalhe.css?v=4">
+<script type="module">import '/shared/detalhe.js?v=4';</script>
 <link rel="stylesheet" href="/shared/dialogo.css?v=2">
 <script type="module">import '/shared/dialogo.js?v=2';</script>
-    <link rel="stylesheet" href="/menu/css/menu.css?v=25">
+    <link rel="stylesheet" href="/menu/css/menu.css?v=26">
     <link rel="stylesheet" href="/shared/tokens.css?v=11">
     <script src="/shared/theme.js"></script>
     <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout PagBank contra bots/abuso. -->
@@ -344,12 +348,12 @@
 
             <!-- ======== ABA METAS ======== -->
             <div class="tab-content" id="tab-metas">
-                <div class="menu-header" style="margin-bottom:10px">
-                    <h1 style="font-size:1.2rem">🎯 Metas da Campanha</h1>
+                <!-- Sem <h1> repetindo o nome da aba, como nas outras. -->
+                <div class="rep-topo">
+                    <p class="rep-explica">Cada peça adquirida na Loja vira um apoio e empurra as
+                        metas abaixo. Elas são <strong>coletivas</strong>: o esforço da mesa inteira
+                        soma no mesmo lugar, e o que for desbloqueado vale para todos.</p>
                 </div>
-                <p class="notifications-info" style="margin-bottom:20px;">Cada item adquirido na Loja vira um apoio e
-                    empurra as metas abaixo. Elas são coletivas: o esforço de toda a mesa soma no mesmo lugar, e o que
-                    for desbloqueado vale para todos.</p>
 
                 <div id="metasLoading" class="empty-state" style="display:none">
                     <div class="icon">⏳</div>
@@ -367,11 +371,9 @@
 
             <!-- ======== ABA NOTIFICAÇÕES ======== -->
             <div class="tab-content" id="tab-notificacoes">
-                <div class="menu-header" style="margin-bottom:10px">
-                    <h1 style="font-size:1.2rem">🔔 Notificações</h1>
+                <div class="rep-topo">
+                    <p class="rep-explica">As 100 mais recentes. As antigas saem sozinhas.</p>
                 </div>
-                <p class="notifications-info">Últimas 100 notificações são armazenadas. Notificações mais antigas são
-                    removidas automaticamente.</p>
 
                 <div id="notificationsList"></div>
 
@@ -526,7 +528,7 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="/menu/js/menu-firebase.js?v=16"></script>
+    <script type="module" src="/menu/js/menu-firebase.js?v=17"></script>
     <!-- O card de livro da estante vem daqui: o mesmo do Escritório do
          Cronista e das telas do mestre. Script clássico, então entra ANTES
          do módulo que o usa. -->
