@@ -1,8 +1,9 @@
 // Rodar: node --test shared/integridade.test.mjs
 //
 // INTEGRIDADE — quanto a peça aguenta antes de parar de servir.
-// Faixa: (Liga + Tamanho) × 3, mínimo 3. Grava-se `avaria` (dano acumulado),
-// nunca "quanto resta". Números conferidos contra contêineres REAIS do banco.
+// Faixa: round((Liga + Tamanho×3) × 3), mínimo 3 — Tamanho em METROS, e o ×3
+// é a cascata do §2.8 (Tamanho do personagem = Altura × 3). Grava-se `avaria`
+// (dano acumulado), nunca "quanto resta".
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
@@ -14,25 +15,34 @@ const perto = (a, b, msg) => assert.ok(Math.abs(a - b) < 0.005, `${msg}: ${a} �
 
 // ===== A FAIXA =====
 
-test('a faixa sai de (Liga + Tamanho) × 3', () => {
-    // Mochila Média de Couro, doc LlfVkp0rLFL5EwuBemcZ: liga 2, tamanho 4
-    assert.equal(integridadeMax({ liga: 2, tamanho: 4 }), 18);
-    // Mochila Maior: liga 3, tamanho 5 — o topo da faixa real
-    assert.equal(integridadeMax({ liga: 3, tamanho: 5 }), 24);
-    // Saco de Luns Simples: liga 1, tamanho 1 — o piso da faixa real
-    assert.equal(integridadeMax({ liga: 1, tamanho: 1 }), 6);
+test('a faixa sai de round((Liga + Tamanho×3) × 3), Tamanho em metros', () => {
+    // Adaga: liga 2, 0,30 m — as âncoras do Livro §5
+    assert.equal(integridadeMax({ liga: 2, tamanho: 0.3 }), 9);
+    // Espada longa: liga 3, 1,20 m
+    assert.equal(integridadeMax({ liga: 3, tamanho: 1.2 }), 20);
+    // Armadura completa: liga 3, 1,70 m — mesma escala do corpo que veste
+    assert.equal(integridadeMax({ liga: 3, tamanho: 1.7 }), 24);
+    // Mochila Média de Couro: liga 2, 0,60 m
+    assert.equal(integridadeMax({ liga: 2, tamanho: 0.6 }), 11);
+});
+
+test('arredonda para o inteiro mais próximo', () => {
+    // (2 + 0,9) × 3 = 8,7 → 9; (5 + 4,5) × 3 = 28,5 → 29
+    assert.equal(integridadeMax({ liga: 5, tamanho: 1.5 }), 29);
+    assert.ok(Number.isInteger(integridadeMax({ liga: 2, tamanho: 0.37 })));
 });
 
 test('Liga ausente lê 1 (Bruta), não 0', () => {
     // §5.5: Liga 0 é "improvisada — pedra, galho". Peça de catálogo não é.
-    assert.equal(integridadeMax({ tamanho: 1 }), 6, 'sem liga = Bruta');
-    // Liga 0 DECLARADA é outra coisa: improvisada mesmo
-    assert.equal(integridadeMax({ liga: 0, tamanho: 1 }), 3, 'cai no piso');
+    assert.equal(integridadeMax({ tamanho: 1 }), 12, 'sem liga = Bruta');
+    // Liga 0 DECLARADA é outra coisa: improvisada — só o porte segura
+    assert.equal(integridadeMax({ liga: 0, tamanho: 1 }), 9, 'galho de 1 m');
 });
 
 test('nunca abaixo de 3', () => {
-    assert.equal(integridadeMax({ liga: 0, tamanho: 0 }), 3);
-    assert.equal(integridadeMax({}), 6, 'sem nada: liga 1 + tamanho 1');
+    assert.equal(integridadeMax({ liga: 0, tamanho: 0.1 }), 3, 'caco de 10 cm cai no piso');
+    assert.equal(integridadeMax({ liga: 0, tamanho: 0 }), 9, 'tamanho 0/vazio lê o padrão de 1 m');
+    assert.equal(integridadeMax({}), 12, 'sem nada: liga 1 + tamanho 1 m');
 });
 
 test('integridadeBase do cadastro vence a derivação', () => {
@@ -43,8 +53,8 @@ test('integridadeBase do cadastro vence a derivação', () => {
 // ===== AVARIA, NÃO "QUANTO RESTA" =====
 
 test('o que resta é o máximo menos a avaria', () => {
-    const m = { liga: 2, tamanho: 4, avaria: 5 };
-    assert.equal(integridadeDe(m), 13);
+    const m = { liga: 2, tamanho: 0.6, avaria: 5 };
+    assert.equal(integridadeDe(m), 6);
     assert.equal(integridadeZerada(m), false);
 });
 
@@ -73,19 +83,19 @@ test('a mesma Aljava com o teto corrigido para 1,5: silêncio absoluto', () => {
 
 test('Mochida Média com a carga de hoje: no-op, zero write', () => {
     // LlfVkp0rLFL5EwuBemcZ — 4 itens, 7,10 kg num teto de 20
-    const mochila = { id: 'c', ehContainer: true, pesoMaximoContainer: 20, liga: 2, tamanho: 4 };
+    const mochila = { id: 'c', ehContainer: true, pesoMaximoContainer: 20, liga: 2, tamanho: 0.6 };
     const dentro = [{ id: 'x', parentItemId: 'c', peso: 7.1, quantidade: 1 }];
     assert.equal(perdaSobrecarga(mochila, dentro, null, GATILHO.conteudo), 0);
 });
 
-test('Mochila Média com o dobro do peso não passa da sessão', () => {
-    const mochila = { id: 'c', ehContainer: true, pesoMaximoContainer: 20, liga: 2, tamanho: 4 };
+test('Mochila Média com o dobro do peso rompe dentro da sessão', () => {
+    const mochila = { id: 'c', ehContainer: true, pesoMaximoContainer: 20, liga: 2, tamanho: 0.6 };
     const dentro = [{ id: 'x', parentItemId: 'c', peso: 40, quantidade: 1 }];
     perto(perdaSobrecarga(mochila, dentro, null, GATILHO.conteudo), 1.0, 'por inserção');
     perto(perdaSobrecarga(mochila, dentro, null, GATILHO.movimento), 0.3333, 'por rodada');
-    // 10 inserções + 20 rodadas = 16,67 num pool de 18: rompe em ~1 sessão
-    const sessao = 10 * 1.0 + 20 * (1 / 3);
-    assert.ok(sessao > 16 && sessao < 18, `uma sessão dura tira ${sessao.toFixed(2)} de 18`);
+    // 10 inserções + 3 rodadas movidas = 11 num pool de 11: o couro cede
+    const abuso = 10 * 1.0 + 3 * (1 / 3);
+    assert.ok(abuso >= integridadeMax(mochila), `${abuso.toFixed(2)} esgota o pool de ${integridadeMax(mochila)}`);
 });
 
 test('o lixo do banco satura em vez de virar Infinity', () => {
@@ -123,12 +133,12 @@ test('sem floor: o gatilho de movimento é alcançável mesmo no pool pequeno', 
 // ===== FALHA CRÍTICA =====
 
 test('Falha Crítica custa 1 ponto, e a escada sai da faixa', () => {
-    const adaga = { liga: 2, tamanho: 0.3 };        // máximo 6,9
-    const espadao = { liga: 5, tamanho: 1.5 };      // máximo 19,5
+    const adaga = { liga: 2, tamanho: 0.3 };        // máximo 9
+    const espadao = { liga: 5, tamanho: 1.5 };      // máximo 29
     assert.equal(perdaFalhaCritica(adaga), 1);
     assert.equal(perdaFalhaCritica(espadao), 1);
-    assert.ok(integridadeMax(adaga) / 1 < 7, 'adaga aguenta 6 falhas');
-    assert.ok(integridadeMax(espadao) / 1 > 19, 'espadão aguenta 19');
+    assert.equal(integridadeMax(adaga), 9, 'adaga aguenta 8 falhas e cai na nona');
+    assert.equal(integridadeMax(espadao), 29, 'montante aguenta 28 e cai na 29ª');
 });
 
 test('arma improvisada (Liga 0) é destruída na falha crítica — §5.5', () => {
@@ -145,12 +155,12 @@ test('desarmado não tem peça para quebrar', () => {
 // ===== O VEREDITO QUE O HOST TRADUZ EM ESCRITA =====
 
 test('desgastarConteiner devolve perda, ruptura e quem cai fora', () => {
-    const c = { id: 'c', ehContainer: true, pesoMaximoContainer: 10, liga: 1, tamanho: 1, avaria: 5.9 };
+    const c = { id: 'c', ehContainer: true, pesoMaximoContainer: 10, liga: 1, tamanho: 1, avaria: 11.9 };
     const dentro = [{ id: 'a', parentItemId: 'c', peso: 20, quantidade: 1 },
                     { id: 'b', parentItemId: 'c', peso: 0.1, quantidade: 1 }];
     const r = desgastarConteiner(c, dentro, null, GATILHO.conteudo);
     assert.ok(r.perda > 0);
-    assert.equal(r.rompeu, true, '5,9 + 1,0 passa do maximo 6');
+    assert.equal(r.rompeu, true, '11,9 + 1,0 passa do maximo 12');
     assert.deepEqual(r.filhos.sort(), ['a', 'b'], 'os dois vao para Soltos');
 });
 
@@ -163,7 +173,7 @@ test('sem perda nao ha ruptura nem filhos', () => {
 // ===== ROMPIDO PARA DE RECEBER =====
 
 test('contêiner rompido recusa carga', () => {
-    const roto = { id: 'c', nome: 'Mochila', ehContainer: true, liga: 1, tamanho: 1, avaria: 6 };
+    const roto = { id: 'c', nome: 'Mochila', ehContainer: true, liga: 1, tamanho: 1, avaria: 12 };
     const item = { id: 'i', nome: 'Corda', peso: 1, quantidade: 1 };
     const r = cabeNoConteiner(item, roto, [roto, item]);
     assert.equal(r.ok, false);
@@ -171,7 +181,30 @@ test('contêiner rompido recusa carga', () => {
 });
 
 test('contêiner inteiro continua recebendo', () => {
-    const bom = { id: 'c', nome: 'Mochila', ehContainer: true, liga: 1, tamanho: 1, avaria: 5.9 };
+    const bom = { id: 'c', nome: 'Mochila', ehContainer: true, liga: 1, tamanho: 1, avaria: 11.9 };
     const item = { id: 'i', nome: 'Corda', peso: 1, quantidade: 1 };
     assert.equal(cabeNoConteiner(item, bom, [bom, item]).ok, true);
+});
+
+// ===== RELÍQUIA NÃO TEM INTEGRIDADE (§5.8) =====
+
+test('Relíquia devolve null, não zero — a régua não se aplica', () => {
+    const r = { tipo: 'Relíquia', nome: 'Especulum Fatu', liga: 5, tamanho: 0.3 };
+    assert.equal(integridadeMax(r), null);
+    assert.equal(integridadeDe(r), null);
+    assert.equal(integridadeZerada(r), false, 'null não pode ser lido como arruinada');
+});
+
+test('Relíquia não lasca em Falha Crítica nem com avaria no doc', () => {
+    const r = { tipo: 'Relíquia', liga: 0, tamanho: 0.3, avaria: 99 };
+    assert.equal(perdaFalhaCritica(r), 0);
+    assert.equal(integridadeZerada(r), false, 'avaria legada não arruina Relíquia');
+});
+
+test('o tipo vem do modelo quando a instância não diz', () => {
+    assert.equal(integridadeMax({ liga: 5, tamanho: 0.3 }, { tipo: 'Relíquia' }), null);
+});
+
+test('peça comum segue com Integridade — a exceção é só da Relíquia', () => {
+    assert.equal(integridadeMax({ tipo: 'Arma', liga: 2, tamanho: 0.3 }), 9);
 });

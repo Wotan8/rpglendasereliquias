@@ -14,7 +14,7 @@
 // modelo não define vira `null` explícito: sem isso o merge deixaria viva
 // justamente a alteração que o Mestre mandou apagar.
 // =============================================================
-import { CAMPOS_EQUIPAMENTO, instanciarDoModelo, normalizaFormaEquipar } from './equip-campos.js?v=14';
+import { CAMPOS_EQUIPAMENTO, instanciarDoModelo, normalizaFormaEquipar } from './equip-campos.js?v=17';
 
 /** Campos que a instância guarda com OUTRO nome que o catálogo. */
 const RENOME = { imagemUrl: 'imagem', mecanicaIds: 'mecanicaIdsProprias' };
@@ -47,7 +47,7 @@ export function patchRestauracao(tpl) {
     p.tamanho = Number(p.tamanho) || 1;
     p.pressaoBase = p.pressaoBase != null ? Number(p.pressaoBase) : p.peso;
     p.ehContainer = !!p.ehContainer || tipo === 'Container';
-    if (!p.ehContainer) { p.pesoMaximoContainer = null; p.multiplicadorPressao = null; p.capacidadeContainer = null; }
+    if (!p.ehContainer) { p.pesoMaximoContainer = null; p.multiplicadorPressao = null; p.capacidadeContainer = null; p.tamanhoMaximoItem = null; p.tagsAceitas = null; }
     p.categoriaArma = tipo === 'Arma' ? (p.categoriaArma || null) : null;
     p.equipavelEm = (p.equipavelEm || []).length ? p.equipavelEm : null;
     p.mecanicaIdsProprias = p.mecanicaIdsProprias || [];

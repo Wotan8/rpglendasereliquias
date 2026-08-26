@@ -31,8 +31,11 @@ import { perguntar } from './dialogo.js?v=1';
 /* Peso e Tamanho do item SEMPRE saem com unidade. Tamanho é em metros e
    fracionado — 0,1 é 10 cm —, então nada de arredondar para inteiro; as casas
    mortas caem para "1 m" não virar "1,00 m". */
-const _pesoKg = (v) => `${(parseFloat(v) || 0).toFixed(2)} kg`;
-const _tamanhoM = (v) => `${Math.round((parseFloat(v) || 0) * 100) / 100} m`;
+// Abaixo de 1, a unidade desce (g/cm); o dado gravado segue SEMPRE em kg/m.
+// Cópias idênticas em inventory.js, aliado-inventario.js, equipment-module.js,
+// repertorio.js e area-economica.js (scripts clássicos não importam daqui).
+const _pesoKg = (v) => { const n = parseFloat(v) || 0; return n && n < 1 ? `${Math.round(n * 1000)} g` : `${(+n.toFixed(2)).toLocaleString('pt-BR')} kg`; };
+const _tamanhoM = (v) => { const n = parseFloat(v) || 0; return n && n < 1 ? `${Math.round(n * 100)} cm` : `${(+n.toFixed(2)).toLocaleString('pt-BR')} m`; };
 
 export const EMOJI_TIPO = {
     'Arma': '⚔️', 'Vestimenta': '🧥', 'Acessório': '💍', 'Projétil': '🎯',
@@ -129,6 +132,18 @@ export function pressaoItem(i, itens) {
 export const capacidadeDe = (c, tpl) => Number(c?.capacidadeContainer ?? tpl?.capacidadeContainer) || 0;
 export const pesoMaxDe = (c, tpl) => Number(c?.pesoMaximoContainer ?? tpl?.pesoMaximoContainer) || 0;
 
+/* 📐 BOCA e 🏷️ CONTEÚDO ACEITO — as duas travas físicas do contêiner.
+   `tamanhoMaximoItem` é a maior peça que passa pela boca, em metros: a lança
+   de 1,70 m não entra na mochila de 60 cm por mais vazia que ela esteja.
+   `tagsAceitas` é o contêiner de propósito único: aljava só recebe Flecha,
+   bolsa de moedas só recebe Moeda. Uma tag basta (lista é OU, não E).
+   Vazio nos dois = sem restrição, como todo campo de contêiner aqui. */
+export const tamMaxItemDe = (c, tpl) => Number(c?.tamanhoMaximoItem ?? tpl?.tamanhoMaximoItem) || 0;
+export const tagsAceitasDe = (c, tpl) => {
+    const t = c?.tagsAceitas ?? tpl?.tagsAceitas;
+    return (Array.isArray(t) ? t : String(t || '').split(',')).map(x => String(x).trim()).filter(Boolean);
+};
+
 /** Peso do que já está dentro, pilhas multiplicadas. */
 export function pesoDentro(contId, itens, ignorarId) {
     return (itens || [])
@@ -160,6 +175,26 @@ export function cabeNoConteiner(item, cont, itens, tpl) {
             return { ok: false, motivo: `${cont.nome || 'O contêiner'} está cheio: ${dentro}/${cap} itens` };
         }
     }
+
+    // A boca do contêiner. Item sem tamanho lê 1 m, o mesmo padrão da régua de
+    // Integridade — peça sem medida é presumida grande, não minúscula.
+    const tamMax = tamMaxItemDe(cont, tpl);
+    if (tamMax > 0) {
+        const tam = Number(item.tamanho) || 1;
+        if (tam > tamMax + 1e-9) {
+            return { ok: false, motivo: `${item.nome || 'O item'} não passa na boca de ${cont.nome || 'contêiner'}: ${_tamanhoM(tam)} de ${_tamanhoM(tamMax)}` };
+        }
+    }
+
+    // Contêiner de propósito único. Lê as tags da INSTÂNCIA (elas são copiadas
+    // do catálogo na instanciação e a sincronização mantém iguais).
+    const aceitas = tagsAceitasDe(cont, tpl);
+    if (aceitas.length) {
+        const minhas = (Array.isArray(item.tags) ? item.tags : []).map(t => String(t).trim().toLowerCase());
+        if (!aceitas.some(a => minhas.includes(a.toLowerCase()))) {
+            return { ok: false, motivo: `${cont.nome || 'O contêiner'} só aceita ${aceitas.join(' ou ')}` };
+        }
+    }
     return { ok: true, motivo: '' };
 }
 
@@ -170,19 +205,23 @@ export function avisoDePeso(item, cont, itens, tpl, qtd) {
     const q = Math.max(1, parseInt(qtd) || qtdDe(item));
     const total = pesoDentro(cont.id, itens, item.id) + (parseFloat(item.peso) || 0) * q;
     if (total <= pmax + 1e-9) return null;
-    return `${cont.nome || 'O contêiner'} passa do peso: ${total.toFixed(2)} kg de ${pmax} kg`;
+    return `${cont.nome || 'O contêiner'} passa do peso: ${_pesoKg(total)} de ${_pesoKg(pmax)}`;
 }
 
 /* ===== INTEGRIDADE =====
    Quanto a peça aguenta antes de parar de servir. O Livro §7.6 já publicou o
    termo e a forma para objetos de cenário — "Integridade (Dureza + Tamanho)" —
    e §5.5 já converte Liga em Dureza. Aqui é a mesma ideia na escala de
-   Vitalidade do §2.8, `(VIG + Tamanho) × 3`:
+   Vitalidade do §2.8, `(VIG + Tamanho) × 3`, com a MESMA régua de Tamanho:
+   o campo `tamanho` da peça é METROS (a maior dimensão), e o porte é o triplo
+   disso — exatamente a cascata do personagem (Tamanho = Altura × 3):
 
-       integridadeMax = (Liga + Tamanho) × 3, nunca menos que 3
+       integridadeMax = round((Liga + Tamanho×3) × 3), nunca menos que 3
 
-   Nenhuma constante nova. Nos contêineres reais dá 6 a 24, e a Mochila Média
-   cai em 18 — a Vitalidade de referência do sistema.
+   Uma escala só para pessoa, peça e cenário (decisão de 25/08/2026 — antes o
+   dado era bimodal: arma em metros, armadura em porte). Âncoras: adaga 9,
+   espada longa 20, armadura completa 24, mochila média 11 — contra a
+   Vitalidade humana de referência, 24.
 
    Liga vazia lê 1 e não 0 porque §5.5 define Liga 0 como "improvisada — pedra,
    galho, garrafa quebrada". Peça de catálogo, com preço, não é improvisada:
@@ -199,25 +238,37 @@ export function avisoDePeso(item, cont, itens, tpl, qtd) {
    com dado de v1.6 (valores 1 a 10 e um 999999, e em 62 deles nem bate com a
    fórmula do Livro). `desgaste` também está, como CHANCE, no Laboratorium. */
 
-/** Máximo da peça. `integridadeBase` no cadastro vence a derivação. */
+/* 💎 RELÍQUIA NÃO TEM INTEGRIDADE (§5.8). Não é peça de ferreiro: não se
+   desgasta, não rompe e não se conserta na bancada — o que a limita é a
+   história dela, não o aço. `integridadeMax`/`integridadeDe` devolvem `null`
+   (não zero!) para dizer "esta régua não se aplica"; quem for pintar número
+   na tela precisa tratar o null como "—". Vale pelo TIPO do cadastro. */
+export const ehReliquia = (i, tpl) => String(i?.tipo ?? tpl?.tipo ?? '') === 'Relíquia';
+
+/** Máximo da peça, ou `null` quando a régua não se aplica (Relíquia). */
 export function integridadeMax(item, tpl) {
+    if (ehReliquia(item, tpl)) return null;
     const base = Number(item?.integridadeBase ?? tpl?.integridadeBase) || 0;
     if (base > 0) return base;
     const liga = Number(item?.liga ?? tpl?.liga);
     const tam = Number(item?.tamanho ?? tpl?.tamanho) || 1;
     // Liga ausente lê 1 (Bruta); Liga 0 declarada é improvisada e vale 0 mesmo.
     const dureza = Number.isFinite(liga) ? liga : 1;
-    return Math.max(3, (dureza + tam) * 3);
+    return Math.max(3, Math.round((dureza + tam * 3) * 3));
 }
 
-/** Quanto resta. Nunca negativo. */
+/** Quanto resta. Nunca negativo. `null` = Relíquia, sem régua. */
 export function integridadeDe(item, tpl) {
-    return Math.max(0, integridadeMax(item, tpl) - (Number(item?.avaria) || 0));
+    const max = integridadeMax(item, tpl);
+    if (max == null) return null;
+    return Math.max(0, max - (Number(item?.avaria) || 0));
 }
 
-/** A peça está arruinada? Item arruinado não aplica efeito nenhum. */
+/** A peça está arruinada? Item arruinado não aplica efeito nenhum.
+ *  Relíquia nunca está: sem régua, sem ruína. */
 export function integridadeZerada(item, tpl) {
-    return integridadeDe(item, tpl) <= 0;
+    const resta = integridadeDe(item, tpl);
+    return resta != null && resta <= 0;
 }
 
 /**
@@ -244,6 +295,7 @@ export const GATILHO = { conteudo: 1, movimento: 1 / 3 };
 export function perdaSobrecarga(cont, itens, tpl, gatilho) {
     const pmax = pesoMaxDe(cont, tpl);
     if (!pmax || !ehContainer(cont)) return 0;
+    if (ehReliquia(cont, tpl)) return 0;         // §5.8: Relíquia não se desgasta
     const r = pesoDentro(cont.id, itens) / pmax;
     const excesso = Math.min(Math.max(0, r - 1), 2);
     if (!excesso) return 0;
@@ -254,8 +306,8 @@ export function perdaSobrecarga(cont, itens, tpl, gatilho) {
  * Perda por FALHA CRÍTICA (§5.5). O acabamento continua sendo escolha do
  * Narrador (§6.7); isto é a consequência que o Tabuleiro aplica sozinho.
  *
- * 1 ponto, sempre. A escada já está na faixa: 1 é um sétimo de uma adaga e um
- * vigésimo de um espadão, porque o máximo escala com Liga e Tamanho.
+ * 1 ponto, sempre. A escada já está na faixa: 1 é um nono de uma adaga e um
+ * vigésimo nono de um montante, porque o máximo escala com Liga e Tamanho.
  *
  * Liga 0 é o caso que o Livro já resolvia: "armas improvisadas tendem a
  * quebrar: numa Falha Crítica, a arma é destruída".
@@ -268,13 +320,15 @@ export function perdaSobrecarga(cont, itens, tpl, gatilho) {
 export function desgastarConteiner(cont, itens, tpl, gatilho) {
     const perda = perdaSobrecarga(cont, itens, tpl, gatilho);
     if (!perda) return { perda: 0, rompeu: false, filhos: [] };
-    const rompeu = ((Number(cont.avaria) || 0) + perda) >= integridadeMax(cont, tpl);
+    const max = integridadeMax(cont, tpl);
+    const rompeu = max != null && ((Number(cont.avaria) || 0) + perda) >= max;
     const filhos = rompeu ? (itens || []).filter(x => x.parentItemId === cont.id).map(x => x.id) : [];
     return { perda, rompeu, filhos };
 }
 
 export function perdaFalhaCritica(item, tpl) {
     if (!item || item.desarmado) return 0;
+    if (ehReliquia(item, tpl)) return 0;         // §5.8: Relíquia não lasca
     const liga = Number(item.liga ?? tpl?.liga);
     if (liga === 0) return integridadeMax(item, tpl);   // improvisada: acaba ali
     return 1;

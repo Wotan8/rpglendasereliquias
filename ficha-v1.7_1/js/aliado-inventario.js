@@ -24,8 +24,10 @@
     /* Dentro da IIFE de proposito: inventory.js ja declara estes dois nomes no
        escopo global, e const repetido em script classico e SyntaxError — o
        arquivo inteiro deixava de carregar. */
-    const _pesoKg = (v) => `${(parseFloat(v) || 0).toFixed(2)} kg`;
-    const _tamanhoM = (v) => `${Math.round((parseFloat(v) || 0) * 100) / 100} m`;
+    // Abaixo de 1 a unidade desce (g/cm); o dado gravado segue em kg/m.
+    // Cópia do canônico em shared/inventario-motor.js — manter iguais.
+    const _pesoKg = (v) => { const n = parseFloat(v) || 0; return n && n < 1 ? `${Math.round(n * 1000)} g` : `${(+n.toFixed(2)).toLocaleString('pt-BR')} kg`; };
+    const _tamanhoM = (v) => { const n = parseFloat(v) || 0; return n && n < 1 ? `${Math.round(n * 100)} cm` : `${(+n.toFixed(2)).toLocaleString('pt-BR')} m`; };
 
     const FIRESTORE_URL = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 

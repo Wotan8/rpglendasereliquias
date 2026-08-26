@@ -542,7 +542,9 @@ function _concederEquipamentosDeMecanica(mech, config, parentPec) {
                     tipo: tpl?.tipo || 'Objeto',
                     categoriaArma: tpl?.tipo === 'Arma' ? (tpl?.categoriaArma || null) : null,
                     peso: tpl?.peso ?? 1,
-                    pressaoBase: tpl?.peso ?? 1,
+                    // conforto do cadastro (peso sentido ×0,5–1,5) desce junto;
+                    // sem ele, pressão = peso, como sempre foi
+                    pressaoBase: tpl?.pressaoBase ?? tpl?.peso ?? 1,
                     tamanho: tpl?.tamanho ?? 1,
                     quantidade: (isArma || isContainer) ? 1 : qtd,
                     descricao: tpl?.descricao || '',

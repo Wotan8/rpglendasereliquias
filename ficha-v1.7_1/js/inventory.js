@@ -12,8 +12,10 @@
 /* Peso e Tamanho do item SEMPRE saem com unidade. Tamanho é em metros e
    fracionado — 0,1 é 10 cm —, então nada de arredondar para inteiro; as casas
    mortas caem para "1 m" não virar "1,00 m". */
-const _pesoKg = (v) => `${(parseFloat(v) || 0).toFixed(2)} kg`;
-const _tamanhoM = (v) => `${Math.round((parseFloat(v) || 0) * 100) / 100} m`;
+// Abaixo de 1 a unidade desce (g/cm); o dado gravado segue em kg/m. Cópia do
+// canônico em shared/inventario-motor.js — manter as duas iguais.
+const _pesoKg = (v) => { const n = parseFloat(v) || 0; return n && n < 1 ? `${Math.round(n * 1000)} g` : `${(+n.toFixed(2)).toLocaleString('pt-BR')} kg`; };
+const _tamanhoM = (v) => { const n = parseFloat(v) || 0; return n && n < 1 ? `${Math.round(n * 100)} cm` : `${(+n.toFixed(2)).toLocaleString('pt-BR')} m`; };
 
 let _RestaurarItem = null;
 import('../../shared/restaurar-item.js?v=1')
@@ -1180,7 +1182,6 @@ function _renderOpenContainers() {
         itemsHtml = inside.map(i => {
             const tipoEmoji = _getTipoEmoji(i.tipo);
             const iQty = Math.max(1, parseInt(i.quantidade) || 1);
-            const iWeightTotal = ((i.peso || 0) * iQty).toFixed(2);
             const iImg = i.imagem || i.imagemUrl;
             const iImgHtml = iImg
                 ? `<img src="${_escHtml(iImg)}" class="inv-row-img" alt="">`
@@ -1197,7 +1198,7 @@ function _renderOpenContainers() {
                 ${iImgHtml}
                 <div class="inv-item-info">
                     <span class="inv-item-name">${_escHtml(i.nome || 'Sem nome')}</span>
-                    <span class="inv-item-meta">${tipoEmoji} ${_escHtml(i.tipo || '')} | Peso: ${iWeightTotal} kg${iQty > 1 ? ` (${_pesoKg(i.peso)} × ${iQty})` : ''} | Tam: ${_tamanhoM(i.tamanho)}</span>
+                    <span class="inv-item-meta">${tipoEmoji} ${_escHtml(i.tipo || '')} | Peso: ${_pesoKg((i.peso || 0) * iQty)}${iQty > 1 ? ` (${_pesoKg(i.peso)} × ${iQty})` : ''} | Tam: ${_tamanhoM(i.tamanho)}</span>
                 </div>
                 ${qtyHtml}
                 <div class="inv-item-actions no-print" onclick="event.stopPropagation()">

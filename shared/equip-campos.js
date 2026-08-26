@@ -96,10 +96,11 @@ export const CAMPOS_EQUIPAMENTO = [
     // cobra que a Blindagem tenha subido junto.
     { key: 'reforco', label: '🛡️ Reforço (acabamento de proteção — teto é a Qualidade)', type: 'number', placeholder: '0 a 5' },
     { key: 'blindagemQ0', label: '⚓ Blindagem quando nova (âncora do audit — não editar à toa)', type: 'number', placeholder: '0' },
-    /* Quanto a peça aguenta. Vazio = derivar de (Liga + Tamanho) × 3, que é a
-       forma do §7.6 na escala do §2.8 — ver integridadeMax em
-       shared/inventario-motor.js. Este campo é a manopla de calibração, como
-       pressaoBase: só preencha para fugir da régua. */
+    /* Quanto a peça aguenta. Vazio = derivar de round((Liga + Tamanho×3) × 3):
+       Tamanho em METROS e o ×3 é a cascata do §2.8 (Altura → Tamanho), a forma
+       do §7.6 numa escala só — ver integridadeMax em shared/inventario-motor.js.
+       Este campo é a manopla de calibração, como pressaoBase: só preencha para
+       fugir da régua. */
     { key: 'integridadeBase', label: '🧱 Integridade máxima (vazio = derivar de Liga + Tamanho)', type: 'number', placeholder: '0 = derivar' },
     { key: 'preco', label: '💰 Preço base (L$)', type: 'number', placeholder: 'Ex: 1100' },
     { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
@@ -107,12 +108,21 @@ export const CAMPOS_EQUIPAMENTO = [
     { key: 'peso', label: 'Peso (kg)', type: 'number', required: true, placeholder: 'kg — ex: 0,5' },
     // Metros, fracionado: 0,1 = 10 cm. Nunca arredondar para inteiro.
     { key: 'tamanho', label: 'Tamanho (m)', type: 'number', required: true, placeholder: 'm — ex: 0,1 (10 cm) · 1,2' },
-    { key: 'pressaoBase', label: 'Pressão Base (peso efetivo ao equipar)', type: 'number', placeholder: '0 = mesmo que Peso' },
+    /* Peso SENTIDO ao equipar = peso × conforto (doutrina de 25/08/2026):
+       ×1 é o normal e fica VAZIO (pressão = peso, sem espelho para defasar).
+       Menor que 1 só para peça bem distribuída no corpo, muito confortável ou
+       de luxo — o ápice é ×0,5 (sente metade). Maior que 1 para peça
+       desajeitada — o teto é ×1,5 (um caixote). Grave o PRODUTO em kg. */
+    { key: 'pressaoBase', label: 'Pressão Base (peso sentido ao equipar — conforto ×0,5 a ×1,5)', type: 'number', placeholder: 'vazio = igual ao Peso · ex: 22,5 (25 kg × 0,9)' },
     { key: 'quantidade', label: 'Quantidade (Padrão ao instanciar)', type: 'number', placeholder: '1', soCatalogo: true },
     { key: 'ehContainer', label: '📦 É Container?', type: 'boolean' },
     { key: 'multiplicadorPressao', label: 'Multiplicador de Pressão (conteúdo)', type: 'number', placeholder: '1', showWhenBoolean: 'ehContainer' },
-    { key: 'pesoMaximoContainer', label: 'Peso Máximo Suportado (Container)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
-    { key: 'capacidadeContainer', label: 'Capacidade do Container (slots antigos)', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
+    { key: 'pesoMaximoContainer', label: '⚖️ Peso Máximo Suportado (kg) — AVISO: passar disso desgasta, não trava', type: 'number', placeholder: 'kg — ex: 20', showWhenBoolean: 'ehContainer' },
+    { key: 'capacidadeContainer', label: '🔢 Capacidade (nº de pilhas) — TRAVA', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
+    /* A boca do contêiner e o que ele foi feito para levar — as duas TRAVAM,
+       como a capacidade. Vazio = sem restrição (ver cabeNoConteiner). */
+    { key: 'tamanhoMaximoItem', label: '📐 Tamanho máximo do item que entra (m) — TRAVA', type: 'number', placeholder: 'm — ex: 0,8 (nada maior passa na boca)', showWhenBoolean: 'ehContainer' },
+    { key: 'tagsAceitas', label: '🏷️ Só aceita itens com estas tags — TRAVA (vazio = aceita tudo)', type: 'tags', placeholder: 'Ex: Flecha, Virote · Moeda', showWhenBoolean: 'ehContainer' },
     { key: 'formulaDano', label: '💥 Fórmula de Dano', type: 'text', placeholder: 'Ex: 1d10, 2d6 — bônus numéricos vêm dos Valores Derivados' },
     // Segundo dado da MESMA peça, para quando ela é empunhada com as duas mãos.
     // Vale só onde a categoria deixa escolher (Versátil, A Distância); arma de
@@ -434,7 +444,8 @@ export const SECOES_EQUIPAMENTO = [
     {
         id: 'conteiner', icone: '📦', titulo: 'Contêiner',
         dica: 'Só vale para peça que guarda outras dentro.',
-        campos: ['ehContainer', 'multiplicadorPressao', 'pesoMaximoContainer', 'capacidadeContainer'],
+        campos: ['ehContainer', 'multiplicadorPressao', 'pesoMaximoContainer', 'capacidadeContainer',
+                 'tamanhoMaximoItem', 'tagsAceitas'],
     },
     {
         id: 'efeitos', icone: '✨', titulo: 'Efeitos e vínculos',

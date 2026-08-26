@@ -7,7 +7,7 @@ import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMecha
 import {
     CAMPOS_EQUIPAMENTO, normalizaFormaEquipar,
     SECOES_EQUIPAMENTO, htmlBarraFerramentas, ligarFormulario, agruparEmSecoesDOM, atualizarResumo,
-} from '../../shared/equip-campos.js?v=14';
+} from '../../shared/equip-campos.js?v=17';
 import {
     SECOES_CONDICAO, SECOES_CLASSE, SECOES_TRIBO, SECOES_VALOR_DERIVADO,
 } from './cadastro-secoes.js?v=1';
@@ -1598,6 +1598,11 @@ function _countLinks(item, keys) {
     return n;
 }
 
+// Abaixo de 1 a unidade desce (g/cm); o dado gravado segue em kg/m (regra de
+// shared/inventario-motor.js — manter iguais).
+const _pesoKg = (v) => { const n = parseFloat(v) || 0; return n && n < 1 ? `${Math.round(n * 1000)} g` : `${(+n.toFixed(2)).toLocaleString('pt-BR')} kg`; };
+const _tamanhoM = (v) => { const n = parseFloat(v) || 0; return n && n < 1 ? `${Math.round(n * 100)} cm` : `${(+n.toFixed(2)).toLocaleString('pt-BR')} m`; };
+
 function _buildCardMetaChips(item) {
     const chips = [];
     const add = (text, cls = '') => { if (text) chips.push(`<span class="meta-chip ${cls}">${text}</span>`); };
@@ -1634,9 +1639,8 @@ function _buildCardMetaChips(item) {
             break;
         case 'equipment':
             add(item.tipo ? escapeHtml(item.tipo) : '', 'chip-accent');
-            // Peso em kg, Tamanho em metros (fracionado: 0,1 = 10 cm).
-            if (item.peso != null) add(`⚖️ ${escapeHtml(item.peso)} kg`);
-            if (item.tamanho != null) add(`📐 ${escapeHtml(item.tamanho)} m`);
+            if (item.peso != null) add(`⚖️ ${_pesoKg(item.peso)}`);
+            if (item.tamanho != null) add(`📐 ${_tamanhoM(item.tamanho)}`);
             if (item.ehContainer) add(`📦 Container${item.capacidadeContainer ? ' ×' + escapeHtml(item.capacidadeContainer) : ''}`, 'chip-gold');
             if (mechCount) add(`🔧 ${mechCount}`);
             break;

@@ -14,6 +14,10 @@ import { confirmar } from '../../shared/dialogo.js?v=2';
 let equipCatalogo = null;
 let caixaItens = null;
 
+// Abaixo de 1 kg exibe gramas; o dado gravado segue em kg (regra de
+// shared/inventario-motor.js — manter iguais).
+const _pesoKg = (v) => { const n = parseFloat(v) || 0; return n && n < 1 ? `${Math.round(n * 1000)} g` : `${(+n.toFixed(2)).toLocaleString('pt-BR')} kg`; };
+
 export function initMostrar() {
     window.tbAbrirMostrar = abrirMostrar;
     window.tbMenuMostrar = menuMostrar;
@@ -81,7 +85,7 @@ function renderListaMostrar() {
         }));
     } else if (aba === 'equip') {
         cards = (equipCatalogo||[]).filter(i => (i.nome||'').toLowerCase().includes(busca)).map(i => card({
-            img: i.imagem || i.imagemUrl, nome: i.nome || 'Item', sub: `${i.tipo || 'Equipamento'}${i.peso ? ' · ' + i.peso + ' kg' : ''}`,
+            img: i.imagem || i.imagemUrl, nome: i.nome || 'Item', sub: `${i.tipo || 'Equipamento'}${i.peso ? ' · ' + _pesoKg(i.peso) : ''}`,
             acoes: [
                 { ic: '🖼️', tip: 'Mostrar na mesa', fn: `tbColocarMostrar('equip','${i.id}')` },
                 { ic: '🧰', tip: 'Dropar como loot no mapa', fn: `tbDroparLoot('equip','${i.id}')` },
@@ -678,7 +682,7 @@ const _dropSoltosTs = new Map();   // tokenId -> último disparo
  * existe, agora com consequência).
  */
 async function _desgastarConteineresNaViagem(itens) {
-    const M = await import('../../shared/inventario-motor.js?v=7');
+    const M = await import('../../shared/inventario-motor.js?v=9');
     const cheios = itens.filter(i => M.ehContainer(i));
     for (const c of cheios) {
         const tpl = M.tplDoItem(c, _sysDoTabuleiro());
@@ -809,7 +813,7 @@ async function aplicarOpcoes(objId, op) {
             const src = o.refTipo === 'equip' ? (equipCatalogo||[]).find(x => x.id === o.refId) : (caixaItens||[]).find(x => x.id === o.refId);
             const i = src || {};
             if (op.exTipo && i.tipo) extras.push('Tipo: ' + i.tipo);
-            if (op.exPeso && i.peso != null) extras.push('Peso: ' + i.peso + ' kg');
+            if (op.exPeso && i.peso != null) extras.push('Peso: ' + _pesoKg(i.peso));
             if (op.exDesc && (i.descricao || i.desc)) extras.push(String(i.descricao || i.desc).slice(0, 80));
         }
     }
@@ -919,7 +923,7 @@ async function abrirFichaAliadoNpc(npc, opts = {}) {
         window.db = window.db || db;
 
         // Inventário do aliado (script clássico, opcional)
-        try { await _tbInjectScript('../ficha-v1.7_1/js/aliado-inventario.js?v=8', 'tbScriptAliadoInv'); }
+        try { await _tbInjectScript('../ficha-v1.7_1/js/aliado-inventario.js?v=9', 'tbScriptAliadoInv'); }
         catch (e) { console.warn('⚠️ aliado-inventario indisponível no tabuleiro:', e); }
 
         if (!window.openAliadoModal) {

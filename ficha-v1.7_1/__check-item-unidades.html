@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>__check: peso em kg e tamanho em m, sem arredondar</title>
+<title>__check: unidade adaptativa — g/cm abaixo de 1, kg/m com vírgula acima</title>
 <link rel="stylesheet" href="../shared/sanfona.css">
 <link rel="stylesheet" href="../shared/dialogo.css?v=2">
 <script type="module">import '../shared/dialogo.js?v=2';</script>
@@ -48,9 +48,16 @@
     linhas.push('PESO (kg)');
     for (const v of [0.5, 1, 2.25, undefined]) linhas.push(`  ${String(v).padEnd(14)} → ${_pesoKg(v)}`);
 
-    if (_tamanhoM(0.1) !== '0.1 m') linhas.push('⚠️ 0,1 m foi arredondado');
-    if (_tamanhoM(0.3) !== '0.3 m') linhas.push('⚠️ 0,3 m foi arredondado');
-    if (!_pesoKg(0.5).endsWith(' kg')) linhas.push('⚠️ peso sem unidade');
+    // A régua fechada na tarefa 1 do balanceamento: < 1 desce a unidade,
+    // ≥ 1 fica em kg/m com vírgula pt-BR e sem zeros à direita.
+    if (_tamanhoM(0.1) !== '10 cm') linhas.push('⚠️ 0,1 m devia virar "10 cm": ' + _tamanhoM(0.1));
+    if (_tamanhoM(0.3) !== '30 cm') linhas.push('⚠️ 0,3 m devia virar "30 cm": ' + _tamanhoM(0.3));
+    if (_tamanhoM(0.1 + 0.2) !== '30 cm') linhas.push('⚠️ float sujo devia virar "30 cm": ' + _tamanhoM(0.1 + 0.2));
+    if (_tamanhoM(1.2) !== '1,2 m') linhas.push('⚠️ 1,2 m devia usar vírgula: ' + _tamanhoM(1.2));
+    if (_pesoKg(0.035) !== '35 g') linhas.push('⚠️ 35 g não pode virar "0.04 kg": ' + _pesoKg(0.035));
+    if (_pesoKg(0.5) !== '500 g') linhas.push('⚠️ 0,5 kg devia virar "500 g": ' + _pesoKg(0.5));
+    if (_pesoKg(1.25) !== '1,25 kg') linhas.push('⚠️ 1,25 kg com vírgula: ' + _pesoKg(1.25));
+    if (_pesoKg(2) !== '2 kg') linhas.push('⚠️ 2 kg sem zeros à direita: ' + _pesoKg(2));
 
     // 2. O formulário aceita fração e anuncia a unidade.
     document.body.insertAdjacentHTML('beforeend', '<div id="formHost" style="display:none"></div>');
@@ -66,7 +73,7 @@
        confere aqui é a SPEC — se ela desenhar peso/tamanho como number de step
        livre, as quatro telas ganham juntas. */
     Promise.all([
-        import('../shared/equip-campos.js?v=14'),
+        import('../shared/equip-campos.js?v=17'),
         fetch('js/inventory.js?t=' + T).then(r => r.text()),
     ]).then(([EC, src]) => {
         const host = document.createElement('div');

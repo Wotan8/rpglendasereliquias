@@ -92,21 +92,26 @@ assert.ok(donos.length >= 6, `só ${donos.length} arquivos formatam peso/tamanho
 assert.equal(copiasPeso.size, 1, 'as cópias de _pesoKg divergiram:\n' + [...copiasPeso].join('\n'));
 assert.equal(copiasTam.size, 1, 'as cópias de _tamanhoM divergiram:\n' + [...copiasTam].join('\n'));
 
-/* ===== 4. E formatam certo ===== */
+/* ===== 4. E formatam certo =====
+   Exibição adaptativa (25/08/2026): abaixo de 1 a unidade desce para g/cm;
+   de 1 pra cima, kg/m com vírgula pt-BR e sem zeros à direita. O dado gravado
+   segue em kg/m — só a tela converte. */
 const _pesoKg = eval('(' + [...copiasPeso][0].replace('const _pesoKg = ', '') .replace(/;$/, '') + ')');
 const _tamanhoM = eval('(' + [...copiasTam][0].replace('const _tamanhoM = ', '').replace(/;$/, '') + ')');
 
-assert.equal(_pesoKg(0.5), '0.50 kg');
-assert.equal(_pesoKg('1'), '1.00 kg');
-assert.equal(_pesoKg(undefined), '0.00 kg', 'sem peso ainda mostra a unidade');
+assert.equal(_pesoKg(0.5), '500 g');
+assert.equal(_pesoKg(0.035), '35 g', '35 g não pode virar "0.04 kg"');
+assert.equal(_pesoKg('1'), '1 kg');
+assert.equal(_pesoKg(1.25), '1,25 kg');
+assert.equal(_pesoKg(undefined), '0 kg', 'sem peso ainda mostra a unidade');
 
-assert.equal(_tamanhoM(0.1), '0.1 m', '0,1 m = 10 cm, e não pode virar 0');
-assert.equal(_tamanhoM(1.2), '1.2 m');
+assert.equal(_tamanhoM(0.1), '10 cm', '0,1 m = 10 cm, e não pode virar 0');
+assert.equal(_tamanhoM(1.2), '1,2 m');
 assert.equal(_tamanhoM(1), '1 m', 'inteiro não ganha casa morta');
-assert.equal(_tamanhoM(0.35), '0.35 m');
+assert.equal(_tamanhoM(0.35), '35 cm');
 assert.equal(_tamanhoM(undefined), '0 m');
 // Ponto flutuante: 0.1 + 0.2 = 0.30000000000000004 não pode vazar para a tela.
-assert.equal(_tamanhoM(0.1 + 0.2), '0.3 m');
+assert.equal(_tamanhoM(0.1 + 0.2), '30 cm');
 
 console.log(`✅ unidades de item OK — ${arquivos.length} arquivos varridos, `
     + `${donos.length} formatam peso/tamanho, nenhum arredonda`);

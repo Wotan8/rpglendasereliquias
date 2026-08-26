@@ -11,13 +11,13 @@ import * as SEL from '../../painel-criador/js/painel-mechanics.js';
 import {
     camposDaInstancia, valorDoItem, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo, modeloDaInstancia, htmlFormulario, htmlBarraFerramentas, ligarFormulario,
-} from '../../shared/equip-campos.js?v=14';
+} from '../../shared/equip-campos.js?v=17';
 import { ensureNpcSystemData } from './npc-system-data.js';
 import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
     pressaoItem, htmlInventario, tratarClique, iniciarArrasto, cabeNoConteiner, tplDoItem,
     desgastarConteiner, GATILHO,
-} from '../../shared/inventario-motor.js?v=7';
+} from '../../shared/inventario-motor.js?v=9';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML, modeloDoItem } from '../../shared/restaurar-item.js?v=1';
 import { confirmar } from '../../shared/dialogo.js?v=2';
 

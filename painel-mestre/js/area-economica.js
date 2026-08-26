@@ -12,8 +12,10 @@ import { confirmar } from '../../shared/dialogo.js?v=2';
 /* Peso e Tamanho do item SEMPRE saem com unidade. Tamanho é em metros e
    fracionado — 0,1 é 10 cm —, então nada de arredondar para inteiro; as casas
    mortas caem para "1 m" não virar "1,00 m". */
-const _pesoKg = (v) => `${(parseFloat(v) || 0).toFixed(2)} kg`;
-const _tamanhoM = (v) => `${Math.round((parseFloat(v) || 0) * 100) / 100} m`;
+// Abaixo de 1 a unidade desce (g/cm); o dado gravado segue em kg/m. Cópia do
+// canônico em shared/inventario-motor.js — manter iguais.
+const _pesoKg = (v) => { const n = parseFloat(v) || 0; return n && n < 1 ? `${Math.round(n * 1000)} g` : `${(+n.toFixed(2)).toLocaleString('pt-BR')} kg`; };
+const _tamanhoM = (v) => { const n = parseFloat(v) || 0; return n && n < 1 ? `${Math.round(n * 100)} cm` : `${(+n.toFixed(2)).toLocaleString('pt-BR')} m`; };
 
 export async function onTabActivated() { await loadAvulsosItems(); }
 
