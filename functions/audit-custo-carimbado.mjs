@@ -14,6 +14,8 @@
 // =============================================
 import { createRequire } from 'node:module';
 import { ACAO, recursoDoPredef } from './parse-custo.mjs';
+
+const UNIDADE_POR_EXP = 0.10;
 const require = createRequire(import.meta.url);
 const admin = require('firebase-admin');
 admin.initializeApp({ credential: admin.credential.cert(
@@ -28,13 +30,12 @@ const ACEITAS = {
     // O numerador 2,75 desta e do Golpe Cruzado (mesma familia "ataque extra")
     // nao e reproduzivel por "1 golpe = 1,000". Recomputada, ela entrega ~1,000
     // por 1,333 = 0,75x: SUBdimensionada. Nao mexer ate o modelo de ataque
-    // extra ser documentado. Auditoria de 16/08/2026.
-    'Corte de Passagem': 'numerador da familia "ataque extra" nao documentado; recomputada da 0,75x',
-    // O carimbo usa "2 Energia" (3,00) e o parser prefere a alternativa mais
-    // barata, "1 Energia + 2 Sanidade" (2,58). As duas leituras passam
-    // (1,31x e 1,52x) e Sanidade nao se recupera em combate, o que torna a
-    // alternativa "barata" discutivel na mesa. Fica como esta.
-    'Transcendência — Receptor': 'alternativa de pagamento e julgamento, nao erro',
+    // extra ficar decidido. Ver memoria numerador-ataque-extra.
+    //
+    // 'Transcendência — Receptor' saiu daqui em 25/08/2026: a alternativa de
+    // pagamento que justificava a excecao ("1 Energia + 2 Sanidade") deixou de
+    // existir. O custo agora e "2 Energia" e toda a Sanidade dela e a
+    // escalonada de shared/incorporacao.js, que nao passa por este parser.
 };
 
 const degrau = t => Number((String(t || '').match(/custo\s+(\d+)/i) || [])[1] || 0);
@@ -50,7 +51,21 @@ for (const doc of (await db.collection('system').doc('data').collection('classMo
         checadas++;
         const acao = ACAO[p.valores?.acao] ?? 1.0;
         const rec = recursoDoPredef(campos, p.valores) || d;
-        const esperado = rec + acao;
+        // O EXP entra no denominador desde 24/08/2026: a habilidade custa recurso
+        // e ação POR USO, mais 0,10 unidade por EXP que ela custou para existir.
+        // Ver functions/exp-no-denominador.mjs para a derivação do 0,10.
+        const exp = UNIDADE_POR_EXP * (Number(p.custoExpProprio) || 0);
+
+        // §0.8 continua mandando onde o custo POR USO é zero (Ação Livre sem
+        // recurso). O termo de EXP não salva a divisão: 0,53 ÷ 0,10 dá 5,30×,
+        // que é ruído e não medida. Ali se mede por TETO, e o carimbo guarda
+        // custo 0 de propósito.
+        if (rec + acao === 0) {
+            if (p.regua.custo !== 0) { furos++; console.log(`!! ${doc.id}::${p.nome}: custo por uso é 0 (§0.8), mas o carimbo diz ${p.regua.custo}`); }
+            continue;
+        }
+
+        const esperado = rec + acao + exp;
         if (!esperado) { semCusto++; continue; }        // custo ilegível: não julga
         if (Math.abs(esperado - p.regua.custo) <= 0.06) continue;
         if (ACEITAS[p.nome]) { aceitas++; continue; }
@@ -60,7 +75,7 @@ for (const doc of (await db.collection('system').doc('data').collection('classMo
         console.log(`     carimbado  custo ${p.regua.custo}  →  ${p.regua.razao}×   (${p.regua.em})`);
         console.log(`     esperado   custo ${esperado.toFixed(2)}  →  ${real.toFixed(2)}×`
             + `${real < 1 || real > 2 ? '  ❌ FORA DA FAIXA' : ''}`);
-        console.log(`                recurso ${rec.toFixed(2)} + ${p.valores?.acao || 'Ação Padrão'} ${acao}`);
+        console.log(`                recurso ${rec.toFixed(2)} + ${p.valores?.acao || 'Ação Padrão'} ${acao} + EXP ${exp.toFixed(2)}`);
     }
 }
 const nota = (semCusto ? ` (${semCusto} sem custo legivel)` : '') + (aceitas ? ` (${aceitas} divergencia(s) ja aceita(s), ver ACEITAS)` : '');
