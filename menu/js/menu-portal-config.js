@@ -44,6 +44,7 @@ function lerTexto() {
     return t;
 }
 
+/** Desenha nos selects E na miniatura. */
 function pintarTexto(t) {
     const v = { ...TEXTO_PADRAO, ...(t || {}) };
     for (const [id, chave] of Object.entries(CAMPOS)) {
@@ -180,10 +181,20 @@ function ligar() {
 
     $('btnSalvarPortalCfg').addEventListener('click', salvar);
 
-    // Prévia ao vivo: mexer no select já mostra o resultado na animação.
-    for (const id of Object.keys(CAMPOS)) {
-        $(id)?.addEventListener('change', () => window.portalHeroAplicarTexto?.(lerTexto()));
-    }
+    /* PRÉVIA. A animação de verdade fica ESCONDIDA enquanto esta aba está
+       aberta (switchTab só mostra o hero na aba Cânone), então mexer no select
+       não mostrava absolutamente nada — dava para escolher a posição do botão
+       e não ver diferença nenhuma até trocar de aba e voltar.
+       A miniatura usa as MESMAS classes e a MESMA função de posicionar do
+       hero, então ela não tem como mostrar uma coisa e a animação fazer outra. */
+    const previa = () => {
+        const t = lerTexto();
+        window.portalHeroAplicarTexto?.(t);          // a animação, para quando voltar
+        const mini = $('cfgPrevia');
+        if (mini) window.portalHeroPosicionar?.(mini, t);
+    };
+    for (const id of Object.keys(CAMPOS)) $(id)?.addEventListener('change', previa);
+    previa();
 
     carregarExistente();
 }

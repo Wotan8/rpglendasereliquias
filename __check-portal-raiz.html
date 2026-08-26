@@ -406,6 +406,67 @@ const w = fr.contentWindow;
         /(^|[^\w.])carregarConfig\s*\)/.test(fonte) || /carregarConfig\(\s*\)/.test(fonte));
 }
 
+/* ===== A PREVIA DA ABA PORTAL =====
+   A animacao de verdade fica ESCONDIDA enquanto a aba Portal esta aberta, entao
+   quem configurava a posicao do botao nao via nada mudar — dava para jurar que
+   a configuracao estava quebrada quando so faltava a prévia. A miniatura resolve
+   isso, mas so vale se ela mostrar o MESMO que a animacao vai fazer. */
+{
+    const mini = d.getElementById('cfgPrevia');
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · a aba Portal tem uma prévia do palco`, !!mini);
+
+    const cfg = await (await fetch('menu/js/menu-portal-config.js?cb=' + Date.now())).text();
+    const semCom = cfg.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · a prévia usa a função de posicionar do hero, não uma cópia`,
+        /portalHeroPosicionar/.test(semCom));
+    /* Se a config passar a mexer em dataset/appendChild por conta propria, e
+       porque alguem duplicou a logica — e duas logicas divergem. */
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · e não reimplementa o posicionamento por fora`,
+        !/dataset\.(cv|ch|v|h)\s*=/.test(semCom));
+
+    if (mini && typeof w.portalHeroPosicionar === 'function') {
+        const palco = d.querySelector('.portal-hero-palco:not(.cfg-previa-palco)');
+        /* A prévia mora na aba Portal, que nasce escondida — e elemento
+           escondido tem retângulo zero, então a medição diria "discordam" com
+           as duas certas. Revela os ancestrais só para medir e devolve depois. */
+        const desfazer = [];
+        for (let n = mini; n && n !== d.body; n = n.parentElement) {
+            if (n.hidden) { n.hidden = false; desfazer.push(() => { n.hidden = true; }); }
+            if (w.getComputedStyle(n).display === 'none') {
+                const antes = n.style.display;
+                n.style.display = 'block';
+                desfazer.push(() => { n.style.display = antes; });
+            }
+        }
+        await new Promise(r => setTimeout(r, 60));
+        // um arranjo em que titulo e botao TEM de ficar separados
+        const cfgSep = { titulo: true, cta: true, vertical: 'topo', horizontal: 'centro',
+                         ctaV: 'base', ctaH: 'centro', ctaTam: 'medio' };
+        w.portalHeroPosicionar(mini, cfgSep);
+        w.portalHeroPosicionar(palco, cfgSep);
+        await new Promise(r => setTimeout(r, 60));
+
+        const separado = (p) => {
+            const c = p.querySelector('.portal-hero-cta');
+            const x = p.querySelector('.portal-hero-texto');
+            return !!c && !!x && c.parentElement === p
+                && c.getBoundingClientRect().top > x.getBoundingClientRect().bottom;
+        };
+        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · com o botão em outro canto, prévia e animação concordam`,
+            separado(mini) === separado(palco) && separado(palco));
+
+        const cfgJunto = { titulo: true, cta: true, vertical: 'centro', horizontal: 'centro' };
+        w.portalHeroPosicionar(mini, cfgJunto);
+        w.portalHeroPosicionar(palco, cfgJunto);
+        await new Promise(r => setTimeout(r, 60));
+        const junto = (p) => p.querySelector('.portal-hero-cta')?.parentElement
+            === p.querySelector('.portal-hero-texto');
+        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · e em "junto do título" as duas voltam a empilhar`,
+            junto(mini) && junto(palco));
+        desfazer.forEach(f => f());
+    }
+}
+
 /* ===== OS DOIS TEXTO_PADRAO TEM DE BATER =====
    menu-hero.js e script classico e menu-portal-config.js e modulo, entao um
    nao importa o outro e o objeto de padroes existe DUAS vezes. Campo novo em

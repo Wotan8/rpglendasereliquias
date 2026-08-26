@@ -172,9 +172,12 @@
         veu: 'medio', ritmo: 'normal',
     };
 
-    window.portalHeroAplicarTexto = function (t) {
+    /* POSICIONA UM PALCO — o de verdade ou a prévia da aba Portal.
+       Recebe o palco como argumento justamente para servir aos dois: a prévia
+       não pode ter uma cópia desta lógica, senão ela mostra uma coisa e a
+       animação faz outra, que é o pior tipo de prévia. */
+    window.portalHeroPosicionar = function (palco, t) {
         var v = Object.assign({}, TEXTO_PADRAO, t || {});
-        var palco = canvas.parentElement;
         var texto = palco && palco.querySelector('.portal-hero-texto');
         // Procura no PALCO, não no texto: o botão pode já ter saído de lá.
         var cta = palco && palco.querySelector('.portal-hero-cta');
@@ -183,13 +186,6 @@
         palco.dataset.v = v.vertical;
         palco.dataset.h = v.horizontal;
         palco.dataset.veu = v.veu;
-
-        // Ritmo da animação = altura do trilho (ver menu.css). Rolar mais para
-        // trocar de quadro é a mesma coisa que animar mais devagar.
-        if (trilho) {
-            if (v.ritmo && v.ritmo !== 'normal') trilho.dataset.ritmo = v.ritmo;
-            else delete trilho.dataset.ritmo;
-        }
 
         texto.hidden = !v.titulo && !v.cta;
         // Esconder o título mas manter o botão: o h1 e o lema saem, o CTA fica.
@@ -215,6 +211,18 @@
             delete cta.dataset.cv;
             delete cta.dataset.ch;
         }
+    };
+
+    window.portalHeroAplicarTexto = function (t) {
+        var v = Object.assign({}, TEXTO_PADRAO, t || {});
+        /* Ritmo da animação = altura do trilho (ver menu.css). Rolar mais para
+           trocar de quadro é a mesma coisa que animar mais devagar. Só o palco
+           de verdade tem trilho; a prévia não anima. */
+        if (trilho) {
+            if (v.ritmo && v.ritmo !== 'normal') trilho.dataset.ritmo = v.ritmo;
+            else delete trilho.dataset.ritmo;
+        }
+        window.portalHeroPosicionar(canvas.parentElement, v);
     };
 
     /* Sequência configurada pelo Criador (portal-config/hero — leitura

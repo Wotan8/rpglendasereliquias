@@ -2262,6 +2262,39 @@ html:not(.dark) .meta-card {
 .portal-hero-trilho[data-ritmo="bem-lento"] { height: 520vh; }
 .portal-hero-trilho[hidden] { display: none; }
 
+/* ===== PRÉVIA DA CONFIGURAÇÃO (aba Portal) =====
+   Uma miniatura do palco. Ela reaproveita as classes do hero de propósito —
+   `.portal-hero-palco`, `.portal-hero-texto`, `.portal-hero-cta` — para que
+   toda regra de posição valha nos dois lugares sem ser escrita duas vezes.
+   O que muda aqui é só o TAMANHO e o fato de ela não ser sticky nem ter canvas. */
+.cfg-previa {
+    grid-column: 1 / -1;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    overflow: hidden;
+    margin-bottom: var(--lr-space-3);
+}
+.cfg-previa-palco {
+    /* vence o `position: sticky` e o `height: 100svh` do palco de verdade */
+    position: relative !important;
+    top: auto !important;
+    height: auto !important;
+    aspect-ratio: 16 / 7;
+    padding: var(--lr-space-2) !important;
+    background: linear-gradient(160deg, #2c3a4a, #10141a);
+    font-size: .5rem;
+}
+.cfg-previa-palco .portal-hero-texto h1 { font-size: 1.7rem; margin-bottom: 2px; }
+.cfg-previa-palco .portal-tagline { font-size: .85rem; }
+.cfg-previa-palco .portal-hero-cta {
+    margin-top: var(--lr-space-2);
+    padding: 3px 10px;
+    font-size: .75rem;
+    cursor: default;
+}
+.cfg-previa-palco .portal-hero-cta[data-tam="minimo"] { padding: 1px 6px; font-size: .62rem; }
+.cfg-previa-palco .portal-hero-cta[data-tam="grande"] { padding: 6px 16px; font-size: .95rem; }
+
 /* ⚠️ O PALCO DESCONTA O CABEÇALHO.
    O `.portal-topo` é sticky e ocupa altura de fluxo ACIMA do trilho, então um
    palco de `100svh` grudado em `top: 0` começa embaixo dele e termina fora da
