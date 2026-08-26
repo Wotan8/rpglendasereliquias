@@ -9,9 +9,17 @@
          faltava aqui: e ele que desenha botao, campo e <dialog> do projeto, e
          sem ele a bancada media um Portal sem metade da roupa. -->
     <link rel="stylesheet" href="/shared/dialogo.css?v=2">
-    <link rel="stylesheet" href="/menu/css/menu.css?v=30">
+    <link rel="stylesheet" href="/menu/css/menu.css?v=31">
     <link rel="stylesheet" href="/shared/tokens.css?v=11">
     <link rel="stylesheet" href="/shared/lendas-reliquias.css?v=2">
+    <!-- Quebra-cache: sem isto o navegador servia a folha ANTIGA e a bancada
+         dava verde para CSS que nem estava no arquivo. Descoberto tentando
+         reintroduzir um defeito de propósito e vendo o teste passar mesmo
+         assim — um guarda que não morde é pior que nenhum. -->
+    <script>
+        for (const l of document.querySelectorAll('link[rel=stylesheet]'))
+            l.href = l.href.replace(/[?&]cb=\d+/, '') + (l.href.includes('?') ? '&' : '?') + 'cb=' + Date.now();
+    </script>
     <style>
         body { font-family: system-ui, sans-serif; padding: 20px; background: var(--lr-bg-0); color: var(--lr-text-1); }
         #saida { font-family: ui-monospace, monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
@@ -59,6 +67,14 @@
             if (condicao) { ok++; linhas.push(`<span class="ok">✔</span> ${nome}`); }
             else { falhou++; linhas.push(`<span class="falha">✘ ${nome}${detalhe ? ' — ' + detalhe : ''}</span>`); }
         };
+
+        /* Varre o CODIGO, sem os comentarios. A primeira versao destes testes
+           acusava `crossOrigin` e `getImageData` no hero: o comentario que
+           EXPLICA a ausencia deles cita os dois pelo nome, e o guarda mordia a
+           propria explicacao. */
+        const semComentarios = (txt) => txt
+            .replace(/\/\*[\s\S]*?\*\//g, ' ')
+            .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
 
         window.rodar = async function () {
             ok = 0; falhou = 0; linhas.length = 0;
@@ -173,12 +189,55 @@
             // --- som não pode explodir se o navegador negar áudio ---
             conferir('o botão de som existe', !!document.getElementById('roletaSom'));
 
+            // --- FECHADA, A JANELA TEM DE SUMIR ---
+            // O navegador esconde <dialog> fechado com
+            // `dialog:not([open]) { display: none }`. Um `display: flex` de
+            // autor no seletor solto VENCE essa regra, e a roda fica pintada
+            // no meio do Portal depois de fechar. Foi o que aconteceu quando a
+            // janela virou coluna flex.
+            dialogo.close();
+            await new Promise(r => setTimeout(r, 30));
+            conferir('fechada, a janela some de vez',
+                getComputedStyle(dialogo).display === 'none',
+                `display=${getComputedStyle(dialogo).display}`);
+            conferir('e nao deixa nada ocupando espaco na pagina',
+                dialogo.getBoundingClientRect().height === 0);
+            await window.abrirRoleta();
+            conferir('e volta a aparecer ao reabrir',
+                getComputedStyle(dialogo).display !== 'none');
+
+            // --- O CARTAO DO PREMIO E TRAZIDO PARA A VISTA ---
+            // A roda ocupa quase toda a coluna, entao o cartao nasce abaixo da
+            // dobra. Nao adianta so caber: tem de aparecer sozinho.
+            const fonteR = semComentarios(await (await fetch('/menu/js/menu-roleta.js?cb=' + Date.now())).text());
+            conferir('o cartao do premio rola sozinho para a vista',
+                /scrollIntoView/.test(fonteR));
+
+            // --- AS IMAGENS DO HERO ---
+            // O Storage do Firebase nao manda Access-Control-Allow-Origin, e
+            // `crossOrigin = 'anonymous'` fazia TODA imagem falhar — em
+            // silencio, porque o allSettled filtrava as rejeitadas e o hero
+            // voltava para o selo desenhado. O canvas so faz drawImage e nunca
+            // le pixel de volta, entao pedir CORS nao comprava nada.
+            const fonteHBruta = await (await fetch('/menu/js/menu-hero.js?cb=' + Date.now())).text();
+            const fonteH = semComentarios(fonteHBruta);
+            conferir('o hero nao pede CORS para imagem que ele so desenha',
+                !/crossOrigin/.test(fonteH));
+            conferir('e o canvas do hero realmente nunca le pixel de volta',
+                !/getImageData|toDataURL|toBlob/.test(fonteH));
+            conferir('imagem que nao carrega deixa aviso, nao silencio',
+                /console\.warn\('Hero: '/.test(fonteH));
+            // e o proprio ajudante tem de funcionar, senao os tres acima sao decorativos
+            conferir('a varredura ignora comentario de verdade',
+                semComentarios('/* crossOrigin */ var a = 1;').indexOf('crossOrigin') === -1
+                && semComentarios('var crossOrigin = 1;').indexOf('crossOrigin') >= 0);
+
             saida.innerHTML = linhas.join('\n') +
                 `\n\n<b>${ok} passaram, ${falhou} falharam</b>` +
                 (falhou === 0 ? ' <span class="ok">— tudo certo</span>' : '');
         };
     </script>
-    <script type="module" src="/menu/js/menu-roleta.js?v=6"></script>
+    <script type="module" src="/menu/js/menu-roleta.js?v=7"></script>
 </body>
 
 </html>

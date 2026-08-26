@@ -390,6 +390,15 @@ window.girarRoletaAgora = async function () {
             </div>`;
     }
 
+    /* A roda ocupa quase toda a coluna, então o cartão do prêmio nasce abaixo
+       da dobra do corpo que rola — e o prêmio é justamente o que a pessoa
+       acabou de ganhar. Em vez de espremer a roda para os dois caberem juntos
+       (o que estragaria a roda em toda tela), o corpo rola até ele. */
+    const cartao = painel?.firstElementChild;
+    if (cartao?.scrollIntoView) {
+        cartao.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
     if (typeof window.loadInventory === 'function') { try { await window.loadInventory(); } catch (e) { /* a tela do Repertório se vira */ } }
 
     girando = false;

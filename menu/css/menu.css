@@ -2971,8 +2971,6 @@ html:not(.dark) .meta-card {
 .lr-roleta {
     width: min(880px, calc(100vw - 32px));
     max-height: min(calc(100dvh - 32px), 760px);
-    display: flex;
-    flex-direction: column;
     padding: 0;
     border: var(--lr-border-w) solid var(--lr-border);
     border-radius: var(--lr-radius-lg);
@@ -2983,6 +2981,15 @@ html:not(.dark) .meta-card {
 
 .lr-roleta::backdrop {
     background: rgba(0, 0, 0, .72);
+}
+
+/* ⚠️ O `display` vai no [open], NUNCA no `.lr-roleta` solto: o navegador
+   esconde a janela fechada com `dialog:not([open]) { display: none }`, e um
+   `display: flex` de autor VENCE essa regra. Com ele solto, fechar a Roleta
+   deixava a roda e o painel de prêmios pintados no meio do Portal. */
+.lr-roleta[open] {
+    display: flex;
+    flex-direction: column;
 }
 
 .roleta-topo {

@@ -189,17 +189,30 @@
                 window.portalHeroAplicarTexto(d.texto);
                 var urls = d.imagens || [];
                 if (!urls.length) return;
+                /* ⚠️ SEM `crossOrigin`. O Storage do Firebase não manda
+                   `Access-Control-Allow-Origin` (conferido no cabeçalho da
+                   resposta), então `crossOrigin = 'anonymous'` fazia TODA
+                   imagem falhar — e a falha era muda: o `allSettled` filtrava
+                   as rejeitadas e o hero voltava para o selo desenhado, como
+                   se ninguém tivesse configurado nada.
+                   Pedir CORS aqui não comprava nada: este canvas só faz
+                   `drawImage` e nunca lê pixel de volta (`getImageData`,
+                   `toDataURL`), que é a única coisa que o `tainted` proíbe. */
                 return Promise.allSettled(urls.map(function (u) {
                     return new Promise(function (ok, erro) {
                         var img = new Image();
-                        img.crossOrigin = 'anonymous';
                         img.onload = function () { ok(img); };
-                        img.onerror = erro;
+                        img.onerror = function () { erro(new Error('não carregou: ' + u)); };
                         img.src = u;
                     });
                 })).then(function (rs) {
                     var ok = rs.filter(function (r) { return r.status === 'fulfilled'; })
                         .map(function (r) { return r.value; });
+                    var caiu = rs.length - ok.length;
+                    // Silêncio aqui já custou uma investigação: se alguma
+                    // imagem não entrar, o Criador merece saber no console.
+                    if (caiu) console.warn('Hero: ' + caiu + ' de ' + rs.length
+                        + ' imagens não carregaram; o restante segue.');
                     if (ok.length) { frames = ok; redesenhar(); }
                 });
             })
