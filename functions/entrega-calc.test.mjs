@@ -47,6 +47,18 @@ assert.equal(l2.inventario.length, 2, 'as duas peças do carrinho entram');
 assert.equal(l2.logsCompra.length, 2);
 assert.equal(l2.apoios.length, 2);
 
+// --- peso na producao: a compra grava quanto vale na meta ---
+const pesado = { nome: 'Roleta 3x', isRoleta: true, roletaGiros: 3, pesoProducao: 3 };
+const p1 = aplicarCompra({}, pesado, { ...pending, quantidade: 1 }, 'Mercado Pago');
+assert.equal(p1.apoios[0].peso, 3, 'o peso do item vai para o apoio');
+assert.equal(p1.apoios[0].montante, 1, 'e o montante continua sendo a quantidade comprada');
+
+const p2 = aplicarCompra({}, item, pending, 'Mercado Pago');
+assert.equal('peso' in p2.apoios[0], false, 'item de peso 1 nao suja o apoio com o padrao');
+
+const p3 = aplicarCompra({}, { ...item, pesoProducao: 'abc' }, pending, 'Mercado Pago');
+assert.equal('peso' in p3.apoios[0], false, 'peso invalido vira 1 e nao e gravado');
+
 // --- item de roleta credita giros; item comum nao mexe no saldo ---
 const roleta3x = { nome: 'Roleta 3x', isRoleta: true, roletaGiros: 3 };
 const g1 = aplicarCompra({}, roleta3x, { ...pending, quantidade: 2 }, 'Mercado Pago');

@@ -1029,6 +1029,7 @@ function renderLojaUI() {
         if (item.isRoleta) tagsHtml += `<span style="background:#135E9E;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Roleta: ${item.roletaGiros}x</span>`;
         if (item.isRerolagem) tagsHtml += `<span style="background:#B45309;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Re-roll: ${item.rerolagensAmount}x</span>`;
         if (item.isNarrativo) tagsHtml += `<span style="background:#047857;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Narrativo</span>`;
+        if (Number(item.pesoProducao) > 1) tagsHtml += `<span style="background:#7C2D12;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Produção ${item.pesoProducao}×</span>`;
         if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span style="background:var(--lr-abyssal);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">🎒 Itens: ${item.personagemItensVinculados.length}</span>`;
         
         const imgHtml = item.imagem ? `<div style="height:120px;width:100%;background-image:url('${escapeHtml(item.imagem)}');background-size:contain;background-repeat:no-repeat;background-position:center;border-radius:8px;background-color:var(--lr-bg-1);"></div>` : '';
@@ -1145,6 +1146,7 @@ window.openLojaModal = async function(itemId = null) {
 
     document.getElementById('loja_modo_meta_selecao').checked = true;
     document.getElementById('loja_meta_selecionaveis').value = '1';
+    document.getElementById('loja_peso_producao').value = '1';
 
     // Popular Metas Checkboxes
     const metasList = document.getElementById('loja_metas_list');
@@ -1199,6 +1201,7 @@ window.openLojaModal = async function(itemId = null) {
 
             document.getElementById('loja_modo_meta_selecao').checked = item.modoSelecaoMeta !== false;
             document.getElementById('loja_meta_selecionaveis').value = item.quantidadeMetasSelecionaveis || item.qtdSelecaoMeta || '1';
+            document.getElementById('loja_peso_producao').value = item.pesoProducao ?? 1;
 
             // Check metas vinculadas
             if (item.metasVinculadas && Array.isArray(item.metasVinculadas)) {
@@ -1288,6 +1291,11 @@ window.saveLojaItem = async function() {
             data.qtdSelecaoMeta = qtd;
         }
 
+        // Peso na produção: quanto UMA unidade rende na meta. 1 é o normal;
+        // "Roleta 3x" com peso 3 conta como três apoios numa compra só.
+        const peso = parseFloat(document.getElementById('loja_peso_producao').value);
+        data.pesoProducao = Number.isFinite(peso) && peso >= 0 ? peso : 1;
+
         const cbs = document.querySelectorAll('.loja-meta-cb');
         cbs.forEach(cb => {
             if (cb.checked) data.metasVinculadas.push(cb.value);
@@ -1350,6 +1358,13 @@ window.deleteLojaItem = async function(id) {
 
 let roletaPremios = [];
 
+// Chance aceita fração: prêmio muito raro vale 0,5 ou até 0,05. Arredondar
+// para uma casa faria 0,05 virar 0,1 no resumo — o dobro da raridade escrita.
+function formatarChance(n) {
+    const v = Number(n) || 0;
+    return Number(v.toFixed(2)).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+}
+
 window.carregarRoleta = async function() {
     const container = document.getElementById('roletaContainer');
     if (!container) return;
@@ -1374,7 +1389,7 @@ function renderRoletaUI() {
     if (resumo) {
         resumo.textContent = roletaPremios.length === 0
             ? 'Nenhum prêmio ainda.'
-            : `${roletaPremios.length} prêmios · soma das chances: ${total.toFixed(1)} (não precisa dar 100)`;
+            : `${roletaPremios.length} prêmios · soma das chances: ${formatarChance(total)} (não precisa dar 100)`;
     }
 
     if (roletaPremios.length === 0) {
@@ -1404,8 +1419,9 @@ function renderRoletaUI() {
                     <option value="">— escolha um item —</option>
                     ${opcoes(p.itemId)}
                 </select>
-                <input type="number" class="form-input" min="0" step="0.1" value="${chance}"
-                       oninput="alterarPremioRoleta(${i}, 'chance', this.value)">
+                <input type="number" class="form-input" min="0" step="0.01" value="${chance}"
+                       oninput="alterarPremioRoleta(${i}, 'chance', this.value)"
+                       title="Aceita fração: 0,5 e 0,05 são chances válidas">
                 <span style="color:${real > 0 ? 'var(--lr-nature)' : 'var(--muted)'};font-weight:700;font-size:.85rem;">
                     ${real > 0 ? real.toFixed(2) + '%' : '—'}
                 </span>
@@ -1436,7 +1452,7 @@ function atualizarPercentuaisRoleta() {
         el.textContent = total > 0 && chance > 0 ? (chance / total * 100).toFixed(2) + '%' : '—';
     });
     if (resumo) {
-        resumo.textContent = `${roletaPremios.length} prêmios · soma das chances: ${total.toFixed(1)} (não precisa dar 100)`;
+        resumo.textContent = `${roletaPremios.length} prêmios · soma das chances: ${formatarChance(total)} (não precisa dar 100)`;
     }
 }
 

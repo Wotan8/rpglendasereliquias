@@ -12,6 +12,16 @@
  */
 const { girosDoItem } = require("./roleta-sorteio");
 
+/**
+ * Quanto UMA unidade do item rende na meta a que está vinculado.
+ * É o que faz a "Roleta 3x" valer 3 de Lore numa compra só, em vez de 1.
+ * Ausente ou inválido vale 1 — nenhum item antigo muda de valor.
+ */
+function pesoProducao(item) {
+  const p = Number(item?.pesoProducao);
+  return Number.isFinite(p) && p >= 0 ? p : 1;
+}
+
 function aplicarCompra(data, item, pending, origem) {
   const quantidade = pending.quantidade || 1;
   const totalCentavos = pending.totalCentavos || pending.valorCentavos;
@@ -49,6 +59,9 @@ function aplicarCompra(data, item, pending, origem) {
     valor: valorReais,
     dataInicio: new Date().toISOString().split("T")[0],
     recebido: true,
+    // Só grava quando é diferente de 1 — apoio antigo sem o campo já vale 1,
+    // e escrever o padrão em todo mundo só engordaria o documento.
+    ...(pesoProducao(item) !== 1 ? { peso: pesoProducao(item) } : {}),
   });
 
   const notifications = data.notifications || [];
@@ -70,4 +83,4 @@ function aplicarCompra(data, item, pending, origem) {
   return { inventario, logsCompra, apoios, notifications, quantidade, totalCentavos, valorReais, giros };
 }
 
-module.exports = { aplicarCompra };
+module.exports = { aplicarCompra, pesoProducao };

@@ -12,9 +12,22 @@ assert.equal(valorApoio({ montante: 4, tipo: 'roleta' }), 4, 'roleta não-múlti
 assert.equal(valorApoio({ montante: 9, tipo: 'Loja (Frag$)' }), 9, 'a regra é só da roleta');
 assert.equal(valorApoio({ montante: 6, tipo: ' ROLETA ' }), 2, 'caixa/espaços não importam');
 
+// --- valorApoio: peso do item (a "Roleta 3x" que vale 3 de Lore) ---
+assert.equal(valorApoio({ montante: 1, peso: 3 }), 3, 'uma compra com peso 3 conta 3');
+assert.equal(valorApoio({ montante: 2, peso: 3 }), 6, 'o peso multiplica a quantidade');
+assert.equal(valorApoio({ montante: 1, peso: 0.5 }), 0.5, 'peso fracionado vale');
+assert.equal(valorApoio({ montante: 4, peso: 1 }), 4, 'peso 1 não muda nada');
+assert.equal(valorApoio({ montante: 4 }), 4, 'apoio antigo, sem peso, continua valendo o montante');
+assert.equal(valorApoio({ montante: 3, peso: 0 }), 0, 'peso 0 zera de propósito');
+assert.equal(valorApoio({ montante: 3, peso: -2 }), 3, 'peso negativo é lixo: cai para 1');
+assert.equal(valorApoio({ montante: 3, peso: 'abc' }), 3, 'peso não numérico cai para 1');
+assert.equal(valorApoio({ montante: 9, tipo: 'roleta', peso: 5 }), 3,
+    'a regra legada da roleta continua vencendo o peso');
+
 // --- somarApoiosDoJogador (o número grande do menu) ---
 assert.equal(somarApoiosDoJogador([{ montante: 5 }, { montante: 9, tipo: 'roleta' }, {}]), 5 + 3 + 1);
 assert.equal(somarApoiosDoJogador([]), 0);
+assert.equal(somarApoiosDoJogador([{ montante: 1, peso: 3 }, { montante: 2 }]), 5, 'o peso entra no total');
 
 const metas = [
     { id: 'm1', slug: 'classe', nome: 'Classe' },
@@ -72,6 +85,8 @@ assert.equal(chaveApoio(a), chaveApoio({ ...a }), 'cópia idêntica tem a mesma 
 assert.notEqual(chaveApoio(a), chaveApoio({ ...a, montante: 3 }));
 assert.notEqual(chaveApoio(a), chaveApoio({ ...a, recebido: false }));
 assert.equal(chaveApoio({ nome: 'A' }), chaveApoio({ nome: 'A', montante: 1, recebido: false }), 'defaults equivalem');
+assert.notEqual(chaveApoio(a), chaveApoio({ ...a, peso: 3 }), 'peso diferente é apoio diferente');
+assert.equal(chaveApoio({ nome: 'A' }), chaveApoio({ nome: 'A', peso: 1 }), 'peso 1 é o mesmo que ausente');
 
 // --- progressoDasEtapas: cascata (o que sobra escorre para a etapa seguinte) ---
 const etapas = [

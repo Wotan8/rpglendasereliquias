@@ -9,7 +9,7 @@ const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
-const { aplicarCompra } = require("./entrega-calc");
+const { aplicarCompra, pesoProducao } = require("./entrega-calc");
 const { TAXAS_PADRAO, calcularCobranca, EXCLUIR_POR_MEIO } = require("./taxa-gateway");
 const { sortear, aplicarPremio, girosDoItem } = require("./roleta-sorteio");
 
@@ -225,6 +225,7 @@ exports.comprarComFragmentos = onCall(
       });
 
       const apoios = data.apoios || [];
+      const peso = pesoProducao(item);
       apoios.push({
         nome: item.nome,
         tipo: "Loja (Frag$)",
@@ -233,6 +234,7 @@ exports.comprarComFragmentos = onCall(
         valor: "",
         dataInicio: new Date().toISOString().split("T")[0],
         recebido: true,
+        ...(peso !== 1 ? { peso } : {}),
       });
 
       const notifications = data.notifications || [];

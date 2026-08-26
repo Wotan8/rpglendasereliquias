@@ -12,14 +12,22 @@
 
 /**
  * Quanto um apoio VALE na contagem (≠ do `montante` gravado, que é exibido cru no card).
- * Regra de mesa: apoio do tipo "roleta" com montante múltiplo de 3 conta 1 a cada 3.
+ *
+ * Duas regras se somam aqui:
+ *  - Legado de mesa: apoio do tipo "roleta" com montante múltiplo de 3 conta 1 a cada 3.
+ *  - `peso`: quanto UMA unidade do item rende na meta. Vem do cadastro da Loja
+ *    (`pesoProducao`) e é o que faz a "Roleta 3x" valer 3 de Lore numa compra só.
+ *    Ausente vale 1, então nada do que já está gravado muda de valor.
+ *
  * Montante ausente vale 1.
  */
 export function valorApoio(apoio) {
     const montante = parseInt(apoio?.montante) || 1;
     const tipo = (apoio?.tipo || '').toLowerCase().trim();
     if (tipo === 'roleta' && montante % 3 === 0) return montante / 3;
-    return montante;
+
+    const peso = Number(apoio?.peso);
+    return montante * (Number.isFinite(peso) && peso >= 0 ? peso : 1);
 }
 
 export function parseMetaIds(metaVal) {
@@ -101,10 +109,15 @@ export function proximaEtapa(etapasComProgresso = []) {
     return etapasComProgresso.find(e => !e.concluida) || null;
 }
 
-/** Identidade de um apoio pelo conteúdo — usada para reencontrá-lo no array do servidor. */
+/* Identidade de um apoio pelo conteúdo — usada para reencontrá-lo no array do
+   servidor. `peso` entra na conta porque duas compras do mesmo item, no mesmo
+   dia, feitas antes e depois de o mestre mudar o peso, são apoios DIFERENTES:
+   sem ele, editar um mexeria no outro. */
 export function chaveApoio(a) {
+    const peso = Number(a?.peso);
     return JSON.stringify([
         a?.nome || '', a?.tipo || '', parseInt(a?.montante) || 1,
-        a?.meta || '', a?.valor || '', a?.dataInicio || '', !!a?.recebido
+        a?.meta || '', a?.valor || '', a?.dataInicio || '', !!a?.recebido,
+        Number.isFinite(peso) && peso >= 0 ? peso : 1
     ]);
 }
