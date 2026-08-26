@@ -235,9 +235,14 @@ const w = fr.contentWindow;
 
     /* Era o defeito do print: com tudo na mesma faixa, o grupo da conta caía
        sozinho para a segunda linha, encostado na esquerda. */
+    /* Deslogado, o grupo da conta pode não ter nenhum filho visível (Frags,
+       nome e sair só existem com sessão). Sem isso o teste estourava com
+       `undefined` em vez de dizer que não havia o que medir. */
     const ultimo = [...conta.children].filter(e => e.offsetParent).pop();
-    t(`T34 · e nada dela vaza pela direita (${Math.round(cx(ultimo).right)} de ${d.documentElement.clientWidth}px)`,
-        cx(ultimo).right <= d.documentElement.clientWidth);
+    t(`T34 · e nada dela vaza pela direita`
+      + (ultimo ? ` (${Math.round(cx(ultimo).right)} de ${d.documentElement.clientWidth}px)`
+                : ' — nada visível para medir (deslogado)'),
+        !ultimo || cx(ultimo).right <= d.documentElement.clientWidth);
     t('T35 · a página não ganhou rolagem lateral',
         d.documentElement.scrollWidth <= d.documentElement.clientWidth + 1);
 
@@ -446,6 +451,20 @@ const w = fr.contentWindow;
         w.portalHeroPosicionar(palco, cfgSep);
         await new Promise(r => setTimeout(r, 60));
 
+        /* ⚠️ APARECE, e não só "está no lugar certo".
+           A primeira versão destes testes media retângulo e parentesco, e os
+           dois estavam certos enquanto o botão ficava INVISÍVEL atrás do canvas
+           — solto no palco ele virava `static`, e estático pinta abaixo de
+           irmão posicionado. Medida que não pode pegar isso é medida que dá
+           verde para tela quebrada.
+           `elementFromPoint` é a pergunta certa: quem está no ponto? */
+        const aparece = (el) => {
+            const r = el.getBoundingClientRect();
+            if (!r.width || !r.height) return false;
+            const alvo = el.ownerDocument.elementFromPoint(
+                Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
+            return !!alvo && (alvo === el || el.contains(alvo));
+        };
         const separado = (p) => {
             const c = p.querySelector('.portal-hero-cta');
             const x = p.querySelector('.portal-hero-texto');
@@ -454,6 +473,27 @@ const w = fr.contentWindow;
         };
         t(`T${(linhas.length + 1).toString().padStart(2, '0')} · com o botão em outro canto, prévia e animação concordam`,
             separado(mini) === separado(palco) && separado(palco));
+        /* AS 144 COMBINAÇÕES, PERGUNTANDO "APARECE?".
+           Duas rodadas de correção passaram por aqui com o botão invisível
+           porque o teste media retângulo. Uma varredura completa com
+           elementFromPoint é o que separa "está posicionado" de "dá para ver". */
+        const some = [];
+        for (const tv of ['topo', 'centro', 'base'])
+        for (const th of ['esquerda', 'centro', 'direita'])
+        for (const cv of ['igual', 'topo', 'centro', 'base'])
+        for (const ch of ['igual', 'esquerda', 'centro', 'direita']) {
+            w.portalHeroPosicionar(palco, { titulo: true, cta: true,
+                vertical: tv, horizontal: th, ctaV: cv, ctaH: ch });
+            await new Promise(r => setTimeout(r, 6));
+            const c = palco.querySelector('.portal-hero-cta');
+            const h = palco.querySelector('.portal-hero-texto h1');
+            if (c && !aparece(c)) some.push(`botão ${tv}/${th}→${cv}/${ch}`);
+            if (h && !aparece(h)) some.push(`título ${tv}/${th}→${cv}/${ch}`);
+        }
+        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · nas 144 combinações tudo APARECE `
+          + `— nada fica atrás da arte nem coberto pelo vizinho`, some.length === 0);
+        if (some.length) linhas.push(`<tr><td colspan="2" style="color:var(--lr-blood-2)">`
+            + `sumiu (${some.length}): ${some.slice(0, 8).join(', ')}…</td></tr>`);
 
         const cfgJunto = { titulo: true, cta: true, vertical: 'centro', horizontal: 'centro' };
         w.portalHeroPosicionar(mini, cfgJunto);

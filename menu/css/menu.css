@@ -2375,8 +2375,18 @@ html:not(.dark) .meta-card {
 .portal-hero-cta[data-ch="esquerda"] { justify-self: start; }
 .portal-hero-cta[data-ch="centro"] { justify-self: center; }
 .portal-hero-cta[data-ch="direita"] { justify-self: end; }
-/* Solto no palco ele não tem o texto em cima para se afastar. */
-.portal-hero-palco > .portal-hero-cta { margin-top: 0; }
+/* Solto no palco ele não tem o texto em cima para se afastar.
+   ⚠️ E precisa de `position` PRÓPRIA. Dentro do bloco de texto ele herdava a
+   camada de `.portal-hero-texto` (`position: relative` + z-index); solto, ficava
+   `static`, e elemento estático pinta ABAIXO de qualquer irmão posicionado — o
+   `#heroCanvas` e o `.portal-hero-veu` são os dois `position: absolute`. O
+   resultado: o botão estava lá, do tamanho certo, no lugar certo, e invisível
+   atrás da arte. `document.elementFromPoint` no centro dele devolvia o CANVAS. */
+.portal-hero-palco > .portal-hero-cta {
+    margin-top: 0;
+    position: relative;
+    z-index: var(--lr-z-base);
+}
 
 /* Só o botão: o h1 e o lema saem, o convite fica. */
 .portal-hero-texto.sem-titulo h1,
@@ -3257,4 +3267,57 @@ html:not(.dark) .meta-card {
     align-self: flex-start;
     padding: 7px 14px;
     font-size: .85rem;
+}
+
+/* ===== ENCERRAR PERSONAGEM =====
+   A escolha entre entregar ao mestre e apagar é a decisão da janela, então ela
+   ocupa o corpo — não é um checkbox escondido perto do botão. A opção perigosa
+   fica visualmente separada, para o clique de rotina não cair nela. */
+.encerrar-vip {
+    margin: 14px 0;
+    padding: 10px 12px;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-surface-2);
+    font-size: .88rem;
+    line-height: 1.5;
+}
+
+.encerrar-vip strong { color: var(--lr-gold); }
+.encerrar-vip .encerrar-vip-nada { color: var(--lr-text-2); }
+
+.encerrar-opcoes { display: flex; flex-direction: column; gap: 10px; }
+
+.encerrar-op {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 11px 12px;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    cursor: pointer;
+    transition: border-color var(--lr-t-base) var(--lr-ease), background var(--lr-t-base) var(--lr-ease);
+}
+
+.encerrar-op:hover { border-color: var(--lr-gold); }
+
+.encerrar-op input { margin-top: 3px; width: 17px; height: 17px; flex: 0 0 auto; accent-color: var(--lr-gold); }
+.encerrar-op span { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.encerrar-op strong { font-size: .95rem; }
+.encerrar-op small { color: var(--lr-text-2); font-size: .8rem; line-height: 1.45; }
+
+.encerrar-op:has(input:checked) {
+    border-color: var(--lr-gold);
+    background: var(--lr-gold-soft);
+}
+
+.encerrar-op--perigo:has(input:checked) {
+    border-color: var(--lr-blood-2);
+    background: var(--lr-blood-soft);
+}
+
+.encerrar-op--perigo:has(input:checked) strong { color: var(--lr-blood-2); }
+
+@media (prefers-reduced-motion: reduce) {
+    .encerrar-op { transition: none; }
 }

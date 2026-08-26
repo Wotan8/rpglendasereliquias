@@ -21,7 +21,7 @@
 <script type="module">import '/shared/detalhe.js?v=4';</script>
 <link rel="stylesheet" href="/shared/dialogo.css?v=2">
 <script type="module">import '/shared/dialogo.js?v=2';</script>
-    <link rel="stylesheet" href="/menu/css/menu.css?v=34">
+    <link rel="stylesheet" href="/menu/css/menu.css?v=36">
     <link rel="stylesheet" href="/shared/tokens.css?v=11">
     <script src="/shared/theme.js"></script>
     <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout Mercado Pago contra bots/abuso. -->
@@ -544,18 +544,41 @@
     <footer class="portal-rodape">🜲 Lendas &amp; Relíquias</footer>
 
     <!-- Modal de Exclusão -->
+    <!-- ENCERRAR PERSONAGEM — duas saídas, não uma.
+         Apagar era o único caminho e levava a ficha junto com tudo que o
+         jogador construiu. Agora a saída padrão é entregar ao mestre: a ficha
+         vira NPC e continua existindo no mundo. Os dois caminhos devolvem 60%
+         do EXP VIP ao Repertório. -->
     <div class="modal" id="deleteModal">
-        <div class="modal-content">
-            <div class="modal-icon">⚠️</div>
-            <div class="modal-title">ATENÇÃO!</div>
-            <div class="modal-text">
-                Tem certeza que deseja <strong>APAGAR PERMANENTEMENTE</strong> o personagem
-                <strong id="deleteCharacterName"></strong>?<br><br>
-                Esta ação <strong>NÃO PODE SER DESFEITA</strong>!
+        <div class="modal-content" style="max-width:520px;text-align:left">
+            <div class="modal-title" style="text-align:center">O que fazer com
+                <span id="deleteCharacterName" style="color:var(--lr-gold)"></span>?</div>
+
+            <div id="encerrarExpVip" class="encerrar-vip"></div>
+
+            <div class="encerrar-opcoes">
+                <label class="encerrar-op">
+                    <input type="radio" name="encerrarDestino" value="mestre" checked>
+                    <span>
+                        <strong>📜 Entregar ao mestre</strong>
+                        <small>A ficha vira um NPC no cadastro do mestre, com atributos, perícias,
+                            peculiaridades e itens. O personagem sai da sua lista, mas continua
+                            existindo no mundo.</small>
+                    </span>
+                </label>
+                <label class="encerrar-op encerrar-op--perigo">
+                    <input type="radio" name="encerrarDestino" value="apagar">
+                    <span>
+                        <strong>🗑️ Apagar de vez</strong>
+                        <small>A ficha e os itens dela somem para sempre.
+                            <strong>Não pode ser desfeito.</strong></small>
+                    </span>
+                </label>
             </div>
+
             <div class="modal-buttons">
                 <button class="btn-modal btn-cancel" onclick="closeDeleteModal()">❌ Cancelar</button>
-                <button class="btn-modal btn-confirm" onclick="confirmDelete()">🗑️ Sim, Apagar</button>
+                <button class="btn-modal btn-confirm" id="btnEncerrar" onclick="confirmDelete()">Confirmar</button>
             </div>
         </div>
     </div>
@@ -624,7 +647,7 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="/menu/js/menu-firebase.js?v=22"></script>
+    <script type="module" src="/menu/js/menu-firebase.js?v=23"></script>
     <!-- A janela da Roleta. Depois do menu-firebase.js: ela usa window.db e
          window.lrFunctions, que nascem lá. -->
     <script type="module" src="/menu/js/menu-roleta.js?v=7"></script>
@@ -634,7 +657,7 @@
     <script src="/shared/livro-vinculado.js?v=9"></script>
     <script type="module" src="/menu/js/menu-wiki.js?v=6"></script>
     <script type="module" src="/menu/js/menu-portal-config.js?v=4"></script>
-    <script src="/menu/js/menu-hero.js?v=8"></script>
+    <script src="/menu/js/menu-hero.js?v=9"></script>
 
 </body>
 

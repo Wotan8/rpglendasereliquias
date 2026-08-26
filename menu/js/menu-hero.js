@@ -201,11 +201,26 @@
            Mover o nó é o que evita a alternativa ruim: deixar os dois soltos na
            mesma célula do grid e vê-los se sobrepondo quando o Criador escolhe
            o mesmo canto para ambos. */
-        var proprio = v.ctaV !== 'igual' || v.ctaH !== 'igual';
+        /* Resolve os dois cantos ANTES de comparar. Comparar com 'igual' não
+           bastava: escolher "Topo" para o botão com o título já no topo dava
+           `proprio = true`, o botão saía para o palco e ia parar EM CIMA do
+           título — mesma célula do grid, mesmo canto, um cobrindo o outro.
+           Canto resolvido igual ao do título é o mesmo que "junto dele". */
+        var cv = v.ctaV === 'igual' ? v.vertical : v.ctaV;
+        var ch = v.ctaH === 'igual' ? v.horizontal : v.ctaH;
+        /* Só a LINHA decide se o botão ganha lugar próprio.
+           Dividir a mesma faixa com o título, cada um numa coluna, não cabe:
+           medido em 375px, doze arranjos punham o botão em cima do texto do
+           título. E não é questão de apertar mais — numa tela de mão não há
+           largura para um título grande e um botão lado a lado.
+           Linha diferente (topo × rodapé, que é o caso de sempre) não tem esse
+           problema em tamanho nenhum. Na mesma linha, ele volta a empilhar
+           embaixo do lema, e a coluna dele passa a ser a do título. */
+        var proprio = cv !== v.vertical;
         if (proprio) {
             if (cta.parentElement !== palco) palco.appendChild(cta);
-            cta.dataset.cv = v.ctaV === 'igual' ? v.vertical : v.ctaV;
-            cta.dataset.ch = v.ctaH === 'igual' ? v.horizontal : v.ctaH;
+            cta.dataset.cv = cv;
+            cta.dataset.ch = ch;
         } else {
             if (cta.parentElement !== texto) texto.appendChild(cta);
             delete cta.dataset.cv;
