@@ -17,7 +17,7 @@ import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
     pressaoItem, htmlInventario, tratarClique, iniciarArrasto, cabeNoConteiner, tplDoItem,
     desgastarConteiner, GATILHO,
-} from '../../shared/inventario-motor.js?v=10';
+} from '../../shared/inventario-motor.js?v=11';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML, modeloDoItem } from '../../shared/restaurar-item.js?v=1';
 import { confirmar } from '../../shared/dialogo.js?v=2';
 

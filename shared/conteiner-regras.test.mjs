@@ -28,10 +28,11 @@ test('contêiner sem capacidade cadastrada não tem limite', () => {
     assert.equal(cabeNoConteiner(lun, mochila, [mochila, lun, ...muitos]).ok, true);
 });
 
-test('contêiner não entra em contêiner', () => {
-    const r = cabeNoConteiner(mochila, saco, [saco, mochila]);
+test('contêiner CHEIO não entra em contêiner (regra antiga, agora com pedágio)', () => {
+    const dentro = { id: 'z1', nome: 'Corda', peso: 3, parentItemId: 'c2' };
+    const r = cabeNoConteiner(mochila, saco, [saco, mochila, dentro]);
     assert.equal(r.ok, false);
-    assert.match(r.motivo, /não entra/i);
+    assert.match(r.motivo, /esvazie/i);
 });
 
 test('item já dentro não reclama — recusa calada', () => {
@@ -153,4 +154,27 @@ test('as travas novas herdam do modelo do catálogo', () => {
     const modelo = { tamanhoMaximoItem: 0.9, tagsAceitas: ['Flecha'] };
     assert.equal(cabeNoConteiner(flecha, instancia, [instancia, flecha], modelo).ok, true);
     assert.equal(cabeNoConteiner(corda, instancia, [instancia, corda], modelo).ok, false);
+});
+
+// ===== CONTÊINER DENTRO DE CONTÊINER: só vazio =====
+
+test('contêiner VAZIO pode ser guardado — o casaco dobrado na mochila', () => {
+    const manto = { id: 'm1', nome: 'Manto do Viajante', ehContainer: true, peso: 2, tamanho: .5 };
+    assert.equal(cabeNoConteiner(manto, mochila, [mochila, manto]).ok, true);
+});
+
+test('contêiner CHEIO recusa e manda esvaziar', () => {
+    const manto = { id: 'm1', nome: 'Manto do Viajante', ehContainer: true, peso: 2, tamanho: .5 };
+    const dentro = { id: 'x1', nome: 'Erva', peso: .1, parentItemId: 'm1' };
+    const r = cabeNoConteiner(manto, mochila, [mochila, manto, dentro]);
+    assert.equal(r.ok, false);
+    assert.match(r.motivo, /esvazie/i);
+});
+
+test('o pedágio existe porque a pressão só soma filho direto', () => {
+    // manto (2 kg) dentro da mochila, com uma bigorna escondida dentro do manto:
+    // se isso fosse permitido, os 50 kg sumiriam da conta.
+    const manto = { id: 'm1', nome: 'Manto', ehContainer: true, peso: 2 };
+    const bigorna = { id: 'b1', nome: 'Bigorna', peso: 50, parentItemId: 'm1' };
+    assert.equal(cabeNoConteiner(manto, mochila, [mochila, manto, bigorna]).ok, false);
 });

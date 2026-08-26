@@ -159,7 +159,14 @@ export function pesoDentro(contId, itens, ignorarId) {
 export function cabeNoConteiner(item, cont, itens, tpl) {
     if (!item || !cont || item.id === cont.id) return { ok: false, motivo: 'Item inválido' };
     if (!ehContainer(cont)) return { ok: false, motivo: 'O destino não é um contêiner' };
-    if (ehContainer(item)) return { ok: false, motivo: 'Contêiner não entra em contêiner' };
+    /* Contêiner VAZIO pode ser guardado — é o casaco dobrado dentro da mochila.
+       Cheio, não: a pressão só soma os filhos DIRETOS, então o conteúdo de um
+       contêiner aninhado escaparia do peso e viraria bolsa infinita. Esvaziar
+       antes de guardar é o pedágio que mantém a conta honesta. */
+    if (ehContainer(item)) {
+        const dentro = (itens || []).filter(x => x.parentItemId === item.id).length;
+        if (dentro) return { ok: false, motivo: `Esvazie ${item.nome || 'o contêiner'} antes de guardar (${dentro} item(ns) dentro)` };
+    }
     if (item.parentItemId === cont.id) return { ok: false, motivo: '' };   // já está lá, sem alarde
 
     // Rompido não recebe mais nada: sem isto o jogador re-enche o saco furado no

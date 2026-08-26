@@ -17,7 +17,7 @@ import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
     htmlInventario, tratarClique, iniciarArrasto, tplDoItem, cabeNoConteiner,
     desgastarConteiner, GATILHO,
-} from '../../shared/inventario-motor.js?v=10';
+} from '../../shared/inventario-motor.js?v=11';
 import {
     camposDaInstancia, valorDoItem, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo, htmlFormulario, htmlBarraFerramentas, ligarFormulario,
