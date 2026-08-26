@@ -42,6 +42,24 @@
             "runtimeExecutable": "python",
             "runtimeArgs": ["-m", "http.server", "5201"],
             "port": 5201
+        },
+        {
+            "name": "site-5202",
+            "runtimeExecutable": "python",
+            "runtimeArgs": ["-m", "http.server", "5202"],
+            "port": 5202
+        },
+        {
+            "name": "site-5310",
+            "runtimeExecutable": "python",
+            "runtimeArgs": ["-m", "http.server", "5310"],
+            "port": 5310
+        },
+        {
+            "name": "site-5411",
+            "runtimeExecutable": "python",
+            "runtimeArgs": ["-m", "http.server", "5411"],
+            "port": 5411
         }
     ]
 }

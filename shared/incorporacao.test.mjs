@@ -12,9 +12,11 @@
  * Roda com: node shared/incorporacao.test.mjs
  */
 import assert from 'node:assert/strict';
+import { DADIVAS } from './dadiva.js';
 import {
     porqueNaoPodeIncorporar, custoEscalonado, dadivasDoHospede, ehAncestral,
     quemFicaInerte, ORCAMENTO_BASE, UNIDADES_POR_SANIDADE, CONDICAO_TRANSE,
+    poderDoHospede, custoDaProjecao,
 } from './incorporacao.js';
 
 const CHAR = 'char_druida_1';
@@ -64,20 +66,67 @@ assert.deepEqual(custoEscalonado(12), { excedente: 10, sanidade: 5 }, 'urso anci
 assert.equal(custoEscalonado(12, { porSanidade: 4 }).sanidade, 2);
 assert.equal(custoEscalonado(12, { orcamento: 0 }).sanidade, 6);
 
-/* ===== quais Dádivas o hóspede tem para dar ===== */
-// o Eco declara UMA no cadastro, e ainda empresta o que sabe e o fôlego
-assert.deepEqual(dadivasDoHospede(eco, 'eco'), ['braco', 'habilidade', 'energia']);
-// um bicho não declara: empresta o que ele é, e vale o que render sobra
-assert.deepEqual(dadivasDoHospede(urso, 'aliado-animal'),
-    ['braco', 'pele', 'olho', 'passo', 'boca', 'habilidade', 'energia']);
-// Eco sem Dádiva cadastrada cai na lista cheia em vez de não dar nada
-assert.equal(dadivasDoHospede({ tipo: 'eco' }, 'eco').length, 7);
+/* ===== 🌫️ a Sanidade do PROJETOR =====
+ * Ela NAO vem das unidades da Dádiva. Aquela conta e cortada pelo teto de quem
+ * recebe, entao mede o espaco que sobrava na ficha do Xama, nao a forca do
+ * hospede: mesmo Eco, mesmo beneficio, e o veterano no teto pagava ZERO
+ * enquanto o iniciante pagava caro. Aqui e o Poder do hospede + o Veu. */
+assert.equal(poderDoHospede({ atributos: { PRS: 8 } }), 8, 'o Poder e a PRS da ficha');
+// Uma fonte so. O campo `eco.prs` do Painel saiu em 25/08/2026: duas entradas
+// para o mesmo numero deixavam o Mestre preencher a escala de RESISTENCIA do
+// §9.9 num campo que precifica PODER, e a projecao cobrava o numero errado.
+assert.equal(poderDoHospede({ eco: { prs: 10 }, atributos: { PRS: 8 } }), 8,
+    'campo antigo do Painel NAO vence mais a ficha');
+assert.equal(poderDoHospede({}), 0);
+
+const servo = { atributos: { PRS: 2 } };       // Eco do Servo
+const mestre = { atributos: { PRS: 8 } };      // Eco do Mestre de Armas
+assert.equal(custoDaProjecao(servo, 'material').sanidade, 1,
+    'o Eco mais banal ainda cobra 1 - sair do corpo custa SEMPRE');
+assert.equal(custoDaProjecao(mestre, 'material').sanidade, 3, '1 + 8/3');
+assert.equal(custoDaProjecao(mestre, 'eterico').sanidade, 4, 'o Eterico soma 1');
+assert.equal(custoDaProjecao(mestre, 'astral').sanidade, 5, 'o Astral soma 2');
+assert.equal(custoDaProjecao({ atributos: { PRS: 10 } }, 'Astral').sanidade, 6,
+    'caixa e acento nao importam no Veu');
+assert.equal(custoDaProjecao(mestre, 'lugar nenhum').degrau, 0, 'Veu desconhecido nao inventa degrau');
+assert.equal(custoDaProjecao(mestre, 'astral', { piso: 0, poderPorSanidade: 4 }).sanidade, 4,
+    'os dois botoes sao ajustaveis sem mexer no Tabuleiro');
+
+// O Redutor do Veu: regra que ja estava escrita no predef e ninguem aplicava.
+// Redutor NAO tem sinal - `Alvo = ... - Redutor`, entao o numero ja e a subtracao.
+assert.equal(custoDaProjecao(mestre, 'material').redutor, 0, 'o Material nao dificulta');
+assert.equal(custoDaProjecao(mestre, 'eterico').redutor, 2);
+assert.equal(custoDaProjecao(mestre, 'astral').redutor, 4);
+assert.equal(custoDaProjecao(mestre, 'lugar nenhum').redutor, 0, 'Veu desconhecido nao inventa Redutor');
+// Sanidade e Redutor sobem juntos, mas em reguas diferentes - nao derivar um do outro
+assert.deepEqual(['material', 'eterico', 'astral'].map(v => {
+    const c = custoDaProjecao(mestre, v);
+    return [c.sanidade, c.redutor];
+}), [[3, 0], [4, 2], [5, 4]]);
+
+// o bicho do Druida tambem paga: cai na PRS da ficha, sem bloco `eco`
+assert.equal(custoDaProjecao({ atributos: { PRS: 6 } }, 'material').sanidade, 3);
+
+/* ===== quais Dádivas o hóspede tem para dar: TODAS =====
+ * Correção de 25/08/2026. A versão antiga travada aqui devolvia uma lista fixa
+ * de sete — sem Mente e sem Perícia — e tentava ler `hospede.ecoDadiva`, campo
+ * que o Painel nunca gravou com esse nome (ele grava `eco.dadiva`). Resultado
+ * em mesa: duas Dádivas nunca saíam e o cadastro do Mestre não chegava a lugar
+ * nenhum. Quem filtra é o DADO de cada Dádiva, não uma lista no código. */
+assert.deepEqual(dadivasDoHospede(eco, 'eco'), Object.keys(DADIVAS),
+    'o Eco entrega as NOVE');
+assert.deepEqual(dadivasDoHospede(urso, 'aliado-animal'), Object.keys(DADIVAS),
+    'o bicho também — a ficha dele é que decide o que rende');
+assert.equal(dadivasDoHospede({ tipo: 'eco' }, 'eco').length, 9);
 
 /* ===== Ancestral ===== */
 assert.equal(ehAncestral({ ecoEstado: 'ancestral' }), true);
 assert.equal(ehAncestral({ ecoEstado: 'Ancestral' }), true, 'caixa não importa');
 assert.equal(ehAncestral({ ecoEstado: 'furioso' }), false);
 assert.equal(ehAncestral(urso), false);
+// o Painel grava ANINHADO; ler só o raso é por que o dobro nunca disparou
+assert.equal(ehAncestral({ eco: { estado: 'ancestral' } }), true);
+assert.equal(ehAncestral({ eco: { estado: 'sereno' } }), false);
 
 /* ===== quem fica para trás ===== */
 assert.deepEqual(quemFicaInerte('receptor'), { inerte: 'hospede', age: 'personagem' },

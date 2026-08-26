@@ -40,10 +40,11 @@ import { updObj } from './tab-objects.js';
 import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte, fonteDoParticipante } from './tab-hud.js';
 import { carregarCondicoesSistema, aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { grausDoAtaque } from './tab-conflito-calc.js';
-import { calcularDadiva, rotuloDoGanho, tetoDoAtributo } from '../../shared/dadiva.js?v=2';
+import { calcularDadiva, rotuloDoGanho, tetoDoAtributo, mesaDeSorteio } from '../../shared/dadiva.js?v=3';
+import { janelaDeSorteio, sorteioDoMestre, janelaDoVeu } from './tab-dadiva-sorteio.js?v=2';
 import { bonusDosGanhos } from '../../shared/bonus-temporario.js?v=1';
 import { porqueNaoPodeIncorporar, custoEscalonado, dadivasDoHospede, ehAncestral,
-         quemFicaInerte, CONDICAO_TRANSE } from '../../shared/incorporacao.js?v=1';
+         quemFicaInerte, CONDICAO_TRANSE, custoDaProjecao } from '../../shared/incorporacao.js?v=2';
 import { oQueDesfazer, comecarRitual, precisaSegundoEstagio, miraDoSegundoEstagio } from '../../shared/turno-efeitos.js?v=1';
 import { logChat } from './tab-chat.js';
 
@@ -1385,14 +1386,46 @@ async function aplicarIncorporacao(m, p, tok, tokAlvo) {
         catalogoAuras: cat.auras || [],
         tetoRacial: fontePersonagem?.tetoRacialAtributo || null,
     });
-    const dadivas = dadivasDoHospede(hospede, m.exigeVinculo)
-        .map(k => calcularDadiva(k, fichaHospede, fichaPersonagem, cat, { ancestral, teto }))
-        .filter(d => d && (d.ganhos.length || d.modulos.length));
+    // 🎲 O Mestre rola antes de qualquer coisa ser gasta. Cancelar aqui não
+    // custa ação nem recurso — por isso a janela vem antes do `gastar`.
+    // Os dois modos cobram Sanidade, mas por medidas diferentes, e misturá-las
+    // é o erro que estava aqui: o Projetor pagava pelas unidades da Dádiva, que
+    // são cortadas pelo TETO de quem recebe — logo mediam o espaço que sobrava
+    // na ficha do Xamã, não a força do hóspede. Veterano no teto pagava zero.
+    let ganhos = [], modulos = [], unidades = 0;
+    let extra = { sanidade: 0, excedente: 0 }, notaCusto = '';
 
-    const ganhos = dadivas.flatMap(d => d.ganhos);
-    const modulos = dadivas.flatMap(d => d.modulos);
-    const unidades = dadivas.reduce((t, d) => t + (d.unidades || 0), 0);
-    const extra = custoEscalonado(unidades);
+    if (modo === 'receptor') {
+        // 🎲 O Mestre rola antes de qualquer coisa ser gasta.
+        const chaves = dadivasDoHospede(hospede, m.exigeVinculo);
+        const linhas = mesaDeSorteio(chaves, fichaHospede, cat);
+        let sorteio;
+        if (linhas.length) {
+            const escolhas = await janelaDeSorteio(hospede, linhas, modo);
+            if (!escolhas) { cancelarMira(); return; }
+            sorteio = sorteioDoMestre(escolhas);
+        }
+        const dadivas = chaves
+            .map(k => calcularDadiva(k, fichaHospede, fichaPersonagem, cat, { ancestral, teto, sorteio }))
+            .filter(d => d && (d.ganhos.length || d.modulos.length));
+        ganhos = dadivas.flatMap(d => d.ganhos);
+        modulos = dadivas.flatMap(d => d.modulos);
+        unidades = dadivas.reduce((t, d) => t + (d.unidades || 0), 0);
+        extra = custoEscalonado(unidades);
+    } else {
+        // 🌫️ A projeção não recebe Dádiva — não há o que sortear. Paga pelo
+        // Poder do hóspede e pela profundidade da camada.
+        // Alvo do teste desta habilidade, quando o cadastro declara um — serve
+        // só para a janela mostrar quanto o Redutor do Véu deixa dele.
+        const alvoBase = Number.isFinite(meta.golpe?.acerto) ? meta.golpe.acerto : null;
+        const veu = await janelaDoVeu(hospede, (v) => custoDaProjecao(hospede, v), alvoBase);
+        if (!veu) { cancelarMira(); return; }
+        const c = custoDaProjecao(hospede, veu);
+        extra = { sanidade: c.sanidade, excedente: 0 };
+        notaCusto = ` · Poder ${c.poder}, Véu ${veu}`
+            + (c.redutor ? ` · Redutor ${c.redutor} no teste de Transcendência`
+                + (alvoBase != null ? ` (Alvo ${alvoBase} → ${alvoBase - c.redutor})` : '') : '');
+    }
 
     // Receptor leva as sobras; Projetor vai para o corpo do hóspede e não
     // ganha empréstimo nenhum — ele passa a JOGAR o hóspede.
@@ -1428,8 +1461,8 @@ async function aplicarIncorporacao(m, p, tok, tokAlvo) {
         + (ancestral ? ' [Ancestral: dobro]' : '')
         + (modo === 'receptor' ? ` → ${resumo}` : ` → passa a agir pelo corpo dele, na iniciativa dele`)
         + (modulos.length ? ` · ✨ ${modulos.length} módulo(s) de habilidade emprestado(s)` : '')
-        + ` · entrega ${unidades.toFixed(2)} un`
-        + (extra.sanidade ? ` · −${extra.sanidade} Sanidade pelo excedente (${extra.excedente.toFixed(2)} un)` : ''));
+        + (modo === 'receptor' ? ` · entrega ${unidades.toFixed(2)} un` : notaCusto)
+        + (extra.sanidade ? ` · −${extra.sanidade} Sanidade` + (extra.excedente ? ` pelo excedente (${extra.excedente.toFixed(2)} un)` : '') : ''));
 
     toast(modo === 'projetor'
         ? `🌀 ${p.name || '?'} projetou-se em ${hospede.nome || '?'} — jogue pelo token dele`

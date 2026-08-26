@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Janela de sorteio das Dádivas</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="../shared/lendas-reliquias.css">
+<link rel="stylesheet" href="css/tabuleiro.css">
+<style>
+  html,body{margin:0;min-height:100%;background:#0b0e14;color:#e6e8ef;font:14px/1.6 Inter,system-ui,sans-serif}
+  #saida{margin:16px;max-width:820px}
+  h1{font-size:1rem;margin:0 0 4px} p{margin:0 0 12px;color:#8b93a7;font-size:.82rem}
+  table{border-collapse:collapse;font:11px ui-monospace,monospace;width:100%;margin-top:10px}
+  td{border:1px solid #2a3040;padding:3px 7px} .ok{color:#34d399} .fail{color:#f87171;font-weight:700}
+  #placar{font-weight:800;margin-top:12px;padding-top:10px;border-top:1px solid #2a3040}
+</style></head>
+<body>
+<div class="tb-modal" id="tbModal"><div class="tb-modal-content"><span class="tb-modal-title"></span><div class="tb-modal-body"></div></div></div>
+
+<div id="saida">
+  <h1>🎲 Janela de sorteio das Dádivas</h1>
+  <p>Chama a <b>janela de verdade</b> (<code>tab-dadiva-sorteio.js</code>) com a mesa que o
+     <b>motor de verdade</b> montou (<code>shared/dadiva.js</code>) — nada de cópia de markup.
+     O hóspede é um Eco de fixture com o catálogo real de Sentidos e Deslocamento.
+     Confira: cada linha tem o seu dado, a última face é <b>nenhum</b>, e
+     <b>🎲 Rolar tudo</b> preenche tudo dentro da faixa.</p>
+  <button class="tb-btn tb-btn-success" id="abrir">🎲 Janela do Receptor</button>
+  <button class="tb-btn" id="abrirVeu">🌫️ Janela do Projetor</button>
+  <div id="res"></div>
+  <div id="placar">rodando…</div>
+</div>
+
+<script type="module">
+/* Arnês lê o arquivo do DISCO, nunca o do cache — senão testa o de ontem e
+   passa dizendo que está tudo bem. Import dinâmico com selo de tempo. */
+const cb = '?cb=' + Date.now();
+const { mesaDeSorteio, candidatoDoDado, rolarSorteio, DADIVAS } = await import('../shared/dadiva.js' + cb);
+const { janelaDeSorteio, sorteioDoMestre, janelaDoVeu } = await import('./js/tab-dadiva-sorteio.js' + cb);
+const { custoDaProjecao, poderDoHospede } = await import('../shared/incorporacao.js' + cb);
+
+/* ── as três globais que o Tabuleiro fornece ───────────────────────────── */
+const modal = document.getElementById('tbModal');
+window._tbAbrirModal = (titulo, html) => {
+    modal.querySelector('.tb-modal-title').textContent = titulo;
+    modal.querySelector('.tb-modal-body').innerHTML = html;
+    modal.classList.add('show'); modal.style.display = 'flex';
+};
+window.tbFecharModal = () => { modal.classList.remove('show'); modal.style.display = 'none'; };
+window.toast = (msg) => { const d = document.createElement('div'); d.textContent = msg; d.id = 'ultimoToast';
+    d.style.cssText = 'position:fixed;bottom:12px;left:12px;background:#3b2a12;border:1px solid #b45309;padding:8px 12px;border-radius:8px;z-index:999';
+    document.getElementById('ultimoToast')?.remove(); document.body.appendChild(d); };
+window.tbFecharModal();
+
+/* ── catálogo real de blocos, Eco de fixture ───────────────────────────── */
+const catalogo = {
+    derivedValues: [
+        ...['Percepção Tátil','Percepção Visual','Percepção Auditiva','Percepção Olfativa','Percepção','Visão de Essência']
+            .map(nome => ({ key: nome, nome, blocoNome: 'Sentidos' })),
+        ...['Flutuação','Resistência de Voo','Desloc. Aéreo','Desloc. Terrestre','Desloc. Vertical','Desloc. Aquático']
+            .map(nome => ({ key: nome, nome, blocoNome: 'Deslocamento' })),
+    ],
+    pericias: [
+        { nome: 'Atletismo', categoria: 'fisico' }, { nome: 'Erudição', categoria: 'mental' },
+        { nome: 'Esquiva', categoria: 'combate' }, { nome: 'Diplomacia', categoria: 'social' },
+        { nome: 'Submundo', categoria: 'exclusivo' }, { nome: 'Furtividade', categoria: 'fisico' },
+    ],
+};
+const eco = {
+    nome: 'Eco do Velho de Muitas Vidas',
+    atributos: { FOR: 3, DES: 3, VIG: 3, INT: 3, RAC: 3, PRS: 6, PRE: 3, MAN: 3, AUT: 3 },
+    pericias: { Atletismo: 3, Erudição: 3, Esquiva: 3, Diplomacia: 3, Submundo: 3, Furtividade: 2 },
+    vitais: { vitMax: 30, enerMax: 7 },
+    vds: { 'Percepção': 4, 'Desloc. Terrestre': 9, Blindagem: 2 },
+};
+
+const linhas = mesaDeSorteio(Object.keys(DADIVAS), eco, catalogo);
+
+/* ── asserções ─────────────────────────────────────────────────────────── */
+const res = [];
+const t = (nome, cond, detalhe = '') => res.push(`<tr><td>${cond ? '<span class=ok>OK</span>' : '<span class=fail>FALHOU</span>'}</td><td>${nome}</td><td>${detalhe}</td></tr>`);
+
+t('Habilidade não vira linha (vem inteira)', !linhas.some(l => l.dadiva === 'habilidade'));
+t('Mente entra na mesa', linhas.some(l => l.dadiva === 'mente'), 'a lista antiga não pedia Mente');
+t('Perícia entra, uma linha por tipo', linhas.filter(l => l.dadiva === 'pericia').length === 5,
+   linhas.filter(l => l.dadiva === 'pericia').map(l => l.categoria).join(', '));
+t('Atributo físico = 1d4, nenhum no 4', linhas.find(l => l.dadiva === 'braco')?.dado.rotulo === '1d4'
+   && linhas.find(l => l.dadiva === 'braco')?.dado.nenhumEm === 4);
+t('6 Sentidos = 1d8, nenhum no 7, rerrola acima', (() => {
+    const d = linhas.find(l => l.dadiva === 'olho')?.dado;
+    return d?.rotulo === '1d8' && d.nenhumEm === 7 && d.rerrolaAcimaDe === 7;
+})());
+t('a face de nenhum anula', linhas.every(l => candidatoDoDado(l.candidatos, l.dado.nenhumEm) === null));
+t('sorteioDoMestre devolve o candidato da face digitada', (() => {
+    const l = linhas.find(x => x.dadiva === 'braco');
+    return sorteioDoMestre({ [l.categoria]: 2 })(l.candidatos, { nome: l.categoria })?.n === 2;
+})());
+t('Projetor: Poder vem da PRS quando nao ha bloco eco', poderDoHospede(eco) === 6);
+t('Projetor: Poder 6 no Material custa 3', custoDaProjecao(eco, 'material').sanidade === 3, '1 + 6/3');
+t('Projetor: o Astral soma 2', custoDaProjecao(eco, 'astral').sanidade === 5);
+t('Projetor: nunca de graca', custoDaProjecao({ atributos: { PRS: 0 } }, 'material').sanidade === 1);
+t('Veu: Redutor 0 / 2 / 4 no teste', ['material','eterico','astral']
+   .map(v => custoDaProjecao(eco, v).redutor).join(',') === '0,2,4', 'regra que estava so na prosa');
+t('rolarSorteio fica em 1..n+1 em 2000 rolagens', (() => {
+    for (const l of linhas) for (let i = 0; i < 2000 / linhas.length; i++) {
+        const v = rolarSorteio(l.candidatos.length);
+        if (v < 1 || v > l.dado.nenhumEm) return false;
+    }
+    return true;
+})());
+
+document.getElementById('res').innerHTML = `<table>${res.join('')}</table>`;
+const falhas = res.filter(r => r.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML = falhas
+    ? `<span class=fail>${falhas} falha(s)</span> de ${res.length}`
+    : `<span class=ok>✅ ${res.length} de ${res.length} · ${linhas.length} rolagens na mesa</span>`;
+
+document.getElementById('abrirVeu').onclick = async () => {
+    const v = await janelaDoVeu(eco, (x) => custoDaProjecao(eco, x), 7);
+    const c = v && custoDaProjecao(eco, v);
+    window.toast(v ? `Véu ${v} → −${c.sanidade} Sanidade · Redutor ${c.redutor}` : 'Cancelado');
+};
+document.getElementById('abrir').onclick = async () => {
+    const r = await janelaDeSorteio(eco, linhas, 'receptor');
+    window.toast(r ? 'Aplicado: ' + JSON.stringify(r) : 'Cancelado');
+};
+</script>
+</body></html>

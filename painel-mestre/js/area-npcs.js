@@ -657,16 +657,16 @@ function _npcSecaoIdentidade() {
              Disposição e Máscara são do MESTRE — é o que o Eco esconde. -->
         <div id="ecoFieldsSection" class="npcv2-card" style="display:none"><div class="npcv2-block-title">ᛉ Campos de Eco da Alma</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                <div class="form-group"><label class="form-label">Dádiva</label><select class="form-select" id="ecoDadiva"><option value="">Selecione</option><option value="braco">Braço — lutou, caçou, matou</option><option value="pele">Pele — aguentou; fera de couro</option><option value="olho">Olho — batedor, vigia, ave</option><option value="passo">Passo — corria; fera veloz</option><option value="boca">Boca — orador, líder, sacerdote</option></select></div>
-                <div class="form-group"><label class="form-label">Estado</label><select class="form-select" id="ecoEstado"><option value="">Selecione</option><option value="sereno">Sereno</option><option value="inquieto">Inquieto</option><option value="furioso">Furioso</option><option value="corrompido">Corrompido</option><option value="ancestral">Ancestral</option></select></div>
+                <div class="form-group" style="grid-column:1/-1"><label class="form-label">Dádivas</label><div class="form-hint" style="font-size:.8rem;line-height:1.5;opacity:.8">Não se escolhe aqui. Todo hóspede entrega as <b>nove</b> — Braço, Mente, Boca, Pele, Olho, Passo, Perícia, Habilidade e Energia — e cada uma <b>sorteia uma coisa</b> na hora da incorporação, com uma face de <b>nenhum</b> no dado. O que sai vem da <b>ficha abaixo</b>: atributos, perícias, Sentidos, Deslocamento e módulos de classe. Eco sem ficha não entrega nada.</div></div>
+                <div class="form-group"><label class="form-label" title="Só &quot;Ancestral&quot; move mecânica: dobra a entrega da Dádiva (o teto continua cortando). Os outros são guia de interpretação.">Estado ⚙️</label><select class="form-select" id="ecoEstado"><option value="">Selecione</option><option value="sereno">Sereno</option><option value="inquieto">Inquieto</option><option value="furioso">Furioso</option><option value="corrompido">Corrompido</option><option value="ancestral">Ancestral</option></select></div>
             </div>
             <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px">
                 <div class="form-group"><label class="form-label">Personalidade</label><select class="form-select" id="ecoPersonalidade"><option value="">Role 1d10</option><option value="1">1 · Sereno</option><option value="2">2 · Zeloso</option><option value="3">3 · Curioso</option><option value="4">4 · Saudoso</option><option value="5">5 · Orgulhoso</option><option value="6">6 · Silente</option><option value="7">7 · Sofrido</option><option value="8">8 · Malicioso</option><option value="9">9 · Faminto</option><option value="10">10 · Rancoroso</option></select></div>
                 <div class="form-group"><label class="form-label" title="0–10. O que o Eco realmente sente. Segredo do Mestre.">Disposição 🔒</label><input type="number" class="form-input" id="ecoDisposicao" min="0" max="10"></div>
-                <div class="form-group"><label class="form-label" title="Redutor do teste de Supressão do Xamã">PRS do Eco</label><input type="number" class="form-input" id="ecoPRS" min="0"></div>
+                <div class="form-group" style="grid-column:1/-1"><label class="form-label">Poder do Eco</label><div class="form-hint" style="font-size:.8rem;line-height:1.5;opacity:.8">É a <b>PRS</b> da ficha, abaixo — não se digita aqui. Ela move duas coisas: é o Redutor do teste de Supressão e é a base da Sanidade que a projeção cobra (1 + Poder÷3 + Véu). <b>Poder e Estado são independentes:</b> um Eco Sereno pode ser poderoso.</div></div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                <div class="form-group"><label class="form-label">Perícia emprestada</label><input type="text" class="form-input" id="ecoPericia" placeholder="Nome · valor 3 (Comum) ou 5 (Ancestral)"></div>
+                <div class="form-group"><label class="form-label" title="Só anotação. A Dádiva de Perícia sorteia uma de cada TIPO entre as perícias da ficha abaixo, não deste campo.">Perícia emprestada <span style="opacity:.6">(nota)</span></label><input type="text" class="form-input" id="ecoPericia" placeholder="Nome · valor 3 (Comum) ou 5 (Ancestral)"></div>
                 <div class="form-group"><label class="form-label">Onde vive</label><input type="text" class="form-input" id="ecoTerritorio" placeholder="Território, Andarilho ou Totem de Antiqua"></div>
             </div>
             <div class="form-group"><label class="form-label">Preço / oferenda <span style="font-weight:400;opacity:.7">(Lei da Reciprocidade)</span></label><input type="text" class="form-input" id="ecoPreco" placeholder="O que ele cobra por comungar"></div>
@@ -2038,8 +2038,8 @@ function fillNpcForm(n) {
     set('npcItens', n.loot?.itens); set('npcLuns', n.loot?.luns); set('npcPistas', n.loot?.pistas); set('npcComplicacoes', n.loot?.complicacoes);
     set('npcHabitat', n.criatura?.habitat); set('npcComportamento', n.criatura?.comportamento); set('npcDieta', n.criatura?.dieta); set('npcNivelAmeaca', n.criatura?.nivelAmeaca);
 
-    set('ecoDadiva', n.eco?.dadiva); set('ecoEstado', n.eco?.estado); set('ecoPersonalidade', n.eco?.personalidade);
-    set('ecoDisposicao', n.eco?.disposicao); set('ecoPRS', n.eco?.prs); set('ecoPericia', n.eco?.pericia);
+    set('ecoEstado', n.eco?.estado); set('ecoPersonalidade', n.eco?.personalidade);
+    set('ecoDisposicao', n.eco?.disposicao); set('ecoPericia', n.eco?.pericia);
     set('ecoTerritorio', n.eco?.territorio); set('ecoPreco', n.eco?.preco);
     const mk = document.getElementById('ecoMascara'); if (mk) mk.checked = !!n.eco?.mascara;
 
@@ -2292,8 +2292,10 @@ function collectNpcData() {
         loot: { itens: g('npcItens'), luns: g('npcLuns'), pistas: g('npcPistas'), complicacoes: g('npcComplicacoes') },
         criatura: tipo === 'criatura' ? { habitat: g('npcHabitat'), comportamento: g('npcComportamento'), dieta: g('npcDieta'), nivelAmeaca: g('npcNivelAmeaca') } : null,
         /* ᛉ Eco da Alma — Disposição e Máscara são segredo do Mestre. */
-        eco: tipo === 'eco' ? { dadiva: g('ecoDadiva'), estado: g('ecoEstado'), personalidade: g('ecoPersonalidade'),
-            disposicao: parseInt(g('ecoDisposicao')) || 0, prs: parseInt(g('ecoPRS')) || 0,
+        // `dadiva` saiu em 25/08/2026: o hóspede entrega as NOVE e o sorteio decide.
+        eco: tipo === 'eco' ? { estado: g('ecoEstado'), personalidade: g('ecoPersonalidade'),
+            // `prs` saiu em 25/08/2026: o Poder e a PRS da ficha, fonte unica.
+            disposicao: parseInt(g('ecoDisposicao')) || 0,
             pericia: g('ecoPericia'), territorio: g('ecoTerritorio'), preco: g('ecoPreco'),
             mascara: !!document.getElementById('ecoMascara')?.checked } : null,
 

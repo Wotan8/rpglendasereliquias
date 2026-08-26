@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__check — Campos do Eco da Alma</title>
+<link rel="stylesheet" href="../shared/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/area-npcs.css">
+<script>for (const l of document.querySelectorAll('link[href*="area-npcs.css"]')) l.href += '?cb=' + Date.now();</script>
+<style>
+  body{margin:0;padding:16px;font:14px/1.6 Inter,system-ui,sans-serif}
+  table{border-collapse:collapse;font:11px ui-monospace,monospace;width:100%;margin:10px 0}
+  td{border:1px solid var(--lr-border);padding:2px 6px}
+  .ok{color:var(--lr-nature)} .fail{color:var(--lr-blood-2);font-weight:700}
+  #placar{font-weight:800;margin:8px 0 16px;padding-top:8px;border-top:1px solid var(--lr-border)}
+  h1{font-size:1rem;margin:0 0 4px} p{margin:0 0 10px;color:var(--lr-text-2);font-size:.8rem}
+  #palco{max-width:760px;border:1px solid var(--lr-border);border-radius:10px;padding:12px}
+</style></head>
+<body>
+<h1>ᛉ Campos do Eco da Alma</h1>
+<p>Recorta o bloco <code>#ecoFieldsSection</code> <b>do próprio <code>area-npcs.js</code></b> em tempo de
+   execução e o desenha com o CSS real — não é cópia do markup. O select de <b>Dádiva</b> saiu:
+   o hóspede entrega as nove e o sorteio decide, então escolher uma no cadastro não movia nada.</p>
+<div id="res"></div>
+<div id="placar">rodando…</div>
+<div id="palco">carregando…</div>
+
+<script type="module">
+const src = await (await fetch('./js/area-npcs.js?cb=' + Date.now(), { cache: 'no-store' })).text();
+
+/* recorta o bloco do Eco do template literal do arquivo de verdade */
+const ini = src.indexOf('<div id="ecoFieldsSection"');
+const fim = src.indexOf('ecoMascara', ini);
+const bruto = src.slice(ini, src.indexOf('</div>', src.indexOf('</label>', fim)) + 6);
+/* o template tem ${...} do Painel; neste palco não há dados, então some */
+const html = bruto.replace(/\$\{[^}]*\}/g, '').replace('display:none', 'display:block');
+document.getElementById('palco').innerHTML = html;
+
+const res = [];
+const t = (nome, cond, det = '') => res.push(`<tr><td>${cond ? '<span class=ok>OK</span>' : '<span class=fail>FALHOU</span>'}</td><td>${nome}</td><td>${det}</td></tr>`);
+const $ = id => document.getElementById(id);
+
+t('o select de Dádiva sumiu do formulário', !$('ecoDadiva'));
+t('e sumiu do arquivo inteiro', !src.includes('ecoDadiva'),
+   'load, save e markup — nenhum resto');
+t('o save não grava mais `dadiva`', !/eco:\s*tipo === 'eco'\s*\?\s*\{\s*dadiva/.test(src));
+t('no lugar dele há a explicação das nove', /Todo h[óo]spede entrega as/.test(document.getElementById('palco').innerHTML));
+t('a nota cita as nove pelo nome', ['Braço','Mente','Boca','Pele','Olho','Passo','Perícia','Habilidade','Energia']
+   .every(n => document.getElementById('palco').textContent.includes(n)));
+t('a nota ocupa a linha inteira do grid', getComputedStyle(document.querySelector('#palco .form-group')).gridColumnStart === '1');
+
+/* os dois campos que movem mecânica precisam dizer o que movem */
+t('o campo PRS duplicado sumiu', !$('ecoPRS') && !src.includes('ecoPRS'),
+   'era segunda entrada para um número que a ficha já tem');
+t('o save não grava mais `prs`', !/disposicao:[^,]+,\s*prs:/.test(src));
+t('no lugar dele, a nota do Poder', /É a <b>PRS<\/b> da ficha/.test(document.getElementById('palco').innerHTML));
+t('a nota diz que Poder e Estado são independentes',
+   /Poder e Estado são independentes/.test(document.getElementById('palco').textContent));
+t('Estado avisa que só Ancestral move mecânica', /s[óo] &quot;Ancestral&quot; move mec/i.test(src) || /Ancestral&quot; move mec/.test(src));
+t('Perícia emprestada marcada como nota', $('ecoPericia')?.previousElementSibling?.textContent.includes('nota'));
+t('os campos vivos continuam de pé', ['ecoEstado','ecoPersonalidade','ecoDisposicao','ecoPericia','ecoTerritorio','ecoPreco'].every(id => !!$(id)),
+   'Estado, Personalidade, Disposição, Perícia, Território, Preço');
+
+document.getElementById('res').innerHTML = `<table>${res.join('')}</table>`;
+const falhas = res.filter(r => r.includes('FALHOU')).length;
+document.getElementById('placar').innerHTML = falhas
+    ? `<span class=fail>${falhas} falha(s)</span> de ${res.length}`
+    : `<span class=ok>✅ ${res.length} de ${res.length}</span>`;
+document.title = `__check eco-campos ${res.length - falhas}/${res.length}`;
+</script>
+</body></html>
