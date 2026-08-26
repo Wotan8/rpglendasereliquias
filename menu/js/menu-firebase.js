@@ -15,7 +15,8 @@ import {
     updateDoc,
     addDoc,
     setDoc,
-    doc
+    doc,
+    onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
@@ -125,6 +126,10 @@ onAuthStateChanged(auth, async (user) => {
         await loadInventory();
         await loadLojaItens();
 
+        // loadNotifications acabou de resolver o userDocRef; daqui em diante
+        // o doc do usuário é observado e a página se atualiza sozinha.
+        iniciarTempoReal();
+
         // Check for mestre or criador role and show respective buttons
         try {
             const userDoc = await findUserDoc();
@@ -169,6 +174,11 @@ onAuthStateChanged(auth, async (user) => {
     } else {
         // Não autenticado → SEM redirect: a própria página vira o login.
         currentUser = null;
+        // O observador do doc morre junto com a sessão, senão ele segue
+        // tentando ler um doc que as rules não deixam mais.
+        if (_pararTempoReal) { _pararTempoReal(); _pararTempoReal = null; }
+        _idsNotifVistos = null;
+        userDocRef = null;
         if (loadingScreen) loadingScreen.style.display = 'none';
         if (toolbar) toolbar.style.display = 'none';
         if (wrap) wrap.style.display = 'none';
@@ -462,19 +472,21 @@ window.selectCharacter = function (characterId) {
 };
 
 // ===== CARREGAR INVENTÁRIO =====
-async function loadInventory() {
+// `dadosProntos` vem do observador de tempo real: quando o snapshot já está na
+// mão, buscar o documento de novo seria pagar duas leituras pela mesma coisa.
+async function loadInventory(dadosProntos) {
     try {
-        // Buscar documento do usuário
-        let userSnapshot = await findUserDoc();
-
-        if (!userSnapshot) {
-            document.getElementById('totalApoios').textContent = '0';
-            document.getElementById('inventoryGrid').innerHTML = '';
-            document.getElementById('emptyInventory').style.display = 'block';
-            return;
+        let userData = dadosProntos;
+        if (!userData) {
+            const userSnapshot = await findUserDoc();
+            if (!userSnapshot) {
+                document.getElementById('totalApoios').textContent = '0';
+                document.getElementById('inventoryGrid').innerHTML = '';
+                document.getElementById('emptyInventory').style.display = 'block';
+                return;
+            }
+            userData = userSnapshot.data();
         }
-
-        const userData = userSnapshot.data();
         const apoios = userData.apoios || [];
         const inventarioRaw = userData.inventario || [];
 
@@ -678,15 +690,12 @@ window.abrirEnviarParaMesa = async function (i) {
                 max="${alvo.quantidade}" value="1" inputmode="numeric">
             <div class="lr-dialogo-botoes">
                 <button type="submit" value="ok" class="lr-dialogo-ok">Mandar</button>
-                <button type="submit" value="" class="lr-dialogo-cancel">Cancelar</button>
+                <button type="button" class="lr-dialogo-cancel">Cancelar</button>
             </div>
         </form>`;
     document.body.appendChild(janela);
 
-    const escolha = await new Promise(resolve => {
-        janela.addEventListener('close', () => resolve(janela.returnValue), { once: true });
-        janela.showModal();
-    });
+    const escolha = await esperarDecisao(janela);
 
     const mesaId = janela.querySelector('#mesaAlvo').value;
     const quantidade = Math.max(1, Math.min(alvo.quantidade,
@@ -749,7 +758,7 @@ window.abrirAplicarExp = async function (i) {
                 Vai somar ${alvo.porUnidade} EXP</div>
             <div class="lr-dialogo-botoes">
                 <button type="submit" value="ok" class="lr-dialogo-ok">Aplicar</button>
-                <button type="submit" value="" class="lr-dialogo-cancel">Cancelar</button>
+                <button type="button" class="lr-dialogo-cancel">Cancelar</button>
             </div>
         </form>`;
     document.body.appendChild(janela);
@@ -762,10 +771,7 @@ window.abrirAplicarExp = async function (i) {
     };
     campoQtd.addEventListener('input', atualizarPrevia);
 
-    const escolha = await new Promise(resolve => {
-        janela.addEventListener('close', () => resolve(janela.returnValue), { once: true });
-        janela.showModal();
-    });
+    const escolha = await esperarDecisao(janela);
 
     const charId = janela.querySelector('#expChar').value;
     const quantidade = Math.max(1, Math.min(alvo.quantidade, parseInt(campoQtd.value, 10) || 1));
@@ -802,6 +808,46 @@ function normalizeNotification(n, i) {
         isNew: n.isNew ?? (n.read === false),
         data: { ...(n.data || {}), highlight: n.data?.highlight || n.highlight || 'normal' }
     };
+}
+
+/* ===== TEMPO REAL =====
+   O doc do usuário é UMA coisa: saldo de Frag$, giros, Repertório e
+   notificações moram juntos. Um observador só cobre tudo — a compra aprovada
+   pelo webhook, o prêmio da roleta, a devolução do mestre: aparecem na tela na
+   hora, sem recarregar a página. */
+let _pararTempoReal = null;
+let _idsNotifVistos = null;
+
+function iniciarTempoReal() {
+    if (_pararTempoReal || !userDocRef) return;
+    _pararTempoReal = onSnapshot(userDocRef, (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+
+        updateFragDisplay(data.fragmentos || 0);
+        updateGirosDisplay(data.giros || 0);
+
+        userNotifications = (data.notifications || [])
+            .map(normalizeNotification)
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        /* Notificação que CHEGOU com a página aberta vira toast — o sino
+           acender sozinho ninguém vê; o toast é o "em tempo real" de verdade.
+           No primeiro quadro não: seria repetir tudo que já estava lá. */
+        if (_idsNotifVistos) {
+            for (const n of userNotifications) {
+                if (n.isNew && !_idsNotifVistos.has(n.id)) showAlert(n.message, 'success', 8000);
+            }
+        }
+        _idsNotifVistos = new Set(userNotifications.map(n => n.id));
+
+        updateNotificationBadge();
+        renderNotifications();
+        // O Repertório redesenha do MESMO snapshot: zero leitura extra.
+        loadInventory(data);
+    }, (e) => {
+        console.warn('tempo real indisponível, a página segue no modo de recarga:', e);
+    });
 }
 
 async function loadNotifications() {
@@ -1158,6 +1204,33 @@ window.openDeleteModal = function (characterId, characterName) {
 
     document.getElementById('deleteModal').classList.add('active');
 };
+
+/* Espera a decisão de um <dialog> SEM depender do evento `close`: há navegador
+   em que o submit de um form method="dialog" fecha a janela e o `close` nunca
+   dispara — a promessa ficava pendurada e o clique no OK não fazia nada. O
+   mesmo padrão do shared/dialogo.js: submit + clique no Cancelar + Esc. */
+function esperarDecisao(janela) {
+    return new Promise(resolve => {
+        let respondido = false;
+        const terminar = (v) => {
+            if (respondido) return;
+            respondido = true;
+            try { if (janela.open) janela.close(); } catch (e) { /* já fechada */ }
+            resolve(v);
+        };
+        janela.querySelector('form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            terminar('ok');
+        });
+        janela.querySelector('.lr-dialogo-cancel')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            terminar('');
+        });
+        janela.addEventListener('cancel', () => terminar(''));   // Esc
+        janela.addEventListener('close', () => terminar(''));    // reforço onde funciona
+        janela.showModal();
+    });
+}
 
 /* A moldura da opção escolhida é uma CLASSE, não `:has(input:checked)`. O
    seletor é mais bonito, mas em teste ele casava e não repintava — e uma janela
