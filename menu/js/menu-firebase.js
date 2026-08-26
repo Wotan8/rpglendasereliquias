@@ -509,6 +509,7 @@ async function loadInventory() {
             emptyState.style.display = 'none';
             _repDetalhes = [];
             _repExp = [];
+            _repMesa = [];
             grid.innerHTML = inventario.map(item => {
                 const imgHtml = item.imagem
                     ? `<div class="loja-card-media">
@@ -546,6 +547,12 @@ async function loadInventory() {
                 const eExp = porUnidade > 0 && qtd > 0;
                 if (eExp) _repExp[i] = { nome: item.nome, porUnidade, quantidade: qtd, vip: !!item.isExpVip };
 
+                /* Qualquer peça com unidade pode ir para uma mesa — é o mestre
+                   quem decide o que ela vira em jogo. Giro de roleta fica de
+                   fora: ele já virou saldo, não é peça. */
+                const podeIrParaMesa = qtd > 0 && !item.isRoleta;
+                if (podeIrParaMesa) _repMesa[i] = { nome: item.nome, quantidade: qtd };
+
                 return `
                 <div class="loja-card${longa ? ' rep-abrivel' : ''}"
                     ${longa ? `onclick="abrirDetalheItem(${i})" title="Ver a ficha completa"` : ''}>
@@ -558,11 +565,18 @@ async function loadInventory() {
                         ${desc ? `<div class="loja-card-desc${longa ? ' rep-desc-curta' : ''}">${escapeHtmlWithBreaks(desc)}</div>` : ''}
                         ${longa ? '<div class="rep-mais">🔎 Clique para ver a ficha completa</div>' : ''}
                         ${tagsHtml ? `<div class="loja-card-tags">${tagsHtml}</div>` : ''}
-                        ${eExp ? `
-                        <button class="loja-btn loja-btn-real rep-usar"
-                            onclick="event.stopPropagation();abrirAplicarExp(${i})"
-                            title="Somar este EXP na ficha de um personagem seu">
-                            ⭐ Aplicar ${porUnidade} EXP</button>` : ''}
+                        ${eExp || podeIrParaMesa ? `<div class="rep-acoes">
+                            ${eExp ? `
+                            <button class="loja-btn loja-btn-real rep-usar"
+                                onclick="event.stopPropagation();abrirAplicarExp(${i})"
+                                title="Somar este EXP na ficha de um personagem seu">
+                                ⭐ Aplicar ${porUnidade} EXP</button>` : ''}
+                            ${podeIrParaMesa ? `
+                            <button class="loja-btn loja-btn-frag rep-usar"
+                                onclick="event.stopPropagation();abrirEnviarParaMesa(${i})"
+                                title="Mandar para o mestre colocar na mesa">
+                                🎁 Mandar para a mesa</button>` : ''}
+                        </div>` : ''}
                         <div class="rep-recebimento">
                             <span>Recebimento</span>
                             <strong>${escapeHtml(item.formaRecebimento || 'a combinar')}</strong>
@@ -610,10 +624,87 @@ function etiquetasDoItem(item) {
    é o que uma ficha de trinta linhas precisa. */
 let _repDetalhes = [];
 let _repExp = [];
+let _repMesa = [];
 
 window.abrirDetalheItem = function (i) {
     const o = _repDetalhes[i];
     if (o && window.LRDetalhe) window.LRDetalhe.abrirDetalhe(o);
+};
+
+/* ===== MANDAR ITEM PARA UMA MESA =====
+   A peça sai do Repertório e cai na Caixa do Mestre da mesa escolhida, com um
+   aviso: o mestre precisa dar um lugar a ela no mundo. Quem move é o servidor
+   — `inventario` é campo protegido, e a peça só pode sair de um lado se
+   entrar no outro. */
+window.abrirEnviarParaMesa = async function (i) {
+    const alvo = _repMesa[i];
+    if (!alvo) return;
+
+    // As mesas do jogador vêm de `mesas.jogadores`, que é o vínculo confiável.
+    // A mesa gravada na ficha aponta para mesas que já não existem.
+    let minhasMesas = [];
+    try {
+        const snap = await getDocs(collection(db, 'mesas'));
+        snap.forEach(d => {
+            if ((d.data().jogadores || []).includes(currentUser.uid)) {
+                minhasMesas.push({ id: d.id, nome: d.data().nome || 'Mesa sem nome' });
+            }
+        });
+    } catch (e) {
+        showAlert('❌ Não foi possível carregar suas mesas.', 'danger');
+        return;
+    }
+
+    if (minhasMesas.length === 0) {
+        showAlert('❌ Você não participa de nenhuma mesa ainda.', 'warning');
+        return;
+    }
+
+    const janela = document.createElement('dialog');
+    janela.className = 'lr-dialogo';
+    janela.innerHTML = `
+        <form class="lr-dialogo-form" method="dialog">
+            <div class="lr-dialogo-titulo">🎁 Mandar ${escapeHtml(alvo.nome)} para a mesa</div>
+            <p class="lr-dialogo-msg">
+                A peça sai do seu Repertório e vai para o mestre, que decide como ela
+                entra na história. Você tem ${alvo.quantidade}.
+            </p>
+            <label for="mesaAlvo" style="font-size:.8rem;font-weight:700;">Para qual mesa?</label>
+            <select id="mesaAlvo" class="lr-dialogo-input">
+                ${minhasMesas.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.nome)}</option>`).join('')}
+            </select>
+            <label for="mesaQtd" style="font-size:.8rem;font-weight:700;">Quantas unidades?</label>
+            <input id="mesaQtd" class="lr-dialogo-input" type="number" min="1"
+                max="${alvo.quantidade}" value="1" inputmode="numeric">
+            <div class="lr-dialogo-botoes">
+                <button type="submit" value="ok" class="lr-dialogo-ok">Mandar</button>
+                <button type="submit" value="" class="lr-dialogo-cancel">Cancelar</button>
+            </div>
+        </form>`;
+    document.body.appendChild(janela);
+
+    const escolha = await new Promise(resolve => {
+        janela.addEventListener('close', () => resolve(janela.returnValue), { once: true });
+        janela.showModal();
+    });
+
+    const mesaId = janela.querySelector('#mesaAlvo').value;
+    const quantidade = Math.max(1, Math.min(alvo.quantidade,
+        parseInt(janela.querySelector('#mesaQtd').value, 10) || 1));
+    janela.remove();
+    if (escolha !== 'ok') return;
+
+    try {
+        const enviar = httpsCallable(functions, 'enviarItemParaMesa');
+        const r = (await enviar({ itemNome: alvo.nome, mesaId, quantidade })).data;
+        showAlert(
+            `🎁 ${r.quantidade}x ${alvo.nome} foi para a mesa ${r.mesa}. ` +
+            'O mestre foi avisado e vai colocar a peça no mundo.', 'success', 9000);
+        await loadInventory();
+    } catch (e) {
+        console.error('Erro ao mandar item para a mesa:', e);
+        showAlert(`❌ ${e.message}`, 'danger', 7000);
+    }
 };
 
 /* ===== APLICAR EXP NUMA FICHA =====

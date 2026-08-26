@@ -2466,6 +2466,24 @@ html:not(.dark) .meta-card {
 
 .portal-hero-dica.some { opacity: 0; }
 
+/* ===== NO CELULAR A ANIMAÇÃO CUSTA MENOS ROLAGEM =====
+   Ela funciona por toque — rolagem é rolagem —, mas o PREÇO era outro: com
+   220vh de trilho numa tela de mão, o hero virava 88% da página inteira e
+   ficavam mais de duas telas de arrasto antes do primeiro texto do Cânone.
+   Aqui o percurso encolhe: a sequência continua inteira, só que cada quadro
+   custa menos dedo. O que o Criador escolhe em "Velocidade da animação"
+   continua valendo — os quatro passos encolhem juntos, mantendo a proporção. */
+@media (max-width: 720px) {
+    /* `svh` e não `vh`: no celular `100vh` conta a barra do navegador, que
+       fica escondida durante a rolagem — então `vh` promete uma tela e entrega
+       mais, e o percurso saía maior do que o calculado. `svh` é a altura com a
+       barra à mostra: estável, e não muda no meio do arrasto como `dvh`. */
+    .portal-hero-trilho { height: 125svh; }
+    .portal-hero-trilho[data-ritmo="rapido"] { height: 108svh; }
+    .portal-hero-trilho[data-ritmo="lento"] { height: 165svh; }
+    .portal-hero-trilho[data-ritmo="bem-lento"] { height: 230svh; }
+}
+
 /* logado: a animação continua para todos; só o convite de scroll some
    mais rápido e o CTA leva para a Home (o Cânone) */
 
@@ -3332,3 +3350,7 @@ html:not(.dark) .meta-card {
 @media (prefers-reduced-motion: reduce) {
     .encerrar-op { transition: none; }
 }
+
+/* Os botões de ação do cartão do Repertório ficam numa linha própria: com dois
+   deles soltos na coluna, o segundo empurrava o rodapé de recebimento. */
+.rep-acoes { display: flex; flex-wrap: wrap; gap: 6px; }

@@ -14,6 +14,7 @@ const { TAXAS_PADRAO, calcularCobranca, EXCLUIR_POR_MEIO } = require("./taxa-gat
 const { sortear, aplicarPremio, girosDoItem } = require("./roleta-sorteio");
 const { aplicarExpDeItem } = require("./exp-item");
 const { charParaNpc, devolucaoExpVip, itemDevolucao } = require("./char-para-npc");
+const { itemParaCaixa, retirarDoRepertorio } = require("./item-para-mesa");
 
 initializeApp();
 const db = getFirestore();
@@ -586,6 +587,97 @@ exports.aplicarExpDoItem = onCall(
       expTotal: resultado.expTotal,
       restante: resultado.restante,
     };
+  }
+);
+
+// =============================================
+// ITEM DO REPERTÓRIO → MESA (callable)
+// O jogador escolhe uma mesa em que joga e manda a peça para lá. Ela sai do
+// Repertório dele, cai na Caixa do Mestre daquela mesa e vira um aviso: o
+// mestre precisa saber que aquilo é de um jogador e que falta dar um lugar
+// para a peça no mundo.
+//
+// Servidor porque `inventario` é campo protegido, e porque o item só pode
+// sair do Repertório se a peça entrar na caixa — as duas coisas na mesma
+// gravação.
+// =============================================
+exports.enviarItemParaMesa = onCall(
+  { region: "southamerica-east1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Você precisa estar logado.");
+    }
+    const uid = request.auth.uid;
+    const email = request.auth.token.email || "";
+    const { itemNome, mesaId, quantidade } = request.data || {};
+
+    if (!itemNome || typeof itemNome !== "string") {
+      throw new HttpsError("invalid-argument", "Diga qual item mandar.");
+    }
+    if (!mesaId || typeof mesaId !== "string") {
+      throw new HttpsError("invalid-argument", "Escolha a mesa.");
+    }
+
+    const mesaSnap = await db.collection("mesas").doc(mesaId).get();
+    if (!mesaSnap.exists) throw new HttpsError("not-found", "Essa mesa não existe.");
+    const mesa = mesaSnap.data();
+    // Só para mesa em que ele joga: sem isto, daria para despejar item na mesa
+    // de qualquer um.
+    if (!(mesa.jogadores || []).includes(uid)) {
+      throw new HttpsError("permission-denied", "Você não joga nessa mesa.");
+    }
+
+    const userRef = await resolveUserRef(uid, email);
+    let enviado;
+
+    await db.runTransaction(async (tx) => {
+      const uSnap = await tx.get(userRef);
+      if (!uSnap.exists) throw new HttpsError("not-found", "Documento de usuário não existe.");
+      const data = uSnap.data();
+
+      let retirada;
+      try {
+        retirada = retirarDoRepertorio(data.inventario, itemNome, quantidade);
+      } catch (e) {
+        throw new HttpsError(e.codigo || "failed-precondition", e.message);
+      }
+
+      const jogador = data.displayName || data.email || email;
+      const qtd = Math.max(1, parseInt(quantidade, 10) || 1);
+      const doc = itemParaCaixa(retirada.item, { mesaId, quantidade: qtd, jogadorUid: uid, jogador });
+
+      tx.set(db.collection("items").doc(doc.id), doc);
+
+      const notifications = data.notifications || [];
+      notifications.unshift({
+        id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+        type: "master_message",
+        message: `🎁 ${qtd}x ${itemNome} foi para a mesa ${mesa.nome || ""}. O mestre já foi avisado.`,
+        timestamp: Date.now(),
+        isNew: true,
+      });
+      if (notifications.length > 100) notifications.length = 100;
+
+      tx.update(userRef, { inventario: retirada.inventario, notifications });
+
+      avisarMestre(tx, {
+        tipo: "item-para-mesa",
+        titulo: `${jogador} mandou ${qtd}x ${itemNome} para a mesa`,
+        mensagem:
+          `A peça saiu do Repertório de ${jogador} e está na Caixa do Mestre de ` +
+          `${mesa.nome || "sua mesa"}. Falta você colocá-la no mundo para o jogador encontrar.` +
+          (retirada.item.descricao ? ` — "${retirada.item.descricao}"` : ""),
+        jogadorUid: uid,
+        jogador,
+        referencia: { colecao: "items", id: doc.id, nome: itemNome },
+        mesaId,
+        acao: "Abrir a Caixa do Mestre desta mesa",
+      });
+
+      enviado = { itemId: doc.id, quantidade: qtd, restante: retirada.restante, mesa: mesa.nome || "" };
+    });
+
+    return { ok: true, ...enviado };
   }
 );
 
