@@ -39,9 +39,10 @@
 
 <div id="saida">
   <h1>⏱️ Perf do arrasto — carga do "Tabuleiro 1"</h1>
-  <p>108 objetos (3 mapas, 11 tokens, 79 desenhos, 11 luzes, porta, alfinete, loot, terreno),
-     78 paredes, 3 visões, luz dinâmica dia + memória. Mede ms por etapa do frame e o
-     custo por <code>pointermove</code>, como jogador (público) e como mestre (secreto).</p>
+  <p><b>134 objetos</b>: 3 mapas, 26 polilinhas de parede (= 78 segmentos), 11 tokens,
+     79 desenhos, 11 luzes, porta, alfinete, loot e terreno. Mais 3 visões e luz dinâmica
+     de dia + memória. Mede ms por etapa do frame e o custo por <code>pointermove</code>,
+     como jogador (público) e como mestre (secreto).</p>
   <div id="res"></div>
   <div id="placar">rodando…</div>
 </div>
@@ -72,6 +73,17 @@ T.measureCfg.mostrarOutros = true;
 HTMLElement.prototype.setPointerCapture = function () {};
 
 // ===== CENÁRIO =====
+/* A CARGA DA CENA, declarada uma vez.
+   Os laços leem daqui e o guarda do fim confere a soma, então mudar a cena é
+   mexer num número só e o guarda acompanha. Antes o esperado era um `108`
+   solto no fim do arquivo, e ele estava ERRADO desde sempre: somava mapas,
+   tokens, desenhos, luzes e avulsos, e esquecia as 26 polilinhas de parede.
+   O texto da página diz "78 paredes" contando SEGMENTOS (26 × 3); no
+   `T.objects` elas são 26 objetos, e o render percorre cada um como qualquer
+   outro. A cena sempre teve 134 — só a conta é que não fechava. */
+const N = { mapas: 3, paredes: 26, tokens: 11, desenhos: 79, luzes: 11, avulsos: 4 };
+const N_TOTAL = Object.values(N).reduce((a, b) => a + b, 0);
+
 let seq = 0;
 const add = (o) => { const id = 'o' + (++seq); T.objects.set(id, { id, visivelPublico: true, ...o }); return T.objects.get(id); };
 
@@ -93,8 +105,8 @@ add({ tipo: 'imagem', layerId: 'mapa', url: 'mapa2', x: CX + 1300, y: CY + 700, 
 // 78 paredes (26 polilinhas de 3 segmentos na camada de luz), fora do corredor
 // livre do arrasto: x∈[CX-200, CX+1200], y∈[CY-200, CY+800].
 const paredes = [];
-for (let i = 0; i < 26; i++) {
-    const ang = (i / 26) * Math.PI * 2;
+for (let i = 0; i < N.paredes; i++) {
+    const ang = (i / N.paredes) * Math.PI * 2;
     const R = 900 + (i % 3) * 160;
     const bx = CX + 500 + Math.cos(ang) * R, by = CY + 300 + Math.sin(ang) * R;
     const pts = [
@@ -109,21 +121,21 @@ for (let i = 0; i < 26; i++) {
 // 11 tokens (o primeiro é do jogador, com visão; +2 visões de NPC)
 const tokenJog = add({ tipo: 'token', layerId: 'tokens', x: CX, y: CY, nome: 'Herói', tamanhoCelulas: 1, rot: 0,
     vinculo: { tipo: 'char', id: 'c1' }, visao: { ativa: true, alcance: 9, angulo: 360, tipo: 'padrao' } });
-for (let i = 1; i < 11; i++) {
+for (let i = 1; i < N.tokens; i++) {
     const o = add({ tipo: 'token', layerId: 'tokens', x: CX - 800 + (i % 4) * 400, y: CY - 600 + Math.floor(i / 4) * 380,
         nome: 'NPC ' + i, tamanhoCelulas: 1, rot: 0 });
     if (i <= 2) o.visao = { ativa: true, alcance: 9, angulo: 360, tipo: 'padrao' };
 }
 
 // 79 desenhos comuns (camada tokens), espalhados
-for (let i = 0; i < 79; i++) {
+for (let i = 0; i < N.desenhos; i++) {
     const bx = CX - 2000 + (i % 10) * 400, by = CY - 1400 + Math.floor(i / 10) * 340;
     const pts = []; for (let k = 0; k < 12; k++) pts.push({ x: bx + k * 14, y: by + Math.sin(k) * 30 });
     add({ tipo: 'desenho', layerId: 'tokens', forma: 'livre', pontos: pts, cor: '#3b82f6', grossura: 4 });
 }
 
 // 11 luzes acesas
-for (let i = 0; i < 11; i++) {
+for (let i = 0; i < N.luzes; i++) {
     add({ tipo: 'luz', layerId: 'luz', x: CX - 1500 + i * 300, y: CY - 500 + (i % 2) * 700, alcance: 6, cor: '#ffdd99' });
 }
 // porta fechada, alfinete, loot, terreno (cruza o corredor do arrasto)
@@ -244,7 +256,7 @@ async function rodar() {
 
     document.getElementById('placar').innerHTML =
         `<span class="ok">MEDIÇÃO CONCLUÍDA</span> — ${totalObjetos} objetos em cena` +
-        (totalObjetos === 108 ? '' : ` <span class="fail">(esperava 108!)</span>`);
+        (totalObjetos === N_TOTAL ? '' : ` <span class="fail">(esperava ${N_TOTAL}!)</span>`);
     window.__RESULTADO = resultados;
     window.__dbg = { T, PERF, desenharUmFrame, markDirty, tokenJog, CX, CY };
     window.__PRONTO = true;
