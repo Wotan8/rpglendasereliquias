@@ -112,13 +112,21 @@ const w = fr.contentWindow;
    1,5s acertava quase sempre, e "quase sempre" num teste vira falha que aparece
    uma vez em cada dez execuções e faz suspeitar do código errado. Aqui se
    espera o que de fato se vai usar. */
-await (async () => {
-    for (let i = 0; i < 120; i++) {                 // até ~6s
-        if (typeof w.switchTab === 'function' && typeof w.portalHeroAplicarTexto === 'function'
-            && d.querySelector('.portal-hero-palco')) return;
+const prontoIframe = await (async () => {
+    for (let i = 0; i < 160; i++) {                 // até ~8s
+        if (typeof w.switchTab === 'function'
+            && typeof w.portalHeroAplicarTexto === 'function'
+            && typeof w.portalHeroPosicionar === 'function'
+            && d.querySelector('.portal-hero-palco')) return true;
         await new Promise(r => setTimeout(r, 50));
     }
+    return false;
 })();
+/* Se o iframe subiu sem as funções que os testes usam, o resto vira uma pilha
+   de `undefined` e a suíte morre no meio sem dizer por quê. Quase sempre é
+   service worker servindo um `menu-hero.js` de antes — vale um teste próprio,
+   porque já custou tempo achando isso na mão. */
+t('T11b · o Portal do iframe subiu com a versão atual dos módulos', prontoIframe);
 
 {
     t('T12 · a folha do Portal aplicou (o cabeçalho tem altura declarada)',
@@ -141,11 +149,18 @@ await (async () => {
     t('T16 · a primeira aba é "Cânone", não "Home"',
         /Cânone/.test(abas.querySelector('.tab').textContent)
         && !/Home/.test(abas.textContent));
-    // Visitante não tem mesa: as abas só aparecem depois de entrar.
+    /* Visitante não tem mesa: as abas só aparecem depois de entrar.
+       ⚠️ Sem `await` entre pôr a classe e medir. A autenticação de verdade
+       roda dentro do iframe e devolve a classe para `portal-logado` assim que
+       responde; com uma espera no meio, ela ganhava a corrida e o teste media
+       o estado errado. Pior num painel oculto, onde o navegador estica um
+       `setTimeout(30)` para perto de um segundo. Trocar classe é síncrono para
+       o layout — `getComputedStyle` logo depois já vê o resultado. */
+    d.body.classList.remove('portal-logado');
+    d.body.classList.add('portal-deslogado');
     t('T17 · deslogado, as abas ficam escondidas', w.getComputedStyle(abas).display === 'none');
     d.body.classList.remove('portal-deslogado');
     d.body.classList.add('portal-logado');
-    await new Promise(r => setTimeout(r, 30));
     t('T17b · logado, elas aparecem ao lado da marca, na mesma faixa',
         abas.getBoundingClientRect().width > 0
         && Math.abs(abas.getBoundingClientRect().top
@@ -423,6 +438,37 @@ await (async () => {
         /(^|[^\w.])carregarConfig\s*\)/.test(fonte) || /carregarConfig\(\s*\)/.test(fonte));
 }
 
+/* ===== O CELULAR NAO PAGA O PRECO DO DESKTOP =====
+   Com 220vh (ou 520vh no "bem lenta") numa tela de mao, o hero virava quase a
+   pagina inteira e ficavam varias telas de arrasto antes do primeiro texto do
+   Canone. A sequencia continua inteira no celular; o que encolhe e o percurso. */
+{
+    const tr = d.getElementById('heroTrilho');
+    const svh = (() => {
+        const p = d.createElement('div');
+        p.style.cssText = 'position:absolute;height:100svh;width:1px;visibility:hidden';
+        d.body.appendChild(p);
+        const h = p.getBoundingClientRect().height; p.remove(); return h;
+    })();
+    const emTelas = (ritmo) => {
+        if (ritmo) tr.dataset.ritmo = ritmo; else delete tr.dataset.ritmo;
+        return tr.getBoundingClientRect().height / svh;
+    };
+    const estreito = fr.clientWidth <= 720;
+    const normal = emTelas(null);
+    const lentissimo = emTelas('bem-lento');
+    emTelas(null);
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · o hero cabe em poucas telas `
+      + `(${normal.toFixed(2)} normal, ${lentissimo.toFixed(2)} no mais lento — quadro de ${fr.clientWidth}px)`,
+        estreito ? (normal <= 1.4 && lentissimo <= 2.5) : (normal <= 2.5 && lentissimo <= 5.5));
+    /* E o mais lento tem de continuar sendo o mais lento: encolher no celular
+       nao pode achatar os quatro passos num so. */
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · os passos de velocidade continuam distintos`,
+        emTelas('rapido') < emTelas(null) && emTelas(null) < emTelas('lento')
+        && emTelas('lento') < emTelas('bem-lento'));
+    emTelas(null);
+}
+
 /* ===== BOTAO: O CONTEUDO NO MEIO DA CAIXA =====
    `shared/lendas-reliquias.css` troca o `display` de TODO botao com icone para
    `inline-flex` — e isso e (0,1,0) por causa do `:has(> .lr-ico)`, entao empata
@@ -571,7 +617,11 @@ await (async () => {
         for (const ch of ['igual', 'esquerda', 'centro', 'direita']) {
             w.portalHeroPosicionar(palco, { titulo: true, cta: true,
                 vertical: tv, horizontal: th, ctaV: cv, ctaH: ch });
-            await new Promise(r => setTimeout(r, 6));
+            /* Sem `await` por combinação: posicionar é layout, e layout é
+               síncrono — `getBoundingClientRect` já força o refluxo. Com uma
+               espera por passo eram 144 timers, e num painel oculto o navegador
+               os limita a ~1s cada: a suíte passava de dois minutos e parecia
+               travada. */
             const c = palco.querySelector('.portal-hero-cta');
             const h = palco.querySelector('.portal-hero-texto h1');
             if (c && !aparece(c)) some.push(`botão ${tv}/${th}→${cv}/${ch}`);

@@ -344,7 +344,22 @@
         document.documentElement.style.setProperty('--portal-cabecalho-h', h + 'px');
     }
     medirCabecalho();
-    window.addEventListener('resize', medirCabecalho);
+
+    /* ⚠️ ResizeObserver, e não só `resize` de janela. O cabeçalho muda de
+       altura por muito mais coisa do que redimensionar: a fonte de título
+       terminando de carregar, o selo de notificações aparecendo, o nome do
+       usuário entrando depois do login, a fileira de abas quebrando em duas
+       linhas. Medido só no boot, o valor congelava no que ele tinha ANTES de
+       tudo isso — vi 55px gravados com o cabeçalho já em 97, e o palco
+       continuava descontando 55: 42px dele ficavam fora da tela, e o que
+       estivesse no rodapé sumia. É o mesmo sintoma que este desconto veio
+       consertar, agora por medida velha em vez de medida ausente. */
+    if (window.ResizeObserver) {
+        var cab = document.querySelector('.portal-topo');
+        if (cab) new ResizeObserver(medirCabecalho).observe(cab);
+    } else {
+        window.addEventListener('resize', medirCabecalho);
+    }
     document.addEventListener('portal:logado', medirCabecalho);
     document.addEventListener('portal:deslogado', medirCabecalho);
 

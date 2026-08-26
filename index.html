@@ -515,11 +515,15 @@
                     </label>
                     <label class="cfg-campo">
                         <span>Velocidade da animação</span>
+                        <!-- O custo vai no rótulo: esta escolha define o TAMANHO DA PÁGINA,
+                             e sem o número dava para pedir "bem lenta" sem imaginar que o
+                             hero passaria a ocupar quatro telas de rolagem antes do
+                             primeiro texto. No celular todos encolhem (ver menu.css). -->
                         <select id="cfgRitmo">
-                            <option value="normal">Normal</option>
-                            <option value="rapido">Rápida — menos rolagem por quadro</option>
-                            <option value="lento">Lenta — mais rolagem por quadro</option>
-                            <option value="bem-lento">Bem lenta</option>
+                            <option value="rapido">Rápida — ~0,3 tela de rolagem</option>
+                            <option value="normal">Normal — ~1,2 telas</option>
+                            <option value="lento">Lenta — ~2,4 telas</option>
+                            <option value="bem-lento">Bem lenta — ~4,2 telas (página longa)</option>
                         </select>
                     </label>
                     <label class="cfg-campo">
@@ -657,7 +661,7 @@
     <script src="/shared/livro-vinculado.js?v=9"></script>
     <script type="module" src="/menu/js/menu-wiki.js?v=6"></script>
     <script type="module" src="/menu/js/menu-portal-config.js?v=4"></script>
-    <script src="/menu/js/menu-hero.js?v=9"></script>
+    <script src="/menu/js/menu-hero.js?v=10"></script>
 
 </body>
 
