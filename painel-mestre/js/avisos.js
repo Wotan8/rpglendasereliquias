@@ -8,8 +8,9 @@
 // nenhuma — chega de qualquer canto do sistema.
 // =============================================
 
-import { db, collection, query, where, orderBy, onSnapshot, doc, updateDoc, getDocs } from './firebase-config.js';
+import { db, collection, query, where, orderBy, onSnapshot, doc, updateDoc, getDocs, functions, httpsCallable } from './firebase-config.js';
 import { escapeHtml, showAlert } from './ui-utils.js';
+import { confirmar } from '../../shared/dialogo.js?v=2';
 import * as S from './state.js';
 
 let avisos = [];
@@ -79,6 +80,9 @@ function pintarLista() {
             ? `<button class="btn btn-primary btn-small" onclick="avisoIrParaNpc('${escapeHtml(a.referencia.id)}')">Ver NPC</button>`
             : ''}
                 <button class="btn btn-secondary btn-small" onclick="avisoMarcarLido('${escapeHtml(a.id)}')">Resolvido</button>
+                ${a.tipo === 'item-para-mesa'
+            ? `<button class="btn btn-danger btn-small" onclick="avisoRecusarItem('${escapeHtml(a.id)}')">Recusar</button>`
+            : ''}
             </div>
         </div>`).join('');
 }
@@ -117,6 +121,27 @@ window.avisoMarcarLido = async function (id) {
     } catch (e) {
         console.error('erro ao marcar aviso:', e);
         showAlert('❌ Não foi possível marcar o aviso.', 'danger');
+    }
+};
+
+/* Recusar um envio de item: a peça sai da Caixa e volta ao Repertório do
+   jogador, que é avisado. Tudo no servidor, numa gravação só — daqui a gente
+   só pede e mostra o resultado. */
+window.avisoRecusarItem = async function (id) {
+    const aviso = avisos.find(a => a.id === id);
+    const oQue = aviso?.referencia?.nome || 'a peça';
+    if (!await confirmar(
+        `Recusar ${oQue}? Ela volta para o Repertório de ${aviso?.jogador || 'quem mandou'}, que será avisado.`,
+        { ok: 'Recusar e devolver' })) return;
+
+    try {
+        const recusar = httpsCallable(functions, 'recusarItemDaMesa');
+        const r = (await recusar({ avisoId: id })).data;
+        showAlert(`↩️ ${r.quantidade}x ${r.nome} devolvido(s) para ${r.jogador || 'o jogador'}.`, 'success');
+        // O onSnapshot tira o aviso da lista sozinho (status deixou de ser 'novo').
+    } catch (e) {
+        console.error('erro ao recusar item:', e);
+        showAlert('❌ ' + e.message, 'danger');
     }
 };
 

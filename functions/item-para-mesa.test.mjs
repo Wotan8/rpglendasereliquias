@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { itemParaCaixa, retirarDoRepertorio, idDaCaixa, PREFIXO_CAIXA } = require('./item-para-mesa.js');
+const { itemParaCaixa, retirarDoRepertorio, devolverAoRepertorio, idDaCaixa, PREFIXO_CAIXA } = require('./item-para-mesa.js');
 
 // ===== o dono virtual da caixa =====
 assert.equal(idDaCaixa('mesa7'), '__caixa_mestre__mesa7');
@@ -93,5 +93,39 @@ assert.equal(itemParaCaixa({}, { mesaId: 'm' }).nome, 'Item sem nome');
 const a = itemParaCaixa({ nome: 'x' }, { mesaId: 'm' });
 const b = itemParaCaixa({ nome: 'x' }, { mesaId: 'm' });
 assert.notEqual(a.id, b.id);
+
+// ===== a volta: recusa devolve ao Reperterio =====
+const naCaixa = { nome: 'Informação x1 (teste)', origemItemNome: 'Informação x1', quantidade: 2, descricao: 'pista', imagem: 'http://x/y.png' };
+
+// a linha ainda existe (mandou so parte): soma nela
+const v1 = devolverAoRepertorio([{ nome: 'Informação x1', quantidade: 1 }], naCaixa);
+assert.equal(v1.length, 1, 'nao duplica a linha');
+assert.equal(v1[0].quantidade, 3, '1 que sobrou + 2 devolvidos');
+
+// a linha sumiu (mandou tudo): renasce com descricao e imagem
+const v2 = devolverAoRepertorio([{ nome: 'Outro' }], naCaixa);
+assert.equal(v2.length, 2);
+const renascida = v2.find(i => i.nome === 'Informação x1');
+assert.equal(renascida.quantidade, 2);
+assert.equal(renascida.descricao, 'pista');
+assert.equal(renascida.imagem, 'http://x/y.png');
+assert.equal(renascida.formaRecebimento, 'Devolvido pelo mestre');
+
+// o nome que vale e o de ORIGEM, nao o da caixa — e o merge e por ele
+assert.equal(v2.some(i => i.nome === 'Informação x1 (teste)'), false);
+
+// inventario vazio ou nulo nao explode
+assert.equal(devolverAoRepertorio([], naCaixa).length, 1);
+assert.equal(devolverAoRepertorio(null, naCaixa).length, 1);
+
+// sem origemItemNome cai no nome da caixa; sem quantidade vale 1
+const v3 = devolverAoRepertorio([], { nome: 'Peça' });
+assert.equal(v3[0].nome, 'Peça');
+assert.equal(v3[0].quantidade, 1);
+
+// o array original nao e tocado
+const antes = [{ nome: 'Informação x1', quantidade: 1 }];
+devolverAoRepertorio(antes, naCaixa);
+assert.equal(antes[0].quantidade, 1);
 
 console.log('✅ item-para-mesa: todos os casos passaram');

@@ -112,4 +112,30 @@ function retirarDoRepertorio(inventario, nomeItem, quantidade) {
   return { inventario: novo, item, restante: disponivel - qtd };
 }
 
-module.exports = { itemParaCaixa, retirarDoRepertorio, idDaCaixa, PREFIXO_CAIXA };
+/**
+ * O caminho de volta: o mestre recusou, as unidades voltam ao Repertório.
+ * Se a linha ainda existir (o jogador mandou só parte), soma nela; senão a
+ * linha renasce com a descrição e a imagem que a peça levou. O array original
+ * não é tocado.
+ */
+function devolverAoRepertorio(inventario, itemCaixa) {
+  const lista = Array.isArray(inventario) ? [...inventario] : [];
+  const nome = itemCaixa.origemItemNome || itemCaixa.nome || "Item sem nome";
+  const qtd = Math.max(1, parseInt(itemCaixa.quantidade, 10) || 1);
+
+  const idx = lista.findIndex((i) => i && i.nome === nome);
+  if (idx !== -1) {
+    lista[idx] = { ...lista[idx], quantidade: (Number(lista[idx].quantidade) || 0) + qtd };
+  } else {
+    lista.push({
+      nome,
+      descricao: itemCaixa.descricao || "",
+      imagem: itemCaixa.imagem || "",
+      quantidade: qtd,
+      formaRecebimento: "Devolvido pelo mestre",
+    });
+  }
+  return lista;
+}
+
+module.exports = { itemParaCaixa, retirarDoRepertorio, devolverAoRepertorio, idDaCaixa, PREFIXO_CAIXA };

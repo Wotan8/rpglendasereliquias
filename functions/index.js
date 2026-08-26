@@ -14,7 +14,7 @@ const { TAXAS_PADRAO, calcularCobranca, EXCLUIR_POR_MEIO } = require("./taxa-gat
 const { sortear, aplicarPremio, girosDoItem } = require("./roleta-sorteio");
 const { aplicarExpDeItem } = require("./exp-item");
 const { charParaNpc, devolucaoExpVip, itemDevolucao } = require("./char-para-npc");
-const { itemParaCaixa, retirarDoRepertorio } = require("./item-para-mesa");
+const { itemParaCaixa, retirarDoRepertorio, devolverAoRepertorio, PREFIXO_CAIXA } = require("./item-para-mesa");
 
 initializeApp();
 const db = getFirestore();
@@ -678,6 +678,114 @@ exports.enviarItemParaMesa = onCall(
     });
 
     return { ok: true, ...enviado };
+  }
+);
+
+// =============================================
+// RECUSAR ITEM MANDADO PARA A MESA (callable)
+// O mestre recusa pelo próprio aviso: a peça sai da Caixa, as unidades voltam
+// ao Repertório do jogador e ele é avisado. Tudo na mesma gravação — não
+// existe estado em que a peça sumiu da caixa e não voltou para o jogador.
+//
+// Servidor porque devolver mexe em `inventario` (campo protegido) e porque
+// dois dos três mestres entram só pelo `role`, sem doc em `masters` — as
+// rules não os deixariam escrever no doc do jogador.
+// =============================================
+async function exigirMestrePorQualquerCaminho(uid) {
+  const m = await db.collection("masters").doc(uid).get();
+  if (m.exists) return true;
+  const u = await db.collection("users").doc(uid).get();
+  return u.exists && ["mestre", "criador"].includes(u.data().role);
+}
+
+exports.recusarItemDaMesa = onCall(
+  { region: "southamerica-east1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Você precisa estar logado.");
+    }
+    const uid = request.auth.uid;
+    const email = request.auth.token.email || "";
+
+    if (!(await exigirMestrePorQualquerCaminho(uid))) {
+      throw new HttpsError("permission-denied", "Só o mestre pode recusar um envio.");
+    }
+
+    const { avisoId } = request.data || {};
+    if (!avisoId || typeof avisoId !== "string") {
+      throw new HttpsError("invalid-argument", "Diga qual aviso recusar.");
+    }
+
+    // Pré-leitura fora da transação só para achar o jogador (resolveUserRef
+    // faz consultas, que transação não aceita). Tudo é RELIDO lá dentro.
+    const avisoRef = db.collection("avisos_mestre").doc(avisoId);
+    const previa = await avisoRef.get();
+    if (!previa.exists) throw new HttpsError("not-found", "Aviso não encontrado.");
+    const jogadorUid = previa.data().jogadorUid || "";
+    if (!jogadorUid) {
+      throw new HttpsError("failed-precondition", "Este aviso não tem jogador para devolver.");
+    }
+    const userRef = await resolveUserRef(jogadorUid, "");
+
+    let resultado;
+    await db.runTransaction(async (tx) => {
+      const avisoSnap = await tx.get(avisoRef);
+      if (!avisoSnap.exists) throw new HttpsError("not-found", "Aviso não encontrado.");
+      const aviso = avisoSnap.data();
+
+      if (aviso.tipo !== "item-para-mesa") {
+        throw new HttpsError("failed-precondition", "Este aviso não é de item enviado para a mesa.");
+      }
+      if (aviso.status !== "novo") {
+        throw new HttpsError("failed-precondition", "Este aviso já foi resolvido.");
+      }
+
+      const itemRef = db.collection("items").doc(String(aviso.referencia?.id || ""));
+      const itemSnap = await tx.get(itemRef);
+      if (!itemSnap.exists) {
+        throw new HttpsError("failed-precondition",
+          "A peça não está mais na Caixa do Mestre — alguém já a moveu. Resolva o aviso à mão.");
+      }
+      const item = itemSnap.data();
+      // Se o mestre já transferiu a peça para um personagem/NPC, recusar
+      // agora tiraria o item de quem o recebeu. Aí a devolução é manual.
+      if (!String(item.characterId || "").startsWith(PREFIXO_CAIXA)) {
+        throw new HttpsError("failed-precondition",
+          "A peça já saiu da Caixa do Mestre. Se quiser devolver, use o transferir da caixa.");
+      }
+
+      const uSnap = await tx.get(userRef);
+      if (!uSnap.exists) throw new HttpsError("not-found", "O jogador não foi encontrado.");
+      const data = uSnap.data();
+
+      const nome = item.origemItemNome || item.nome || "Item";
+      const qtd = Math.max(1, parseInt(item.quantidade, 10) || 1);
+
+      const inventario = devolverAoRepertorio(data.inventario, item);
+
+      const notifications = data.notifications || [];
+      notifications.unshift({
+        id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+        type: "master_message",
+        message: `↩️ O mestre devolveu ${qtd}x ${nome} ao seu Repertório — a peça não entrou na mesa.`,
+        timestamp: Date.now(),
+        isNew: true,
+        data: { highlight: "importante" },
+      });
+      if (notifications.length > 100) notifications.length = 100;
+
+      tx.update(userRef, { inventario, notifications });
+      tx.delete(itemRef);
+      tx.update(avisoRef, {
+        status: "recusado",
+        resolvidoEm: new Date().toISOString(),
+        resolvidoPor: email,
+      });
+
+      resultado = { nome, quantidade: qtd, jogador: aviso.jogador || "" };
+    });
+
+    return { ok: true, ...resultado };
   }
 );
 
