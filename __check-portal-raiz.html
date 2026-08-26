@@ -91,7 +91,7 @@ const t = (nome, cond) => linhas.push(
         !/menu\/menu\.html/.test(sw));
     t('T10 · e continua pré-carregando a raiz', /'\/index\.html'/.test(sw));
 
-    // O 301 é o que salva favorito e link de retorno do PagBank.
+    // O 301 é o que salva favorito e link antigo de retorno de pagamento.
     // firebase.json não vai ao ar (fica no `ignore`); no servidor local ele
     // existe e dá para conferir o 301.
     const rf = await fetch('/firebase.json', { cache: 'no-store' });

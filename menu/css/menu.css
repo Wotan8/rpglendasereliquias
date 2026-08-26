@@ -351,8 +351,9 @@ body {
     display: block
 }
 
-/* ===== NOTIFICATION BADGE ON TAB ===== */
-.tab .badge {
+/* ===== NOTIFICATION BADGE ON TAB (e no carrinho do cabeçalho) ===== */
+.tab .badge,
+.portal-cargo .badge {
     position: absolute;
     top: -6px;
     right: -6px;
@@ -1738,6 +1739,33 @@ html:not(.dark) .loja-card {
     font-size: .7rem;
     color: var(--muted);
     text-align: center;
+}
+
+/* Passos de quantidade do carrinho. O .loja-btn NAO serve aqui: ele tem texto
+   branco fixo e conta com o gradiente que so as variantes -frag/-real trazem,
+   entao sem elas o botao vira um bloco branco com o sinal invisivel dentro. */
+.qtd-btn {
+    width: 28px;
+    height: 28px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border-radius: var(--lr-radius);
+    border: var(--lr-border-w) solid var(--lr-border);
+    background: var(--lr-surface-2);
+    color: var(--lr-text-1);
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color var(--lr-t-base) var(--lr-ease), color var(--lr-t-base) var(--lr-ease);
+}
+
+.qtd-btn:hover,
+.qtd-btn:focus-visible {
+    border-color: var(--lr-gold);
+    color: var(--lr-gold-2);
 }
 
 /* Alertas complementares usados pela Loja */

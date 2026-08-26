@@ -21,10 +21,10 @@
 <script type="module">import '/shared/detalhe.js?v=4';</script>
 <link rel="stylesheet" href="/shared/dialogo.css?v=2">
 <script type="module">import '/shared/dialogo.js?v=2';</script>
-    <link rel="stylesheet" href="/menu/css/menu.css?v=26">
+    <link rel="stylesheet" href="/menu/css/menu.css?v=28">
     <link rel="stylesheet" href="/shared/tokens.css?v=11">
     <script src="/shared/theme.js"></script>
-    <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout PagBank contra bots/abuso. -->
+    <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout Mercado Pago contra bots/abuso. -->
     <script src="https://www.google.com/recaptcha/api.js?render=6Lc3_lUtAAAAAFhlPCUXgJSdL3zLnzFUwx_ZbIzT"></script>
     <script type="module" src="/js/global-favicon.js"></script>
     <link rel="manifest" href="/manifest.json">
@@ -95,6 +95,10 @@
                     onclick="window.location.href='/worldbuilding/worldbuilding.html'">
                 <svg class="lr-ico"><use href="#i-globo" /></svg></button>
             </div>
+            <button class="portal-cargo" id="btnCarrinho" title="Carrinho de compras" style="position:relative"
+                onclick="abrirCarrinho()">
+                <svg class="lr-ico"><use href="#i-carrinho" /></svg>
+                <span class="badge" id="carrinhoBadge" style="display:none">0</span></button>
             <span id="userDisplayName" title=""></span>
             <button class="portal-cargo portal-sair" onclick="logout()" title="Sair da conta">
             <svg class="lr-ico"><use href="#i-sair" /></svg></button>
@@ -332,9 +336,10 @@
                 <!-- Sem <h1> repetindo o nome da aba. Fica a frase que explica
                      COMO se compra, que é o que não está no rótulo. -->
                 <div class="rep-topo">
-                    <p class="rep-explica">Troque <strong>Fragmentos</strong> ou pague em dinheiro
-                        (PIX, ou em mãos com o mestre) para adquirir peças e fortalecer suas
-                        histórias.</p>
+                    <p class="rep-explica">Troque <strong>Fragmentos</strong> ou pague pelo
+                        Mercado Pago (PIX, Cartão ou Boleto) para adquirir peças e fortalecer suas
+                        histórias. Depois de pagar, <strong>pode fechar a aba</strong>: o item
+                        aparece aqui sozinho quando o pagamento for confirmado.</p>
                 </div>
 
                 <div class="inventory-grid" id="lojaGrid"></div>
@@ -527,8 +532,43 @@
         </div>
     </div>
 
+    <!-- Modal do Carrinho (pagamento via Mercado Pago) -->
+    <div class="modal" id="carrinhoModal">
+        <div class="modal-content" style="max-width:520px;text-align:left;">
+            <div class="modal-header"
+                style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                <span class="modal-title" style="font-size:1.2rem;font-weight:700;">🛒 Carrinho de Compras</span>
+                <button class="modal-close" onclick="document.getElementById('carrinhoModal').style.display='none'"
+                    style="background:transparent;border:none;color:var(--text);font-size:1.2rem;cursor:pointer;">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="carrinhoLista" style="max-height:260px;overflow-y:auto;"></div>
+
+                <div style="font-weight:600;font-size:0.85rem;margin:14px 0 6px;">Como quer pagar?</div>
+                <div id="carrinhoMeios" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+
+                <div id="carrinhoResumo" style="margin-top:12px;"></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;font-size:1.05rem;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;">
+                    <span style="font-weight:600;">Total a pagar</span>
+                    <strong id="carrinhoTotal" style="color:var(--lr-nature);font-size:1.2rem;">R$ 0,00</strong>
+                </div>
+                <div style="font-size:0.78rem;color:var(--muted);margin-top:6px;">
+                    🔒 Pagamento no ambiente seguro do Mercado Pago. Depois de pagar você pode
+                    fechar a aba: o item cai sozinho no seu Repertório assim que o pagamento
+                    for confirmado.
+                </div>
+            </div>
+            <div class="modal-buttons" style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+                <button class="btn-modal btn-cancel"
+                    onclick="document.getElementById('carrinhoModal').style.display='none'">Continuar Comprando</button>
+                <button class="btn-modal btn-confirm" id="btnPagarCarrinho" onclick="confirmPurchaseCarrinho()">💳
+                    Pagar com Mercado Pago</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase Module -->
-    <script type="module" src="/menu/js/menu-firebase.js?v=17"></script>
+    <script type="module" src="/menu/js/menu-firebase.js?v=20"></script>
     <!-- O card de livro da estante vem daqui: o mesmo do Escritório do
          Cronista e das telas do mestre. Script clássico, então entra ANTES
          do módulo que o usa. -->

@@ -8,7 +8,7 @@
  * @param {object} data    documento atual do usuário
  * @param {object} item    item da loja (doc completo, vai inteiro pro inventário)
  * @param {object} pending doc de compras_pendentes
- * @param {string} origem  rótulo do meio de pagamento ("PagBank" | "Dinheiro")
+ * @param {string} origem  rótulo do meio de pagamento ("Mercado Pago" | "Dinheiro")
  */
 function aplicarCompra(data, item, pending, origem) {
   const quantidade = pending.quantidade || 1;

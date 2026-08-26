@@ -83,13 +83,13 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
-    // Auditoria de transações em dinheiro real (PagBank) — escrita SOMENTE pelo servidor
+    // Auditoria de transações em dinheiro real (Mercado Pago) — escrita SOMENTE pelo servidor
     match /real_logs/{logId} {
       allow read: if isSignedIn() && (isMaster() || resource.data.uid == request.auth.uid);
       allow create, update, delete: if false;
     }
 
-    // Compras pendentes (PagBank) — criadas/atualizadas SOMENTE pelas Cloud Functions.
+    // Compras pendentes (Mercado Pago) — criadas/atualizadas SOMENTE pelas Cloud Functions.
     // O jogador só lê as próprias compras; mestre lê todas; ninguém escreve pelo cliente.
     match /compras_pendentes/{compraId} {
       allow read: if isSignedIn() && (isMaster() || resource.data.uid == request.auth.uid);

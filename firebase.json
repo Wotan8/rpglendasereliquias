@@ -17,7 +17,7 @@
     ],
     "redirects": [
       {
-        "//": "O Portal saiu de /menu/menu.html para a raiz. 301 permanente para tudo que ficou apontando para o endereço antigo: links de retorno do PagBank (functions/index.js), favoritos e páginas em cache.",
+        "//": "O Portal saiu de /menu/menu.html para a raiz. 301 permanente para tudo que ficou apontando para o endereço antigo: favoritos, páginas em cache e links antigos de retorno de pagamento.",
         "source": "/menu/menu.html",
         "destination": "/",
         "type": 301
@@ -31,13 +31,6 @@
       }
     ],
     "headers": [
-      {
-        "source": "**/*.html",
-        "headers": [
-          { "key": "Content-Type", "value": "text/html; charset=utf-8" },
-          { "key": "Cache-Control", "value": "public, max-age=3600" }
-        ]
-      },
       {
         "source": "**/*.css",
         "headers": [
@@ -56,6 +49,22 @@
         "headers": [
           { "key": "Content-Type", "value": "application/javascript; charset=utf-8" },
           { "key": "Cache-Control", "value": "public, max-age=60" }
+        ]
+      },
+      {
+        "//": "HTML vem DEPOIS do ** de propósito: quando duas regras casam o mesmo arquivo, a última vence. E o HTML não pode ficar preso em cache — com max-age=3600 uma correção publicada demorava até uma hora para chegar em quem já tinha aberto o site. 'no-cache' não proíbe guardar: obriga a revalidar antes de usar, e o servidor responde 304 quando nada mudou. Os .js e .css seguem cacheados porque são versionados por ?v=.",
+        "source": "**/*.html",
+        "headers": [
+          { "key": "Content-Type", "value": "text/html; charset=utf-8" },
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      },
+      {
+        "//": "A raiz é servida por rewrite para /index.html, mas o header casa pelo caminho PEDIDO — e '/' não casa com **/*.html.",
+        "source": "/",
+        "headers": [
+          { "key": "Content-Type", "value": "text/html; charset=utf-8" },
+          { "key": "Cache-Control", "value": "no-cache" }
         ]
       },
       {
@@ -87,7 +96,7 @@
         "*firebase-adminsdk*.json",
         "__*.mjs",
         "_backup-*.json",
-        "avulsos-imagens/**",
+        "avulsos-imagens",
         "*.md"
       ]
     }

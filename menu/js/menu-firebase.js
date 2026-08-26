@@ -1105,11 +1105,11 @@ function renderLojaItens() {
                         ${precoReal ? `
                             <button class="loja-btn loja-btn-real" onclick="openCheckoutReal('${item.id}')"
                                 title="${MODO_PAGAMENTO_REAL === 'dinheiro' ? 'Pagar direto ao mestre' : 'PIX · Cartão · Boleto'}"
-                                >${MODO_PAGAMENTO_REAL === 'dinheiro' ? '💵' : '💳'} R$ ${precoReal}</button>` : ''}
+                                >${MODO_PAGAMENTO_REAL === 'dinheiro' ? '💵' : '🛒'} R$ ${precoReal}</button>` : ''}
                     </div>
                     ${precoReal ? `<div class="loja-card-secure">${MODO_PAGAMENTO_REAL === 'dinheiro'
                         ? '🤝 Você combina o pagamento com o mestre; o item é liberado após a confirmação dele'
-                        : '🔒 Pagamento processado no ambiente seguro do PagBank'}</div>` : ''}
+                        : '🔒 PIX, Cartão ou Boleto — a taxa do meio escolhido entra no carrinho'}</div>` : ''}
                 </div>
             </div>
         `;
@@ -1126,12 +1126,12 @@ function getItemValorCentavos(item) {
     return 0;
 }
 
-let currentCheckoutMode = 'frag'; // 'frag' | 'dinheiro' | 'pagbank'
+let currentCheckoutMode = 'frag'; // 'frag' | 'dinheiro' | 'mercadopago'
 
 // Meio de pagamento em dinheiro real da Loja:
-//   'dinheiro' → jogador faz o pedido e o mestre confirma o recebimento no painel
-//   'pagbank'  → checkout online (só volta a valer depois da homologação do PagBank)
-const MODO_PAGAMENTO_REAL = 'dinheiro';
+//   'dinheiro'    → jogador faz o pedido e o mestre confirma o recebimento no painel
+//   'mercadopago' → carrinho + Checkout Pro do Mercado Pago (PIX, Cartão, Boleto)
+const MODO_PAGAMENTO_REAL = 'mercadopago';
 
 // Dados mostrados no checkout em dinheiro
 const PIX_CHAVE = '62991156283';
@@ -1175,7 +1175,7 @@ async function getRecaptchaToken(action) {
 }
 
 function rotuloBotaoCompra(mode) {
-    if (mode === 'pagbank') return '💳 Ir para o Pagamento';
+    if (mode === 'mercadopago') return '🛒 Adicionar ao Carrinho';
     if (mode === 'dinheiro') return '💵 Enviar Pedido ao Mestre';
     return '✔️ Confirmar Compra';
 }
@@ -1204,7 +1204,7 @@ function openCheckoutModal(item, mode) {
                 <input type="number" id="lojaCheckoutQuantity" value="1" min="1" max="99" oninput="updateCheckoutTotal()" style="width:60px;text-align:center;background:var(--lr-bg-1);border:1px solid rgba(255,255,255,0.1);color:var(--lr-text-1);border-radius:6px;padding:4px;font-family:var(--font);font-size:0.9rem;font-weight:600;">
             </div>
         </div>
-        ${isReal ? cartaoPixHtml() : ''}
+        ${mode === 'dinheiro' ? cartaoPixHtml() : ''}
     `;
 
     const metaSelector = document.getElementById('lojaCheckoutMetaSelector');
@@ -1298,6 +1298,229 @@ window.openCheckoutReal = function (itemId) {
     openCheckoutModal(item, MODO_PAGAMENTO_REAL);
 };
 
+// =============================================
+// CARRINHO (dinheiro real → Mercado Pago)
+// Vive no localStorage do aparelho; preço e metas são revalidados
+// pelo servidor na hora do checkout — aqui é só exibição.
+// =============================================
+let carrinho = [];
+try { carrinho = JSON.parse(localStorage.getItem('lr_carrinho') || '[]'); } catch (e) { carrinho = []; }
+if (!Array.isArray(carrinho)) carrinho = [];
+
+function salvarCarrinho() {
+    localStorage.setItem('lr_carrinho', JSON.stringify(carrinho));
+    atualizarBadgeCarrinho();
+}
+
+function atualizarBadgeCarrinho() {
+    const badge = document.getElementById('carrinhoBadge');
+    if (!badge) return;
+    const total = carrinho.reduce((s, l) => s + (l.quantidade || 1), 0);
+    badge.textContent = total;
+    badge.style.display = total > 0 ? '' : 'none';
+}
+atualizarBadgeCarrinho();
+
+function addAoCarrinho(item, quantidade, selectedMetas) {
+    // Mesmo item com as mesmas metas → soma a quantidade em vez de duplicar
+    const chaveMetas = [...selectedMetas].sort().join(',');
+    const igual = carrinho.find(l =>
+        l.itemId === item.id &&
+        [...(l.selectedMetas || [])].sort().join(',') === chaveMetas);
+    if (igual) {
+        igual.quantidade = Math.min(99, (igual.quantidade || 1) + quantidade);
+    } else {
+        carrinho.push({
+            itemId: item.id,
+            nome: item.nome,
+            valorCentavos: getItemValorCentavos(item),
+            quantidade,
+            selectedMetas,
+        });
+    }
+    salvarCarrinho();
+}
+
+// ---- Taxa do gateway: quem paga é o jogador ----
+// As taxas vivem em `config/pagamento` (o mestre ajusta pelo banco). O valor
+// que vale é SEMPRE o recalculado no servidor; aqui é só para o jogador ver
+// antes de escolher.
+const TAXAS_FALLBACK = {
+    pix: { pct: 0.0099, fixo: 0, rotulo: 'PIX' },
+    credito: { pct: 0.0498, fixo: 0, rotulo: 'Cartão' },
+    boleto: { pct: 0, fixo: 349, rotulo: 'Boleto', minimoCentavos: 2000 },
+};
+let taxasPagamento = TAXAS_FALLBACK;
+let meioEscolhido = 'pix';
+let taxasBuscadas = false;
+
+// Só busca com o jogador logado: `config` exige login nas rules, e chamar
+// isso na carga da página enchia o console de todo visitante com um 400.
+// Devolve true quando os valores mudaram, para redesenhar o carrinho.
+async function garantirTaxas() {
+    if (taxasBuscadas || !auth.currentUser) return false;
+    taxasBuscadas = true;
+    try {
+        const snap = await getDoc(doc(db, 'config', 'pagamento'));
+        const d = snap.exists() ? snap.data() : null;
+        if (d && d.pix && d.credito && d.boleto) {
+            taxasPagamento = d;
+            return true;
+        }
+    } catch (e) { /* fallback já serve */ }
+    return false;
+}
+
+// Mesma conta do servidor (functions/taxa-gateway.js): a taxa incide sobre o
+// valor cobrado, então é divisão, não acréscimo.
+function cobrancaComTaxa(subtotalCentavos, taxa) {
+    const pct = Number(taxa?.pct) || 0;
+    const fixo = Number(taxa?.fixo) || 0;
+    return Math.ceil((subtotalCentavos + fixo) / (1 - pct));
+}
+
+const emReais = c => 'R$ ' + (c / 100).toFixed(2).replace('.', ',');
+
+window.escolherMeioPagamento = function (meio) {
+    meioEscolhido = meio;
+    renderCarrinho();
+};
+
+window.abrirCarrinho = function () {
+    renderCarrinho();
+    document.getElementById('carrinhoModal').style.display = 'flex';
+    // Se o banco tiver taxa diferente do padrão, redesenha com o valor certo
+    garantirTaxas().then(mudou => { if (mudou) renderCarrinho(); });
+};
+
+function renderCarrinho() {
+    const lista = document.getElementById('carrinhoLista');
+    const totalEl = document.getElementById('carrinhoTotal');
+    const btn = document.getElementById('btnPagarCarrinho');
+    if (!lista || !totalEl || !btn) return;
+
+    const meios = document.getElementById('carrinhoMeios');
+    const resumo = document.getElementById('carrinhoResumo');
+
+    if (carrinho.length === 0) {
+        lista.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);">Seu carrinho está vazio.<br>Adicione itens da Loja para pagar com PIX, Cartão ou Boleto.</div>';
+        totalEl.textContent = 'R$ 0,00';
+        if (meios) meios.innerHTML = '';
+        if (resumo) resumo.innerHTML = '';
+        btn.disabled = true;
+        return;
+    }
+    btn.disabled = false;
+
+    let total = 0;
+    lista.innerHTML = carrinho.map((l, i) => {
+        const sub = (l.valorCentavos || 0) * (l.quantidade || 1);
+        total += sub;
+        const metasTxt = (l.selectedMetas || [])
+            .map(id => (metasData.find(m => m.id === id) || {}).nome)
+            .filter(Boolean).join(', ');
+        return `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.08);flex-wrap:wrap;">
+                <div style="flex:1;min-width:140px;">
+                    <div style="font-weight:600;color:var(--lr-text-1);">${escapeHtml(l.nome)}</div>
+                    ${metasTxt ? `<div style="font-size:0.75rem;color:var(--muted);">🎯 ${escapeHtml(metasTxt)}</div>` : ''}
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <button class="qtd-btn" onclick="carrinhoQtd(${i},-1)" title="Diminuir" aria-label="Diminuir quantidade">−</button>
+                    <span style="min-width:20px;text-align:center;font-weight:600;">${l.quantidade || 1}</span>
+                    <button class="qtd-btn" onclick="carrinhoQtd(${i},1)" title="Aumentar" aria-label="Aumentar quantidade">+</button>
+                </div>
+                <div style="min-width:80px;text-align:right;font-weight:700;color:var(--lr-nature);">${emReais(sub)}</div>
+                <button onclick="carrinhoRemover(${i})" title="Remover do carrinho" style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1rem;">🗑️</button>
+            </div>`;
+    }).join('');
+
+    // Botões de meio de pagamento: o meio precisa ser escolhido AQUI porque
+    // cada um tem uma taxa diferente, e é ela que define o total.
+    const ICONE = { pix: '💠', credito: '💳', boleto: '🧾' };
+    const taxaDe = m => taxasPagamento[m] || TAXAS_FALLBACK[m];
+    // Meio com valor mínimo (boleto) some nas compras pequenas: os R$ 3,49
+    // fixos dele encareceriam um item de R$ 5,00 em 70%.
+    const disponiveis = ['pix', 'credito', 'boleto']
+        .filter(m => total >= (Number(taxaDe(m).minimoCentavos) || 0));
+    if (!disponiveis.includes(meioEscolhido)) meioEscolhido = disponiveis[0] || 'pix';
+
+    if (meios) {
+        meios.innerHTML = disponiveis.map(m => {
+            const t = taxaDe(m);
+            const cobrado = cobrancaComTaxa(total, t);
+            const ativo = m === meioEscolhido;
+            return `
+                <button onclick="escolherMeioPagamento('${m}')"
+                    style="flex:1 1 0;min-width:0;padding:8px 4px;border-radius:8px;cursor:pointer;text-align:center;
+                           background:${ativo ? 'rgba(16,185,129,0.12)' : 'transparent'};
+                           border:1px solid ${ativo ? 'var(--lr-nature)' : 'rgba(255,255,255,0.15)'};
+                           color:var(--lr-text-1);font-family:var(--font);">
+                    <div style="font-size:0.9rem;white-space:nowrap;">${ICONE[m]} ${escapeHtml(t.rotulo || m)}</div>
+                    <div style="font-size:0.8rem;color:${ativo ? 'var(--lr-nature)' : 'var(--muted)'};font-weight:700;white-space:nowrap;">${emReais(cobrado)}</div>
+                </button>`;
+        }).join('');
+    }
+
+    const taxa = taxasPagamento[meioEscolhido] || TAXAS_FALLBACK[meioEscolhido];
+    const cobrado = cobrancaComTaxa(total, taxa);
+    if (resumo) {
+        resumo.innerHTML = `
+            <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--muted);">
+                <span>Itens</span><span>${emReais(total)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--muted);margin-top:2px;">
+                <span>Taxa do Mercado Pago</span><span>${emReais(cobrado - total)}</span>
+            </div>`;
+    }
+    totalEl.textContent = emReais(cobrado);
+}
+
+window.carrinhoQtd = function (i, delta) {
+    const l = carrinho[i];
+    if (!l) return;
+    l.quantidade = Math.max(1, Math.min(99, (l.quantidade || 1) + delta));
+    salvarCarrinho();
+    renderCarrinho();
+};
+
+window.carrinhoRemover = function (i) {
+    carrinho.splice(i, 1);
+    salvarCarrinho();
+    renderCarrinho();
+};
+
+// Fecha o carrinho no servidor e vai para o Checkout Pro do Mercado Pago
+window.confirmPurchaseCarrinho = async function () {
+    if (carrinho.length === 0) return;
+    const btn = document.getElementById('btnPagarCarrinho');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Gerando pagamento...';
+    try {
+        const recaptchaToken = await getRecaptchaToken('comprar_loja');
+        const criarCheckout = httpsCallable(functions, 'criarCheckoutMercadoPago');
+        const result = await criarCheckout({
+            itens: carrinho.map(l => ({
+                itemId: l.itemId,
+                quantidade: l.quantidade || 1,
+                selectedMetas: l.selectedMetas || [],
+            })),
+            meio: meioEscolhido,
+            recaptchaToken,
+        });
+        // Esvazia AQUI, e não no retorno: no PIX o jogador fecha a aba do
+        // Mercado Pago em vez de voltar, e o carrinho ficaria cheio para sempre.
+        carrinho = [];
+        salvarCarrinho();
+        window.location.href = result.data.paymentUrl; // ambiente seguro do Mercado Pago
+    } catch (error) {
+        console.error('Erro ao criar checkout:', error);
+        showAlert(`❌ Não foi possível iniciar o pagamento: ${error.message}`, 'danger');
+        btn.disabled = false;
+        btn.innerHTML = '💳 Pagar com Mercado Pago';
+    }
+};
+
 window.confirmPurchaseFrag = async function () {
     if (!currentCheckoutItem) return;
     const item = currentCheckoutItem;
@@ -1340,22 +1563,15 @@ window.confirmPurchaseFrag = async function () {
         return;
     }
 
-    // ---- Fluxo PagBank: cria o checkout no servidor e redireciona ----
-    if (currentCheckoutMode === 'pagbank') {
-        try {
-            showAlert('⏳ Gerando pagamento seguro no PagBank...', 'info');
-            const recaptchaToken = await getRecaptchaToken('comprar_loja');
-            const criarCheckout = httpsCallable(functions, 'criarCheckoutPagBank');
-            const result = await criarCheckout({ itemId: item.id, selectedMetas, quantidade, recaptchaToken });
-            window.location.href = result.data.paymentUrl; // ambiente seguro do PagBank
-            return; // a página vai navegar; não reabilita o botão
-        } catch (error) {
-            console.error('Erro ao criar checkout:', error);
-            showAlert(`❌ Não foi possível iniciar o pagamento: ${error.message}`, 'danger');
-            btn.disabled = false;
-            btn.innerHTML = '💳 Ir para o Pagamento';
-            return;
-        }
+    // ---- Fluxo Mercado Pago: entra no carrinho; o pagamento é no carrinho ----
+    if (currentCheckoutMode === 'mercadopago') {
+        addAoCarrinho(item, quantidade, selectedMetas);
+        document.getElementById('lojaCheckoutModal').style.display = 'none';
+        btn.disabled = false;
+        btn.innerHTML = rotuloBotaoCompra('mercadopago');
+        currentCheckoutItem = null;
+        abrirCarrinho();
+        return;
     }
 
     // ---- Fluxo Frag$ (inalterado no geral, mas envia quantidade) ----
@@ -1380,7 +1596,7 @@ window.confirmPurchaseFrag = async function () {
 };
 
 // =============================================
-// RETORNO DO PAGBANK (?compra=...)
+// RETORNO DO MERCADO PAGO (?compra=...)
 // Nenhum benefício é aplicado aqui — a entrega é exclusiva
 // do webhook no servidor (PIX confirma em segundos; boleto pode levar dias).
 // =============================================
@@ -1388,11 +1604,14 @@ window.confirmPurchaseFrag = async function () {
     const params = new URLSearchParams(window.location.search);
     if (!params.get('compra')) return;
     showAlert(
-        '✅ Pagamento em processamento! Assim que o PagBank confirmar, o item aparecerá ' +
+        '✅ Pagamento em processamento! Assim que o Mercado Pago confirmar, o item aparecerá ' +
         'automaticamente no seu Repertório e você receberá uma notificação.',
         'success',
         10000
     );
+    // O pagamento saiu do carrinho — esvazia para não cobrar duas vezes sem querer
+    carrinho = [];
+    salvarCarrinho();
     const url = new URL(window.location.href);
     url.searchParams.delete('compra');
     window.history.replaceState({}, '', url);

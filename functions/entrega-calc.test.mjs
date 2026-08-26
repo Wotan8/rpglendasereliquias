@@ -29,11 +29,23 @@ assert.match(r1.notifications[0].message, /2x Bênção do Cronista por R\$ 30,0
 // --- item repetido: soma a quantidade em vez de duplicar a linha ---
 const r2 = aplicarCompra(
     { inventario: [{ nome: item.nome, quantidade: 3 }] },
-    item, pending, 'PagBank'
+    item, pending, 'Mercado Pago'
 );
 assert.equal(r2.inventario.length, 1, 'não duplica a linha do inventário');
 assert.equal(r2.inventario[0].quantidade, 5, '3 + 2');
-assert.equal(r2.apoios[0].tipo, 'Loja (PagBank)');
+assert.equal(r2.apoios[0].tipo, 'Loja (Mercado Pago)');
+
+// --- carrinho: duas linhas em sequência, a segunda parte do estado da primeira ---
+const l1 = aplicarCompra({}, item, pending, 'Mercado Pago');
+const l2 = aplicarCompra(
+    { inventario: l1.inventario, logsCompra: l1.logsCompra, apoios: l1.apoios, notifications: l1.notifications },
+    { nome: 'Outra Peça', descricao: 'y' },
+    { itemId: 'it2', compraId: 'c1', quantidade: 1, valorCentavos: 500, totalCentavos: 500 },
+    'Mercado Pago'
+);
+assert.equal(l2.inventario.length, 2, 'as duas peças do carrinho entram');
+assert.equal(l2.logsCompra.length, 2);
+assert.equal(l2.apoios.length, 2);
 
 // --- fallbacks: sem quantidade e sem totalCentavos ---
 const r3 = aplicarCompra({}, item, { itemId: 'it1', valorCentavos: 990 }, 'Dinheiro');
