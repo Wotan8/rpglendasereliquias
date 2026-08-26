@@ -3306,17 +3306,17 @@ html:not(.dark) .meta-card {
 .encerrar-op strong { font-size: .95rem; }
 .encerrar-op small { color: var(--lr-text-2); font-size: .8rem; line-height: 1.45; }
 
-.encerrar-op:has(input:checked) {
+.encerrar-op.sel {
     border-color: var(--lr-gold);
     background: var(--lr-gold-soft);
 }
 
-.encerrar-op--perigo:has(input:checked) {
+.encerrar-op--perigo.sel {
     border-color: var(--lr-blood-2);
     background: var(--lr-blood-soft);
 }
 
-.encerrar-op--perigo:has(input:checked) strong { color: var(--lr-blood-2); }
+.encerrar-op--perigo.sel strong { color: var(--lr-blood-2); }
 
 @media (prefers-reduced-motion: reduce) {
     .encerrar-op { transition: none; }

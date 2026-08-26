@@ -12,7 +12,6 @@ import {
     where,
     getDocs,
     getDoc,
-    deleteDoc,
     updateDoc,
     addDoc,
     setDoc,
@@ -1044,8 +1043,45 @@ window.switchTab = function (tabName) {
 window.openDeleteModal = function (characterId, characterName) {
     characterToDelete = characterId;
     document.getElementById('deleteCharacterName').textContent = characterName;
+
+    /* Quanto de EXP VIP o personagem carrega, e quanto disso volta. O número
+       vem do próprio doc da ficha (`expVip`), que o assistente de criação já
+       gravava e a aplicação de EXP passou a somar. */
+    const ficha = characters.find(c => c.id === characterId) || {};
+    const vip = Number(ficha.expVip) || 0;
+    const devolve = Math.round(vip * 0.6);
+    const caixa = document.getElementById('encerrarExpVip');
+    if (caixa) {
+        caixa.innerHTML = vip > 0
+            ? `⭐ Este personagem recebeu <strong>${vip} EXP VIP</strong>.
+               Encerrando, <strong>${devolve} EXP</strong> voltam para o seu Repertório,
+               prontos para outro personagem.`
+            : `<span class="encerrar-vip-nada">⭐ Nenhum EXP VIP foi aplicado neste personagem,
+               então não há EXP para devolver.</span>`;
+    }
+
+    // A opção segura é a que vem marcada — apagar tem de ser escolha, não inércia.
+    const padrao = document.querySelector('input[name="encerrarDestino"][value="mestre"]');
+    if (padrao) padrao.checked = true;
+    sincronizarEscolhaEncerrar();
+
     document.getElementById('deleteModal').classList.add('active');
 };
+
+/* A moldura da opção escolhida é uma CLASSE, não `:has(input:checked)`. O
+   seletor é mais bonito, mas em teste ele casava e não repintava — e uma janela
+   que não mostra o que está selecionado, numa decisão irreversível, é pior do
+   que uma linha de JS a mais. */
+function sincronizarEscolhaEncerrar() {
+    document.querySelectorAll('input[name="encerrarDestino"]').forEach(radio => {
+        const caixa = radio.closest('.encerrar-op');
+        if (caixa) caixa.classList.toggle('sel', radio.checked);
+    });
+}
+
+document.addEventListener('change', (e) => {
+    if (e.target && e.target.name === 'encerrarDestino') sincronizarEscolhaEncerrar();
+});
 
 window.closeDeleteModal = function () {
     characterToDelete = null;
@@ -1054,18 +1090,36 @@ window.closeDeleteModal = function () {
 
 window.confirmDelete = async function () {
     if (!characterToDelete) return;
+    const destino = document.querySelector('input[name="encerrarDestino"]:checked')?.value || 'mestre';
+
+    if (destino === 'apagar' && !await confirmar(
+        'Apagar de vez é definitivo: a ficha e os itens dela somem para sempre. Confirma?',
+        { perigo: true, ok: 'Apagar mesmo assim' })) return;
+
+    const btn = document.getElementById('btnEncerrar');
+    if (btn) { btn.disabled = true; btn.textContent = 'Encerrando...'; }
 
     try {
-        showAlert('🗑️ Apagando personagem...', 'success');
-        await deleteDoc(doc(db, 'char', characterToDelete));
-        // Clean up localStorage for deleted character
+        const encerrar = httpsCallable(functions, 'encerrarPersonagem');
+        const r = (await encerrar({ charId: characterToDelete, destino })).data;
+
         try { localStorage.removeItem('lr_ficha_v17_' + characterToDelete); } catch (e) { }
-        showAlert('✅ Personagem apagado com sucesso!', 'success');
+
+        const sobreExp = r.devolvido > 0
+            ? ` ${r.devolvido} EXP VIP voltaram ao seu Repertório.`
+            : '';
+        showAlert(destino === 'mestre'
+            ? `📜 ${r.nome} foi entregue ao mestre e virou NPC.${sobreExp}`
+            : `🗑️ ${r.nome} foi apagado.${sobreExp}`, 'success', 9000);
+
         closeDeleteModal();
         await loadCharacters();
+        await loadInventory();
     } catch (error) {
-        console.error('Erro ao apagar personagem:', error);
-        showAlert('❌ Erro ao apagar: ' + error.message, 'danger');
+        console.error('Erro ao encerrar personagem:', error);
+        showAlert('❌ ' + error.message, 'danger', 7000);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Confirmar'; }
     }
 };
 

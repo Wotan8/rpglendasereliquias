@@ -13,6 +13,7 @@ const { aplicarCompra, pesoProducao } = require("./entrega-calc");
 const { TAXAS_PADRAO, calcularCobranca, EXCLUIR_POR_MEIO } = require("./taxa-gateway");
 const { sortear, aplicarPremio, girosDoItem } = require("./roleta-sorteio");
 const { aplicarExpDeItem } = require("./exp-item");
+const { charParaNpc, devolucaoExpVip, itemDevolucao } = require("./char-para-npc");
 
 initializeApp();
 const db = getFirestore();
@@ -517,10 +518,17 @@ exports.aplicarExpDoItem = onCall(
       tx.update(userRef, { inventario: resultado.inventario, notifications });
       // Números, e não texto: é o mesmo formato que o log de sessão grava, e a
       // ficha lê os dois com parseInt de qualquer jeito.
-      tx.update(charRef, {
+      const patchFicha = {
         "fields.exp": resultado.exp,
         "fields.exp_total": resultado.expTotal,
-      });
+      };
+      /* `expVip` é o contador que o assistente de criação já gravava. Sem somar
+         aqui, EXP VIP aplicado DEPOIS da criação não contaria na devolução de
+         60% quando o personagem for encerrado. */
+      if (resultado.vip) {
+        patchFicha.expVip = (Number(ficha.expVip) || 0) + resultado.ganho;
+      }
+      tx.update(charRef, patchFicha);
 
       // Trilha imutável: EXP é comprado com dinheiro, então tem de dar para
       // reconstruir quem aplicou o quê, em quem e quando.
@@ -547,6 +555,144 @@ exports.aplicarExpDoItem = onCall(
       exp: resultado.exp,
       expTotal: resultado.expTotal,
       restante: resultado.restante,
+    };
+  }
+);
+
+// =============================================
+// ENCERRAR PERSONAGEM (callable)
+// Duas saídas, e as duas devolvem 60% do EXP VIP ao Repertório:
+//   'mestre' → a ficha vira NPC no cadastro do mestre e sai do jogador
+//   'apagar' → some de vez, com os itens dela
+//
+// Precisa ser servidor por três motivos independentes: `npcs` só aceita
+// criação de mestre nas rules, `inventario` é campo protegido, e apagar a
+// ficha junto com os itens dela é coisa que não pode ficar pela metade.
+// =============================================
+exports.encerrarPersonagem = onCall(
+  { region: "southamerica-east1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Você precisa estar logado.");
+    }
+    const uid = request.auth.uid;
+    const email = request.auth.token.email || "";
+    const { charId, destino } = request.data || {};
+
+    if (!charId || typeof charId !== "string") {
+      throw new HttpsError("invalid-argument", "Diga qual personagem encerrar.");
+    }
+    if (destino !== "mestre" && destino !== "apagar") {
+      throw new HttpsError("invalid-argument", "Escolha entregar ao mestre ou apagar.");
+    }
+
+    const charRef = db.collection("char").doc(charId);
+    const charSnap = await charRef.get();
+    if (!charSnap.exists) throw new HttpsError("not-found", "Personagem não encontrado.");
+    const ficha = charSnap.data();
+    if (ficha.ownerUid !== uid) {
+      throw new HttpsError("permission-denied", "Este personagem não é seu.");
+    }
+
+    const nome = (ficha.fields && ficha.fields.nome) || ficha.nome || "Personagem sem nome";
+    const devolvido = devolucaoExpVip(ficha.expVip);
+
+    // Itens da ficha: a mesma coleção `items`, marcada pelo characterId.
+    const itensSnap = await db.collection("items").where("characterId", "==", charId).get();
+
+    let npcId = "";
+    let perdidoNaConversao = [];
+
+    if (destino === "mestre") {
+      // O catálogo de perícias é o que traduz `sk_<cat>_<slug>` em refId.
+      // Sem ele a conversão perderia todas as perícias em silêncio.
+      let skills = [];
+      try {
+        const cat = await db.collection("system/data/skills").get();
+        skills = cat.docs.map((d) => ({ id: d.id, ...d.data() }));
+      } catch (e) {
+        console.warn("catálogo de perícias indisponível na conversão:", e.message);
+      }
+
+      const { npc, perdido } = charParaNpc(ficha, { skills, autor: email, charId });
+      perdidoNaConversao = perdido;
+
+      const npcRef = db.collection("npcs").doc();
+      await npcRef.set(npc);
+      npcId = npcRef.id;
+
+      // Os itens vão junto: mesma coleção, novo dono. O painel do mestre lê o
+      // inventário do NPC exatamente assim.
+      const lote = db.batch();
+      itensSnap.forEach((d) => {
+        lote.update(d.ref, { characterId: npcId, ownerType: "npc", ownerUid: "" });
+      });
+      await lote.commit();
+    } else {
+      // Apagar de verdade leva os itens junto. Deixá-los para trás é o que
+      // vinha acontecendo: docs em `items` apontando para uma ficha que não
+      // existe mais, invisíveis e eternos.
+      const lote = db.batch();
+      itensSnap.forEach((d) => lote.delete(d.ref));
+      await lote.commit();
+    }
+
+    // Devolução do EXP VIP + baixa da ficha, na mesma transação.
+    const userRef = await resolveUserRef(uid, email);
+    await db.runTransaction(async (tx) => {
+      const uSnap = await tx.get(userRef);
+      if (!uSnap.exists) throw new HttpsError("not-found", "Documento de usuário não existe.");
+      const data = uSnap.data();
+
+      const inventario = data.inventario || [];
+      if (devolvido > 0) inventario.push(itemDevolucao(devolvido, nome));
+
+      const notifications = data.notifications || [];
+      notifications.unshift({
+        id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+        type: "master_message",
+        message: destino === "mestre"
+          ? `📜 ${nome} foi entregue ao mestre e virou NPC.` +
+            (devolvido > 0 ? ` ${devolvido} EXP VIP voltaram ao seu Repertório.` : "")
+          : `🗑️ ${nome} foi apagado.` +
+            (devolvido > 0 ? ` ${devolvido} EXP VIP voltaram ao seu Repertório.` : ""),
+        timestamp: Date.now(),
+        isNew: true,
+        data: { highlight: "importante" },
+      });
+      if (notifications.length > 100) notifications.length = 100;
+
+      tx.update(userRef, { inventario, notifications });
+      tx.delete(charRef);
+
+      tx.set(db.collection("exp_logs").doc(), {
+        uid,
+        jogador: data.displayName || data.email || email,
+        charId,
+        personagem: nome,
+        itemNome: "(encerramento do personagem)",
+        quantidade: 1,
+        porUnidade: devolvido,
+        ganho: -Number(ficha.expVip || 0),
+        devolvido,
+        vip: true,
+        destino,
+        npcId,
+        itensMovidos: itensSnap.size,
+        origem: destino === "mestre" ? "Entregue ao mestre" : "Apagado pelo jogador",
+        criadoEm: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return {
+      ok: true,
+      destino,
+      nome,
+      devolvido,
+      expVip: Number(ficha.expVip) || 0,
+      npcId,
+      itens: itensSnap.size,
+      perdido: perdidoNaConversao,
     };
   }
 );

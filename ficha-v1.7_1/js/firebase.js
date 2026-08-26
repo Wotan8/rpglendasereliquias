@@ -166,6 +166,11 @@ async function loadFromFirebase(charId) {
             if (typeof state !== 'undefined') {
                 state.mesaId = data.mesaId;
             }
+            /* EXP VIP: quanto do EXP deste personagem veio de item VIP. A ficha
+               não usa o número em conta nenhuma — ele existe porque 60% dele
+               volta ao Repertório se o personagem for encerrado, e o jogador
+               precisa poder ver isso antes de decidir. */
+            if (window.mostrarExpVip) window.mostrarExpVip(data.expVip);
             if (window.initMesaTab && data.mesaId) {
                 window.initMesaTab(data.mesaId);
             }
