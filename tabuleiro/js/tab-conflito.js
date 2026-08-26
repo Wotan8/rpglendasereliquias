@@ -366,7 +366,7 @@ async function desgastarPorFalhaCritica(c) {
     if (!itemId || c.acao?.golpe?.desarmado) return;      // o corpo não é peça
     if (!controla(c.atacante?.pid)) return;
     try {
-        const M = await import('../../shared/inventario-motor.js?v=11');
+        const M = await import('../../shared/inventario-motor.js?v=12');
         const ref = _doc(_db, 'items', itemId);
         const snap = await _get(ref);
         if (!snap.exists()) return;

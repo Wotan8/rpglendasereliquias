@@ -249,8 +249,15 @@ export function avisoDePeso(item, cont, itens, tpl, qtd) {
    desgasta, não rompe e não se conserta na bancada — o que a limita é a
    história dela, não o aço. `integridadeMax`/`integridadeDe` devolvem `null`
    (não zero!) para dizer "esta régua não se aplica"; quem for pintar número
-   na tela precisa tratar o null como "—". Vale pelo TIPO do cadastro. */
-export const ehReliquia = (i, tpl) => String(i?.tipo ?? tpl?.tipo ?? '') === 'Relíquia';
+   na tela precisa tratar o null como "—".
+
+   Vale pelo TIPO **ou** pela TAG. A tag existe porque peça que também é arma
+   precisa ficar no tipo Arma para ter dano, categoria e slot de mão — "O
+   Sussurro Final" é adaga E relíquia. Relíquia não quebra, esteja ela em que
+   gaveta do cadastro estiver. */
+const ehReliquiaSolta = (x) => String(x?.tipo ?? '') === 'Relíquia'
+    || (Array.isArray(x?.tags) && x.tags.some(t => String(t).trim().toLowerCase() === 'relíquia'));
+export const ehReliquia = (i, tpl) => ehReliquiaSolta(i) || ehReliquiaSolta(tpl);
 
 /** Máximo da peça, ou `null` quando a régua não se aplica (Relíquia). */
 export function integridadeMax(item, tpl) {

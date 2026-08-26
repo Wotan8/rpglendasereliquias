@@ -10,7 +10,7 @@
 // =============================================
 
 // O motor e puro: importa em vez de olhar `window` como o resto do painel faz.
-import { integridadeZerada } from '../../shared/inventario-motor.js?v=11';
+import { integridadeZerada } from '../../shared/inventario-motor.js?v=12';
 
 const ATTR_SIGLAS = ['INT', 'RAC', 'PRS', 'FOR', 'DES', 'VIG', 'PRE', 'MAN', 'AUT'];
 

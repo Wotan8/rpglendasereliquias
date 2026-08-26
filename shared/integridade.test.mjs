@@ -208,3 +208,20 @@ test('o tipo vem do modelo quando a instância não diz', () => {
 test('peça comum segue com Integridade — a exceção é só da Relíquia', () => {
     assert.equal(integridadeMax({ tipo: 'Arma', liga: 2, tamanho: 0.3 }), 9);
 });
+
+test('a TAG Relíquia também isenta — peça que é arma E relíquia', () => {
+    // O Sussurro Final: tipo Arma (precisa, para ter dano e slot de mão) com
+    // tag Relíquia. Não quebra, e o tipo Arma segue valendo no combate.
+    const sussurro = { nome: 'O Sussurro Final', tipo: 'Arma', tags: ['Adaga', 'Relíquia'], tamanho: 0.45 };
+    assert.equal(integridadeMax(sussurro), null);
+    assert.equal(perdaFalhaCritica(sussurro), 0);
+    assert.equal(integridadeZerada(sussurro), false);
+});
+
+test('a tag vem do modelo quando a instância não a copiou', () => {
+    assert.equal(integridadeMax({ tipo: 'Arma', tamanho: 0.45 }, { tags: ['Relíquia'] }), null);
+});
+
+test('tag parecida não isenta — só "Relíquia" mesmo', () => {
+    assert.equal(integridadeMax({ tipo: 'Arma', tags: ['Relicário'], liga: 2, tamanho: 0.3 }), 9);
+});
