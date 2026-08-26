@@ -11,6 +11,7 @@ import { doc, getDoc, collection, getDocs } from 'https://www.gstatic.com/fireba
 import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 import { toast } from '../../shared/dialogo.js?v=2';
 import { fatias, rotacaoFinal, fatiaSobASeta, ANGULO_SETA } from '../../shared/roleta-geometria.js?v=1';
+import { curvaGiro } from '../../shared/roleta-curva.js?v=1';
 
 let janela = null;        // <dialog>, criado uma vez
 let premios = [];         // o que está desenhado na roda
@@ -96,10 +97,102 @@ function paleta() {
         fatias: [t('--lr-gold') || '#D4AF37', t('--lr-blood-2') || '#A33',
                  t('--lr-bronze') || '#8a6a2f', t('--lr-arcane') || '#4F46E5'],
         borda: t('--lr-gold-2') || '#f0d060',
+        aro: t('--lr-bronze') || '#8a6a2f',
         texto: t('--lr-divine') || '#F6F7FB',
         fundo: t('--lr-surface') || '#151A21',
         seta: t('--lr-gold') || '#D4AF37',
     };
+}
+
+/* O DISCO É CACHEADO FORA DA TELA.
+   Antes `desenhar()` repintava as ~30 fatias e todos os rótulos a CADA quadro
+   do giro — e o giro tem uns quatro segundos de quadros. Mas a roda não muda
+   enquanto gira: ela só roda. Então ela é pintada uma vez num canvas
+   auxiliar, e cada quadro vira um `rotate` mais um `drawImage`.
+   O cache cai quando muda o que ele desenhou: tamanho, tema ou lista de
+   prêmios. É a mesma disciplina do Tabuleiro — camada estática é blit. */
+let disco = null;          // canvas auxiliar
+let discoChave = '';       // o que ele foi pintado para representar
+
+function chaveDoDisco(px) {
+    return px + '|' + document.documentElement.className + '|' + listaFatias.length
+        + '|' + listaFatias.map(f => f.indice).join(',');
+}
+
+function construirDisco(px) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = px;
+    const ctx = cv.getContext('2d');
+    const c = paleta();
+    const raio = px / 2;
+    const rad = g => (g * Math.PI) / 180;
+    const rDisco = raio - px * 0.045;
+    ctx.translate(raio, raio);
+
+    listaFatias.forEach((f, i) => {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, rDisco, rad(f.inicio), rad(f.fim));
+        ctx.closePath();
+        ctx.fillStyle = c.fatias[i % c.fatias.length];
+        ctx.fill();
+        // Fatia de 1 grau não comporta contorno: a linha comeria a cor toda.
+        if (f.tamanho > 2) {
+            ctx.strokeStyle = 'rgba(0,0,0,.28)';
+            ctx.lineWidth = Math.max(1, px * 0.002);
+            ctx.stroke();
+        }
+
+        // Texto só onde cabe — nas fatias de 0,3% ele viraria borrão.
+        if (f.tamanho >= 4) {
+            const nome = premios[f.indice]?.nome || '';
+            ctx.save();
+            ctx.rotate(rad(f.meio));
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            const tam = Math.max(8, Math.min(px * 0.030, f.tamanho * px * 0.010));
+            ctx.font = `700 ${tam}px system-ui, sans-serif`;
+            const max = 26;
+            const txt = nome.length > max ? nome.slice(0, max - 1) + '…' : nome;
+            // Realce claro por baixo: o mesmo rótulo cai em fatia escura e em
+            // fatia clara, e sem ele some numa das duas.
+            ctx.fillStyle = 'rgba(255,255,255,.28)';
+            ctx.fillText(txt, rDisco - px * 0.025, Math.max(1, px * 0.0015));
+            ctx.fillStyle = '#1a1208';
+            ctx.fillText(txt, rDisco - px * 0.025, 0);
+            ctx.restore();
+        }
+    });
+
+    /* Volume: um véu radial que escurece só a borda. É o que tira a roda do
+       "leque de papel" e a põe de pé — e custa um gradiente por construção,
+       não por quadro. */
+    const veu = ctx.createRadialGradient(0, 0, rDisco * 0.35, 0, 0, rDisco);
+    veu.addColorStop(0, 'rgba(255,255,255,.06)');
+    veu.addColorStop(0.62, 'rgba(0,0,0,0)');
+    veu.addColorStop(1, 'rgba(0,0,0,.30)');
+    ctx.beginPath(); ctx.arc(0, 0, rDisco, 0, Math.PI * 2);
+    ctx.fillStyle = veu; ctx.fill();
+
+    /* Aro duplo: bronze por fora, ouro por dentro. Um anel só de uma cor lia
+       como contorno de desenho; dois leem como metal. */
+    ctx.beginPath(); ctx.arc(0, 0, rDisco, 0, Math.PI * 2);
+    ctx.strokeStyle = c.aro; ctx.lineWidth = Math.max(3, px * 0.020); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, rDisco - px * 0.011, 0, Math.PI * 2);
+    ctx.strokeStyle = c.borda; ctx.lineWidth = Math.max(1, px * 0.005); ctx.stroke();
+
+    /* Cravos no aro — mas só quando há folga entre eles. Com trinta fatias
+       eles encostariam e virariam uma linha pontilhada suja. */
+    if (listaFatias.length <= 16) {
+        const rc = rDisco - px * 0.004;
+        listaFatias.forEach(f => {
+            const a = rad(f.inicio);
+            ctx.beginPath();
+            ctx.arc(Math.cos(a) * rc, Math.sin(a) * rc, Math.max(1.5, px * 0.007), 0, Math.PI * 2);
+            ctx.fillStyle = c.borda; ctx.fill();
+        });
+    }
+    return cv;
 }
 
 function desenhar() {
@@ -114,11 +207,12 @@ function desenhar() {
 
     const c = paleta();
     const raio = px / 2;
+    const rad = g => (g * Math.PI) / 180;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, px, px);
-    ctx.translate(raio, raio);
 
     if (!listaFatias.length) {
+        ctx.translate(raio, raio);
         ctx.fillStyle = c.fundo;
         ctx.beginPath(); ctx.arc(0, 0, raio - 2, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = c.texto;
@@ -128,65 +222,44 @@ function desenhar() {
         return;
     }
 
-    const rad = g => (g * Math.PI) / 180;
+    const chave = chaveDoDisco(px);
+    if (chave !== discoChave) { disco = construirDisco(px); discoChave = chave; }
+
+    // O disco gira; o miolo e a agulha ficam parados por cima dele.
+    ctx.save();
+    ctx.translate(raio, raio);
+    ctx.rotate(rad(rotacao));
+    ctx.drawImage(disco, -raio, -raio);
+    ctx.restore();
+
+    ctx.translate(raio, raio);
     const rDisco = raio - px * 0.045;
 
-    listaFatias.forEach((f, i) => {
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.arc(0, 0, rDisco, rad(f.inicio + rotacao), rad(f.fim + rotacao));
-        ctx.closePath();
-        ctx.fillStyle = c.fatias[i % c.fatias.length];
-        ctx.fill();
-        // Fatia de 1 grau não comporta contorno: a linha comeria a cor toda.
-        if (f.tamanho > 2) {
-            ctx.strokeStyle = 'rgba(0,0,0,.35)';
-            ctx.lineWidth = Math.max(1, px * 0.002);
-            ctx.stroke();
-        }
+    // Miolo: anel de ouro com poço escuro, para a agulha ter de onde sair
+    ctx.beginPath(); ctx.arc(0, 0, px * 0.082, 0, Math.PI * 2);
+    ctx.fillStyle = c.borda; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, px * 0.066, 0, Math.PI * 2);
+    ctx.fillStyle = c.fundo; ctx.fill();
+    const brilho = ctx.createRadialGradient(-px * 0.02, -px * 0.02, 1, 0, 0, px * 0.066);
+    brilho.addColorStop(0, 'rgba(255,255,255,.16)');
+    brilho.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = brilho; ctx.fill();
 
-        // Texto só onde cabe — nas fatias de 0,3% ele viraria borrão.
-        if (f.tamanho >= 4) {
-            const nome = premios[f.indice]?.nome || '';
-            ctx.save();
-            ctx.rotate(rad(f.meio + rotacao));
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#1a1208';
-            const tam = Math.max(8, Math.min(px * 0.030, f.tamanho * px * 0.010));
-            ctx.font = `700 ${tam}px system-ui, sans-serif`;
-            const max = 26;
-            ctx.fillText(nome.length > max ? nome.slice(0, max - 1) + '…' : nome, rDisco - px * 0.025, 0);
-            ctx.restore();
-        }
-    });
-
-    // Aro
-    ctx.beginPath();
-    ctx.arc(0, 0, rDisco, 0, Math.PI * 2);
-    ctx.strokeStyle = c.borda;
-    ctx.lineWidth = Math.max(2, px * 0.012);
-    ctx.stroke();
-
-    // Miolo
-    ctx.beginPath();
-    ctx.arc(0, 0, px * 0.075, 0, Math.PI * 2);
-    ctx.fillStyle = c.fundo;
-    ctx.fill();
-    ctx.strokeStyle = c.borda;
-    ctx.lineWidth = Math.max(2, px * 0.008);
-    ctx.stroke();
-
-    // Agulha no topo, apontando para dentro — é ela que lê o resultado
+    /* Agulha no topo, apontando para dentro — é ela que lê o resultado.
+       A sombra é o que a levanta do disco em vez de deixá-la colada nele. */
     ctx.save();
     ctx.rotate(rad(ANGULO_SETA));
+    ctx.shadowColor = 'rgba(0,0,0,.55)';
+    ctx.shadowBlur = Math.max(2, px * 0.012);
+    ctx.shadowOffsetX = Math.max(1, px * 0.004);
     ctx.beginPath();
-    ctx.moveTo(rDisco - px * 0.005, 0);
-    ctx.lineTo(rDisco + px * 0.045, -px * 0.030);
-    ctx.lineTo(rDisco + px * 0.045, px * 0.030);
+    ctx.moveTo(rDisco - px * 0.012, 0);
+    ctx.lineTo(rDisco + px * 0.048, -px * 0.030);
+    ctx.lineTo(rDisco + px * 0.048, px * 0.030);
     ctx.closePath();
     ctx.fillStyle = c.seta;
     ctx.fill();
+    ctx.shadowColor = 'transparent';
     ctx.strokeStyle = 'rgba(0,0,0,.45)';
     ctx.lineWidth = Math.max(1, px * 0.003);
     ctx.stroke();
@@ -201,7 +274,8 @@ window.addEventListener('resize', () => { if (janela?.open) desenhar(); });
 // ---------------------------------------------
 // GIRO
 // ---------------------------------------------
-const easeOutQuart = t => 1 - Math.pow(1 - t, 4);
+/* A curva mora em roleta-curva.js, com teste ao lado: atrito de verdade,
+   em vez de um easeOut que despejava o giro no primeiro terco. */
 
 function animarAte(alvo, duracaoMs) {
     return new Promise(resolve => {
@@ -242,7 +316,7 @@ function animarAte(alvo, duracaoMs) {
         function quadro(agora) {
             if (terminou) return;
             const t = Math.min(1, (agora - inicio) / duracaoMs);
-            rotacao = de + delta * easeOutQuart(t);
+            rotacao = de + delta * curvaGiro(t);
             desenhar();
 
             // Uma fatia cruzada = um tic. Conta pelo total de bordas já

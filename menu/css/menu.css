@@ -153,6 +153,13 @@ html.dark .toolbar button:hover {
     padding: 0
 }
 
+/* O `margin: 0` acima atropela o `margin: auto` que o navegador dá ao
+   <dialog>, e é ele quem centraliza a caixa de `showModal()`. Sem esta linha
+   TODA janela modal do Portal nasce grudada no canto de cima à esquerda —
+   foi o que aconteceu com a Roleta. Devolver o padrão é mais seguro que
+   centralizar cada dialog na mão. */
+dialog { margin: auto; }
+
 body {
     font-family: var(--font);
     background: var(--bg-gradient);
@@ -2956,9 +2963,16 @@ html:not(.dark) .meta-card {
    A janela é <dialog> em camada de topo, então não disputa z-index com nada.
    Toda cor sai de token: a roda é desenhada em canvas lendo os MESMOS tokens,
    e é assim que ela acompanha a troca de tema sem ter duas paletas. */
+/* Coluna flex: o topo é fixo e SÓ o corpo rola. Antes eram dois
+   `calc(100vh - …)` independentes (48 aqui, 130 no corpo) que precisavam
+   somar certo à mão — e não somavam: numa janela baixa o cartão do prêmio
+   ficava abaixo da dobra, que é justamente o que a pessoa acabou de ganhar.
+   `dvh` porque no celular a barra do navegador entra e sai da conta. */
 .lr-roleta {
     width: min(880px, calc(100vw - 32px));
-    max-height: calc(100vh - 48px);
+    max-height: min(calc(100dvh - 32px), 760px);
+    display: flex;
+    flex-direction: column;
     padding: 0;
     border: var(--lr-border-w) solid var(--lr-border);
     border-radius: var(--lr-radius-lg);
@@ -2972,6 +2986,7 @@ html:not(.dark) .meta-card {
 }
 
 .roleta-topo {
+    flex: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -3007,12 +3022,14 @@ html:not(.dark) .meta-card {
 .roleta-icone:focus-visible { border-color: var(--lr-gold); color: var(--lr-gold-2); }
 
 .roleta-corpo {
+    flex: 1 1 auto;
+    min-height: 0;      /* sem isto o filho que rola estica a caixa em vez de rolar */
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+    align-items: start;
     gap: 18px;
     padding: 16px;
     overflow-y: auto;
-    max-height: calc(100vh - 130px);
 }
 
 .roleta-roda { display: flex; flex-direction: column; align-items: center; gap: 10px; }
