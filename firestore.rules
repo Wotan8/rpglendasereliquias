@@ -91,6 +91,14 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Cada aplicação de EXP do Repertório numa ficha — escrita SOMENTE pelo
+    // servidor. EXP é comprado com dinheiro; tem de dar para reconstruir quem
+    // aplicou o quê, em quem e quando.
+    match /exp_logs/{logId} {
+      allow read: if isSignedIn() && (isMaster() || resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
     // Cada giro da roleta, com o que saiu e o saldo antes/depois — escrita
     // SOMENTE pelo servidor. É a prova de que o sorteio não foi no navegador.
     match /roleta_logs/{logId} {

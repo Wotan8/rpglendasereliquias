@@ -509,6 +509,7 @@ async function loadInventory() {
         } else {
             emptyState.style.display = 'none';
             _repDetalhes = [];
+            _repExp = [];
             grid.innerHTML = inventario.map(item => {
                 const imgHtml = item.imagem
                     ? `<div class="loja-card-media">
@@ -538,6 +539,14 @@ async function loadInventory() {
                 }) - 1;
                 const longa = desc.length > 180;
 
+                /* Item de EXP deixa de ser enfeite: daqui sai o botão que
+                   aplica o EXP numa ficha. `_repExp` guarda o que o botão
+                   precisa, porque nome de item tem apóstrofo (Ka'Lunis) e não
+                   sobrevive dentro de um onclick. */
+                const porUnidade = item.isExp ? (parseInt(item.expAmount, 10) || 0) : 0;
+                const eExp = porUnidade > 0 && qtd > 0;
+                if (eExp) _repExp[i] = { nome: item.nome, porUnidade, quantidade: qtd, vip: !!item.isExpVip };
+
                 return `
                 <div class="loja-card${longa ? ' rep-abrivel' : ''}"
                     ${longa ? `onclick="abrirDetalheItem(${i})" title="Ver a ficha completa"` : ''}>
@@ -550,6 +559,11 @@ async function loadInventory() {
                         ${desc ? `<div class="loja-card-desc${longa ? ' rep-desc-curta' : ''}">${escapeHtmlWithBreaks(desc)}</div>` : ''}
                         ${longa ? '<div class="rep-mais">🔎 Clique para ver a ficha completa</div>' : ''}
                         ${tagsHtml ? `<div class="loja-card-tags">${tagsHtml}</div>` : ''}
+                        ${eExp ? `
+                        <button class="loja-btn loja-btn-real rep-usar"
+                            onclick="event.stopPropagation();abrirAplicarExp(${i})"
+                            title="Somar este EXP na ficha de um personagem seu">
+                            ⭐ Aplicar ${porUnidade} EXP</button>` : ''}
                         <div class="rep-recebimento">
                             <span>Recebimento</span>
                             <strong>${escapeHtml(item.formaRecebimento || 'a combinar')}</strong>
@@ -596,10 +610,90 @@ function etiquetasDoItem(item) {
    Valor Derivado: `<dialog>` nativo, altura limitada e rolagem por dentro, que
    é o que uma ficha de trinta linhas precisa. */
 let _repDetalhes = [];
+let _repExp = [];
 
 window.abrirDetalheItem = function (i) {
     const o = _repDetalhes[i];
     if (o && window.LRDetalhe) window.LRDetalhe.abrirDetalhe(o);
+};
+
+/* ===== APLICAR EXP NUMA FICHA =====
+   O item de EXP ficava parado no Repertório e o número era somado na ficha à
+   mão. Aqui o jogador escolhe o personagem e a quantidade; quem soma e quem
+   baixa a unidade é o servidor, porque `inventario` é campo protegido. */
+window.abrirAplicarExp = async function (i) {
+    const alvo = _repExp[i];
+    if (!alvo) return;
+
+    if (characters.length === 0) {
+        showAlert('❌ Você não tem nenhum personagem para receber o EXP.', 'warning');
+        return;
+    }
+
+    const opcoes = characters.map(c => {
+        const f = c.fields || {};
+        const nome = f.nome || c.nome || 'Sem nome';
+        const total = parseInt(f.exp_total, 10) || 0;
+        const livre = parseInt(f.exp, 10) || 0;
+        return `<option value="${escapeHtml(c.id)}">${escapeHtml(nome)} — ${livre} livres / ${total} total</option>`;
+    }).join('');
+
+    /* Mesmas classes do diálogo compartilhado (shared/dialogo.css): a janela
+       nasce com a identidade do site sem CSS novo. O <select> e o rótulo não
+       existem lá, então levam o estilo do próprio input. */
+    const janela = document.createElement('dialog');
+    janela.className = 'lr-dialogo';
+    janela.innerHTML = `
+        <form class="lr-dialogo-form" method="dialog">
+            <div class="lr-dialogo-titulo">⭐ Aplicar ${escapeHtml(alvo.nome)}</div>
+            <p class="lr-dialogo-msg">
+                Cada unidade vale <strong>${alvo.porUnidade} EXP</strong>${alvo.vip ? ' (VIP)' : ''}.
+                Você tem ${alvo.quantidade}.
+            </p>
+            <label for="expChar" style="font-size:.8rem;font-weight:700;">Em qual personagem?</label>
+            <select id="expChar" class="lr-dialogo-input">${opcoes}</select>
+            <label for="expQtd" style="font-size:.8rem;font-weight:700;">Quantas unidades?</label>
+            <input id="expQtd" class="lr-dialogo-input" type="number" min="1"
+                max="${alvo.quantidade}" value="1" inputmode="numeric">
+            <div id="expTotalPrevia" style="font-weight:700;color:var(--lr-gold);">
+                Vai somar ${alvo.porUnidade} EXP</div>
+            <div class="lr-dialogo-botoes">
+                <button type="submit" value="ok" class="lr-dialogo-ok">Aplicar</button>
+                <button type="submit" value="" class="lr-dialogo-cancel">Cancelar</button>
+            </div>
+        </form>`;
+    document.body.appendChild(janela);
+
+    const campoQtd = janela.querySelector('#expQtd');
+    const previa = janela.querySelector('#expTotalPrevia');
+    const atualizarPrevia = () => {
+        const n = Math.max(1, Math.min(alvo.quantidade, parseInt(campoQtd.value, 10) || 1));
+        previa.textContent = `Vai somar ${n * alvo.porUnidade} EXP`;
+    };
+    campoQtd.addEventListener('input', atualizarPrevia);
+
+    const escolha = await new Promise(resolve => {
+        janela.addEventListener('close', () => resolve(janela.returnValue), { once: true });
+        janela.showModal();
+    });
+
+    const charId = janela.querySelector('#expChar').value;
+    const quantidade = Math.max(1, Math.min(alvo.quantidade, parseInt(campoQtd.value, 10) || 1));
+    janela.remove();
+    if (escolha !== 'ok') return;
+
+    try {
+        const aplicar = httpsCallable(functions, 'aplicarExpDoItem');
+        const r = await aplicar({ itemNome: alvo.nome, charId, quantidade });
+        showAlert(
+            `⭐ ${r.data.ganho} EXP aplicados! O personagem ficou com ${r.data.exp} livres ` +
+            `de ${r.data.expTotal} no total.`, 'success', 8000);
+        await loadInventory();
+        await loadCharacters();
+    } catch (e) {
+        console.error('Erro ao aplicar EXP:', e);
+        showAlert(`❌ ${e.message}`, 'danger', 7000);
+    }
 };
 
 // ===== NOTIFICAÇÕES =====

@@ -12,6 +12,7 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { aplicarCompra, pesoProducao } = require("./entrega-calc");
 const { TAXAS_PADRAO, calcularCobranca, EXCLUIR_POR_MEIO } = require("./taxa-gateway");
 const { sortear, aplicarPremio, girosDoItem } = require("./roleta-sorteio");
+const { aplicarExpDeItem } = require("./exp-item");
 
 initializeApp();
 const db = getFirestore();
@@ -451,6 +452,104 @@ async function entregarCompra(pendingRef, pending, origem, extras = {}) {
     });
   });
 }
+
+// =============================================
+// EXP DO REPERTÓRIO → FICHA (callable)
+// O jogador escolhe em qual personagem gastar o item de EXP que comprou.
+// Precisa ser servidor por dois motivos: `inventario` é campo protegido nas
+// rules (o navegador não consegue baixar a unidade), e o par exp/exp_total tem
+// de andar junto com o consumo — senão dá para aplicar o mesmo item duas vezes
+// numa aba e noutra.
+// =============================================
+exports.aplicarExpDoItem = onCall(
+  { region: "southamerica-east1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Você precisa estar logado.");
+    }
+    const uid = request.auth.uid;
+    const email = request.auth.token.email || "";
+    const { itemNome, charId, quantidade } = request.data || {};
+
+    if (!itemNome || typeof itemNome !== "string") {
+      throw new HttpsError("invalid-argument", "Diga qual item usar.");
+    }
+    if (!charId || typeof charId !== "string") {
+      throw new HttpsError("invalid-argument", "Escolha o personagem.");
+    }
+
+    const userRef = await resolveUserRef(uid, email);
+    const charRef = db.collection("char").doc(charId);
+
+    let resultado;
+    await db.runTransaction(async (tx) => {
+      const [uSnap, cSnap] = await Promise.all([tx.get(userRef), tx.get(charRef)]);
+      if (!uSnap.exists) throw new HttpsError("not-found", "Documento de usuário não existe.");
+      if (!cSnap.exists) throw new HttpsError("not-found", "Personagem não encontrado.");
+
+      const ficha = cSnap.data();
+      // A ficha tem de ser DELE. Sem isto, um jogador aplicaria o próprio EXP
+      // na ficha de outro — ou pior, na de um NPC.
+      if (ficha.ownerUid !== uid) {
+        throw new HttpsError("permission-denied", "Este personagem não é seu.");
+      }
+
+      const data = uSnap.data();
+      try {
+        resultado = aplicarExpDeItem(data, ficha.fields, itemNome, quantidade);
+      } catch (e) {
+        throw new HttpsError(e.codigo || "failed-precondition", e.message);
+      }
+
+      const nomePersonagem = (ficha.fields && ficha.fields.nome) || ficha.nome || "seu personagem";
+
+      const notifications = data.notifications || [];
+      notifications.unshift({
+        id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+        type: "exp_received",
+        message: `⭐ ${resultado.ganho} EXP aplicados em ${nomePersonagem} (${itemNome}).`,
+        timestamp: Date.now(),
+        isNew: true,
+        data: { direction: "up", amount: resultado.ganho, characterName: nomePersonagem },
+      });
+      if (notifications.length > 100) notifications.length = 100;
+
+      tx.update(userRef, { inventario: resultado.inventario, notifications });
+      // Números, e não texto: é o mesmo formato que o log de sessão grava, e a
+      // ficha lê os dois com parseInt de qualquer jeito.
+      tx.update(charRef, {
+        "fields.exp": resultado.exp,
+        "fields.exp_total": resultado.expTotal,
+      });
+
+      // Trilha imutável: EXP é comprado com dinheiro, então tem de dar para
+      // reconstruir quem aplicou o quê, em quem e quando.
+      tx.set(db.collection("exp_logs").doc(), {
+        uid,
+        jogador: data.displayName || data.email || email,
+        charId,
+        personagem: nomePersonagem,
+        itemNome,
+        quantidade: resultado.ganho / resultado.porUnidade,
+        porUnidade: resultado.porUnidade,
+        ganho: resultado.ganho,
+        vip: resultado.vip,
+        expDepois: resultado.exp,
+        expTotalDepois: resultado.expTotal,
+        origem: "Repertório do jogador",
+        criadoEm: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return {
+      ok: true,
+      ganho: resultado.ganho,
+      exp: resultado.exp,
+      expTotal: resultado.expTotal,
+      restante: resultado.restante,
+    };
+  }
+);
 
 // =============================================
 // ROLETA — UM GIRO (callable)
