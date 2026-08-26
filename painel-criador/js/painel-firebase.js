@@ -7,7 +7,7 @@ import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMecha
 import {
     CAMPOS_EQUIPAMENTO, normalizaFormaEquipar,
     SECOES_EQUIPAMENTO, htmlBarraFerramentas, ligarFormulario, agruparEmSecoesDOM, atualizarResumo,
-} from '../../shared/equip-campos.js?v=17';
+} from '../../shared/equip-campos.js?v=18';
 import {
     SECOES_CONDICAO, SECOES_CLASSE, SECOES_TRIBO, SECOES_VALOR_DERIVADO,
 } from './cadastro-secoes.js?v=1';

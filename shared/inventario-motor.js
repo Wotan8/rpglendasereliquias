@@ -255,7 +255,10 @@ export function avisoDePeso(item, cont, itens, tpl, qtd) {
    precisa ficar no tipo Arma para ter dano, categoria e slot de mão — "O
    Sussurro Final" é adaga E relíquia. Relíquia não quebra, esteja ela em que
    gaveta do cadastro estiver. */
-const ehReliquiaSolta = (x) => String(x?.tipo ?? '') === 'Relíquia'
+const ehReliquiaSolta = (x) => x?.ehReliquia === true
+    // LEGADO: antes da marca existir, relíquia era o TIPO (Especulum Fatu) ou
+    // uma tag (O Sussurro Final). Dado antigo segue isento sem precisar migrar.
+    || String(x?.tipo ?? '') === 'Relíquia'
     || (Array.isArray(x?.tags) && x.tags.some(t => String(t).trim().toLowerCase() === 'relíquia'));
 export const ehReliquia = (i, tpl) => ehReliquiaSolta(i) || ehReliquiaSolta(tpl);
 
@@ -353,7 +356,8 @@ function detalheItem(ctx, i) {
     const sys = ctx.sys;
     const l = [];
     const tpl = tplDoItem(i, sys);
-    l.push(`<b>Tipo:</b> ${esc(i.tipo || 'Objeto')}${i.categoriaArma ? ' · ' + (CAT_ARMA[i.categoriaArma] || esc(i.categoriaArma)) : ''}`);
+    l.push(`<b>Tipo:</b> ${esc(i.tipo || 'Objeto')}${i.categoriaArma ? ' · ' + (CAT_ARMA[i.categoriaArma] || esc(i.categoriaArma)) : ''}`
+        + (ehReliquia(i, tpl) ? ' · <b>✨ Relíquia</b> <i>(não desgasta)</i>' : ''));
     l.push(`<b>Peso:</b> ${_pesoKg(i.peso)} · <b>Tamanho:</b> ${_tamanhoM(i.tamanho ?? 1)} · <b>Qtd:</b> ${qtdDe(i)} · <b>Pressão:</b> ${fmtN(pressaoItem(i, ctx.itens))}`);
     const f = formulaDanoDoItem(i, sys);
     if (f) l.push(`<b>💥 Dano:</b> ${esc(f)}${!i.formulaDano && tpl ? ' <i>(do modelo)</i>' : ''}`);

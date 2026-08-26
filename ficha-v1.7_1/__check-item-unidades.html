@@ -73,7 +73,7 @@
        confere aqui é a SPEC — se ela desenhar peso/tamanho como number de step
        livre, as quatro telas ganham juntas. */
     Promise.all([
-        import('../shared/equip-campos.js?v=17'),
+        import('../shared/equip-campos.js?v=18'),
         fetch('js/inventory.js?t=' + T).then(r => r.text()),
     ]).then(([EC, src]) => {
         const host = document.createElement('div');

@@ -209,7 +209,24 @@ test('peça comum segue com Integridade — a exceção é só da Relíquia', ()
     assert.equal(integridadeMax({ tipo: 'Arma', liga: 2, tamanho: 0.3 }), 9);
 });
 
-test('a TAG Relíquia também isenta — peça que é arma E relíquia', () => {
+test('a MARCA ehReliquia isenta, seja qual for o tipo', () => {
+    // Relíquia é marca, não tipo: a adaga marcada segue adaga no combate.
+    const adagaReliquia = { tipo: 'Arma', ehReliquia: true, categoriaArma: 'uma_mao', liga: 5, tamanho: 0.45 };
+    assert.equal(integridadeMax(adagaReliquia), null);
+    assert.equal(perdaFalhaCritica(adagaReliquia), 0);
+    // e uma armadura marcada também
+    assert.equal(integridadeMax({ tipo: 'Vestimenta', ehReliquia: true, liga: 3, tamanho: 1.7 }), null);
+});
+
+test('a marca vem do modelo quando a instância não a copiou', () => {
+    assert.equal(integridadeMax({ tipo: 'Arma', tamanho: 0.45 }, { ehReliquia: true }), null);
+});
+
+test('ehReliquia false NÃO isenta — a marca é explícita', () => {
+    assert.equal(integridadeMax({ tipo: 'Arma', ehReliquia: false, liga: 2, tamanho: 0.3 }), 9);
+});
+
+test('LEGADO: a TAG Relíquia também isenta — peça que é arma E relíquia', () => {
     // O Sussurro Final: tipo Arma (precisa, para ter dano e slot de mão) com
     // tag Relíquia. Não quebra, e o tipo Arma segue valendo no combate.
     const sussurro = { nome: 'O Sussurro Final', tipo: 'Arma', tags: ['Adaga', 'Relíquia'], tamanho: 0.45 };

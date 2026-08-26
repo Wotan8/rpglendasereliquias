@@ -31,8 +31,10 @@ export const CAMPOS_EQUIPAMENTO = [
             { value: 'Projétil', label: '🎯 Projétil' },
             { value: 'Container', label: '📦 Container' },
             { value: 'Objeto', label: '📦 Objeto' },
-            { value: 'Consumível', label: '🧪 Consumível' },
-            { value: 'Relíquia', label: '✨ Relíquia' }
+            { value: 'Consumível', label: '🧪 Consumível' }
+            /* "Relíquia" saiu daqui: relíquia pode ser arma, vestimenta ou
+               objeto — é MARCA, não tipo (campo ehReliquia). Dado legado com
+               tipo Relíquia continua isento, ver ehReliquia no motor. */
         ]
     },
     { key: 'tags', label: '🏷️ Tags', type: 'tags', placeholder: 'Digite e Enter para adicionar (Ex: metálico, mágico, leve)' },
@@ -102,6 +104,11 @@ export const CAMPOS_EQUIPAMENTO = [
        Este campo é a manopla de calibração, como pressaoBase: só preencha para
        fugir da régua. */
     { key: 'integridadeBase', label: '🧱 Integridade máxima (vazio = derivar de Liga + Tamanho)', type: 'number', placeholder: '0 = derivar' },
+    /* ✨ A MARCA de relíquia. Qualquer tipo pode ter: a adaga que é relíquia
+       segue sendo adaga no combate — dano, categoria, slot de mão — e não
+       quebra. Marcada, a peça não tem Integridade nenhuma (§5.8): não lasca na
+       Falha Crítica, não cede sob peso, não se conserta na bancada. */
+    { key: 'ehReliquia', label: '✨ É Relíquia? (não desgasta, não quebra — sem Integridade)', type: 'boolean' },
     { key: 'preco', label: '💰 Preço base (L$)', type: 'number', placeholder: 'Ex: 1100' },
     { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
     { key: 'imagemUrl', label: 'Imagem (URL)', type: 'text', placeholder: 'https://...' },
@@ -428,7 +435,7 @@ export const SECOES_EQUIPAMENTO = [
     {
         id: 'qualidade', icone: '⚒️', titulo: 'Qualidade e durabilidade',
         dica: 'A Liga é o teto e a Qualidade nunca passa dela. Afiação e Reforço são o acabamento pago.',
-        campos: ['liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'integridadeBase'],
+        campos: ['liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'integridadeBase', 'ehReliquia'],
     },
     {
         id: 'equipar', icone: '🧍', titulo: 'Como se veste',

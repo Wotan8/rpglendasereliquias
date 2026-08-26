@@ -2423,6 +2423,7 @@ window.openItemDetail = function(itemId) {
             ${img ? `<img src="${_escHtml(img)}" class="inv-detail-img" alt="">` : ''}
             <div class="inv-detail-grid">
                 <div class="inv-detail-field"><span class="inv-detail-label">Tipo</span><span>${tipoEmoji} ${_escHtml(item.tipo || '-')}</span></div>
+                ${window.InvMotor?.ehReliquia(item, _tplDe(item)) ? `<div class="inv-detail-field"><span class="inv-detail-label">Relíquia</span><span>✨ Não desgasta</span></div>` : ''}
                 ${item.tipo === 'Arma' && item.categoriaArma ? `<div class="inv-detail-field"><span class="inv-detail-label">Categoria</span><span>${WEAPON_CATEGORIES.find(c=>c.value===item.categoriaArma)?.label || item.categoriaArma}</span></div>` : ''}
                 <div class="inv-detail-field"><span class="inv-detail-label">Peso (un.)</span><span>${_pesoKg(item.peso)}</span></div>
                 <div class="inv-detail-field"><span class="inv-detail-label">Quantidade</span><span>×${qty}</span></div>

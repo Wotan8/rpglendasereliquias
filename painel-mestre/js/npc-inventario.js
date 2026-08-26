@@ -17,11 +17,11 @@ import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
     htmlInventario, tratarClique, iniciarArrasto, tplDoItem, cabeNoConteiner,
     desgastarConteiner, GATILHO,
-} from '../../shared/inventario-motor.js?v=12';
+} from '../../shared/inventario-motor.js?v=13';
 import {
     camposDaInstancia, valorDoItem, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo, htmlFormulario, htmlBarraFerramentas, ligarFormulario,
-} from '../../shared/equip-campos.js?v=17';
+} from '../../shared/equip-campos.js?v=18';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML } from '../../shared/restaurar-item.js?v=1';
 import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 
