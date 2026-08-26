@@ -34,7 +34,7 @@ import {
     tplDoItem as tplDoItemMotor, formulaDanoDoItem as formulaDanoMotor, fmtN,
     htmlInventario as htmlInvMotor, tratarClique as tratarCliqueInv, iniciarArrasto, cabeNoConteiner,
     integridadeZerada, integridadeDe, integridadeMax, perdaSobrecarga, perdaFalhaCritica, GATILHO,
-} from '../../shared/inventario-motor.js?v=9';
+} from '../../shared/inventario-motor.js?v=10';
 
 // Mesmo ritmo do painel de combate (ver CUSTOS-FIRESTORE.md): cliques rápidos
 // em ± não viram um write por clique.

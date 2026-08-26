@@ -35,9 +35,11 @@
 
 <!-- sem cache: arnes tem de ler o arquivo do disco, senao testa o de ontem -->
 <script>document.write('<script src="../shared/equip-slots.js?t=' + Date.now() + '"><\/script>');</script>
-<script src="js/inventory.js?c=1"></script>
+<!-- carimbo de tempo: pino fixo fazia o navegador servir uma copia velha
+     e o check acusava falha ja corrigida (ver __check-item-unidades) -->
+<script>document.write('<scr' + 'ipt src="js/inventory.js?t=' + Date.now() + '"><\/scr' + 'ipt>');</script>
 <script type="module">
-import * as InvMotor from '../shared/inventario-motor.js?v=9';
+import * as InvMotor from '../shared/inventario-motor.js?v=10';
 window.InvMotor = InvMotor;
 
 /* O CSS pode chegar DEPOIS deste módulo quando a folha vem da rede (foi o que
@@ -65,7 +67,7 @@ window.isMestre = true;                     // libera podeEditarItens()
 window.state = { partesDoCorpo: [{ id: 'bp-mao', nome: 'Mão', icone: '🤚', slots: 2, podeEmpunhar: true }] };
 const itens = [
     { id: 'i1', nome: 'Espada Longa', tipo: 'Arma', peso: 2, tamanho: 1.1, quantidade: 1, equipado: true, slotAnatomico: 'bp-mao_1', estadoEquip: 'empunhado' },
-    { id: 'i2', nome: 'Mochila', tipo: 'Container', ehContainer: true, peso: 1, tamanho: .6, quantidade: 1 },
+    { id: 'i2', nome: 'Mochila', tipo: 'Container', ehContainer: true, peso: 1, tamanho: .6, quantidade: 1, pesoMaximoContainer: 20, tamanhoMaximoItem: 1.2 },
     { id: 'i3', nome: 'Flecha', tipo: 'Projétil', peso: .05, tamanho: .7, quantidade: 12 },
     { id: 'i4', nome: 'Flecha', tipo: 'Projétil', peso: .05, tamanho: .7, quantidade: 5 },
     { id: 'i5', nome: 'Corda', tipo: 'Objeto', peso: 3, tamanho: .3, quantidade: 1, parentItemId: 'i2' },
@@ -177,6 +179,27 @@ teste('T20 · clique SEM arrasto continua abrindo o detalhe',
         window.openItemDetail = orig;
         return abriu === 1;
     })());
+
+/* As travas do cadastro têm de APARECER na tela: o jogador precisa saber por
+   que a bolsa recusa, antes de arrastar. Entram só agora para não mudar o que
+   os testes de arrasto acima medem. */
+const bolsa = window._inventoryState.items.find(i => i.id === 'i2');
+bolsa.tamanhoMaximoItem = 0.1;
+bolsa.tagsAceitas = ['Moeda'];
+document.querySelectorAll('.inv-modal').forEach(m => m.remove());
+window.openItemDetail('i2');
+const det = [...document.querySelectorAll('.inv-modal .inv-detail-field')]
+    .map(f => f.innerText.split(String.fromCharCode(10)).join(': ')).join(' | ');
+teste('T21 · o detalhe do item anuncia a boca do contêiner', /BOCA[^|]*10 cm/i.test(det));
+teste('T22 · e anuncia o que ele aceita', /SÓ ACEITA[^|]*Moeda/i.test(det));
+document.querySelectorAll('.inv-modal').forEach(m => m.remove());
+// o painel pode ter ficado aberto pelos testes de soltura acima: mede o DOM,
+// nao o estado, senao o toggle FECHA em vez de abrir
+if (!document.querySelector('#containerViewer .inv-container-viewer')) window.toggleContainer('i2');
+else _renderOpenContainers?.();   // repinta com as travas recem-postas
+const stats = document.querySelector('#containerViewer .inv-container-stats')?.innerText || '';
+teste('T23 · o painel do contêiner aberto repete as duas travas',
+    /Boca: item até 10 cm/.test(stats) && /Só Moeda/.test(stats));
 
 // ---- saída ----
 $('#saida').innerHTML = linhas.map(([n, p]) =>

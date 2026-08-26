@@ -727,7 +727,7 @@ export function espelhosDoVital(stat, derivedValues) {
  * Clampa em [1, total] — pedir 99 de 12 move os 12, pedir 0 move 1.
  * Mora no motor de inventário: o Painel do Mestre divide pilha do mesmo jeito.
  */
-export { dividirPilha } from '../../shared/inventario-motor.js?v=9';
+export { dividirPilha } from '../../shared/inventario-motor.js?v=10';
 
 // ===== 💀 CONDIÇÕES EM CIMA DO TOKEN =====
 /**

@@ -36,7 +36,7 @@
 <script>document.write('<script src="../shared/equip-slots.js?t=' + Date.now() + '"><\/script>');</script>
 <script type="module">
 import { _pintarHosts } from './js/area-mesas-inventario.js?c=1';
-import { alvoSob } from '../shared/inventario-motor.js?v=9';
+import { alvoSob, htmlInventario } from '../shared/inventario-motor.js?v=10';
 
 // Cede um turno: o módulo roda com o documento ainda aberto e metade dos
 // testes daqui mede geometria (elementFromPoint no arrasto).
@@ -144,6 +144,23 @@ teste('T15 · sem o gancho externo, alvo de fora continua nulo',
              return alvoSob(limpo, it('i3'), ...centro(cartaoCaixa)) === null; })());
 
 // ---- T12 estado por dono não vaza ----
+/* As duas travas novas do cadastro têm de APARECER no detalhe: o jogador
+   precisa saber por que a bolsa recusou, ANTES de tentar arrastar. As travas
+   entram só agora, com os testes de arrasto já corridos, para não mudar o que
+   eles medem. */
+const mochila = { ...itens.find(x => x.id === 'i2'), tamanhoMaximoItem: 0.1, tagsAceitas: ['Moeda'] };
+const detalheBolsa = htmlInventario({
+    raiz: document.createElement('div'),
+    itens: [mochila],
+    abertos: new Set(['i2']),          // detalhe expandido
+    contAbertos: new Set(),
+    acoes: {},
+}).replace(/<[^>]+>/g, ' ');
+teste('T16 · o detalhe do contêiner anuncia a boca (10 cm)',
+    /Só entra/i.test(detalheBolsa) && /10 cm/.test(detalheBolsa));
+teste('T17 · e anuncia o que ele aceita (Moeda)',
+    /Moeda/.test(detalheBolsa));
+
 teste('T12 · Caixa e personagem têm listas independentes',
     $$('[data-grab]', hostCaixa).length === 1);
 

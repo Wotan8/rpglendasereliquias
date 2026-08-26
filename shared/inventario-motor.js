@@ -350,6 +350,13 @@ function detalheItem(ctx, i) {
     if (ehContainer(i)) {
         const nDentro = (ctx.itens || []).filter(x => x.parentItemId === i.id).length;
         l.push(`<b>📦 Contêiner:</b> peso máx ${_pesoKg(i.pesoMaximoContainer)} · pressão ×${fmtN(i.multiplicadorPressao ?? 1)} · ${nDentro} item(ns) dentro`);
+        // As duas TRAVAS do cadastro (cabeNoConteiner): só aparecem se existirem.
+        const boca = tamMaxItemDe(i, tpl);
+        const aceita = tagsAceitasDe(i, tpl);
+        if (boca || aceita.length) {
+            l.push(`<b>🚪 Só entra:</b> ${boca ? `item até ${_tamanhoM(boca)}` : 'qualquer tamanho'}`
+                + (aceita.length ? ` · <b>🏷️</b> ${aceita.map(esc).join(' ou ')}` : ''));
+        }
     }
     // Vínculos com VDs e Status Vitais — instância vence o modelo, como na ficha
     const dvs = (Array.isArray(i.valoresDerivadosVinculados) && i.valoresDerivadosVinculados.length)

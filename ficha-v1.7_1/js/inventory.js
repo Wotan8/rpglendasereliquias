@@ -1210,6 +1210,8 @@ function _renderOpenContainers() {
         }).join('');
     }
 
+    const boca = window.InvMotor?.tamMaxItemDe(contItem, tplCont) || 0;
+    const aceita = window.InvMotor?.tagsAceitasDe(contItem, tplCont) || [];
     const capDisplay = cap > 0 ? `${inside.length} / ${cap}` : `${inside.length}`;
     const weightDisplay = pesoMax != null
         ? `⚖️ Peso: ${insideWeight.toFixed(2)} / ${_pesoKg(pesoMax)}${overWeight ? ' ⚠️' : ''}`
@@ -1227,6 +1229,8 @@ function _renderOpenContainers() {
         <div class="inv-container-stats">
             <span class="${overWeight ? 'inv-stat-over' : 'inv-stat-ok'}">${weightDisplay}</span>
             <span class="inv-stat-pressure">📐 Pressão: ${pressaoContainer.toFixed(2)} (${pesoBase.toFixed(2)} + ${insideWeight.toFixed(2)} × ${mult})</span>
+            ${boca ? `<span class="inv-stat-ok">📐 Boca: item até ${_tamanhoM(boca)}</span>` : ''}
+            ${aceita.length ? `<span class="inv-stat-ok">🏷️ Só ${aceita.map(_escHtml).join(' ou ')}</span>` : ''}
         </div>
         <div class="inv-container-items">${itemsHtml}</div>
         ${window.podeEditarItens() ? `<button class="inv-btn inv-btn-add-to-container" onclick="addItemToContainer('${cid}')">➕ Adicionar Item</button>` : ''}
@@ -2432,6 +2436,8 @@ window.openItemDetail = function(itemId) {
                 ${item.equipado && item.estadoEquip ? `<div class="inv-detail-field"><span class="inv-detail-label">Estado</span><span>${EQUIP_STATES[item.estadoEquip]?.label || item.estadoEquip}</span></div>` : ''}
                 ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Peso Máximo</span><span>⚖️ ${item.pesoMaximoContainer ? _pesoKg(item.pesoMaximoContainer) : '∞'}</span></div>` : ''}
                 ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Multiplicador</span><span>×${item.multiplicadorPressao || 1}</span></div>` : ''}
+                ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Boca (item até)</span><span>📐 ${_bocaDe(item) ? _tamanhoM(_bocaDe(item)) : '∞'}</span></div>` : ''}
+                ${item.ehContainer ? `<div class="inv-detail-field"><span class="inv-detail-label">Só aceita</span><span>🏷️ ${_aceitaDe(item).map(_escHtml).join(', ') || 'Qualquer item'}</span></div>` : ''}
             </div>
             ${projetilHtml}
             ${item.descricao ? `<div class="inv-detail-desc">${_escHtml(item.descricao)}</div>` : ''}
@@ -2873,6 +2879,12 @@ function _cachesDoForm() {
         bodyParts: (window.state?.partesDoCorpo?.length ? window.state.partesDoCorpo : sd.bodyParts) || [],
     };
 }
+
+/* Boca e conteúdo aceito do contêiner, com herança do modelo — as duas travas
+   moram no motor (cabeNoConteiner); aqui é só a leitura para a tela. */
+const _tplDe = (i) => (window._inventoryState.catalog || []).find(t => t.id === i?.modeloId) || null;
+const _bocaDe = (i) => window.InvMotor?.tamMaxItemDe(i, _tplDe(i)) || 0;
+const _aceitaDe = (i) => window.InvMotor?.tagsAceitasDe(i, _tplDe(i)) || [];
 
 /** Redesenha os campos para um item (ou para a semente de um modelo). */
 function _pintarCamposItem(item, modelo) {

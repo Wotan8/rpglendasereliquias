@@ -682,7 +682,7 @@ const _dropSoltosTs = new Map();   // tokenId -> último disparo
  * existe, agora com consequência).
  */
 async function _desgastarConteineresNaViagem(itens) {
-    const M = await import('../../shared/inventario-motor.js?v=9');
+    const M = await import('../../shared/inventario-motor.js?v=10');
     const cheios = itens.filter(i => M.ehContainer(i));
     for (const c of cheios) {
         const tpl = M.tplDoItem(c, _sysDoTabuleiro());

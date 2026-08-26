@@ -30,9 +30,11 @@
 <script src="../shared/campo-imagem.js"></script>
 <!-- sem cache: arnes tem de ler o arquivo do disco, senao testa o de ontem -->
 <script>document.write('<script src="../shared/equip-slots.js?t=' + Date.now() + '"><\/script>');</script>
-<script src="js/inventory.js?c=2"></script>
+<!-- carimbo de tempo: pino fixo fazia o navegador servir uma copia velha
+     e o check acusava falha ja corrigida (ver __check-item-unidades) -->
+<script>document.write('<scr' + 'ipt src="js/inventory.js?t=' + Date.now() + '"><\/scr' + 'ipt>');</script>
 <script type="module">
-import * as InvMotor from '../shared/inventario-motor.js?v=9';
+import * as InvMotor from '../shared/inventario-motor.js?v=10';
 import * as EquipCampos from '../shared/equip-campos.js?v=17';
 import * as EquipSel from '../painel-criador/js/painel-mechanics.js?v=16';
 window.InvMotor = InvMotor;
