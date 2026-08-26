@@ -259,4 +259,20 @@
     // logar/deslogar muda a altura do palco → repinta no novo tamanho
     document.addEventListener('portal:logado', redesenhar);
     document.addEventListener('portal:deslogado', redesenhar);
+
+    /* ⚠️ ISTO AQUI FALTAVA. `carregarConfig()` estava escrita e ninguém a
+       chamava: o hero nunca tentou ler `portal-config/hero`, então as imagens
+       do Criador jamais entravam e o selo desenhado ficava para sempre — sem
+       erro nenhum no console, porque nada chegava a rodar.
+
+       Por que nos EVENTOS e não só aqui: menu-hero.js é script clássico e roda
+       ANTES dos módulos, então `window.db` ainda não existe neste ponto. A
+       tentativa no boot cobre quem já tem o db pronto; `portal:logado` e
+       `portal:deslogado` cobrem o resto — o `onAuthStateChanged` dispara um
+       dos dois em toda visita, com ou sem login. `configTentada` só é marcada
+       quando a leitura de fato começa, então a tentativa que sai cedo demais
+       não queima a vez. */
+    carregarConfig();
+    document.addEventListener('portal:logado', carregarConfig);
+    document.addEventListener('portal:deslogado', carregarConfig);
 })();

@@ -287,6 +287,38 @@ const w = fr.contentWindow;
     await new Promise(r => setTimeout(r, 60));
 }
 
+/* ===== FUNCAO ESCRITA E NUNCA CHAMADA =====
+   `carregarConfig()` do menu-hero.js — a que le as imagens da animacao que o
+   Criador subiu — ficou meses definida SEM CHAMADOR. O hero nunca tentou ler
+   `portal-config/hero`, entao as imagens jamais entravam e o selo desenhado
+   ficava para sempre. E nao havia sintoma: nenhum erro, nenhum aviso, porque
+   nada chegava a rodar. So se descobre olhando quem chama quem.
+
+   Aqui a varredura vale para o arquivo INTEIRO, nao so para aquela funcao:
+   qualquer `function nome()` de menu-hero.js precisa aparecer em outro lugar
+   que nao a propria declaracao. */
+{
+    const bruto = await (await fetch('menu/js/menu-hero.js?cb=' + Date.now())).text();
+    // sem comentarios: uma funcao citada so num comentario continua orfa
+    const fonte = bruto
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+
+    const declaradas = [...fonte.matchAll(/function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map(m => m[1]);
+    const orfas = declaradas.filter(nome => {
+        const usos = fonte.match(new RegExp('\\b' + nome + '\\b', 'g')) || [];
+        return usos.length < 2;   // 1 = so a declaracao
+    });
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · nenhuma funcao do hero fica sem chamador `
+      + `(${declaradas.length} declaradas)`, orfas.length === 0);
+    if (orfas.length) linhas.push(
+        `<tr><td colspan="2" style="color:var(--lr-blood-2)">órfãs: ${orfas.join(', ')}</td></tr>`);
+
+    // e a que causou o problema, pelo nome, porque foi ela que custou caro
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · a leitura da config do hero é de fato chamada`,
+        /(^|[^\w.])carregarConfig\s*\)/.test(fonte) || /carregarConfig\(\s*\)/.test(fonte));
+}
+
 document.getElementById('saida').innerHTML = linhas.join('');
 const falhas = linhas.filter(l => l.includes('FALHOU')).length;
 document.getElementById('placar').innerHTML =
