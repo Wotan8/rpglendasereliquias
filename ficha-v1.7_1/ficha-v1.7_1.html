@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="../shared/detalhe.css?v=4">
 <script type="module">import '../shared/detalhe.js?v=4';</script>
 <link rel="stylesheet" href="../shared/acervo.css?v=3">
-    <link rel="stylesheet" href="css/styles_v2.css?v=22">
+    <link rel="stylesheet" href="css/styles_v2.css?v=23">
     <link rel="stylesheet" href="css/inventory.css?v=14">
     <link rel="stylesheet" href="css/equip-modal.css?v=9">
     <link rel="stylesheet" href="css/combat-panel.css?v=6">
@@ -134,15 +134,12 @@
                                     </select></div>
                             </div>
                             <div class="row r3">
-                                <div class="field"><label>⭐ Experiência
-                                        <!-- Quanto do EXP deste personagem veio de item VIP.
-                                             Importa porque 60% disso volta ao Repertório se o
-                                             personagem for encerrado. O valor é escrito pelo
-                                             JS (exp-vip.js), que lê `expVip` do documento. -->
-                                        <span id="expVipDica" class="exp-vip-selo" hidden
-                                            data-tooltip-type="texto"
-                                            data-tooltip-nome="EXP VIP aplicado"></span>
-                                    </label>
+                                <div class="field">
+                                    <!-- O rótulo inteiro é o alvo do tooltip: hover no desktop,
+                                         toque no celular. O texto (Restante/Total/VIPS) é montado
+                                         na hora pelo exp-vip.js, lendo os inputs e o `expVip`. -->
+                                    <label id="expRotulo" data-tooltip-type="texto"
+                                        data-tooltip-nome="Experiência">⭐ Experiência</label>
                                     <div style="display:flex;gap:4px">
                                         <input type="text" data-key="exp" placeholder="Rest." style="flex:1">
                                         <input type="text" data-key="exp_total" placeholder="Total" style="flex:1">
@@ -508,7 +505,7 @@
     <script src="js/inventory.js?v=31"></script>
     <script src="js/combat-panel.js?v=8"></script>
     <!-- Depois de derived-values.js: usa o tooltip flutuante de lá. -->
-    <script src="js/exp-vip.js?v=1"></script>
+    <script src="js/exp-vip.js?v=2"></script>
     <script src="js/notes.js?v=2"></script>
     <script src="js/aura.js"></script>
     <script src="js/storage.js"></script>

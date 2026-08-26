@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<!-- Bancada do tooltip da Experiência (fora do deploy, como toda __check-*).
+     A ficha real exige login e redireciona para o Portal, então aqui o
+     fragmento REAL do HTML é extraído por DOMParser e o exp-vip.js REAL roda
+     sobre ele — só o showDvTooltip é um espião que grava o que receberia. -->
+<head>
+    <meta charset="UTF-8">
+    <title>check · tooltip da Experiência</title>
+</head>
+<body style="padding:20px;font-family:sans-serif">
+    <h3 id="placar">…</h3>
+    <table id="saida"></table>
+    <div id="banco"></div>
+    <script>
+        (async () => {
+            const linhas = [];
+            let ok = 0, tot = 0;
+            const t = (nome, passou) => {
+                tot++; if (passou) ok++;
+                linhas.push(`<tr><td>${passou ? '✅' : '❌'}</td><td>${nome}</td></tr>`);
+            };
+
+            const cb = Date.now();
+            // Folha SEMPRE fresca — cache-buster fixo já deu verde com CSS velho.
+            await new Promise((r) => {
+                const l = document.createElement('link');
+                l.rel = 'stylesheet';
+                l.href = 'css/styles_v2.css?cb=' + cb;
+                l.onload = r;
+                document.head.appendChild(l);
+            });
+            const html = await (await fetch('ficha-v1.7_1.html?cb=' + cb)).text();
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+
+            // T01 — o selo antigo morreu de verdade, no HTML servido
+            t('T01 · o selo `expVipDica` não existe mais no HTML', !doc.getElementById('expVipDica'));
+
+            // T02 — o rótulo é o novo alvo, com os atributos que o tooltip lê
+            const rot = doc.getElementById('expRotulo');
+            t('T02 · o rótulo ⭐ Experiência tem id e tipo de tooltip',
+                !!rot && rot.dataset.tooltipType === 'texto' && rot.dataset.tooltipNome === 'Experiência');
+
+            // Reconstrói o campo real dentro da bancada
+            const banco = document.getElementById('banco');
+            banco.appendChild(rot.closest('.field').cloneNode(true));
+
+            // Espião no lugar do tooltip real (derived-values.js não roda sem a ficha)
+            let visto = null;
+            window.showDvTooltip = (e) => { visto = e.currentTarget.dataset.tooltipText; };
+            window.hideDvTooltip = () => {};
+
+            await new Promise((r) => {
+                const s = document.createElement('script');
+                s.src = 'js/exp-vip.js?cb=' + cb;
+                s.onload = r;
+                document.body.appendChild(s);
+            });
+
+            document.querySelector('input[data-key="exp"]').value = '0';
+            document.querySelector('input[data-key="exp_total"]').value = '249';
+            window.mostrarExpVip(80);
+            const alvo = document.getElementById('expRotulo');
+            alvo.dispatchEvent(new MouseEvent('mouseenter'));
+
+            // T03..T06 — as três linhas pedidas, com os valores DA TELA
+            t('T03 · hover no rótulo dispara o tooltip', visto !== null);
+            t('T04 · linha "EXP Restante: 0"', /^EXP Restante: 0$/m.test(visto || ''));
+            t('T05 · linha "EXP Total: 249"', /^EXP Total: 249$/m.test(visto || ''));
+            t('T06 · linha "EXP VIPS: 80"', /^EXP VIPS: 80$/m.test(visto || ''));
+            t('T07 · com VIP > 0, explica os 60% que voltam (48)', /48 EXP \(60%/.test(visto || ''));
+
+            // T08 — o texto acompanha a edição do campo (montado na hora, não no load)
+            document.querySelector('input[data-key="exp"]').value = '37';
+            alvo.dispatchEvent(new MouseEvent('mouseenter'));
+            t('T08 · editar o campo muda o tooltip na hora (37)', /^EXP Restante: 37$/m.test(visto || ''));
+
+            // T09 — sem VIP o tooltip ainda existe, sem a frase dos 60%
+            window.mostrarExpVip(0);
+            alvo.dispatchEvent(new MouseEvent('mouseenter'));
+            t('T09 · sem VIP: três linhas, sem a frase dos 60%',
+                /^EXP VIPS: 0$/m.test(visto || '') && !/60%/.test(visto || ''));
+
+            // T10 — o \n só vira linha se a folha der pre-line ao .dv-tooltip-desc
+            const p = document.createElement('div');
+            p.className = 'dv-tooltip-desc';
+            document.body.appendChild(p);
+            t('T10 · .dv-tooltip-desc respeita as quebras (pre-line)',
+                getComputedStyle(p).whiteSpace === 'pre-line');
+            p.remove();
+
+            // T11 — cursor de consulta no rótulo (a dica de que ali tem hover)
+            t('T11 · cursor: help no rótulo', getComputedStyle(alvo).cursor === 'help');
+
+            document.getElementById('placar').textContent = `${ok}/${tot}`;
+            document.getElementById('saida').innerHTML = linhas.join('');
+        })();
+    </script>
+</body>
+</html>

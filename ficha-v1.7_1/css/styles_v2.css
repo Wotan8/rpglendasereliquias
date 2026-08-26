@@ -2835,6 +2835,9 @@ html.dark .pec-capacidade {
 .dv-tooltip-desc {
     margin-bottom: 8px;
     color: var(--lr-text-2);
+    /* Tooltips de texto pronto (tipo "texto") usam \n para quebrar linha —
+       sem isto as três linhas da Experiência viravam uma frase só. */
+    white-space: pre-line;
 }
 
 .dv-tooltip-mechs {
@@ -4109,19 +4112,6 @@ html.dark #aliadosGrid .leal-mistico { color: color-mix(in srgb, var(--lr-abyssa
 }
 .module-item-regua.abaixo { color: var(--lr-blood-3, #c94f5c); opacity: .85; }
 
-/* Selo de EXP VIP no rótulo da Experiência. Discreto de propósito: é
-   informação de consulta, não um número que se opera. */
-.exp-vip-selo {
-    display: inline-block;
-    margin-left: 6px;
-    padding: 1px 6px;
-    border-radius: 10px;
-    border: 1px solid var(--lr-gold);
-    background: var(--lr-gold-soft);
-    color: var(--lr-gold);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: .04em;
-    cursor: help;
-    vertical-align: middle;
-}
+/* O rótulo da Experiência abre um tooltip (Restante/Total/VIPS) — o cursor
+   avisa que ali tem consulta, como nos Valores Derivados. */
+#expRotulo { cursor: help; }

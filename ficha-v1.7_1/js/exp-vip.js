@@ -1,40 +1,52 @@
 /* =============================================
-   EXP VIP na ficha — só exibição
-   O número não entra em conta nenhuma da ficha: ele existe porque 60% do EXP
-   VIP volta ao Repertório quando o personagem é encerrado, e o jogador precisa
+   Tooltip da Experiência — só exibição
+   Hover (ou toque, no celular) no rótulo "⭐ Experiência" abre a janelinha
+   flutuante dos Valores Derivados com as três linhas: Restante, Total e VIPS.
+   O EXP VIP não entra em conta nenhuma da ficha: ele existe porque 60% dele
+   volta ao Repertório quando o personagem é encerrado, e o jogador precisa
    ver isso ANTES de decidir entregar ou apagar.
-   Reusa o tooltip flutuante dos Valores Derivados — no celular não há hover,
-   e é o toque que abre, exatamente como nos chips do painel de combate.
    ============================================= */
 (function () {
     'use strict';
 
-    window.mostrarExpVip = function (valor) {
-        const selo = document.getElementById('expVipDica');
-        if (!selo) return;
+    let expVip = 0;
 
-        const vip = parseInt(valor, 10) || 0;
-        if (vip <= 0) {
-            selo.hidden = true;
-            return;
-        }
+    /* O texto é montado NA HORA do hover: os campos Restante/Total são
+       editáveis e o tooltip tem de mostrar o que está na tela agora,
+       não o que estava quando o doc carregou. */
+    function atualizarTexto(rotulo) {
+        const num = (sel) => {
+            const el = document.querySelector(`input[data-key="${sel}"]`);
+            return parseInt(el && el.value, 10) || 0;
+        };
+        rotulo.dataset.tooltipText =
+            `EXP Restante: ${num('exp')}\n` +
+            `EXP Total: ${num('exp_total')}\n` +
+            `EXP VIPS: ${expVip}` +
+            (expVip > 0
+                ? `\n\nAo encerrar o personagem — entregando ao mestre ou apagando —, ` +
+                  `${Math.round(expVip * 0.6)} EXP (60% do VIP) voltam para o seu Repertório.`
+                : '');
+    }
 
-        const devolve = Math.round(vip * 0.6);
-        selo.hidden = false;
-        selo.textContent = `VIP ${vip}`;
-        selo.dataset.tooltipText =
-            `${vip} EXP deste personagem vieram de itens EXP VIP.\n\n` +
-            `Se você encerrar o personagem — entregando ao mestre ou apagando —, ` +
-            `${devolve} EXP (60%) voltam para o seu Repertório, prontos para outro personagem.`;
-        // Fallback de desktop: o title aparece mesmo se o tooltip não carregar.
-        selo.title = `${vip} EXP VIP · devolve ${devolve} ao encerrar`;
-
-        if (selo.dataset.ligado === '1') return;
+    function ligar() {
+        const rotulo = document.getElementById('expRotulo');
+        if (!rotulo || rotulo.dataset.ligado === '1') return;
         if (typeof showDvTooltip !== 'function') return;
-        selo.dataset.ligado = '1';
-        selo.addEventListener('mouseenter', showDvTooltip);
-        selo.addEventListener('mouseleave', hideDvTooltip);
-        selo.addEventListener('touchstart', showDvTooltip, { passive: true });
-        selo.addEventListener('touchend', hideDvTooltip);
+        rotulo.dataset.ligado = '1';
+
+        const abrir = (e) => { atualizarTexto(rotulo); showDvTooltip(e); };
+        rotulo.addEventListener('mouseenter', abrir);
+        rotulo.addEventListener('mouseleave', hideDvTooltip);
+        rotulo.addEventListener('touchstart', abrir, { passive: true });
+        rotulo.addEventListener('touchend', hideDvTooltip);
+    }
+
+    /* Chamada pelo firebase.js quando o doc chega; também liga o tooltip. */
+    window.mostrarExpVip = function (valor) {
+        expVip = parseInt(valor, 10) || 0;
+        ligar();
     };
+
+    document.addEventListener('DOMContentLoaded', ligar);
 })();
