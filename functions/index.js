@@ -9,7 +9,7 @@ const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
-const { aplicarCompra, pesoProducao } = require("./entrega-calc");
+const { aplicarCompra, pesoProducao, rerolagensDoItem } = require("./entrega-calc");
 const { TAXAS_PADRAO, calcularCobranca, EXCLUIR_POR_MEIO } = require("./taxa-gateway");
 const { sortear, aplicarPremio, girosDoItem } = require("./roleta-sorteio");
 const { aplicarExpDeItem } = require("./exp-item");
@@ -218,6 +218,7 @@ exports.comprarComFragmentos = onCall(
     const userRef = await resolveUserRef(uid, email);
     let novoSaldo = 0;
     let novosGiros = 0;
+    let novasRerolagens = 0;
 
     await db.runTransaction(async (tx) => {
       const uSnap = await tx.get(userRef);
@@ -282,8 +283,9 @@ exports.comprarComFragmentos = onCall(
       if (notifications.length > 100) notifications.length = 100;
 
       // ponytail: dois caminhos de entrega (aqui e aplicarCompra); unificar se
-      // aparecer um terceiro. Por ora só o crédito de giros anda nos dois.
+      // aparecer um terceiro. Por ora só os saldos andam nos dois.
       novosGiros = (data.giros || 0) + girosDoItem(item, quantidade);
+      novasRerolagens = (data.rerolagens || 0) + rerolagensDoItem(item, quantidade);
 
       tx.update(userRef, {
         fragmentos: novoSaldo,
@@ -292,6 +294,7 @@ exports.comprarComFragmentos = onCall(
         apoios,
         notifications,
         giros: novosGiros,
+        rerolagens: novasRerolagens,
         // Marcador de atribuição lido pelo gatilho de auditoria (registrarLogFragmentos)
         fragLastOp: {
           origem: "Compra na Loja (Frag$)",
@@ -302,7 +305,7 @@ exports.comprarComFragmentos = onCall(
       });
     });
 
-    return { ok: true, novoSaldo, novosGiros };
+    return { ok: true, novoSaldo, novosGiros, novasRerolagens };
   }
 );
 
@@ -446,11 +449,11 @@ async function entregarCompra(pendingRef, pending, origem, extras = {}) {
         selectedMetas: linha.selectedMetas || [],
         compraId: pendingRef.id,
       };
-      const { inventario, logsCompra, apoios, notifications, giros, quantidade, totalCentavos } =
+      const { inventario, logsCompra, apoios, notifications, giros, rerolagens, quantidade, totalCentavos } =
         aplicarCompra(data, item, pendenteLinha, origem);
       // O resultado de uma linha é o estado de partida da próxima — inclusive
       // `giros`, senão um carrinho com dois itens de roleta credita só o último
-      data = { ...data, inventario, logsCompra, apoios, notifications, giros };
+      data = { ...data, inventario, logsCompra, apoios, notifications, giros, rerolagens };
 
       // Log imutável de transação em dinheiro real (equivalente ao frag_logs)
       tx.set(db.collection("real_logs").doc(), {
@@ -476,6 +479,7 @@ async function entregarCompra(pendingRef, pending, origem, extras = {}) {
       apoios: data.apoios,
       notifications: data.notifications,
       giros: data.giros || 0,
+      rerolagens: data.rerolagens || 0,
     });
     tx.update(pendingRef, {
       status: "CONCLUIDA",
@@ -1037,6 +1041,56 @@ exports.girarRoleta = onCall(
         giros: girosDoItem(item, 1),
       },
     };
+  }
+);
+
+// =============================================
+// RE-ROLAGEM — GASTAR UMA (callable)
+// Gêmeo do débito de giro, e pelo mesmo motivo: `rerolagens` é saldo, e saldo
+// que o navegador escreve é saldo infinito. O que a re-rolagem AUTORIZA
+// acontece na mesa (o dado rola de novo no Tabuleiro, ou na mão do jogador);
+// aqui só se cobra o preço e se registra que foi cobrado.
+// =============================================
+exports.gastarRerolagem = onCall(
+  { region: "southamerica-east1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Você precisa estar logado para usar uma re-rolagem.");
+    }
+    const uid = request.auth.uid;
+    const email = request.auth.token.email || "";
+    const { mesaId, motivo } = request.data || {};
+
+    const userRef = await resolveUserRef(uid, email);
+    let restantes = 0;
+
+    await db.runTransaction(async (tx) => {
+      const uSnap = await tx.get(userRef);
+      if (!uSnap.exists) throw new HttpsError("not-found", "Documento de usuário não existe.");
+      const data = uSnap.data();
+
+      const saldo = data.rerolagens || 0;
+      if (saldo < 1) {
+        throw new HttpsError("failed-precondition",
+          "Você não tem re-rolagens. Compre na Loja para poder rolar de novo.");
+      }
+      restantes = saldo - 1;
+
+      // Débito e registro na MESMA transação: duas abas abertas não gastam a
+      // mesma re-rolagem duas vezes.
+      tx.update(userRef, { rerolagens: restantes });
+      tx.set(db.collection("rerolagem_logs").doc(), {
+        uid,
+        jogador: data.displayName || data.email || email,
+        mesaId: String(mesaId || ""),
+        motivo: String(motivo || "").slice(0, 200),
+        saldoAntes: saldo,
+        saldoDepois: restantes,
+        criadoEm: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return { ok: true, restantes };
   }
 );
 

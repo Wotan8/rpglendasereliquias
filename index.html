@@ -76,6 +76,14 @@
             <span class="frag-amount" id="fragmentosValue">0</span>
             <span class="frag-label">Frag$</span>
             </div>
+            <!-- Mesma carteira do Frag$, outro saldo: some quando é zero, porque
+                 quem nunca comprou re-rolagem não precisa saber que existem. -->
+            <div class="frag-wallet" id="rerolagensWallet" style="display:none"
+                title="Re-rolagens — no Tabuleiro, o 🎲 Rolador tem o botão para gastar uma"
+                onclick="switchTab('loja')">
+            <span class="frag-amount" id="rerolagensValue">0</span>
+            <span class="frag-label">🎲 Re-rolls</span>
+            </div>
             <button id="btnThemeToggle" class="portal-tema" onclick="toggleTheme()" title="Alternar tema">🌙</button>
             <button id="btnEntrarTop" class="portal-entrar" onclick="portalIrLogin()" hidden>Entrar</button>
             <div class="toolbar" style="display:none">
@@ -651,7 +659,7 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="/menu/js/menu-firebase.js?v=28"></script>
+    <script type="module" src="/menu/js/menu-firebase.js?v=29"></script>
     <!-- A janela da Roleta. Depois do menu-firebase.js: ela usa window.db e
          window.lrFunctions, que nascem lá. -->
     <script type="module" src="/menu/js/menu-roleta.js?v=7"></script>

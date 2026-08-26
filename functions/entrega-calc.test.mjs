@@ -1,6 +1,6 @@
 // Rodar: node functions/entrega-calc.test.mjs
 import assert from 'node:assert/strict';
-import { aplicarCompra } from './entrega-calc.js';
+import { aplicarCompra, rerolagensDoItem } from './entrega-calc.js';
 
 const item = { nome: 'Bênção do Cronista', descricao: 'x', isExp: true, expAmount: 50 };
 const pending = {
@@ -72,6 +72,18 @@ assert.equal(g3.giros, 4, 'item comum nao altera o saldo de giros');
 
 const g4 = aplicarCompra({}, item, pending, 'Mercado Pago');
 assert.equal(g4.giros, 0, 'sem saldo e sem item de roleta, fica zero');
+
+// --- item de re-rolagem credita o contador, igualzinho aos giros ---
+assert.equal(rerolagensDoItem({ isRerolagem: true, rerolagensAmount: 5 }, 2), 10, '5 re-rolls x 2 unidades');
+assert.equal(rerolagensDoItem({ isRerolagem: true, rerolagensAmount: 1 }), 1, 'quantidade ausente vale 1');
+assert.equal(rerolagensDoItem({ isRerolagem: false, rerolagensAmount: 9 }, 5), 0, 'sem a flag nao credita');
+assert.equal(rerolagensDoItem({ isRerolagem: true }, 3), 0, 'flag sem quantidade nao credita');
+assert.equal(rerolagensDoItem({ isRerolagem: true, rerolagensAmount: -2 }), 0, 'negativo nao vira credito');
+
+const reroll5x = { nome: '5x Re-rolagem', isRerolagem: true, rerolagensAmount: 5 };
+assert.equal(aplicarCompra({}, reroll5x, { ...pending, quantidade: 2 }, 'Mercado Pago').rerolagens, 10);
+assert.equal(aplicarCompra({ rerolagens: 3 }, reroll5x, { ...pending, quantidade: 1 }, 'Dinheiro').rerolagens, 8);
+assert.equal(aplicarCompra({ rerolagens: 3 }, item, pending, 'Dinheiro').rerolagens, 3, 'item comum nao mexe');
 
 // --- fallbacks: sem quantidade e sem totalCentavos ---
 const r3 = aplicarCompra({}, item, { itemId: 'it1', valorCentavos: 990 }, 'Dinheiro');

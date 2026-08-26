@@ -100,6 +100,18 @@ function updateGirosDisplay(valor) {
 }
 window.updateGirosDisplay = updateGirosDisplay;
 
+// ===== SALDO DE RE-ROLAGENS (exibição) =====
+// Mesmo desenho dos giros: o número vive em `users/{doc}.rerolagens`, é escrito
+// só pelo servidor, e é gasto no Tabuleiro — aqui é só a vitrine do saldo.
+function updateRerolagensDisplay(valor) {
+    const chip = document.getElementById('rerolagensWallet');
+    const n = Number(valor) || 0;
+    const el = document.getElementById('rerolagensValue');
+    if (el) el.textContent = n.toLocaleString('pt-BR');
+    if (chip) chip.style.display = n > 0 ? '' : 'none';
+}
+window.updateRerolagensDisplay = updateRerolagensDisplay;
+
 // ===== DARK THEME =====
 // A lógica de tema agora é compartilhada por todo o site: /shared/theme.js
 // (chave única 'lr_theme'; window.toggleTheme é definido lá).
@@ -139,6 +151,7 @@ onAuthStateChanged(auth, async (user) => {
 
                 updateFragDisplay(data.fragmentos || 0);
                 updateGirosDisplay(data.giros || 0);
+                updateRerolagensDisplay(data.rerolagens || 0);
 
                 const btnMestre = document.getElementById('btnPainelMestre');
                 const btnCriador = document.getElementById('btnPainelCriador');
@@ -826,6 +839,7 @@ function iniciarTempoReal() {
 
         updateFragDisplay(data.fragmentos || 0);
         updateGirosDisplay(data.giros || 0);
+        updateRerolagensDisplay(data.rerolagens || 0);
 
         userNotifications = (data.notifications || [])
             .map(normalizeNotification)
@@ -1858,6 +1872,7 @@ window.confirmPurchaseFrag = async function () {
 
         updateFragDisplay(result.data.novoSaldo);
         updateGirosDisplay(result.data.novosGiros);
+        updateRerolagensDisplay(result.data.novasRerolagens);
 
         await loadInventory();
     } catch (error) {

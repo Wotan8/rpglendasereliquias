@@ -22,6 +22,17 @@ function pesoProducao(item) {
   return Number.isFinite(p) && p >= 0 ? p : 1;
 }
 
+/**
+ * Quantas re-rolagens um item da Loja concede. Gêmeo de `girosDoItem`: o campo
+ * `isRerolagem`/`rerolagensAmount` do cadastro era só uma etiqueta no card.
+ */
+function rerolagensDoItem(item, quantidade = 1) {
+  if (!item || !item.isRerolagem) return 0;
+  const porUnidade = Number(item.rerolagensAmount) || 0;
+  const qtd = parseInt(quantidade) || 1;
+  return porUnidade > 0 ? porUnidade * qtd : 0;
+}
+
 function aplicarCompra(data, item, pending, origem) {
   const quantidade = pending.quantidade || 1;
   const totalCentavos = pending.totalCentavos || pending.valorCentavos;
@@ -79,8 +90,9 @@ function aplicarCompra(data, item, pending, origem) {
   // que ninguém sabe usar. A peça continua entrando (é o comprovante), mas o
   // que o jogador gasta é o contador.
   const giros = (data.giros || 0) + girosDoItem(item, quantidade);
+  const rerolagens = (data.rerolagens || 0) + rerolagensDoItem(item, quantidade);
 
-  return { inventario, logsCompra, apoios, notifications, quantidade, totalCentavos, valorReais, giros };
+  return { inventario, logsCompra, apoios, notifications, quantidade, totalCentavos, valorReais, giros, rerolagens };
 }
 
-module.exports = { aplicarCompra, pesoProducao };
+module.exports = { aplicarCompra, pesoProducao, rerolagensDoItem };
