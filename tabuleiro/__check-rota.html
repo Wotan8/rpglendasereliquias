@@ -4,8 +4,13 @@
 <link rel="stylesheet" href="../shared/sanfona.css">
 <link rel="stylesheet" href="../shared/dialogo.css?v=2">
 <script type="module">import '../shared/dialogo.js?v=2';</script>
-<link rel="stylesheet" href="../shared/tokens.css">
+<!-- ⚠️ ORDEM: tabuleiro.css vem ANTES de tokens.css, como na página real.
+     Não é detalhe — é do que depende a paleta escura presa em `html, body`
+     (o cabeçalho do tabuleiro.css explica) e é o que decide quem vence entre
+     dois seletores de mesma especificidade. Com a ordem trocada a bancada
+     mede uma cascata que não existe. -->
 <link rel="stylesheet" href="css/tabuleiro.css">
+<link rel="stylesheet" href="../shared/tokens.css">
 <style>
   html,body{margin:0;height:100%;background:#0b0e14;color:#e6e8ef;font:14px/1.6 Inter,system-ui,sans-serif}
   #tbCanvas{position:fixed;inset:0;width:100vw;height:100vh}
