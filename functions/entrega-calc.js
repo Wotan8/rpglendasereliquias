@@ -10,6 +10,8 @@
  * @param {object} pending doc de compras_pendentes
  * @param {string} origem  rótulo do meio de pagamento ("Mercado Pago" | "Dinheiro")
  */
+const { girosDoItem } = require("./roleta-sorteio");
+
 function aplicarCompra(data, item, pending, origem) {
   const quantidade = pending.quantidade || 1;
   const totalCentavos = pending.totalCentavos || pending.valorCentavos;
@@ -60,7 +62,12 @@ function aplicarCompra(data, item, pending, origem) {
   });
   if (notifications.length > 100) notifications.length = 100;
 
-  return { inventario, logsCompra, apoios, notifications, quantidade, totalCentavos, valorReais };
+  // Item de roleta vira saldo de giros, e não uma peça parada no inventário
+  // que ninguém sabe usar. A peça continua entrando (é o comprovante), mas o
+  // que o jogador gasta é o contador.
+  const giros = (data.giros || 0) + girosDoItem(item, quantidade);
+
+  return { inventario, logsCompra, apoios, notifications, quantidade, totalCentavos, valorReais, giros };
 }
 
 module.exports = { aplicarCompra };

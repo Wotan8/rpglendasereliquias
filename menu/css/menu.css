@@ -2951,3 +2951,193 @@ html:not(.dark) .meta-card {
     .tabs { padding: 0 var(--lr-space-3) 5px; }
     .portal-topo .tab { padding: 7px 9px; font-size: 10px; }
 }
+
+/* ===== ROLETA DOS APOIADORES =====
+   A janela é <dialog> em camada de topo, então não disputa z-index com nada.
+   Toda cor sai de token: a roda é desenhada em canvas lendo os MESMOS tokens,
+   e é assim que ela acompanha a troca de tema sem ter duas paletas. */
+.lr-roleta {
+    width: min(880px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    padding: 0;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius-lg);
+    background: var(--lr-surface);
+    color: var(--lr-text-1);
+    overflow: hidden;
+}
+
+.lr-roleta::backdrop {
+    background: rgba(0, 0, 0, .72);
+}
+
+.roleta-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: var(--lr-border-w) solid var(--lr-border);
+    background: var(--lr-surface-2);
+}
+
+.roleta-titulo {
+    font-family: var(--lr-font-title);
+    font-weight: 800;
+    color: var(--lr-gold);
+    font-size: 1.05rem;
+}
+
+.roleta-topo-bts { display: flex; gap: 6px; }
+
+.roleta-icone {
+    width: 32px;
+    height: 32px;
+    display: inline-grid;
+    place-items: center;
+    background: transparent;
+    border: var(--lr-border-w) solid transparent;
+    border-radius: var(--lr-radius);
+    color: var(--lr-text-2);
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.roleta-icone:hover,
+.roleta-icone:focus-visible { border-color: var(--lr-gold); color: var(--lr-gold-2); }
+
+.roleta-corpo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+    gap: 18px;
+    padding: 16px;
+    overflow-y: auto;
+    max-height: calc(100vh - 130px);
+}
+
+.roleta-roda { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+/* O canvas é quadrado por aspect-ratio; o JS só copia a largura medida para o
+   buffer. Sem isto a roda vira elipse quando a janela é estreita. */
+#roletaCanvas {
+    width: 100%;
+    max-width: 380px;
+    aspect-ratio: 1;
+    display: block;
+}
+
+.roleta-saldo-linha { font-size: .9rem; color: var(--lr-text-2); }
+.roleta-saldo-linha strong { color: var(--lr-gold); font-size: 1.15rem; }
+
+.roleta-girar {
+    min-width: 180px;
+    font-size: 1rem;
+    letter-spacing: .04em;
+}
+
+.roleta-girar:disabled { opacity: .5; cursor: not-allowed; }
+
+.roleta-lado { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+.roleta-secao {
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--lr-text-2);
+    border-bottom: var(--lr-border-w) solid var(--lr-border);
+    padding-bottom: 4px;
+    margin-top: 4px;
+}
+
+.roleta-compra-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 0;
+    font-size: .88rem;
+    flex-wrap: wrap;
+}
+
+.roleta-compra-item b { color: var(--lr-gold); }
+.roleta-compra-bts { display: flex; gap: 6px; }
+.roleta-compra-bts .loja-btn { flex: 0 0 auto; padding: 5px 10px; font-size: .8rem; }
+.roleta-vazio { color: var(--lr-text-2); font-size: .85rem; }
+
+.roleta-legenda {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 260px;
+    overflow-y: auto;
+    font-size: .82rem;
+}
+
+.roleta-legenda li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--lr-border-soft);
+}
+
+.roleta-legenda i {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex: 0 0 auto;
+}
+
+.roleta-legenda span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.roleta-legenda b { color: var(--lr-text-2); font-variant-numeric: tabular-nums; }
+
+.roleta-premio {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 4px;
+    padding: 10px 12px;
+    border: var(--lr-border-w) solid var(--lr-gold);
+    border-radius: var(--lr-radius);
+    background: var(--lr-gold-soft);
+    animation: roletaPremioEntra .45s var(--lr-ease, ease) both;
+}
+
+.roleta-premio img {
+    width: 54px;
+    height: 54px;
+    object-fit: contain;
+    border-radius: var(--lr-radius);
+    flex: 0 0 auto;
+}
+
+.roleta-premio-nome { font-weight: 800; color: var(--lr-gold); }
+.roleta-premio-desc { font-size: .82rem; color: var(--lr-text-2); margin-top: 2px; }
+.roleta-premio-pe { font-size: .78rem; color: var(--lr-nature); margin-top: 4px; }
+
+@keyframes roletaPremioEntra {
+    from { opacity: 0; transform: translateY(8px) scale(.97); }
+    to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .roleta-premio { animation: none; }
+}
+
+@media (max-width: 768px) {
+    .roleta-corpo {
+        grid-template-columns: 1fr;
+        max-height: calc(100vh - 120px);
+    }
+
+    .roleta-legenda { max-height: 180px; }
+    #roletaCanvas { max-width: 300px; }
+}

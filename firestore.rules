@@ -26,10 +26,12 @@ service cloud.firestore {
           .data.role in ['mestre', 'criador'];
     }
 
-    // Campos que só o servidor (Cloud Functions) e mestres podem alterar
+    // Campos que só o servidor (Cloud Functions) e mestres podem alterar.
+    // `giros` entra aqui pelo mesmo motivo de `fragmentos`: é saldo, e saldo
+    // que o navegador consegue escrever é saldo infinito.
     function naoMexeuEmCamposProtegidos() {
       return !request.resource.data.diff(resource.data).affectedKeys()
-        .hasAny(['fragmentos', 'inventario', 'apoios', 'logsCompra', 'fragLastOp']);
+        .hasAny(['fragmentos', 'inventario', 'apoios', 'logsCompra', 'fragLastOp', 'giros']);
     }
 
     // ========== Coleções do Painel de Criador (system/data/*) ==========
@@ -64,7 +66,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && (
         isMaster() ||
         (request.auth.uid == userId &&
-         !request.resource.data.keys().hasAny(['fragmentos', 'inventario', 'apoios', 'logsCompra', 'fragLastOp']))
+         !request.resource.data.keys().hasAny(['fragmentos', 'inventario', 'apoios', 'logsCompra', 'fragLastOp', 'giros']))
       );
 
       // Mestre mantém escrita total (painel-mestre concede Frag$ e apoios pelo cliente)
@@ -85,6 +87,13 @@ service cloud.firestore {
 
     // Auditoria de transações em dinheiro real (Mercado Pago) — escrita SOMENTE pelo servidor
     match /real_logs/{logId} {
+      allow read: if isSignedIn() && (isMaster() || resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    // Cada giro da roleta, com o que saiu e o saldo antes/depois — escrita
+    // SOMENTE pelo servidor. É a prova de que o sorteio não foi no navegador.
+    match /roleta_logs/{logId} {
       allow read: if isSignedIn() && (isMaster() || resource.data.uid == request.auth.uid);
       allow create, update, delete: if false;
     }

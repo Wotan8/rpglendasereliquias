@@ -459,7 +459,7 @@
                     <button class="sub-tab-btn active" data-subtab="apoios" onclick="switchSubTab('apoio','apoios')"><svg class="lr-ico"><use href="#i-apoio"/></svg> Apoios</button>
                     <button class="sub-tab-btn" data-subtab="metas" onclick="switchSubTab('apoio','metas')"><svg class="lr-ico"><use href="#i-template"/></svg> Metas</button>
                     <button class="sub-tab-btn" data-subtab="loja" onclick="switchSubTab('apoio','loja')"><svg class="lr-ico"><use href="#i-carrinho"/></svg> Loja</button>
-                    <button class="sub-tab-btn" data-subtab="compras" onclick="switchSubTab('apoio','compras'); carregarComprasDinheiro()"><svg class="lr-ico"><use href="#i-moeda"/></svg> Compras em Dinheiro</button>
+                    <button class="sub-tab-btn" data-subtab="roleta" onclick="switchSubTab('apoio','roleta')"><svg class="lr-ico"><use href="#i-dado"/></svg> Roleta</button>
                     <button class="sub-tab-btn" data-subtab="notificacoes" onclick="switchSubTab('apoio','notificacoes')"><svg class="lr-ico"><use href="#i-megafone"/></svg> Notificações</button>
                     <button class="sub-tab-btn" data-subtab="producao" onclick="switchSubTab('apoio','producao')"><svg class="lr-ico"><use href="#i-fabrica"/></svg> Produção</button>
                 </div>
@@ -528,13 +528,18 @@
                         <div style="text-align:center;padding:50px;color:var(--muted);grid-column:1/-1;">Carregando loja...</div>
                     </div>
                 </div>
-                <div class="sub-tab-content" id="subtab-compras">
+                <!-- ROLETA — a mesa dos prêmios. O mestre escolhe itens JÁ cadastrados na
+                     Loja e dá um peso a cada um. As chances não precisam somar 100: o que
+                     vale é a proporção entre elas, e o servidor normaliza no sorteio. -->
+                <div class="sub-tab-content" id="subtab-roleta">
                     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
-                        <button class="btn btn-secondary btn-small" onclick="carregarComprasDinheiro()"><svg class="lr-ico"><use href="#i-recarregar"/></svg> Atualizar</button>
-                        <span style="color:var(--muted);font-size:.82rem">Confirme só depois de receber o dinheiro — a confirmação entrega o item na hora.</span>
+                        <button class="btn btn-success btn-small" onclick="addPremioRoleta()"><svg class="lr-ico"><use href="#i-mais"/></svg> Novo Prêmio</button>
+                        <button class="btn btn-primary btn-small" onclick="salvarRoleta()"><svg class="lr-ico"><use href="#i-salvar"/></svg> Salvar Roleta</button>
+                        <button class="btn btn-secondary btn-small" onclick="carregarRoleta()"><svg class="lr-ico"><use href="#i-recarregar"/></svg> Recarregar</button>
+                        <span id="roletaResumo" style="color:var(--muted);font-size:.82rem"></span>
                     </div>
-                    <div id="comprasDinheiroContainer">
-                        <div style="text-align:center;padding:50px;color:var(--muted);">Carregando pedidos...</div>
+                    <div id="roletaContainer">
+                        <div style="text-align:center;padding:50px;color:var(--muted);">Carregando roleta...</div>
                     </div>
                 </div>
                 <div class="sub-tab-content" id="subtab-notificacoes">

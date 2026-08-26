@@ -11,6 +11,7 @@ const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { aplicarCompra } = require("./entrega-calc");
 const { TAXAS_PADRAO, calcularCobranca, EXCLUIR_POR_MEIO } = require("./taxa-gateway");
+const { sortear, aplicarPremio, girosDoItem } = require("./roleta-sorteio");
 
 initializeApp();
 const db = getFirestore();
@@ -183,6 +184,7 @@ exports.comprarComFragmentos = onCall(
 
     const userRef = await resolveUserRef(uid, email);
     let novoSaldo = 0;
+    let novosGiros = 0;
 
     await db.runTransaction(async (tx) => {
       const uSnap = await tx.get(userRef);
@@ -244,12 +246,17 @@ exports.comprarComFragmentos = onCall(
       });
       if (notifications.length > 100) notifications.length = 100;
 
+      // ponytail: dois caminhos de entrega (aqui e aplicarCompra); unificar se
+      // aparecer um terceiro. Por ora só o crédito de giros anda nos dois.
+      novosGiros = (data.giros || 0) + girosDoItem(item, quantidade);
+
       tx.update(userRef, {
         fragmentos: novoSaldo,
         inventario,
         logsCompra,
         apoios,
         notifications,
+        giros: novosGiros,
         // Marcador de atribuição lido pelo gatilho de auditoria (registrarLogFragmentos)
         fragLastOp: {
           origem: "Compra na Loja (Frag$)",
@@ -260,7 +267,7 @@ exports.comprarComFragmentos = onCall(
       });
     });
 
-    return { ok: true, novoSaldo };
+    return { ok: true, novoSaldo, novosGiros };
   }
 );
 
@@ -359,47 +366,13 @@ async function validarLinhaCompra(itemId, selectedMetas, reqQuantidade) {
   return { itemId, item, valorCentavos, quantidade, metas };
 }
 
-// Pedido de UM item (fluxo dinheiro/mestre): valida e registra a intenção.
-async function registrarCompraPendente(request, status) {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Você precisa estar logado para comprar.");
-  }
-
-  const uid = request.auth.uid;
-  const email = request.auth.token.email || "";
-  const { itemId, selectedMetas, quantidade: reqQuantidade, recaptchaToken } = request.data || {};
-
-  // Verificação anti-bot ANTES de qualquer operação de pagamento
-  await verificarRecaptcha(recaptchaToken, "comprar_loja");
-
-  const { item, valorCentavos, quantidade, metas } =
-    await validarLinhaCompra(itemId, selectedMetas, reqQuantidade);
-
-  // Registro da intenção de compra (também serve de trilha de auditoria)
-  const pendingRef = db.collection("compras_pendentes").doc();
-  await pendingRef.set({
-    uid,
-    email,
-    itemId,
-    itemNome: item.nome,
-    valorCentavos,
-    quantidade,
-    totalCentavos: valorCentavos * quantidade,
-    selectedMetas: metas,
-    status,
-    criadoEm: FieldValue.serverTimestamp(),
-  });
-
-  return { pendingRef, item, itemId, valorCentavos, quantidade, metas };
-}
-
 // =============================================
 // ENTREGA DOS BENEFÍCIOS DE UMA COMPRA EM DINHEIRO
-// Único caminho de entrega: usado pelo webhook do Mercado Pago e pela
-// confirmação manual do mestre. Idempotente (compra CONCLUIDA nunca
-// é aplicada de novo) e sempre grava log imutável em `real_logs`.
-// `origem` é o rótulo do meio de pagamento ("Mercado Pago" | "Dinheiro").
-// Aceita os dois formatos de pendência: carrinho (`itens[]`) e item único.
+// Caminho único de entrega, hoje só do webhook do Mercado Pago: a compra é
+// automática e o mestre não confirma mais nada. Idempotente (compra CONCLUIDA
+// nunca é aplicada de novo) e sempre grava log imutável em `real_logs`.
+// Aceita os dois formatos de pendência: carrinho (`itens[]`) e item único
+// (o antigo, que ainda existe em pendências gravadas antes do carrinho).
 // =============================================
 async function entregarCompra(pendingRef, pending, origem, extras = {}) {
   const linhas = Array.isArray(pending.itens) && pending.itens.length > 0
@@ -438,10 +411,11 @@ async function entregarCompra(pendingRef, pending, origem, extras = {}) {
         selectedMetas: linha.selectedMetas || [],
         compraId: pendingRef.id,
       };
-      const { inventario, logsCompra, apoios, notifications, quantidade, totalCentavos } =
+      const { inventario, logsCompra, apoios, notifications, giros, quantidade, totalCentavos } =
         aplicarCompra(data, item, pendenteLinha, origem);
-      // O resultado de uma linha é o estado de partida da próxima
-      data = { ...data, inventario, logsCompra, apoios, notifications };
+      // O resultado de uma linha é o estado de partida da próxima — inclusive
+      // `giros`, senão um carrinho com dois itens de roleta credita só o último
+      data = { ...data, inventario, logsCompra, apoios, notifications, giros };
 
       // Log imutável de transação em dinheiro real (equivalente ao frag_logs)
       tx.set(db.collection("real_logs").doc(), {
@@ -466,6 +440,7 @@ async function entregarCompra(pendingRef, pending, origem, extras = {}) {
       logsCompra: data.logsCompra,
       apoios: data.apoios,
       notifications: data.notifications,
+      giros: data.giros || 0,
     });
     tx.update(pendingRef, {
       status: "CONCLUIDA",
@@ -475,100 +450,94 @@ async function entregarCompra(pendingRef, pending, origem, extras = {}) {
   });
 }
 
-// Só o mestre (doc em `masters/{uid}`) passa daqui — mesma fonte de verdade das rules
-async function exigirMestre(request) {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Você precisa estar logado.");
-  }
-  const m = await db.collection("masters").doc(request.auth.uid).get();
-  if (!m.exists) {
-    throw new HttpsError("permission-denied", "Apenas o mestre pode confirmar pagamentos.");
-  }
-  return request.auth.token.email || request.auth.uid;
-}
-
 // =============================================
-// COMPRA EM DINHEIRO — PEDIDO DO JOGADOR (callable)
-// Sem gateway: registra o pedido e espera o mestre confirmar que
-// recebeu o dinheiro (na mão, PIX direto, etc.). A entrega acontece
-// só em confirmarCompraDinheiro.
+// ROLETA — UM GIRO (callable)
+// O sorteio acontece AQUI e em lugar nenhum mais. O navegador não manda
+// índice, nem semente, nem a lista de prêmios: manda só o token de login. O
+// prêmio já está entregue e o giro já está debitado quando a resposta sai —
+// a animação da roda é encenação do que já aconteceu. Fechar a aba no meio
+// do giro custa o espetáculo, nunca o prêmio.
 // =============================================
-exports.solicitarCompraDinheiro = onCall(
-  { secrets: [RECAPTCHA_SECRET], region: "southamerica-east1" },
-  async (request) => {
-    const { pendingRef, item, valorCentavos, quantidade } =
-      await registrarCompraPendente(request, "AGUARDANDO_CONFIRMACAO_MESTRE");
-
-    return {
-      compraId: pendingRef.id,
-      itemNome: item.nome,
-      totalCentavos: valorCentavos * quantidade,
-    };
-  }
-);
-
-// =============================================
-// COMPRA EM DINHEIRO — CONFIRMAÇÃO DO MESTRE (callable)
-// aprovar=true  → entrega os benefícios (mesmo caminho do webhook)
-// aprovar=false → cancela e avisa o jogador
-// =============================================
-exports.confirmarCompraDinheiro = onCall(
+exports.girarRoleta = onCall(
   { region: "southamerica-east1" },
   async (request) => {
-    const autor = await exigirMestre(request);
-    const { compraId, aprovar } = request.data || {};
-
-    if (!compraId || typeof compraId !== "string") {
-      throw new HttpsError("invalid-argument", "compraId é obrigatório.");
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Você precisa estar logado para girar a roleta.");
     }
+    const uid = request.auth.uid;
+    const email = request.auth.token.email || "";
 
-    const pendingRef = db.collection("compras_pendentes").doc(compraId);
-    const snap = await pendingRef.get();
-    if (!snap.exists) {
-      throw new HttpsError("not-found", "Pedido não encontrado.");
-    }
-    const pending = snap.data();
+    // Sorteio ANTES da transação, de propósito: o callback de uma transação
+    // roda de novo quando há contenção, e sortear lá dentro re-sortearia o
+    // prêmio a cada retentativa.
+    const cfgSnap = await db.collection("config").doc("roleta").get();
+    const premios = (cfgSnap.exists ? cfgSnap.data().premios : null) || [];
 
-    if (pending.status === "CONCLUIDA") {
-      throw new HttpsError("failed-precondition", "Este pedido já foi entregue.");
+    let sorteio;
+    try {
+      sorteio = sortear(premios);
+    } catch (e) {
+      // Roleta sem prêmio válido falha aqui, antes de custar um giro.
+      throw new HttpsError("failed-precondition", "A roleta ainda não foi configurada pelo mestre.");
     }
-    if (pending.status !== "AGUARDANDO_CONFIRMACAO_MESTRE") {
-      throw new HttpsError("failed-precondition", "Este pedido não é de pagamento em dinheiro.");
-    }
+    const { indice, premio, probabilidade } = sorteio;
 
-    if (aprovar === false) {
-      await pendingRef.update({
-        status: "CANCELADA",
-        canceladaEm: FieldValue.serverTimestamp(),
-        canceladaPor: autor,
+    const itemSnap = await db.collection("loja_itens").doc(String(premio.itemId || "")).get();
+    if (!itemSnap.exists) {
+      throw new HttpsError("failed-precondition",
+        `O prêmio "${premio.nome || ""}" não existe mais no catálogo. Avise o mestre.`);
+    }
+    const item = itemSnap.data();
+
+    const userRef = await resolveUserRef(uid, email);
+    let novosGiros = 0;
+
+    await db.runTransaction(async (tx) => {
+      const uSnap = await tx.get(userRef);
+      if (!uSnap.exists) throw new HttpsError("not-found", "Documento de usuário não existe.");
+      const data = uSnap.data();
+
+      const saldo = data.giros || 0;
+      if (saldo < 1) {
+        throw new HttpsError("failed-precondition", "Você não tem giros. Compre na Loja para girar.");
+      }
+
+      const { inventario, notifications, girosGanhos } = aplicarPremio(data, item);
+      // Débito e entrega na MESMA transação: não existe estado em que o giro
+      // saiu e o prêmio não entrou. `girosGanhos` é o que faz a Re-roleta
+      // devolver o giro sem nenhum caso especial no código.
+      novosGiros = saldo - 1 + girosGanhos;
+
+      tx.update(userRef, { giros: novosGiros, inventario, notifications });
+
+      tx.set(db.collection("roleta_logs").doc(), {
+        uid,
+        jogador: data.displayName || data.email || email,
+        itemId: premio.itemId,
+        itemNome: item.nome,
+        indice,
+        chance: premio.chance,
+        probabilidade,
+        girosAntes: saldo,
+        girosDepois: novosGiros,
+        criadoEm: FieldValue.serverTimestamp(),
       });
-
-      // Avisa o jogador — sem isso o pedido some sem explicação
-      const userRef = await resolveUserRef(pending.uid, pending.email || "");
-      await db.runTransaction(async (tx) => {
-        const uSnap = await tx.get(userRef);
-        if (!uSnap.exists) return;
-        const notifications = uSnap.data().notifications || [];
-        notifications.unshift({
-          id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
-          type: "master_message",
-          message: `❌ Pedido cancelado: ${pending.quantidade || 1}x ${pending.itemNome}. Fale com o mestre.`,
-          timestamp: Date.now(),
-          isNew: true,
-        });
-        if (notifications.length > 100) notifications.length = 100;
-        tx.update(userRef, { notifications });
-      });
-
-      return { ok: true, status: "CANCELADA" };
-    }
-
-    await entregarCompra(pendingRef, pending, "Dinheiro", {
-      pendingExtra: { confirmadaPor: autor },
-      logExtra: { confirmadaPor: autor },
     });
 
-    return { ok: true, status: "CONCLUIDA" };
+    // `premios` volta junto porque o mestre pode ter salvo a roleta entre o
+    // desenho da roda e o clique: sem redesenhar com esta lista, a agulha
+    // pararia numa fatia que não existe mais.
+    return {
+      indice,
+      premios,
+      novosGiros,
+      premio: {
+        nome: item.nome,
+        descricao: item.descricao || "",
+        imagem: item.imagem || "",
+        giros: girosDoItem(item, 1),
+      },
+    };
   }
 );
 

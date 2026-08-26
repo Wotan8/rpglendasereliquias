@@ -47,6 +47,20 @@ assert.equal(l2.inventario.length, 2, 'as duas peças do carrinho entram');
 assert.equal(l2.logsCompra.length, 2);
 assert.equal(l2.apoios.length, 2);
 
+// --- item de roleta credita giros; item comum nao mexe no saldo ---
+const roleta3x = { nome: 'Roleta 3x', isRoleta: true, roletaGiros: 3 };
+const g1 = aplicarCompra({}, roleta3x, { ...pending, quantidade: 2 }, 'Mercado Pago');
+assert.equal(g1.giros, 6, '3 giros x 2 unidades');
+
+const g2 = aplicarCompra({ giros: 4 }, roleta3x, { ...pending, quantidade: 1 }, 'Mercado Pago');
+assert.equal(g2.giros, 7, 'soma ao saldo que ja existia');
+
+const g3 = aplicarCompra({ giros: 4 }, item, pending, 'Mercado Pago');
+assert.equal(g3.giros, 4, 'item comum nao altera o saldo de giros');
+
+const g4 = aplicarCompra({}, item, pending, 'Mercado Pago');
+assert.equal(g4.giros, 0, 'sem saldo e sem item de roleta, fica zero');
+
 // --- fallbacks: sem quantidade e sem totalCentavos ---
 const r3 = aplicarCompra({}, item, { itemId: 'it1', valorCentavos: 990 }, 'Dinheiro');
 assert.equal(r3.quantidade, 1);

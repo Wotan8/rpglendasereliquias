@@ -54,6 +54,9 @@ const functions = getFunctions(app, 'southamerica-east1');
 // mesmo padrão do livro-vinculado.js no resto do site).
 window.db = db;
 window.auth = auth;
+// A janela da Roleta (menu-roleta.js) chama a callable pela mesma instância,
+// em vez de inicializar um segundo Firebase só para ela.
+window.lrFunctions = functions;
 
 let currentUser = null;
 let characters = [];
@@ -80,6 +83,22 @@ function updateFragDisplay(valor) {
     }
 }
 window.updateFragDisplay = updateFragDisplay;
+
+// ===== SALDO DE GIROS DA ROLETA (exibição) =====
+// Espelho do saldo de Fragmentos: o número vive em `users/{doc}.giros`, é
+// escrito só pelo servidor, e aqui só aparece.
+function updateGirosDisplay(valor) {
+    const badge = document.getElementById('girosBadge');
+    const n = Number(valor) || 0;
+    if (badge) {
+        badge.textContent = n;
+        badge.style.display = n > 0 ? '' : 'none';
+    }
+    // A janela da roleta, se estiver aberta, mostra o mesmo saldo por dentro
+    const dentro = document.getElementById('roletaSaldo');
+    if (dentro) dentro.textContent = n;
+}
+window.updateGirosDisplay = updateGirosDisplay;
 
 // ===== DARK THEME =====
 // A lógica de tema agora é compartilhada por todo o site: /shared/theme.js
@@ -115,6 +134,7 @@ onAuthStateChanged(auth, async (user) => {
                 const role = data.role;
 
                 updateFragDisplay(data.fragmentos || 0);
+                updateGirosDisplay(data.giros || 0);
 
                 const btnMestre = document.getElementById('btnPainelMestre');
                 const btnCriador = document.getElementById('btnPainelCriador');
@@ -546,6 +566,8 @@ async function loadInventory() {
         showAlert('❌ Erro ao carregar inventário: ' + error.message, 'danger');
     }
 }
+// A Roleta chama isto para o prêmio aparecer no Repertório sem recarregar a página
+window.loadInventory = loadInventory;
 
 /* As cinco etiquetas do item da Loja e do Repertório.
    Eram cinco `background:` em hexadecimal INLINE, um por tipo — cinco cores
@@ -554,7 +576,7 @@ async function loadInventory() {
    abissal para a roleta, sangue para o re-roll, natureza para o narrativo). */
 const ETIQUETAS = [
     { quando: (i) => i.isExp, classe: 'exp', texto: (i) => `⭐ ${i.expAmount} EXP${i.isExpVip ? ' · VIP' : ''}` },
-    { quando: (i) => i.isRoleta, classe: 'roleta', texto: (i) => `🎰 Roleta ${i.roletaGiros}×` },
+    { quando: (i) => i.isRoleta, classe: 'roleta', texto: (i) => `🎰 +${i.roletaGiros} giro${i.roletaGiros > 1 ? 's' : ''}` },
     { quando: (i) => i.isRerolagem, classe: 'reroll', texto: (i) => `🎲 Re-roll ${i.rerolagensAmount}×` },
     { quando: (i) => i.isNarrativo, classe: 'narrativo', texto: () => '📜 Benefício narrativo' },
     {
@@ -1104,12 +1126,9 @@ function renderLojaItens() {
                                 title="Comprar com Fragmentos">💎 ${item.valorFrag} Frag$</button>` : ''}
                         ${precoReal ? `
                             <button class="loja-btn loja-btn-real" onclick="openCheckoutReal('${item.id}')"
-                                title="${MODO_PAGAMENTO_REAL === 'dinheiro' ? 'Pagar direto ao mestre' : 'PIX · Cartão · Boleto'}"
-                                >${MODO_PAGAMENTO_REAL === 'dinheiro' ? '💵' : '🛒'} R$ ${precoReal}</button>` : ''}
+                                title="PIX · Cartão · Boleto">🛒 R$ ${precoReal}</button>` : ''}
                     </div>
-                    ${precoReal ? `<div class="loja-card-secure">${MODO_PAGAMENTO_REAL === 'dinheiro'
-                        ? '🤝 Você combina o pagamento com o mestre; o item é liberado após a confirmação dele'
-                        : '🔒 PIX, Cartão ou Boleto — a taxa do meio escolhido entra no carrinho'}</div>` : ''}
+                    ${precoReal ? `<div class="loja-card-secure">🔒 PIX, Cartão ou Boleto — a taxa do meio escolhido entra no carrinho</div>` : ''}
                 </div>
             </div>
         `;
@@ -1126,37 +1145,7 @@ function getItemValorCentavos(item) {
     return 0;
 }
 
-let currentCheckoutMode = 'frag'; // 'frag' | 'dinheiro' | 'mercadopago'
-
-// Meio de pagamento em dinheiro real da Loja:
-//   'dinheiro'    → jogador faz o pedido e o mestre confirma o recebimento no painel
-//   'mercadopago' → carrinho + Checkout Pro do Mercado Pago (PIX, Cartão, Boleto)
-const MODO_PAGAMENTO_REAL = 'mercadopago';
-
-// Dados mostrados no checkout em dinheiro
-const PIX_CHAVE = '62991156283';
-const PIX_TITULAR = 'Igor Estevam Alves de Souza';
-
-function cartaoPixHtml() {
-    return `
-        <div style="margin-top:12px;padding:12px 14px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;">
-            <div style="display:flex;align-items:center;gap:6px;font-weight:700;color:var(--lr-nature);font-size:0.8rem;letter-spacing:.02em;text-transform:uppercase;margin-bottom:8px;">
-                <span>💠</span> Pagamento por PIX
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;">
-                <span style="font-size:0.8rem;color:var(--muted);">Chave (telefone)</span>
-                <strong style="font-family:monospace;font-size:0.95rem;color:var(--lr-text-1);letter-spacing:.02em;">${escapeHtml(PIX_CHAVE)}</strong>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:4px;">
-                <span style="font-size:0.8rem;color:var(--muted);">Titular</span>
-                <strong style="font-size:0.9rem;color:var(--lr-text-1);">${escapeHtml(PIX_TITULAR)}</strong>
-            </div>
-            <div style="font-size:0.78rem;color:var(--muted);margin-top:10px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;">
-                Também aceito em dinheiro na mesa. Assim que o pagamento for confirmado, o item cai automaticamente no seu Repertório.
-            </div>
-        </div>
-    `;
-}
+let currentCheckoutMode = 'frag'; // 'frag' | 'mercadopago'
 
 // ⚠️ Substitua pela sua Site Key do reCAPTCHA v3 (a MESMA usada no menu.html).
 const RECAPTCHA_SITE_KEY = '6Lc3_lUtAAAAAFhlPCUXgJSdL3zLnzFUwx_ZbIzT';
@@ -1176,7 +1165,6 @@ async function getRecaptchaToken(action) {
 
 function rotuloBotaoCompra(mode) {
     if (mode === 'mercadopago') return '🛒 Adicionar ao Carrinho';
-    if (mode === 'dinheiro') return '💵 Enviar Pedido ao Mestre';
     return '✔️ Confirmar Compra';
 }
 
@@ -1204,7 +1192,6 @@ function openCheckoutModal(item, mode) {
                 <input type="number" id="lojaCheckoutQuantity" value="1" min="1" max="99" oninput="updateCheckoutTotal()" style="width:60px;text-align:center;background:var(--lr-bg-1);border:1px solid rgba(255,255,255,0.1);color:var(--lr-text-1);border-radius:6px;padding:4px;font-family:var(--font);font-size:0.9rem;font-weight:600;">
             </div>
         </div>
-        ${mode === 'dinheiro' ? cartaoPixHtml() : ''}
     `;
 
     const metaSelector = document.getElementById('lojaCheckoutMetaSelector');
@@ -1295,7 +1282,7 @@ window.openCheckoutFrag = async function (itemId) {
 window.openCheckoutReal = function (itemId) {
     const item = lojaItensData.find(i => i.id === itemId);
     if (!item) return;
-    openCheckoutModal(item, MODO_PAGAMENTO_REAL);
+    openCheckoutModal(item, 'mercadopago');
 };
 
 // =============================================
@@ -1538,31 +1525,6 @@ window.confirmPurchaseFrag = async function () {
     btn.disabled = true;
     btn.innerHTML = 'Processando...';
 
-    // ---- Fluxo Dinheiro: registra o pedido; o mestre confirma o recebimento ----
-    if (currentCheckoutMode === 'dinheiro') {
-        try {
-            const recaptchaToken = await getRecaptchaToken('comprar_loja');
-            const solicitar = httpsCallable(functions, 'solicitarCompraDinheiro');
-            await solicitar({ itemId: item.id, selectedMetas, quantidade, recaptchaToken });
-
-            document.getElementById('lojaCheckoutModal').style.display = 'none';
-            showAlert(
-                `✅ Pedido enviado! Pague ${quantidade}x ${item.nome} ao mestre. ` +
-                'Assim que ele confirmar, o item aparece no seu Repertório.',
-                'success',
-                10000
-            );
-        } catch (error) {
-            console.error('Erro ao solicitar compra em dinheiro:', error);
-            showAlert(`❌ Não foi possível registrar o pedido: ${error.message}`, 'danger');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = rotuloBotaoCompra('dinheiro');
-            currentCheckoutItem = null;
-        }
-        return;
-    }
-
     // ---- Fluxo Mercado Pago: entra no carrinho; o pagamento é no carrinho ----
     if (currentCheckoutMode === 'mercadopago') {
         addAoCarrinho(item, quantidade, selectedMetas);
@@ -1583,6 +1545,7 @@ window.confirmPurchaseFrag = async function () {
         document.getElementById('lojaCheckoutModal').style.display = 'none';
 
         updateFragDisplay(result.data.novoSaldo);
+        updateGirosDisplay(result.data.novosGiros);
 
         await loadInventory();
     } catch (error) {

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bancada — Roleta dos Apoiadores</title>
+    <link rel="stylesheet" href="/menu/css/menu.css?v=29">
+    <link rel="stylesheet" href="/shared/tokens.css?v=11">
+    <link rel="stylesheet" href="/shared/dialogo.css?v=2">
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 20px; background: var(--lr-bg-0); color: var(--lr-text-1); }
+        #saida { font-family: ui-monospace, monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
+        .ok { color: #16a34a; } .falha { color: #dc2626; font-weight: 700; }
+        button.acao { margin: 4px 6px 12px 0; padding: 8px 14px; cursor: pointer; }
+    </style>
+</head>
+
+<body>
+    <h1 style="font-size:1.1rem">Bancada — Roleta dos Apoiadores</h1>
+    <p style="color:var(--lr-text-2);font-size:.9rem;max-width:70ch">
+        Confere o que não precisa de servidor: geometria das fatias contra o desenho, legenda,
+        layout responsivo e o estado do botão. O sorteio em si é do servidor e tem teste próprio
+        em <code>functions/roleta-sorteio.test.mjs</code>.
+    </p>
+
+    <button class="acao" onclick="rodar()">▶ Rodar conferência</button>
+    <button class="acao" onclick="window.abrirRoleta()">👁 Só abrir a janela</button>
+    <div id="saida">…</div>
+
+    <script type="module" src="/shared/dialogo.js?v=2"></script>
+    <script type="module">
+        import { fatias, fatiaSobASeta, rotacaoFinal } from '/shared/roleta-geometria.js?v=1';
+
+        // As 37 chances reais do documento de mesa, incluindo as de 0,3%
+        const CHANCES = [1, 1, 1, 3, 3, 3, 3, 5, 3, 5, 5, 1, 3, 3, 3, 3, 3, 5, 5, 3, 5, 3, 3, 1, 1, 1,
+            0.5, 3, 3, 3, 3, 5, 1, 1, 0.5, 0.3, 0.3];
+
+        window.__roletaBancada = {
+            premios: CHANCES.map((chance, i) => ({
+                itemId: 'fake' + i, chance,
+                nome: ['Lunis x250', 'Lunis x500', 'Lunis x800', 'EXP 3', 'EXP 4', 'Re-roleta 1x',
+                    'Vale-Compra 20%', 'Informação x1', 'Recurso Comum x10', 'Benção Menor'][i] || ('Prêmio ' + (i + 1)),
+            })),
+            itensDeGiro: [
+                { id: 'g1', nome: 'Roleta 1x', roletaGiros: 1, valorFrag: 10, valorReal: 1000 },
+                { id: 'g3', nome: 'Roleta 3x', roletaGiros: 3, valorFrag: 25, valorReal: 2000 },
+            ],
+        };
+
+        let ok = 0, falhou = 0;
+        const linhas = [];
+        const conferir = (nome, condicao, detalhe = '') => {
+            if (condicao) { ok++; linhas.push(`<span class="ok">✔</span> ${nome}`); }
+            else { falhou++; linhas.push(`<span class="falha">✘ ${nome}${detalhe ? ' — ' + detalhe : ''}</span>`); }
+        };
+
+        window.rodar = async function () {
+            ok = 0; falhou = 0; linhas.length = 0;
+            const saida = document.getElementById('saida');
+
+            await window.abrirRoleta();
+            const dialogo = document.querySelector('dialog.lr-roleta');
+            conferir('a janela abriu', dialogo && dialogo.open);
+
+            // --- desenho ---
+            const canvas = document.getElementById('roletaCanvas');
+            conferir('o canvas existe', !!canvas);
+            conferir('o canvas é quadrado', canvas && canvas.width === canvas.height,
+                canvas ? `${canvas.width}x${canvas.height}` : '');
+            conferir('o canvas tem pixel de verdade (não ficou 0)', canvas && canvas.width > 100, canvas?.width);
+
+            // pinta? amostra o centro-topo, onde a agulha fica
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                const px = ctx.getImageData(canvas.width / 2, canvas.height * 0.12, 1, 1).data;
+                conferir('a roda foi pintada (pixel não transparente)', px[3] > 0, `alpha=${px[3]}`);
+            }
+
+            // --- legenda ---
+            const itensLegenda = document.querySelectorAll('#roletaLegenda li');
+            conferir('a legenda lista os 37 prêmios', itensLegenda.length === 37, itensLegenda.length);
+            const soma = [...itensLegenda].reduce((s, li) => s + parseFloat(li.querySelector('b').textContent), 0);
+            conferir('os percentuais da legenda somam ~100%', Math.abs(soma - 100) < 0.6, soma.toFixed(2) + '%');
+
+            // --- compra de giros ---
+            const bts = document.querySelectorAll('#roletaCompra .roleta-compra-item');
+            conferir('os dois itens de giro aparecem para compra', bts.length === 2, bts.length);
+
+            // --- botão travado sem saldo ---
+            const btn = document.getElementById('roletaBtnGirar');
+            conferir('o botão GIRAR nasce travado sem giros', btn && btn.disabled);
+
+            // --- INVARIANTE: a agulha para na fatia sorteada ---
+            const lista = fatias(window.__roletaBancada.premios);
+            let erros = 0, pior = '';
+            for (const alvo of [0, 5, 12, 26, 34, 35, 36]) {
+                const parou = await window.__roletaAnimarPara(alvo, 60);
+                if (parou !== alvo) { erros++; pior = `pediu ${alvo}, parou ${parou}`; }
+            }
+            conferir('a agulha para na fatia sorteada (7 alvos, incluindo os de 0,3%)', erros === 0, pior);
+
+            // a menor fatia realmente é minúscula — o teste acima vale alguma coisa
+            const menor = lista.reduce((a, b) => a.tamanho < b.tamanho ? a : b);
+            conferir('a menor fatia é mesmo estreita (< 1,5°)', menor.tamanho < 1.5, menor.tamanho.toFixed(2) + '°');
+
+            // --- responsivo ---
+            const largura = document.documentElement.clientWidth;
+            const caixa = dialogo?.getBoundingClientRect();
+            conferir('a janela cabe na largura da tela', caixa && caixa.width <= largura, `${caixa?.width?.toFixed(0)} de ${largura}`);
+            conferir('a página não ganhou rolagem horizontal',
+                document.documentElement.scrollWidth <= largura);
+
+            // --- som não pode explodir se o navegador negar áudio ---
+            conferir('o botão de som existe', !!document.getElementById('roletaSom'));
+
+            saida.innerHTML = linhas.join('\n') +
+                `\n\n<b>${ok} passaram, ${falhou} falharam</b>` +
+                (falhou === 0 ? ' <span class="ok">— tudo certo</span>' : '');
+        };
+    </script>
+    <script type="module" src="/menu/js/menu-roleta.js?v=5"></script>
+</body>
+
+</html>

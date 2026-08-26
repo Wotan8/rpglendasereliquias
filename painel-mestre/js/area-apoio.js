@@ -1,5 +1,5 @@
 // ÁREA APOIO — Apoios, Metas, Notificações (Full Migration)
-import { db, collection, query, where, getDocs, getDoc, setDoc, doc, updateDoc, addDoc, deleteDoc, runTransaction, functions, httpsCallable } from './firebase-config.js';
+import { db, collection, getDocs, getDoc, setDoc, doc, updateDoc, addDoc, deleteDoc, runTransaction } from './firebase-config.js';
 import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
@@ -27,8 +27,10 @@ export async function onTabActivated() {
     await loadApoioUsers();
     await carregarSistemaMetas();
     await carregarSistemaLoja();
-    await carregarComprasDinheiro();
     await carregarListaProducao();
+    // Por último: a roleta escolhe entre os itens da Loja, então depende do
+    // carregarSistemaLoja acima ter populado `lojaItens`.
+    await carregarRoleta();
 }
 
 async function checkCriadorRole() {
@@ -991,68 +993,6 @@ window.addLojaItemPersonagemRow = function(itemId = '', qtd = 1) {
     if(!itemId) select.value = '';
 };
 
-// ============= COMPRAS EM DINHEIRO (aguardando o mestre) =============
-// O jogador pede na Loja, paga fora do site (dinheiro/PIX/transferência) e o
-// mestre confirma aqui. A entrega roda no servidor — mesma da compra online.
-
-window.carregarComprasDinheiro = async function() {
-    const container = document.getElementById('comprasDinheiroContainer');
-    if (!container) return;
-    try {
-        const snap = await getDocs(query(
-            collection(db, 'compras_pendentes'),
-            where('status', '==', 'AGUARDANDO_CONFIRMACAO_MESTRE')
-        ));
-        const pedidos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        pedidos.sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
-
-        if (pedidos.length === 0) {
-            container.innerHTML = '<div style="text-align:center;padding:50px;color:var(--muted);">Nenhum pedido aguardando confirmação.</div>';
-            return;
-        }
-
-        const users = await loadUsers();
-        container.innerHTML = pedidos.map(p => {
-            const u = users.find(x => x.id === p.uid || x.uid === p.uid || x.email === p.email);
-            const jogador = u?.displayName || u?.nome || p.email || p.uid;
-            const total = ((p.totalCentavos || p.valorCentavos || 0) / 100).toFixed(2).replace('.', ',');
-            const quando = p.criadoEm?.seconds ? new Date(p.criadoEm.seconds * 1000).toLocaleString('pt-BR') : '';
-            return `
-                <div class="apoio-card" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
-                    <div>
-                        <div style="font-weight:700;color:var(--primary);">${escapeHtml(jogador)}</div>
-                        <div style="font-size:.9rem;">${p.quantidade || 1}x ${escapeHtml(p.itemNome || '')}</div>
-                        <div style="font-size:.78rem;color:var(--muted);">${escapeHtml(quando)}</div>
-                    </div>
-                    <div style="font-weight:800;color:var(--lr-nature);font-size:1.1rem;">R$ ${total}</div>
-                    <div style="display:flex;gap:8px;">
-                        <button class="btn btn-success btn-small" onclick="resolverCompraDinheiro('${p.id}', true)">✅ Recebi — Entregar</button>
-                        <button class="btn btn-secondary btn-small" onclick="resolverCompraDinheiro('${p.id}', false)">❌ Cancelar</button>
-                    </div>
-                </div>`;
-        }).join('');
-    } catch (e) {
-        console.error('❌ Erro ao carregar compras em dinheiro:', e);
-        container.innerHTML = '<div style="text-align:center;padding:50px;color:var(--muted);">Erro ao carregar pedidos.</div>';
-    }
-};
-
-window.resolverCompraDinheiro = async function(compraId, aprovar) {
-    if (!await confirmar(aprovar
-        ? 'Confirmar que o dinheiro foi recebido e entregar o item agora?'
-        : 'Cancelar este pedido? O jogador será avisado.', { perigo: true })) return;
-    try {
-        const fn = httpsCallable(functions, 'confirmarCompraDinheiro');
-        await fn({ compraId, aprovar });
-        showAlert(aprovar ? '✅ Item entregue ao jogador!' : '❌ Pedido cancelado.', aprovar ? 'success' : 'warning');
-        await addLog(S.currentUser?.email, `${aprovar ? 'confirmou' : 'cancelou'} a compra em dinheiro ${compraId}`, '', 'apoios');
-        carregarComprasDinheiro();
-    } catch (e) {
-        console.error('❌ Erro ao resolver compra:', e);
-        showAlert('❌ ' + e.message, 'danger');
-    }
-};
-
 window.carregarSistemaLoja = async function() {
     try {
         const snap = await getDocs(collection(db, 'loja_itens'));
@@ -1395,6 +1335,152 @@ window.deleteLojaItem = async function(id) {
         await carregarSistemaLoja();
     } catch(e) {
         showAlert('❌ Erro ao excluir', 'danger');
+    }
+};
+
+// ==========================================
+// ===== ROLETA (config/roleta) =============
+// ==========================================
+// O mestre monta a roda escolhendo itens que JÁ existem na Loja — inclusive os
+// que estão com a venda desligada, que é como um prêmio fica fora da vitrine e
+// ainda assim pode ser entregue pelo caminho normal de entrega.
+// As chances NÃO precisam somar 100: o servidor sorteia por proporção, então
+// 5 / 1 / 0,3 significa exatamente o que parece. A coluna "na prática" mostra
+// a probabilidade real para o mestre não ter de fechar a conta na unha.
+
+let roletaPremios = [];
+
+window.carregarRoleta = async function() {
+    const container = document.getElementById('roletaContainer');
+    if (!container) return;
+    try {
+        const snap = await getDoc(doc(db, 'config', 'roleta'));
+        roletaPremios = (snap.exists() ? snap.data().premios : null) || [];
+        renderRoletaUI();
+    } catch (e) {
+        console.error('❌ Erro ao carregar a roleta:', e);
+        container.innerHTML = '<div style="text-align:center;padding:50px;color:var(--muted);">Erro ao carregar a roleta.</div>';
+    }
+};
+
+function renderRoletaUI() {
+    const container = document.getElementById('roletaContainer');
+    const resumo = document.getElementById('roletaResumo');
+    if (!container) return;
+
+    const validos = roletaPremios.filter(p => Number(p.chance) > 0);
+    const total = validos.reduce((s, p) => s + Number(p.chance), 0);
+
+    if (resumo) {
+        resumo.textContent = roletaPremios.length === 0
+            ? 'Nenhum prêmio ainda.'
+            : `${roletaPremios.length} prêmios · soma das chances: ${total.toFixed(1)} (não precisa dar 100)`;
+    }
+
+    if (roletaPremios.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:50px;color:var(--muted);">A roleta está vazia. Clique em <b>Novo Prêmio</b> para começar.</div>';
+        return;
+    }
+
+    // <option> de cada item da Loja, com aviso de quem está fora da vitrine
+    const opcoes = (selecionado) => lojaItens.map(i =>
+        `<option value="${escapeHtml(i.id)}"${i.id === selecionado ? ' selected' : ''}>` +
+        `${escapeHtml(i.nome)}${i.isVendaAtiva === false ? ' — (fora da vitrine)' : ''}</option>`
+    ).join('');
+
+    container.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 110px 90px 40px;gap:8px;align-items:center;
+                    font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:6px;">
+            <span>Item da Loja</span><span>Chance (peso)</span><span>Na prática</span><span></span>
+        </div>
+        ${roletaPremios.map((p, i) => {
+            const chance = Number(p.chance) || 0;
+            const real = total > 0 && chance > 0 ? (chance / total * 100) : 0;
+            const orfao = p.itemId && !lojaItens.some(x => x.id === p.itemId);
+            return `
+            <div style="display:grid;grid-template-columns:1fr 110px 90px 40px;gap:8px;align-items:center;margin-bottom:6px;">
+                <select class="form-select" onchange="alterarPremioRoleta(${i}, 'itemId', this.value)"
+                        style="${orfao ? 'border-color:var(--danger);' : ''}">
+                    <option value="">— escolha um item —</option>
+                    ${opcoes(p.itemId)}
+                </select>
+                <input type="number" class="form-input" min="0" step="0.1" value="${chance}"
+                       oninput="alterarPremioRoleta(${i}, 'chance', this.value)">
+                <span style="color:${real > 0 ? 'var(--lr-nature)' : 'var(--muted)'};font-weight:700;font-size:.85rem;">
+                    ${real > 0 ? real.toFixed(2) + '%' : '—'}
+                </span>
+                <button class="btn btn-danger btn-small" onclick="removerPremioRoleta(${i})"
+                        title="Remover prêmio" style="padding:2px 8px;">✕</button>
+            </div>
+            ${orfao ? `<div style="color:var(--danger);font-size:.75rem;margin:-2px 0 8px;">
+                ⚠️ O item deste prêmio não existe mais na Loja — escolha outro ou remova a linha.</div>` : ''}`;
+        }).join('')}
+    `;
+}
+
+window.alterarPremioRoleta = function(i, campo, valor) {
+    if (!roletaPremios[i]) return;
+    roletaPremios[i][campo] = campo === 'chance' ? (parseFloat(valor) || 0) : valor;
+    // Só a coluna "na prática" e o resumo mudam; redesenhar tudo faria o campo
+    // perder o foco a cada tecla digitada.
+    if (campo === 'chance') atualizarPercentuaisRoleta();
+};
+
+function atualizarPercentuaisRoleta() {
+    const total = roletaPremios.reduce((s, p) => s + (Number(p.chance) > 0 ? Number(p.chance) : 0), 0);
+    const container = document.getElementById('roletaContainer');
+    const resumo = document.getElementById('roletaResumo');
+    if (!container) return;
+    container.querySelectorAll('span[style*="font-weight:700"]').forEach((el, i) => {
+        const chance = Number(roletaPremios[i]?.chance) || 0;
+        el.textContent = total > 0 && chance > 0 ? (chance / total * 100).toFixed(2) + '%' : '—';
+    });
+    if (resumo) {
+        resumo.textContent = `${roletaPremios.length} prêmios · soma das chances: ${total.toFixed(1)} (não precisa dar 100)`;
+    }
+}
+
+window.addPremioRoleta = function() {
+    roletaPremios.push({ itemId: '', nome: '', imagem: '', chance: 1 });
+    renderRoletaUI();
+};
+
+window.removerPremioRoleta = function(i) {
+    roletaPremios.splice(i, 1);
+    renderRoletaUI();
+};
+
+window.salvarRoleta = async function() {
+    const semItem = roletaPremios.filter(p => !p.itemId);
+    if (semItem.length) {
+        showAlert(`❌ ${semItem.length} prêmio(s) sem item escolhido.`, 'warning');
+        return;
+    }
+    try {
+        // `nome` e `imagem` são cópia só para a roda desenhar sem varrer a Loja
+        // inteira no navegador. Quem vale na entrega é o itemId, relido no
+        // servidor na hora do giro.
+        const premios = roletaPremios.map(p => {
+            const item = lojaItens.find(i => i.id === p.itemId) || {};
+            return {
+                itemId: p.itemId,
+                nome: item.nome || p.nome || '',
+                imagem: item.imagem || '',
+                chance: Number(p.chance) || 0,
+            };
+        });
+        await setDoc(doc(db, 'config', 'roleta'), {
+            premios,
+            atualizadoEm: new Date().toISOString(),
+            atualizadoPor: S.currentUser?.email || '',
+        });
+        roletaPremios = premios;
+        renderRoletaUI();
+        showAlert('✅ Roleta salva.', 'success');
+        await addLog(S.currentUser?.email, `atualizou a Roleta (${premios.length} prêmios)`, '', 'apoios');
+    } catch (e) {
+        console.error('❌ Erro ao salvar a roleta:', e);
+        showAlert('❌ Erro ao salvar a roleta.', 'danger');
     }
 };
 
