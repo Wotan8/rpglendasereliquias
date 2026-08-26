@@ -287,6 +287,93 @@ const w = fr.contentWindow;
     await new Promise(r => setTimeout(r, 60));
 }
 
+/* ===== O TEXTO SOBRE A ARTE: CADA CANTO, SEM CORTE =====
+   O defeito relatado: com o titulo no "rodape" o botao saia pela borda de
+   baixo. A folga era declarada em cada posicao, no bloco de texto, e no rodape
+   a conta nao fechava — `align-items: end` encostava o bloco no fim do palco e
+   o `overflow: hidden` comia o botao. Agora a folga e padding do PALCO, entao
+   nenhuma combinacao alcanca a borda. Este teste varre TODAS. */
+{
+    const palco = d.querySelector('.portal-hero-palco');
+    const aplicar = w.portalHeroAplicarTexto;
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · o hero expõe o aplicador de texto`,
+        typeof aplicar === 'function');
+
+    if (typeof aplicar === 'function' && palco) {
+        const cantos = ['topo', 'centro', 'base'];
+        const lados = ['esquerda', 'centro', 'direita'];
+        /* Mede contra a TELA, não contra o palco. Medir contra o palco foi o
+           erro da primeira versão deste teste: o defeito era justamente o
+           palco terminar fora da tela (100svh começando abaixo do cabeçalho
+           sticky), então o conteúdo ficava dentro do palco e fora da vista, e
+           o teste dava verde com o botão cortado. */
+        const dentro = (el) => {
+            const r = el.getBoundingClientRect();
+            return r.top >= -1 && r.bottom <= fr.clientHeight + 1
+                && r.left >= -1 && r.right <= fr.clientWidth + 1;
+        };
+        let fora = [];
+        for (const v of cantos) for (const h of lados) {
+            aplicar({ titulo: true, cta: true, vertical: v, horizontal: h });
+            await new Promise(r => setTimeout(r, 20));
+            const cta = palco.querySelector('.portal-hero-cta');
+            const txt = palco.querySelector('.portal-hero-texto');
+            if (cta && !cta.hidden && !dentro(cta)) fora.push(`botão em ${v}/${h}`);
+            if (txt && !txt.hidden && !dentro(txt)) fora.push(`título em ${v}/${h}`);
+        }
+        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · nas 9 posições nada sai da tela`,
+            fora.length === 0);
+        if (fora.length) linhas.push(
+            `<tr><td colspan="2" style="color:var(--lr-blood-2)">saiu: ${fora.join(', ')}</td></tr>`);
+
+        // ---- botao com canto proprio ----
+        aplicar({ titulo: true, cta: true, vertical: 'topo', horizontal: 'centro',
+                  ctaV: 'base', ctaH: 'direita' });
+        await new Promise(r => setTimeout(r, 30));
+        const cta = palco.querySelector('.portal-hero-cta');
+        const txt = palco.querySelector('.portal-hero-texto');
+        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · com canto próprio o botão sai de dentro do bloco de texto`,
+            cta && cta.parentElement === palco);
+        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · e vai de fato para outro canto que o título`,
+            cta && txt && cta.getBoundingClientRect().top > txt.getBoundingClientRect().bottom);
+        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · sem sair da borda mesmo assim`,
+            cta && dentro(cta));
+
+        // ---- "junto do titulo" devolve o botao para dentro ----
+        aplicar({ titulo: true, cta: true, vertical: 'centro', horizontal: 'centro' });
+        await new Promise(r => setTimeout(r, 30));
+        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · voltando para "junto do título" ele empilha de novo`,
+            palco.querySelector('.portal-hero-cta')?.parentElement
+                === palco.querySelector('.portal-hero-texto'));
+
+        // ---- tamanho ----
+        const larguras = {};
+        for (const tam of ['minimo', 'medio', 'grande']) {
+            aplicar({ titulo: true, cta: true, ctaTam: tam });
+            await new Promise(r => setTimeout(r, 20));
+            larguras[tam] = palco.querySelector('.portal-hero-cta').getBoundingClientRect().width;
+        }
+        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · os três tamanhos de botão são mesmo diferentes `
+          + `(${Math.round(larguras.minimo)} / ${Math.round(larguras.medio)} / ${Math.round(larguras.grande)}px)`,
+            larguras.minimo < larguras.medio && larguras.medio < larguras.grande);
+
+        // ---- ritmo: trilho mais alto = mais rolagem por quadro ----
+        const trilho = d.getElementById('heroTrilho');
+        const alturas = {};
+        for (const ritmo of ['rapido', 'normal', 'lento', 'bem-lento']) {
+            aplicar({ titulo: true, cta: true, ritmo });
+            await new Promise(r => setTimeout(r, 20));
+            alturas[ritmo] = trilho.getBoundingClientRect().height;
+        }
+        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · a velocidade da animação muda a rolagem por quadro `
+          + `(${Object.values(alturas).map(Math.round).join(' < ')})`,
+            alturas.rapido < alturas.normal && alturas.normal < alturas.lento
+            && alturas.lento < alturas['bem-lento']);
+
+        aplicar({ titulo: true, cta: true });   // devolve o palco ao padrão
+    }
+}
+
 /* ===== FUNCAO ESCRITA E NUNCA CHAMADA =====
    `carregarConfig()` do menu-hero.js — a que le as imagens da animacao que o
    Criador subiu — ficou meses definida SEM CHAMADOR. O hero nunca tentou ler
@@ -317,6 +404,31 @@ const w = fr.contentWindow;
     // e a que causou o problema, pelo nome, porque foi ela que custou caro
     t(`T${(linhas.length + 1).toString().padStart(2, '0')} · a leitura da config do hero é de fato chamada`,
         /(^|[^\w.])carregarConfig\s*\)/.test(fonte) || /carregarConfig\(\s*\)/.test(fonte));
+}
+
+/* ===== OS DOIS TEXTO_PADRAO TEM DE BATER =====
+   menu-hero.js e script classico e menu-portal-config.js e modulo, entao um
+   nao importa o outro e o objeto de padroes existe DUAS vezes. Campo novo em
+   um so significa configuracao que a tela salva e o hero ignora — em silencio.
+   Aqui as duas listas de chaves sao comparadas. */
+{
+    const chaves = (txt) => {
+        const m = txt.match(/TEXTO_PADRAO\s*=\s*\{([\s\S]*?)\}\s*;/);
+        return m ? [...m[1].matchAll(/([A-Za-z_$][\w$]*)\s*:/g)].map(x => x[1]).sort() : null;
+    };
+    const [a, b] = await Promise.all([
+        fetch('menu/js/menu-hero.js?cb=' + Date.now()).then(r => r.text()),
+        fetch('menu/js/menu-portal-config.js?cb=' + Date.now()).then(r => r.text()),
+    ]);
+    const ka = chaves(a), kb = chaves(b);
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · os dois TEXTO_PADRAO têm os mesmos campos `
+      + `(${(ka || []).length})`,
+        !!ka && !!kb && ka.join(',') === kb.join(','));
+    if (ka && kb && ka.join(',') !== kb.join(',')) {
+        const so = (x, y) => x.filter(k => !y.includes(k));
+        linhas.push(`<tr><td colspan="2" style="color:var(--lr-blood-2)">só no hero: ${so(ka, kb).join(', ') || '—'}`
+            + ` · só na config: ${so(kb, ka).join(', ') || '—'}</td></tr>`);
+    }
 }
 
 document.getElementById('saida').innerHTML = linhas.join('');

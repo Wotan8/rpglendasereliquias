@@ -160,21 +160,61 @@
     /* Título e botão por cima da arte: quem manda é o Criador, na aba Portal.
        Vira atributo no palco e o CSS posiciona — sem estilo inline, para o
        tema e o celular continuarem tendo a palavra. */
-    var TEXTO_PADRAO = { titulo: true, cta: true, vertical: 'centro', horizontal: 'centro', veu: 'medio' };
+    /* ⚠️ ESTE OBJETO TEM UM GÊMEO em menu/js/menu-portal-config.js, e os dois
+       precisam bater. Não dá para importar um do outro: este arquivo é script
+       clássico (roda antes dos módulos, de propósito, para o selo já estar
+       pintado no primeiro quadro) e aquele é módulo. Quem cobra a igualdade é
+       __check-portal-raiz.html — foi para isso que o teste entrou. */
+    var TEXTO_PADRAO = {
+        titulo: true, cta: true,
+        vertical: 'centro', horizontal: 'centro',
+        ctaV: 'igual', ctaH: 'igual', ctaTam: 'medio',
+        veu: 'medio', ritmo: 'normal',
+    };
 
     window.portalHeroAplicarTexto = function (t) {
         var v = Object.assign({}, TEXTO_PADRAO, t || {});
         var palco = canvas.parentElement;
         var texto = palco && palco.querySelector('.portal-hero-texto');
-        var cta = texto && texto.querySelector('.portal-hero-cta');
+        // Procura no PALCO, não no texto: o botão pode já ter saído de lá.
+        var cta = palco && palco.querySelector('.portal-hero-cta');
         if (!palco || !texto) return;
+
         palco.dataset.v = v.vertical;
         palco.dataset.h = v.horizontal;
         palco.dataset.veu = v.veu;
+
+        // Ritmo da animação = altura do trilho (ver menu.css). Rolar mais para
+        // trocar de quadro é a mesma coisa que animar mais devagar.
+        if (trilho) {
+            if (v.ritmo && v.ritmo !== 'normal') trilho.dataset.ritmo = v.ritmo;
+            else delete trilho.dataset.ritmo;
+        }
+
         texto.hidden = !v.titulo && !v.cta;
         // Esconder o título mas manter o botão: o h1 e o lema saem, o CTA fica.
         texto.classList.toggle('sem-titulo', !v.titulo);
-        if (cta) cta.hidden = !v.cta;
+        if (!cta) return;
+        cta.hidden = !v.cta;
+        cta.dataset.tam = v.ctaTam;
+
+        /* CANTO PRÓPRIO PARA O BOTÃO.
+           Com 'igual' nos dois eixos ele volta para DENTRO do bloco de texto e
+           empilha embaixo do lema, que é como sempre foi. Com um canto seu, ele
+           sai para o palco e se posiciona sozinho.
+           Mover o nó é o que evita a alternativa ruim: deixar os dois soltos na
+           mesma célula do grid e vê-los se sobrepondo quando o Criador escolhe
+           o mesmo canto para ambos. */
+        var proprio = v.ctaV !== 'igual' || v.ctaH !== 'igual';
+        if (proprio) {
+            if (cta.parentElement !== palco) palco.appendChild(cta);
+            cta.dataset.cv = v.ctaV === 'igual' ? v.vertical : v.ctaV;
+            cta.dataset.ch = v.ctaH === 'igual' ? v.horizontal : v.ctaH;
+        } else {
+            if (cta.parentElement !== texto) texto.appendChild(cta);
+            delete cta.dataset.cv;
+            delete cta.dataset.ch;
+        }
     };
 
     /* Sequência configurada pelo Criador (portal-config/hero — leitura
@@ -272,6 +312,19 @@
        dos dois em toda visita, com ou sem login. `configTentada` só é marcada
        quando a leitura de fato começa, então a tentativa que sai cedo demais
        não queima a vez. */
+    /* Altura do cabeçalho -> CSS, para o palco descontar (ver menu.css).
+       Medida, e não somada dos tokens: quanto as faixas ocupam depende da
+       largura, de estar logado e de o rótulo quebrar em duas linhas. */
+    function medirCabecalho() {
+        var cab = document.querySelector('.portal-topo');
+        var h = cab ? Math.round(cab.getBoundingClientRect().height) : 0;
+        document.documentElement.style.setProperty('--portal-cabecalho-h', h + 'px');
+    }
+    medirCabecalho();
+    window.addEventListener('resize', medirCabecalho);
+    document.addEventListener('portal:logado', medirCabecalho);
+    document.addEventListener('portal:deslogado', medirCabecalho);
+
     carregarConfig();
     document.addEventListener('portal:logado', carregarConfig);
     document.addEventListener('portal:deslogado', carregarConfig);

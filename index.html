@@ -21,7 +21,7 @@
 <script type="module">import '/shared/detalhe.js?v=4';</script>
 <link rel="stylesheet" href="/shared/dialogo.css?v=2">
 <script type="module">import '/shared/dialogo.js?v=2';</script>
-    <link rel="stylesheet" href="/menu/css/menu.css?v=31">
+    <link rel="stylesheet" href="/menu/css/menu.css?v=33">
     <link rel="stylesheet" href="/shared/tokens.css?v=11">
     <script src="/shared/theme.js"></script>
     <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout Mercado Pago contra bots/abuso. -->
@@ -458,7 +458,7 @@
                         </select>
                     </label>
                     <label class="cfg-campo">
-                        <span>Posição na vertical</span>
+                        <span>Título — posição na vertical</span>
                         <select id="cfgVertical">
                             <option value="centro">Centro</option>
                             <option value="topo">Topo</option>
@@ -466,11 +466,46 @@
                         </select>
                     </label>
                     <label class="cfg-campo">
-                        <span>Posição na horizontal</span>
+                        <span>Título — posição na horizontal</span>
                         <select id="cfgHorizontal">
                             <option value="centro">Centro</option>
                             <option value="esquerda">Esquerda</option>
                             <option value="direita">Direita</option>
+                        </select>
+                    </label>
+                    <label class="cfg-campo">
+                        <span>Botão — posição na vertical</span>
+                        <select id="cfgCtaV">
+                            <option value="igual">Junto do título</option>
+                            <option value="topo">Topo</option>
+                            <option value="centro">Centro</option>
+                            <option value="base">Rodapé</option>
+                        </select>
+                    </label>
+                    <label class="cfg-campo">
+                        <span>Botão — posição na horizontal</span>
+                        <select id="cfgCtaH">
+                            <option value="igual">Junto do título</option>
+                            <option value="esquerda">Esquerda</option>
+                            <option value="centro">Centro</option>
+                            <option value="direita">Direita</option>
+                        </select>
+                    </label>
+                    <label class="cfg-campo">
+                        <span>Tamanho do botão</span>
+                        <select id="cfgCtaTam">
+                            <option value="medio">Médio</option>
+                            <option value="grande">Grande</option>
+                            <option value="minimo">Mínimo</option>
+                        </select>
+                    </label>
+                    <label class="cfg-campo">
+                        <span>Velocidade da animação</span>
+                        <select id="cfgRitmo">
+                            <option value="normal">Normal</option>
+                            <option value="rapido">Rápida — menos rolagem por quadro</option>
+                            <option value="lento">Lenta — mais rolagem por quadro</option>
+                            <option value="bem-lento">Bem lenta</option>
                         </select>
                     </label>
                     <label class="cfg-campo">
@@ -584,8 +619,8 @@
          do módulo que o usa. -->
     <script src="/shared/livro-vinculado.js?v=9"></script>
     <script type="module" src="/menu/js/menu-wiki.js?v=6"></script>
-    <script type="module" src="/menu/js/menu-portal-config.js?v=2"></script>
-    <script src="/menu/js/menu-hero.js?v=5"></script>
+    <script type="module" src="/menu/js/menu-portal-config.js?v=3"></script>
+    <script src="/menu/js/menu-hero.js?v=7"></script>
 
 </body>
 

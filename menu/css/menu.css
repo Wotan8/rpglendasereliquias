@@ -2252,17 +2252,42 @@ html:not(.dark) .meta-card {
 /* ---------- hero: selo rúnico guiado pelo scroll ---------- */
 /* Seção de topo, fora do container da mesa: a largura da janela vem de graça,
    sem `100vw` (que conta a barra de rolagem e cria rolagem horizontal). */
+/* A ALTURA DO TRILHO É A VELOCIDADE DA ANIMAÇÃO.
+   `progresso()` divide o quanto já se rolou pela altura do trilho, então
+   trilho mais alto = mais scroll para trocar de quadro = animação mais lenta.
+   Não há cronômetro nenhum envolvido: é só esta altura. */
 .portal-hero-trilho { height: 220vh; }
+.portal-hero-trilho[data-ritmo="rapido"] { height: 130vh; }
+.portal-hero-trilho[data-ritmo="lento"] { height: 340vh; }
+.portal-hero-trilho[data-ritmo="bem-lento"] { height: 520vh; }
 .portal-hero-trilho[hidden] { display: none; }
 
+/* ⚠️ O PALCO DESCONTA O CABEÇALHO.
+   O `.portal-topo` é sticky e ocupa altura de fluxo ACIMA do trilho, então um
+   palco de `100svh` grudado em `top: 0` começa embaixo dele e termina fora da
+   tela pela mesma medida. Com `align-items: end` — o "rodapé" da configuração
+   — o conteúdo ia justamente para esse pedaço invisível, e o botão saía pela
+   borda de baixo. Era o defeito relatado.
+   A altura do cabeçalho é MEDIDA por menu-hero.js e publicada aqui como
+   `--portal-cabecalho-h`: os tokens `--portal-topo-h`/`--portal-abas-h`
+   descrevem as duas faixas, mas quanto elas somam na tela depende da largura,
+   de estar logado e de o rótulo quebrar — medir é a única forma que não
+   envelhece. O `0px` de reserva mantém a página inteira se o script não rodar. */
 .portal-hero-palco {
     position: sticky;
-    top: 0;
+    top: var(--portal-cabecalho-h, 0px);
     height: 100vh;
-    height: 100svh;
+    height: calc(100svh - var(--portal-cabecalho-h, 0px));
     overflow: hidden;
     display: grid;
+    grid-template-areas: 'palco';
     place-items: center;
+    /* A FOLGA MORA AQUI, no palco, não em cada posição.
+       Antes cada canto tinha o seu `padding` no bloco de texto, e no rodapé a
+       conta não fechava: `align-items: end` encostava o bloco no fim do palco e
+       o `overflow: hidden` comia o botão. Como padding do container, a borda
+       nunca é alcançada, esteja o conteúdo em que canto estiver. */
+    padding: var(--lr-space-6) var(--lr-space-5);
 }
 
 #heroCanvas {
@@ -2284,11 +2309,17 @@ html:not(.dark) .meta-card {
     pointer-events: none;
 }
 
+/* Os dois ficam na mesma célula do grid. Quando o botão mora DENTRO do bloco
+   de texto (o padrão), há um filho só e ele empilha como sempre; quando o
+   Criador dá ao botão um canto próprio, o JS o move para fora e os dois se
+   posicionam sozinhos, sem disputar espaço. */
+.portal-hero-texto,
+.portal-hero-palco > .portal-hero-cta { grid-area: palco; }
+
 .portal-hero-texto {
     position: relative;
     z-index: var(--lr-z-base);
     text-align: center;
-    padding: 0 var(--lr-space-5);
     max-width: 860px;
 }
 
@@ -2303,9 +2334,16 @@ html:not(.dark) .meta-card {
 .portal-hero-palco[data-h="esquerda"] .portal-hero-texto { text-align: left; }
 .portal-hero-palco[data-h="direita"] .portal-hero-texto { text-align: right; }
 
-/* Fora do centro, o texto encosta na borda da tela sem uma folga própria. */
-.portal-hero-palco[data-v="topo"] .portal-hero-texto { padding-top: var(--lr-space-6); }
-.portal-hero-palco[data-v="base"] .portal-hero-texto { padding-bottom: var(--lr-space-7); }
+/* O botão com canto próprio: `-self` vence o `-items` do palco, então ele sai
+   de onde o título está sem levar o título junto. */
+.portal-hero-cta[data-cv="topo"] { align-self: start; }
+.portal-hero-cta[data-cv="centro"] { align-self: center; }
+.portal-hero-cta[data-cv="base"] { align-self: end; }
+.portal-hero-cta[data-ch="esquerda"] { justify-self: start; }
+.portal-hero-cta[data-ch="centro"] { justify-self: center; }
+.portal-hero-cta[data-ch="direita"] { justify-self: end; }
+/* Solto no palco ele não tem o texto em cima para se afastar. */
+.portal-hero-palco > .portal-hero-cta { margin-top: 0; }
 
 /* Só o botão: o h1 e o lema saem, o convite fica. */
 .portal-hero-texto.sem-titulo h1,
@@ -2344,6 +2382,17 @@ html:not(.dark) .meta-card {
     padding: var(--lr-space-3) var(--lr-space-6);
     border-radius: var(--lr-radius);
     transition: background var(--lr-t-base) var(--lr-ease), transform var(--lr-t-fast) var(--lr-ease);
+}
+
+/* Três tamanhos: o mínimo para quando a arte é o assunto e o convite só
+   precisa existir; o grande para quando ele É a chamada. */
+.portal-hero-cta[data-tam="minimo"] {
+    padding: var(--lr-space-1) var(--lr-space-3);
+    font-size: var(--lr-fs-sm);
+}
+.portal-hero-cta[data-tam="grande"] {
+    padding: var(--lr-space-4) var(--lr-space-7);
+    font-size: var(--lr-fs-lg);
 }
 
 .portal-hero-cta:hover { background: var(--lr-gold-2); }
@@ -3164,4 +3213,15 @@ html:not(.dark) .meta-card {
 
     .roleta-legenda { max-height: 180px; }
     #roletaCanvas { max-width: 300px; }
+}
+
+/* Botão de usar item do Repertório (hoje só o EXP). Fica dentro do corpo do
+   cartão, que é uma coluna flex — sem esta regra o .loja-btn tenta ocupar a
+   base de 150px e estica a linha inteira. O `margin-top:auto` do
+   .rep-recebimento continua empurrando o rodapé para baixo dele. */
+.rep-usar {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    padding: 7px 14px;
+    font-size: .85rem;
 }

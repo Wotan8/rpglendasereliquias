@@ -15,10 +15,22 @@ let ativo = false;
 /* Como o título e o botão se põem por cima da arte. Vive no mesmo doc das
    imagens porque é a mesma decisão: uma paisagem com céu limpo em cima pede o
    texto lá, uma com o assunto ao centro pede embaixo. */
-const TEXTO_PADRAO = { titulo: true, cta: true, vertical: 'centro', horizontal: 'centro', veu: 'medio' };
+/* `vertical`/`horizontal` continuam sendo os do TÍTULO — o nome ficou do
+   tempo em que texto e botão andavam grudados, e renomear quebraria o doc que
+   já está salvo em portal-config/hero.
+   `ctaV`/`ctaH` nascem em 'igual': o botão acompanha o título, que é o
+   comportamento de sempre. Assim o documento antigo, sem estes campos, continua
+   desenhando exatamente a mesma tela. */
+const TEXTO_PADRAO = {
+    titulo: true, cta: true,
+    vertical: 'centro', horizontal: 'centro',
+    ctaV: 'igual', ctaH: 'igual', ctaTam: 'medio',
+    veu: 'medio', ritmo: 'normal',
+};
 const CAMPOS = {
     cfgMostrarTitulo: 'titulo', cfgMostrarCta: 'cta',
     cfgVertical: 'vertical', cfgHorizontal: 'horizontal', cfgVeu: 'veu',
+    cfgCtaV: 'ctaV', cfgCtaH: 'ctaH', cfgCtaTam: 'ctaTam', cfgRitmo: 'ritmo',
 };
 
 /** Lê os selects. Os dois primeiros são "1"/"0" e viram booleano. */
