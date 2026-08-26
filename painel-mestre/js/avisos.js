@@ -1,0 +1,150 @@
+// =============================================
+// AVISOS DO MESTRE
+// O sistema sempre soube avisar o jogador; não tinha caminho de volta. Esta é
+// a caixa de entrada do mestre: uma fila em `avisos_mestre`, escrita só pelo
+// servidor, que o painel escuta em tempo real.
+//
+// Fica na barra do topo, e não numa aba, porque aviso não pertence a área
+// nenhuma — chega de qualquer canto do sistema.
+// =============================================
+
+import { db, collection, query, where, orderBy, onSnapshot, doc, updateDoc, getDocs } from './firebase-config.js';
+import { escapeHtml, showAlert } from './ui-utils.js';
+import * as S from './state.js';
+
+let avisos = [];
+let janela = null;
+let parar = null;   // encerra o onSnapshot
+
+const QUANDO = (ts) => {
+    if (!ts) return '';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+};
+
+const ICONE = {
+    'personagem-entregue': '📜',
+    'item-para-mesa': '🎁',
+    geral: '📣',
+};
+
+/** Liga a escuta. Chamada uma vez, quando o painel confirma que é mestre. */
+export function iniciarAvisos() {
+    if (parar) return;
+    // Sem orderBy no servidor: `criadoEm` só existe depois que o servidor
+    // resolve o timestamp, e um aviso recém-criado ficaria de fora do índice
+    // por um instante. A ordenação é feita aqui, que é barato para uma fila.
+    const q = query(collection(db, 'avisos_mestre'), where('status', '==', 'novo'));
+    parar = onSnapshot(q, (snap) => {
+        avisos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            .sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0));
+        pintarBadge();
+        if (janela?.open) pintarLista();
+    }, (e) => {
+        // Sem permissão ou sem rede: o painel segue funcionando sem a caixa.
+        console.warn('avisos do mestre indisponíveis:', e.message);
+    });
+}
+
+function pintarBadge() {
+    const badge = document.getElementById('avisosBadge');
+    if (!badge) return;
+    badge.textContent = avisos.length;
+    badge.hidden = avisos.length === 0;
+}
+
+function pintarLista() {
+    const lista = document.getElementById('avisosLista');
+    if (!lista) return;
+
+    if (avisos.length === 0) {
+        lista.innerHTML = `<div class="avisos-vazio">Nada esperando por você.<br>
+            Quando um jogador entregar um personagem ou mandar algo para a mesa, aparece aqui.</div>`;
+        return;
+    }
+
+    lista.innerHTML = avisos.map(a => `
+        <div class="aviso" data-id="${escapeHtml(a.id)}">
+            <div class="aviso-icone">${ICONE[a.tipo] || ICONE.geral}</div>
+            <div class="aviso-corpo">
+                <div class="aviso-titulo">${escapeHtml(a.titulo || 'Aviso')}</div>
+                <div class="aviso-msg">${escapeHtml(a.mensagem || '')}</div>
+                <div class="aviso-pe">
+                    ${a.jogador ? `<span>${escapeHtml(a.jogador)}</span>` : ''}
+                    ${a.criadoEm ? `<span>${QUANDO(a.criadoEm)}</span>` : ''}
+                </div>
+            </div>
+            <div class="aviso-bts">
+                ${a.referencia?.colecao === 'npcs'
+            ? `<button class="btn btn-primary btn-small" onclick="avisoIrParaNpc('${escapeHtml(a.referencia.id)}')">Ver NPC</button>`
+            : ''}
+                <button class="btn btn-secondary btn-small" onclick="avisoMarcarLido('${escapeHtml(a.id)}')">Resolvido</button>
+            </div>
+        </div>`).join('');
+}
+
+function montarJanela() {
+    janela = document.createElement('dialog');
+    janela.className = 'lr-avisos';
+    janela.innerHTML = `
+        <div class="avisos-topo">
+            <span class="avisos-titulo">📣 Avisos dos jogadores</span>
+            <div style="display:flex;gap:6px">
+                <button class="avisos-icone" id="btnLerTudo" onclick="avisoMarcarTudo()"
+                    title="Marcar todos como resolvidos">✔️</button>
+                <button class="avisos-icone" onclick="this.closest('dialog').close()" aria-label="Fechar">✕</button>
+            </div>
+        </div>
+        <div class="avisos-lista" id="avisosLista"></div>`;
+    document.body.appendChild(janela);
+    janela.addEventListener('click', e => { if (e.target === janela) janela.close(); });
+}
+
+window.abrirAvisos = function () {
+    if (!janela) montarJanela();
+    pintarLista();
+    janela.showModal();
+};
+
+window.avisoMarcarLido = async function (id) {
+    try {
+        await updateDoc(doc(db, 'avisos_mestre', id), {
+            status: 'lido',
+            lidoEm: new Date().toISOString(),
+            lidoPor: S.currentUser?.email || '',
+        });
+        // O onSnapshot tira da lista sozinho (a consulta é por status === novo).
+    } catch (e) {
+        console.error('erro ao marcar aviso:', e);
+        showAlert('❌ Não foi possível marcar o aviso.', 'danger');
+    }
+};
+
+window.avisoMarcarTudo = async function () {
+    const pendentes = [...avisos];
+    if (!pendentes.length) return;
+    for (const a of pendentes) await window.avisoMarcarLido(a.id);
+    showAlert(`✅ ${pendentes.length} aviso(s) resolvidos.`, 'success');
+};
+
+/** Leva o mestre até o NPC que o aviso cita, já com a busca preenchida. */
+window.avisoIrParaNpc = async function (npcId) {
+    janela?.close();
+    if (typeof window.switchTab === 'function') await window.switchTab('npcs');
+    // O painel de NPCs filtra por texto; achar o nome é o caminho mais curto
+    // que não depende de API interna dele.
+    try {
+        const alvo = avisos.find(a => a.referencia?.id === npcId);
+        const campo = document.getElementById('npcSearchInput');
+        if (campo && alvo?.referencia?.nome) {
+            campo.value = alvo.referencia.nome;
+            campo.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    } catch (e) { /* a aba abriu, que é o essencial */ }
+};
+
+/** Usada pelo e2e e por quem quiser conferir a fila sem abrir a janela. */
+export async function contarAvisos() {
+    const snap = await getDocs(query(collection(db, 'avisos_mestre'), where('status', '==', 'novo')));
+    return snap.size;
+}

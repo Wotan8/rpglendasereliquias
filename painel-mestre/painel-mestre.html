@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="../shared/dialogo.css?v=2">
 <script type="module">import '../shared/dialogo.js?v=2';</script>
     <link rel="stylesheet" href="css/base.css?v=2">
-    <link rel="stylesheet" href="css/layout.css?v=5">
+    <link rel="stylesheet" href="css/layout.css?v=6">
     <link rel="stylesheet" href="css/tabs.css?v=2">
     <link rel="stylesheet" href="css/modais.css?v=3">
     <link rel="stylesheet" href="css/area-mesas.css?v=5">
@@ -58,6 +58,12 @@
         <button onclick="goToWorldbuilding()"><svg class="lr-ico"><use href="#i-globo"/></svg> Worldbuilding</button>
         <button onclick="goToHexmap()"><svg class="lr-ico"><use href="#i-mapa"/></svg> Hexmap</button>
         <div class="spacer"></div>
+        <!-- Avisos: a fila do que os jogadores mandaram para o mestre resolver.
+             Fica na barra, e não numa aba, porque aviso não pertence a área
+             nenhuma — chega de qualquer canto do sistema. -->
+        <button id="btnAvisos" onclick="abrirAvisos()" title="Avisos dos jogadores"
+            style="position:relative"><svg class="lr-ico"><use href="#i-megafone"/></svg>
+            <span id="avisosBadge" class="avisos-badge" hidden>0</span></button>
         <button id="btnThemeToggle" onclick="toggleTheme()" title="Alternar tema"><svg class="lr-ico"><use href="#i-lua"/></svg></button>
         <div class="user-info">
             <span class="user-name" id="userDisplayName"></span>
@@ -805,5 +811,5 @@
     <script src="../ficha-v1.7_1/js/system-data-loader.js"></script>
     <script src="../shared/equip-slots.js?v=3"></script>
     <script src="../shared/predef-campos.js?v=1"></script>
-    <script type="module" src="js/main.js?v=19"></script>
+    <script type="module" src="js/main.js?v=20"></script>
 </body>

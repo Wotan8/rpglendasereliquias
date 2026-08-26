@@ -91,6 +91,18 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    /* Fila de avisos para o mestre. Criada SÓ pelo servidor: aviso que o
+       navegador cria é aviso que o navegador forja.
+       A leitura aceita os DOIS jeitos de ser mestre porque o painel entra pelo
+       `role` em users e as rules olham a coleção `masters` — hoje 2 dos 3
+       mestres não têm doc em `masters` e não veriam aviso nenhum.
+       O update existe para marcar como lido; o delete não, para ninguém
+       apagar o que não quis resolver. */
+    match /avisos_mestre/{avisoId} {
+      allow read, update: if isSignedIn() && (isMaster() || temPapelMestre());
+      allow create, delete: if false;
+    }
+
     // Cada aplicação de EXP do Repertório numa ficha — escrita SOMENTE pelo
     // servidor. EXP é comprado com dinheiro; tem de dar para reconstruir quem
     // aplicou o quê, em quem e quando.

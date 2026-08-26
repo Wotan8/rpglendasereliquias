@@ -103,6 +103,36 @@ async function getMetasNames(metas) {
 }
 
 // ---------------------------------------------
+// AVISO AO MESTRE
+// O sistema sabia avisar o jogador (users.notifications), mas não tinha
+// caminho de volta: nada conseguia chamar a atenção do mestre. Esta é a fila.
+// Um documento por aviso, com status — o mesmo desenho que a antiga aba de
+// compras usava, que é o que o painel sabe ler e contar.
+// Escrita SÓ por aqui: aviso que o navegador cria é aviso que o navegador
+// forja.
+// ---------------------------------------------
+function avisarMestre(tx, aviso) {
+  const ref = db.collection("avisos_mestre").doc();
+  const doc = {
+    tipo: aviso.tipo || "geral",
+    titulo: aviso.titulo || "Aviso",
+    mensagem: aviso.mensagem || "",
+    // Quem gerou, para o mestre saber com quem falar
+    jogadorUid: aviso.jogadorUid || "",
+    jogador: aviso.jogador || "",
+    // Para onde o mestre precisa ir resolver (ex.: npcs/<id>)
+    referencia: aviso.referencia || null,
+    mesaId: aviso.mesaId || "",
+    acao: aviso.acao || "",
+    status: "novo",
+    criadoEm: FieldValue.serverTimestamp(),
+  };
+  if (tx) tx.set(ref, doc);
+  else return ref.set(doc).then(() => ref.id);
+  return ref.id;
+}
+
+// ---------------------------------------------
 // Helper: localizar o documento do usuário
 // (mesma ordem de busca do findUserDoc do frontend:
 //  1) campo uid, 2) campo email, 3) doc com ID = uid)
@@ -664,6 +694,28 @@ exports.encerrarPersonagem = onCall(
 
       tx.update(userRef, { inventario, notifications });
       tx.delete(charRef);
+
+      /* Entrega precisa de aviso: o NPC aparece no cadastro, mas em silêncio.
+         O mestre tem de saber que aquilo era o personagem de alguém e que
+         está esperando um lugar no mundo. */
+      if (destino === "mestre") {
+        avisarMestre(tx, {
+          tipo: "personagem-entregue",
+          titulo: `${nome} foi entregue por um jogador`,
+          mensagem:
+            `${data.displayName || data.email || email} encerrou o personagem ${nome} e entregou ao mestre. ` +
+            `A ficha virou NPC${itensSnap.size ? ` e levou ${itensSnap.size} item(ns) junto` : ""}. ` +
+            `Falta você dar um lugar a ele no mundo.` +
+            (perdidoNaConversao.length
+              ? ` A história do NPC guarda o que a ficha tinha e o cadastro não comporta.`
+              : ""),
+          jogadorUid: uid,
+          jogador: data.displayName || data.email || email,
+          referencia: { colecao: "npcs", id: npcId, nome },
+          mesaId: ficha.mesaId || (ficha.mesaVinculada && ficha.mesaVinculada.id) || "",
+          acao: "Abrir no cadastro de NPCs",
+        });
+      }
 
       tx.set(db.collection("exp_logs").doc(), {
         uid,

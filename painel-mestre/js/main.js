@@ -10,7 +10,7 @@ import { addLog } from './logs.js';
 // Cache-busting dos imports dinâmicos. Antes era Date.now(), que gerava uma URL
 // nova a cada troca de aba e anulava o cache HTTP e o service worker.
 // Subir junto com o VERSION do sw.js quando os módulos mudarem.
-const V = '?v=v79';
+const V = '?v=v80';
 window._pmV = V;   // imports tardios (area-mesas-npcs) usam a MESMA URL — uma instância só
 
 // ===== AREA MODULES (lazy-loaded on tab switch) =====
@@ -123,6 +123,17 @@ window.switchTab = async function (tabName) {
 
 // ===== INIT =====
 initAuth(async (user) => {
+
+    /* A caixa de avisos escuta desde a entrada, não só quando o mestre abre a
+       janela: o contador na barra é o ponto todo — ele avisa sem ser
+       procurado. Carregado aqui, e não numa aba, porque aviso chega de
+       qualquer canto do sistema. */
+    try {
+        const { iniciarAvisos } = await import('./avisos.js' + V);
+        iniciarAvisos();
+    } catch (e) {
+        console.warn('caixa de avisos indisponível:', e);
+    }
 
     // Load default tab (Mesas)
     await window.switchTab('mesas');
