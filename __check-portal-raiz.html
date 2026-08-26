@@ -104,9 +104,21 @@ const t = (nome, cond) => linhas.push(
 const fr = document.getElementById('palco');
 fr.src = '/?cb=' + Date.now();
 await new Promise(r => { fr.onload = r; setTimeout(r, 8000); });
-await new Promise(r => setTimeout(r, 1500));
 const d = fr.contentDocument;
 const w = fr.contentWindow;
+
+/* `onload` do iframe dispara quando os RECURSOS terminam, não quando os
+   módulos ES rodaram — e é um módulo que publica `switchTab`. A espera fixa de
+   1,5s acertava quase sempre, e "quase sempre" num teste vira falha que aparece
+   uma vez em cada dez execuções e faz suspeitar do código errado. Aqui se
+   espera o que de fato se vai usar. */
+await (async () => {
+    for (let i = 0; i < 120; i++) {                 // até ~6s
+        if (typeof w.switchTab === 'function' && typeof w.portalHeroAplicarTexto === 'function'
+            && d.querySelector('.portal-hero-palco')) return;
+        await new Promise(r => setTimeout(r, 50));
+    }
+})();
 
 {
     t('T12 · a folha do Portal aplicou (o cabeçalho tem altura declarada)',
@@ -409,6 +421,81 @@ const w = fr.contentWindow;
     // e a que causou o problema, pelo nome, porque foi ela que custou caro
     t(`T${(linhas.length + 1).toString().padStart(2, '0')} · a leitura da config do hero é de fato chamada`,
         /(^|[^\w.])carregarConfig\s*\)/.test(fonte) || /carregarConfig\(\s*\)/.test(fonte));
+}
+
+/* ===== BOTAO: O CONTEUDO NO MEIO DA CAIXA =====
+   `shared/lendas-reliquias.css` troca o `display` de TODO botao com icone para
+   `inline-flex` — e isso e (0,1,0) por causa do `:has(> .lr-ico)`, entao empata
+   com qualquer regra de classe da pagina e vence pela ordem de carga. Quem
+   tinha escrito `display: grid; place-items: center` perdia o grid e, com ele,
+   o `justify-items`: sobrava so o eixo vertical e o icone encostava na
+   esquerda. Foi o caso do botao de apagar personagem — 7,5px fora do centro
+   numa caixa de 30px. O olho ve; `getBoundingClientRect` do botao, nao.
+
+   Aqui se mede o CONTEUDO (texto e icones) contra o centro da caixa. */
+{
+    const centro = (el) => {
+        const r = el.getBoundingClientRect();
+        const rs = [];
+        const rg = el.ownerDocument.createRange();
+        rg.selectNodeContents(el);
+        for (const x of rg.getClientRects()) if (x.width && x.height) rs.push(x);
+        for (const g of el.querySelectorAll('svg, img')) {
+            const x = g.getBoundingClientRect();
+            if (x.width && x.height) rs.push(x);
+        }
+        if (!rs.length) return null;
+        const L = Math.min(...rs.map(x => x.left)), R = Math.max(...rs.map(x => x.right));
+        const T = Math.min(...rs.map(x => x.top)), B = Math.max(...rs.map(x => x.bottom));
+        return { dx: (L + R) / 2 - (r.left + r.width / 2), dy: (T + B) / 2 - (r.top + r.height / 2) };
+    };
+
+    /* O botao de apagar e os do modal so existem logado, entao entram aqui
+       montados com a marcacao real — a mesma de menu-firebase.js e index.html. */
+    const banco = d.createElement('div');
+    banco.style.cssText = 'position:fixed;left:-3000px;top:0';
+    banco.innerHTML = `<div class="character-card" style="position:relative;width:220px;height:220px">
+        <button class="pj-apagar"><svg class="lr-ico"><use href="#i-lixeira"/></svg></button></div>
+      <div class="modal-buttons">
+        <button class="btn-modal btn-cancel">❌ Cancelar</button>
+        <button class="btn-modal btn-confirm">Confirmar</button></div>`;
+    d.body.appendChild(banco);
+    await new Promise(r => setTimeout(r, 40));
+
+    const tortos = [];
+    for (const b of [...d.querySelectorAll('button, .btn-modal'), ...banco.querySelectorAll('button')]) {
+        const r = b.getBoundingClientRect();
+        if (r.width < 8 || r.height < 8) continue;
+        const c = centro(b);
+        if (!c) continue;
+        if (Math.abs(c.dx) > 1.5 || Math.abs(c.dy) > 1.5) {
+            const nome = (b.className || b.id || b.tagName).toString().split(' ')[0];
+            tortos.push(`${nome} (${c.dx.toFixed(1)}, ${c.dy.toFixed(1)})`);
+        }
+    }
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · o conteúdo de todo botão fica no meio da caixa`,
+        tortos.length === 0);
+    if (tortos.length) linhas.push(`<tr><td colspan="2" style="color:var(--lr-blood-2)">`
+        + `fora do centro: ${tortos.slice(0, 8).join(', ')}</td></tr>`);
+
+    /* `.btn-cancel` tinha borda de 2px e `.btn-confirm` nenhuma: lado a lado,
+       um era 6px mais alto que o outro para o mesmo rotulo. */
+    const [bc, bf] = banco.querySelectorAll('.btn-modal');
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · Cancelar e Confirmar têm a mesma altura `
+      + `(${Math.round(bc.getBoundingClientRect().height)} e ${Math.round(bf.getBoundingClientRect().height)}px)`,
+        Math.abs(bc.getBoundingClientRect().height - bf.getBoundingClientRect().height) < 1);
+
+    /* E o botao COM rotulo nao pode ter virado centralizado por dentro: icone
+       antes do texto, o par no meio — mas o icone continua colado no padding. */
+    banco.innerHTML = `<button class="btn-modal btn-confirm">
+        <svg class="lr-ico"><use href="#i-check"/></svg> Com rótulo</button>`;
+    await new Promise(r => setTimeout(r, 40));
+    const comRot = banco.querySelector('button');
+    const ico = comRot.querySelector('svg').getBoundingClientRect();
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · botão COM rótulo mantém o ícone antes do texto`,
+        ico.left - comRot.getBoundingClientRect().left > 8);
+
+    banco.remove();
 }
 
 /* ===== A PREVIA DA ABA PORTAL =====

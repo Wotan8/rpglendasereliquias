@@ -1097,13 +1097,24 @@ body {
 }
 
 .btn-modal {
+    /* inline-flex + centro nos dois eixos: com ✕/emoji ao lado do rótulo, o
+       alinhamento por linha de base deixava o glifo e o texto em alturas
+       diferentes. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--lr-space-2);
+    /* Borda TRANSPARENTE. `.btn-cancel` tem borda de 2px e `.btn-confirm` não
+       tinha nenhuma: lado a lado, um era 6px mais alto e 4px mais largo que o
+       outro para o mesmo rótulo. Reservando o espaço aqui, as duas variantes
+       ficam do mesmo tamanho e só a COR da borda muda. */
+    border: 2px solid transparent;
     padding: 10px 20px;
     border-radius: 8px;
     font-weight: 800;
     font-size: .85rem;
     cursor: pointer;
     transition: all .2s;
-    border: none;
     text-transform: uppercase;
     letter-spacing: .3px;
     font-family: var(--font);
@@ -1112,7 +1123,7 @@ body {
 .btn-cancel {
     background: var(--chip);
     color: var(--ink);
-    border: 2px solid var(--soft);
+    border-color: var(--soft);
 }
 
 .btn-confirm {

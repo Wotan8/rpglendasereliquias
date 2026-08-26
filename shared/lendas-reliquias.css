@@ -403,6 +403,20 @@ dialog {
     gap: var(--lr-space-2);
 }
 
+/* ⚠️ BOTÃO SÓ DE ÍCONE tem de centralizar nos DOIS eixos.
+   A regra acima troca o `display` de todo botão com ícone para `inline-flex`, e
+   isso é (0,1,0) por causa do `:has(> .lr-ico)` — empata com qualquer regra de
+   classe da página e vence pela ordem de carga, porque esta folha é a última.
+   Quem tinha escrito `display: grid; place-items: center` para centralizar
+   perdia o `grid` e, com ele, o `justify-items`: sobrava só o eixo vertical, e
+   o ícone ia encostar na esquerda da caixa. Foi o que aconteceu com o botão de
+   apagar personagem — 7,5px fora do centro numa caixa de 30px.
+   `:only-child` é o que separa os dois casos: com rótulo ao lado, `flex-start`
+   continua sendo o certo; sozinho, o ícone é o conteúdo e vai no meio. */
+:where(button, .btn, .tab-button, a):has(> .lr-ico:only-child) {
+    justify-content: center;
+}
+
 /* =====================================================================
    11. RESPONSIVIDADE — mesmo poder em qualquer dispositivo
    ===================================================================== */
