@@ -2487,14 +2487,29 @@ html:not(.dark) .meta-card {
 /* logado: a animação continua para todos; só o convite de scroll some
    mais rápido e o CTA leva para a Home (o Cânone) */
 
-/* movimento reduzido: sem trilho, quadro final estático */
-@media (prefers-reduced-motion: reduce) {
-    .portal-hero-trilho { height: auto; }
+/* ⚠️ MOVIMENTO REDUZIDO NÃO DESLIGA MAIS OS 24 QUADROS — E ISSO É DE PROPÓSITO.
+   Havia aqui um bloco `@media (prefers-reduced-motion: reduce)` que trocava a
+   sequência inteira por um quadro estático: trilho `height: auto`, palco
+   `position: relative; height: 60vh`, dica escondida. Ele saiu por decisão de
+   produto — a animação é o cartão de entrada do Cânone e roda para todo mundo.
 
-    .portal-hero-palco { position: relative; height: 60vh; }
+   Duas coisas para quem pensar em recolocá-lo:
 
-    .portal-hero-dica { display: none; }
-}
+   1. Quem troca de quadro é o dedo de quem lê. Não há relógio nenhum: parou de
+      rolar, parou o quadro. O que corre sozinho é só a inércia do `lerp`, e
+      ESSA continua desligada sob a preferência — em menu-hero.js, não aqui.
+
+   2. Se voltar, o `[data-ritmo]` TEM de entrar nos seletores. `@media` não soma
+      especificidade: `.portal-hero-trilho { height: auto }` pesa (0,1,0) e
+      perde para `.portal-hero-trilho[data-ritmo="bem-lento"]` lá de cima, que
+      pesa (0,2,0). O resultado era o palco encolher para 60vh e o trilho ficar
+      com os 520vh do ritmo escolhido: 3312px de vazio preto medidos embaixo da
+      arte. E o palco precisa de `top: auto` junto — o `top` dele é a altura do
+      cabeçalho e serve ao `sticky`; em `relative` aquilo vira deslocamento de
+      verdade e abre uma faixa preta acima da arte.
+
+   As transições curtas da página seguem zeradas por `shared/tokens.css`, que
+   já trata a preferência para o site inteiro. */
 
 /* ---------- login embutido ---------- */
 .portal-login {

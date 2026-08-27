@@ -469,6 +469,50 @@ t('T11b · o Portal do iframe subiu com a versão atual dos módulos', prontoIfr
     emTelas(null);
 }
 
+/* ===== OS 24 QUADROS RODAM PARA TODO MUNDO =====
+   Havia um `@media (prefers-reduced-motion: reduce)` que trocava a sequencia
+   inteira por um quadro parado — e como `@media` nao soma especificidade, ele
+   nem chegava a funcionar direito: `.portal-hero-trilho { height: auto }` pesa
+   (0,1,0) e perdia para `.portal-hero-trilho[data-ritmo="bem-lento"]`, (0,2,0).
+   O palco encolhia para 60vh, o trilho ficava com 520vh, e sobravam 3312px de
+   preto embaixo da arte.
+   A decisao foi tirar o bloco: quem troca de quadro e o dedo de quem le, e a
+   preferencia agora regula so a inercia do lerp, dentro do menu-hero.js.
+   Este teste tranca as duas pontas — o CSS nao pode voltar a desmontar o hero,
+   e o JS nao pode voltar a desviar o desenho pela preferencia. */
+{
+    const css = await (await fetch('menu/css/menu.css?cb=' + Date.now())).text();
+    const desmontam = (css.match(/@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{([\s\S]*?)\n\}/g) || [])
+        .filter(b => /\.portal-hero-(trilho|palco|dica)\s*[,{[]/.test(b));
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · movimento reduzido nao desmonta mais o hero no CSS`
+      + `${desmontam.length ? ' — ' + desmontam.length + ' bloco(s) ainda mexem nele' : ''}`,
+        desmontam.length === 0);
+
+    const bruto = await (await fetch('menu/js/menu-hero.js?cb=' + Date.now())).text();
+    const fonte = bruto
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
+    // A preferencia pode ser lida, mas so para regular a suavizacao do lerp.
+    const usos = [...fonte.matchAll(/[^\n]*prefers-reduced-motion[^\n]*/g)].map(m => m[0].trim());
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · e no JS ela so regula a suavizacao `
+      + `(${usos.length} uso(s))`,
+        usos.length === 1 && /suavizacao/.test(usos[0]));
+    // O laco tem de ser ligado sem condicao nenhuma em volta.
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · o hero escuta o scroll sem condicao`,
+        /\n\s{0,8}window\.addEventListener\('scroll', acordar/.test(fonte));
+
+    /* E a prova viva: seja qual for a preferencia de quem roda este teste, o
+       trilho precisa ter percurso sobrando alem do palco, e o palco precisa
+       continuar grudado — sem isso nao ha 24 quadros, ha um so. */
+    const tr = d.getElementById('heroTrilho');
+    const pa = tr.querySelector('.portal-hero-palco');
+    const percurso = Math.round(tr.getBoundingClientRect().height - pa.getBoundingClientRect().height);
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · sobra percurso para os 24 quadros (${percurso}px)`,
+        percurso > 300);
+    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · e o palco continua grudado na tela`,
+        w.getComputedStyle(pa).position === 'sticky');
+}
+
 /* ===== BOTAO: O CONTEUDO NO MEIO DA CAIXA =====
    `shared/lendas-reliquias.css` troca o `display` de TODO botao com icone para
    `inline-flex` — e isso e (0,1,0) por causa do `:has(> .lr-ico)`, entao empata

@@ -6,8 +6,8 @@
    O quadro desenhado persegue o alvo com lerp — sem salto visível, e o
    rAF pausa sozinho quando não há movimento (zero custo parado).
 
-   Logado (body.portal-logado) ou prefers-reduced-motion: sem trilho,
-   quadro final estático.
+   A sequência roda para TODO MUNDO, `prefers-reduced-motion` incluído.
+   O que a preferência desliga é só a inércia do lerp (ver `suavizacao`).
 
    Fase futura: o Criador configura uma sequência de imagens; este selo
    permanece como fallback quando não houver nenhuma.
@@ -20,7 +20,17 @@
     var ctx = canvas.getContext('2d');
     var trilho = document.getElementById('heroTrilho');
     var dica = document.getElementById('heroDica');
-    var reduzMovimento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    /* ⚠️ ISTO NÃO DESLIGA MAIS A ANIMAÇÃO — só a INÉRCIA dela.
+       Antes, `prefers-reduced-motion` trocava a sequência inteira por
+       `desenhar(1)`: nem trilho, nem scroll, um quadro parado. Quem tem a
+       preferência ligada no sistema — e é mais gente do que parece, o Windows
+       liga junto com "Mostrar animações" desmarcado — nunca via os 24 quadros.
+       Agora vê. Trocar de quadro é consequência direta do dedo de quem lê:
+       parou de rolar, parou o quadro. O que corria sozinho era o `lerp`, que
+       segue perseguindo o alvo por alguns frames DEPOIS da rolagem parar — e
+       é só isso que a preferência zera aqui, com `suavizacao = 1`: o quadro
+       cola no scroll, 1:1, sem sobra de movimento. */
+    var suavizacao = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 0.18;
 
     var alvo = 0, atual = -1;
     var rodando = false;
@@ -282,16 +292,27 @@
             .catch(function (e) { console.warn('Hero: sem config de imagens, usando o selo.', e); });
     }
 
+    /* QUANTO O PALCO JÁ DESLIZOU DENTRO DO TRILHO — medido, não calculado.
+       Era `(scrollY − trilho.offsetTop) / (trilho − janela)`, e as duas metades
+       erravam pelo mesmo motivo: o palco não mede uma tela (mede
+       `100svh − cabeçalho`) e não começa a deslizar em `offsetTop` (gruda em
+       `top: cabeçalho`). Sobrava a altura do cabeçalho de folga nas duas
+       pontas — uns 55 a 100px de rolagem morta no começo e o último quadro
+       congelado no fim.
+       `rp.top − rt.top` é o deslize de verdade: 0 no início e `alt` quando o
+       palco encosta no fim do trilho, seja qual for o cabeçalho. */
     function progresso() {
-        if (reduzMovimento) return 1;
-        var alt = trilho.offsetHeight - window.innerHeight;
+        var palco = canvas.parentElement;
+        if (!palco) return 1;
+        var rt = trilho.getBoundingClientRect(), rp = palco.getBoundingClientRect();
+        var alt = rt.height - rp.height;
         if (alt <= 0) return 1;
-        return Math.min(1, Math.max(0, (window.scrollY - trilho.offsetTop) / alt));
+        return Math.min(1, Math.max(0, (rp.top - rt.top) / alt));
     }
 
     function laco() {
         alvo = progresso();
-        atual = atual < 0 ? alvo : atual + (alvo - atual) * 0.18;
+        atual = atual < 0 ? alvo : atual + (alvo - atual) * suavizacao;
         if (Math.abs(alvo - atual) < 0.0015) atual = alvo;
         desenhar(atual);
         if (dica) dica.classList.toggle('some', alvo > 0.04);
@@ -307,13 +328,9 @@
        plano não tem rAF); dali em diante o rAF assume */
     function redesenhar() { atual = -1; laco(); }
 
-    if (reduzMovimento) {
-        desenhar(1);
-    } else {
-        window.addEventListener('scroll', acordar, { passive: true });
-        window.addEventListener('resize', redesenhar);
-        laco();
-    }
+    window.addEventListener('scroll', acordar, { passive: true });
+    window.addEventListener('resize', redesenhar);
+    laco();
 
     // tema trocou (html.dark) → cores do canvas trocam
     new MutationObserver(redesenhar)
