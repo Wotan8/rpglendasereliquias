@@ -4,8 +4,10 @@
 // a caixa de entrada do mestre: uma fila em `avisos_mestre`, escrita só pelo
 // servidor, que o painel escuta em tempo real.
 //
-// Fica na barra do topo, e não numa aba, porque aviso não pertence a área
-// nenhuma — chega de qualquer canto do sistema.
+// Fica DENTRO da mesa: todo aviso nasce de uma, porque é o jogador quem
+// escolhe para qual mesa manda a peça ou entrega o personagem. O botão só
+// aparece na mesa que tem algo esperando — a fila é global, o que se vê é o
+// pedaço dela que é daquela mesa.
 // =============================================
 
 import { db, collection, query, where, orderBy, onSnapshot, doc, updateDoc, getDocs, functions, httpsCallable } from './firebase-config.js';
@@ -47,29 +49,59 @@ export function iniciarAvisos() {
     });
 }
 
+/**
+ * Os avisos que a mesa aberta tem de resolver.
+ *
+ * Sem mesa aberta, nenhum — o botão vive dentro da mesa.
+ *
+ * Aviso com `mesaId` vazio entra em todas: são os que o servidor gravou sem
+ * mesa (personagem entregue por uma ficha que não estava vinculada). Deixá-los
+ * fora de todas as mesas os tornaria invisíveis, e ninguém resolveria.
+ */
+function avisosDaMesa() {
+    const mesa = S.currentMesaId;
+    if (!mesa) return [];
+    return avisos.filter(a => a.mesaId === mesa || !a.mesaId);
+}
+
 function pintarBadge() {
+    const daMesa = avisosDaMesa();
+    const bt = document.getElementById('btnAvisos');
+    if (bt) bt.hidden = daMesa.length === 0;
     const badge = document.getElementById('avisosBadge');
     if (!badge) return;
-    badge.textContent = avisos.length;
-    badge.hidden = avisos.length === 0;
+    badge.textContent = daMesa.length;
+    badge.hidden = daMesa.length === 0;
 }
+
+/** Chamada quando a mesa aberta muda: o botão e a janela seguem a mesa. */
+export function avisosTrocouDeMesa() {
+    pintarBadge();
+    if (!S.currentMesaId) janela?.close();
+    else if (janela?.open) pintarLista();
+}
+window.avisosTrocouDeMesa = avisosTrocouDeMesa;
 
 function pintarLista() {
     const lista = document.getElementById('avisosLista');
     if (!lista) return;
 
-    const conta = document.getElementById('avisosConta');
-    if (conta) conta.textContent = avisos.length ? String(avisos.length) : '';
-    const lerTudo = document.getElementById('btnLerTudo');
-    if (lerTudo) lerTudo.hidden = avisos.length === 0;
+    const daMesa = avisosDaMesa();
 
-    if (avisos.length === 0) {
-        lista.innerHTML = `<div class="avisos-vazio">Nada esperando por você.<br>
-            Quando um jogador entregar um personagem ou mandar algo para a mesa, aparece aqui.</div>`;
+    const conta = document.getElementById('avisosConta');
+    if (conta) conta.textContent = daMesa.length ? String(daMesa.length) : '';
+    const lerTudo = document.getElementById('btnLerTudo');
+    if (lerTudo) lerTudo.hidden = daMesa.length === 0;
+    const mesa = document.getElementById('avisosMesa');
+    if (mesa) mesa.textContent = S.currentMesaData?.nome || '';
+
+    if (daMesa.length === 0) {
+        lista.innerHTML = `<div class="avisos-vazio">Nada esperando por você nesta mesa.<br>
+            Quando um jogador entregar um personagem ou mandar algo para cá, aparece aqui.</div>`;
         return;
     }
 
-    lista.innerHTML = avisos.map(a => {
+    lista.innerHTML = daMesa.map(a => {
         const msg = String(a.mensagem || '');
         // Ficha de item colada pelo jogador passa fácil de mil caracteres: o
         // cartão mostra o começo e abre o resto no clique (o corte é do CSS).
@@ -84,6 +116,7 @@ function pintarLista() {
                 <div class="aviso-pe">
                     ${a.jogador ? `<span>👤 ${escapeHtml(a.jogador)}</span>` : ''}
                     ${a.criadoEm ? `<span>🕐 ${QUANDO(a.criadoEm)}</span>` : ''}
+                    ${!a.mesaId ? `<span class="aviso-semmesa" title="O servidor gravou este aviso sem mesa — ele aparece em todas até alguém resolver">⚠️ sem mesa</span>` : ''}
                 </div>
             </div>
             <div class="aviso-bts">
@@ -111,7 +144,8 @@ function montarJanela() {
     janela.className = 'lr-avisos';
     janela.innerHTML = `
         <div class="avisos-topo">
-            <span class="avisos-titulo">📣 Avisos dos jogadores <span class="avisos-conta" id="avisosConta"></span></span>
+            <span class="avisos-titulo">📣 Avisos dos jogadores <span class="avisos-conta" id="avisosConta"></span>
+                <span class="avisos-mesa" id="avisosMesa"></span></span>
             <div class="avisos-acoes">
                 <button class="avisos-icone" id="btnLerTudo" onclick="avisoMarcarTudo()"
                     title="Marcar todos como resolvidos" aria-label="Marcar todos como resolvidos">
@@ -127,6 +161,7 @@ function montarJanela() {
 }
 
 window.abrirAvisos = function () {
+    if (!S.currentMesaId) return;   // a caixa é da mesa aberta
     if (!janela) montarJanela();
     pintarLista();
     janela.showModal();
@@ -168,7 +203,8 @@ window.avisoRecusarItem = async function (id) {
 };
 
 window.avisoMarcarTudo = async function () {
-    const pendentes = [...avisos];
+    // Só os desta mesa: "marcar tudo" nunca limpa a fila de outra.
+    const pendentes = avisosDaMesa();
     if (!pendentes.length) return;
     for (const a of pendentes) await window.avisoMarcarLido(a.id);
     showAlert(`✅ ${pendentes.length} aviso(s) resolvidos.`, 'success');

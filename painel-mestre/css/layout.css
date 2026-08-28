@@ -483,6 +483,15 @@ html.dark .mechsel-search-bar select {
 }
 .avisos-conta:empty { display: none; }
 
+/* Qual mesa está sendo olhada — a fila é global, a janela mostra uma mesa. */
+.avisos-mesa {
+    font-weight: 600;
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+}
+.avisos-mesa:empty { display: none; }
+.avisos-mesa::before { content: '· '; }
+
 .avisos-acoes { display: flex; align-items: center; gap: 6px; }
 
 .avisos-icone {
@@ -561,9 +570,20 @@ html.dark .mechsel-search-bar select {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+    align-items: center;
     margin-top: 6px;
     font-size: .75rem;
     color: var(--lr-text-2);
+}
+
+/* Aviso que o servidor gravou sem mesa: aparece em todas, e o selo explica
+   por que ele está aqui e não só numa. */
+.aviso-semmesa {
+    padding: 1px 6px;
+    border-radius: 10px;
+    background: var(--lr-gold-soft);
+    color: var(--lr-gold);
+    font-weight: 700;
 }
 
 /* Os botões descem para a largura toda do cartão: empilhados na coluna da

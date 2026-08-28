@@ -13,8 +13,8 @@
 <link rel="stylesheet" href="../shared/dialogo.css?v=2">
 <script type="module">import '../shared/dialogo.js?v=2';</script>
     <link rel="stylesheet" href="css/base.css?v=2">
-    <link rel="stylesheet" href="css/layout.css?v=7">
-    <link rel="stylesheet" href="css/tabs.css?v=2">
+    <link rel="stylesheet" href="css/layout.css?v=8">
+    <link rel="stylesheet" href="css/tabs.css?v=3">
     <link rel="stylesheet" href="css/modais.css?v=3">
     <link rel="stylesheet" href="css/area-mesas.css?v=5">
     <link rel="stylesheet" href="css/area-npcs.css?v=12">
@@ -58,12 +58,6 @@
         <button onclick="goToWorldbuilding()"><svg class="lr-ico"><use href="#i-globo"/></svg> Worldbuilding</button>
         <button onclick="goToHexmap()"><svg class="lr-ico"><use href="#i-mapa"/></svg> Hexmap</button>
         <div class="spacer"></div>
-        <!-- Avisos: a fila do que os jogadores mandaram para o mestre resolver.
-             Fica na barra, e não numa aba, porque aviso não pertence a área
-             nenhuma — chega de qualquer canto do sistema. -->
-        <button id="btnAvisos" onclick="abrirAvisos()" title="Avisos dos jogadores"
-            style="position:relative"><svg class="lr-ico"><use href="#i-megafone"/></svg>
-            <span id="avisosBadge" class="avisos-badge" hidden>0</span></button>
         <button id="btnThemeToggle" onclick="toggleTheme()" title="Alternar tema"><svg class="lr-ico"><use href="#i-lua"/></svg></button>
         <div class="user-info">
             <span class="user-name" id="userDisplayName"></span>
@@ -121,6 +115,13 @@
                         <button class="btn btn-primary btn-small" onclick="openTabuleiro()" title="Abrir o Tabuleiro (VTT) desta mesa em modo secreto"><svg class="lr-ico"><use href="#i-mapa"/></svg> Tabuleiro</button>
                         <h2 id="mesaContentName" style="font-size:1.1rem;font-weight:800;color:var(--primary);margin:0"></h2>
                         <div class="mesa-ajustes">
+                            <!-- Avisos: a fila do que os jogadores mandaram para o mestre
+                                 resolver. Fica DENTRO da mesa porque todo aviso nasce de
+                                 uma: o jogador escolhe para qual mesa manda. Só aparece
+                                 quando esta mesa tem algo esperando. -->
+                            <button class="mesa-ajuste-btn mesa-ajuste-avisos" id="btnAvisos" onclick="abrirAvisos()"
+                                title="Avisos dos jogadores desta mesa" hidden><svg class="lr-ico"><use href="#i-megafone"/></svg> Avisos
+                                <span id="avisosBadge" class="avisos-badge" hidden>0</span></button>
                             <button class="mesa-ajuste-btn" id="btnMesaDensidade" onclick="mesaAlternarDensidade()" title="Alternar densidade da área Mesa"><svg class="lr-ico"><use href="#i-densidade"/></svg> Confortável</button>
                             <button class="mesa-ajuste-btn" id="btnMesaAbas" onclick="mesaAlternarConfigAbas()" title="Escolher quais sub-abas aparecem"><svg class="lr-ico"><use href="#i-engrenagem"/></svg> Abas</button>
                             <div class="mesa-abas-config" id="mesaAbasConfig"></div>

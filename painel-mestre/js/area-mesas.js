@@ -143,6 +143,8 @@ window.authenticateMesa = function() {
 async function openMesa() {
     document.getElementById('mesaContentName').textContent = '🎲 ' + (S.currentMesaData?.nome || '');
     showScreen('mesa-content');
+    // A caixa de avisos é da mesa: o botão só aparece se esta tiver algo.
+    window.avisosTrocouDeMesa?.();
     // Carrega combate persistido (sincronizado com o Tabuleiro)
     if (window._loadCombatFromMesa) window._loadCombatFromMesa();
     // A aba que abre vem da FASE da sessão, não de um nome cravado: em preparo
@@ -166,6 +168,7 @@ window.closeMesa = function() {
     S.setCurrentMesaData(null);
     S.setMesaCharacters([]);
     S.setIsExpMode(false);
+    window.avisosTrocouDeMesa?.();   // fecha a caixa e esconde o botão
     showScreen('mesa-selection-screen');
     loadMesas();
 };

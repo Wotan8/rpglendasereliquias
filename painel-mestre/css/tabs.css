@@ -190,6 +190,19 @@
 }
 .mesa-ajuste-btn:hover { background: var(--lr-surface-2); color: var(--lr-text-1); }
 .mesa-ajuste-btn.active { background: var(--lr-gold-soft); color: var(--lr-gold-2); border-color: var(--lr-gold); }
+.mesa-ajuste-btn[hidden] { display: none; }
+
+/* Avisos não é ajuste: é coisa esperando o mestre. Vive na mesma barra, mas
+   dourado, para não se perder entre "Confortável" e "Abas". O selo da contagem
+   se pendura no canto — daí o position: relative. */
+.mesa-ajuste-avisos {
+    position: relative;
+    background: var(--lr-gold-soft);
+    border-color: var(--lr-gold);
+    color: var(--lr-gold);
+    font-weight: 800;
+}
+.mesa-ajuste-avisos:hover { background: var(--lr-gold-soft); color: var(--lr-gold-2); border-color: var(--lr-gold-2); }
 
 /* Lista de "quais sub-abas aparecem" — cai de dentro do botão de ajustes. */
 .mesa-abas-config {
