@@ -58,45 +58,67 @@ function pintarLista() {
     const lista = document.getElementById('avisosLista');
     if (!lista) return;
 
+    const conta = document.getElementById('avisosConta');
+    if (conta) conta.textContent = avisos.length ? String(avisos.length) : '';
+    const lerTudo = document.getElementById('btnLerTudo');
+    if (lerTudo) lerTudo.hidden = avisos.length === 0;
+
     if (avisos.length === 0) {
         lista.innerHTML = `<div class="avisos-vazio">Nada esperando por você.<br>
             Quando um jogador entregar um personagem ou mandar algo para a mesa, aparece aqui.</div>`;
         return;
     }
 
-    lista.innerHTML = avisos.map(a => `
+    lista.innerHTML = avisos.map(a => {
+        const msg = String(a.mensagem || '');
+        // Ficha de item colada pelo jogador passa fácil de mil caracteres: o
+        // cartão mostra o começo e abre o resto no clique (o corte é do CSS).
+        const comprida = msg.length > 220;
+        return `
         <div class="aviso" data-id="${escapeHtml(a.id)}">
             <div class="aviso-icone">${ICONE[a.tipo] || ICONE.geral}</div>
             <div class="aviso-corpo">
                 <div class="aviso-titulo">${escapeHtml(a.titulo || 'Aviso')}</div>
-                <div class="aviso-msg">${escapeHtml(a.mensagem || '')}</div>
+                <div class="aviso-msg">${escapeHtml(msg)}</div>
+                ${comprida ? `<button type="button" class="aviso-mais" onclick="avisoVerTudo(this)">Ver tudo</button>` : ''}
                 <div class="aviso-pe">
-                    ${a.jogador ? `<span>${escapeHtml(a.jogador)}</span>` : ''}
-                    ${a.criadoEm ? `<span>${QUANDO(a.criadoEm)}</span>` : ''}
+                    ${a.jogador ? `<span>👤 ${escapeHtml(a.jogador)}</span>` : ''}
+                    ${a.criadoEm ? `<span>🕐 ${QUANDO(a.criadoEm)}</span>` : ''}
                 </div>
             </div>
             <div class="aviso-bts">
                 ${a.referencia?.colecao === 'npcs'
             ? `<button class="btn btn-primary btn-small" onclick="avisoIrParaNpc('${escapeHtml(a.referencia.id)}')">Ver NPC</button>`
             : ''}
-                <button class="btn btn-secondary btn-small" onclick="avisoMarcarLido('${escapeHtml(a.id)}')">Resolvido</button>
+                <button class="btn btn-secondary btn-small" onclick="avisoMarcarLido('${escapeHtml(a.id)}')">✓ Resolvido</button>
                 ${a.tipo === 'item-para-mesa'
             ? `<button class="btn btn-danger btn-small" onclick="avisoRecusarItem('${escapeHtml(a.id)}')">Recusar</button>`
             : ''}
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
+
+/** Abre a mensagem cortada. O botão vira "Ver menos" e fecha de volta. */
+window.avisoVerTudo = function (bt) {
+    const cartao = bt.closest('.aviso'); if (!cartao) return;
+    const aberto = cartao.classList.toggle('aberto');
+    bt.textContent = aberto ? 'Ver menos' : 'Ver tudo';
+};
 
 function montarJanela() {
     janela = document.createElement('dialog');
     janela.className = 'lr-avisos';
     janela.innerHTML = `
         <div class="avisos-topo">
-            <span class="avisos-titulo">📣 Avisos dos jogadores</span>
-            <div style="display:flex;gap:6px">
+            <span class="avisos-titulo">📣 Avisos dos jogadores <span class="avisos-conta" id="avisosConta"></span></span>
+            <div class="avisos-acoes">
                 <button class="avisos-icone" id="btnLerTudo" onclick="avisoMarcarTudo()"
-                    title="Marcar todos como resolvidos">✔️</button>
-                <button class="avisos-icone" onclick="this.closest('dialog').close()" aria-label="Fechar">✕</button>
+                    title="Marcar todos como resolvidos" aria-label="Marcar todos como resolvidos">
+                    <svg class="lr-ico"><use href="#i-check"/></svg></button>
+                <button class="avisos-icone" onclick="this.closest('dialog').close()"
+                    title="Fechar" aria-label="Fechar">
+                    <svg class="lr-ico"><use href="#i-fechar"/></svg></button>
             </div>
         </div>
         <div class="avisos-lista" id="avisosLista"></div>`;
