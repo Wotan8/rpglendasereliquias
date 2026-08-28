@@ -43,7 +43,7 @@
     <script type="module" src="/shared/dialogo.js?v=2"></script>
     <script type="module">
         import { fatias, fatiaSobASeta, rotacaoFinal } from '/shared/roleta-geometria.js?v=1';
-        import { curvaGiro, forcaGiro } from '/shared/roleta-curva.js?v=2';
+        import { curvaGiro } from '/shared/roleta-curva.js?v=3';
 
         // As 37 chances reais do documento de mesa, incluindo as de 0,3%
         const CHANCES = [1, 1, 1, 3, 3, 3, 3, 5, 3, 5, 5, 1, 3, 3, 3, 3, 3, 5, 5, 3, 5, 3, 3, 1, 1, 1,
@@ -182,16 +182,22 @@
                 conferir('e o fim e um sussurro (para suave)', vel(0.98) < vMax * 0.02,
                     `${(vel(0.98) / vMax * 100).toFixed(1)}% do pico`);
             }
-            /* --- A RODA TEM DE GIRAR, NAO SALTAR ---
-               O defeito relatado: a roleta so mostrava o resultado. Quem tem
+            /* --- O GIRO DURA O MESMO PARA TODO MUNDO ---
+               Este ramo ja errou duas vezes. Primeiro quem tinha
                `prefers-reduced-motion` — e no Windows basta ter desligado as
-               animacoes do sistema — caia num ramo que teletransportava a roda
-               para o angulo final. Isso nao e a versao calma da animacao, e a
-               ausencia dela: some justamente com o que a pessoa clicou para ver. */
-            conferir('menos movimento ganha giro curto, nao teletransporte',
-                fonte.includes('const calmo = menosMovimento()')
-                && fonte.includes('await animarAte(alvo, calmo ?')
-                && !fonte.includes('if (menosMovimento()) {'));
+               animacoes do sistema — era TELETRANSPORTADO para o angulo final: a
+               roleta "girava" mostrando so o resultado. Depois ganhou um giro de
+               1,5s, que continuou parecendo um resultado piscando na tela.
+               O tempo e a espera, e a espera e a graca: ele nao muda para
+               ninguem. O caso calmo perde VOLTAS, nunca segundos. */
+            conferir('o giro dura o mesmo para todo mundo',
+                fonte.includes('await animarAte(alvo, DURACAO_GIRO)')
+                && !fonte.includes('if (menosMovimento()) {')
+                && !fonte.includes('calmo ? 1500'));
+            conferir('e o caso calmo perde voltas, nao tempo',
+                fonte.includes('const voltas = calmo ? 2 :'));
+            conferir('a espera e de uns cinco segundos', /DURACAO_GIRO = (5[0-9]{3}|6000);/.test(fonte),
+                (fonte.match(/DURACAO_GIRO = d+/) || ['?'])[0]);
 
             /* --- A FORCA COMANDA A ENCENACAO ---
                Rastro, torcao da agulha e altura do tic penduram todos no mesmo
@@ -232,12 +238,15 @@
                     aceso && aceso.indice === 12 && aceso.pulso > 0);
             }
 
-            /* --- A CURVA PARA DE VERDADE ---
+            /* --- A CURVA PARA DE VERDADE, E SO NO FIM ---
                Atrito so viscoso morre por assintota: a roda vai ficando cada vez
                mais lenta e nunca da o ultimo clique. O atrito seco zera em tempo
-               finito, e e ele que entrega a parada. */
-            conferir('a forca zera exatamente no fim do giro', forcaGiro(1) === 0);
-            conferir('e ainda esta andando a 97% do tempo', forcaGiro(0.97) > 0);
+               finito, e e ele que entrega a parada. E ela tem de continuar
+               andando ate tarde: se aos 80% do tempo ja nao sobra percurso, o
+               relogio cumpre os cinco segundos mas o olho da a roda por parada. */
+            conferir('a roda ainda anda a 97% do tempo', curvaGiro(0.97) < 1);
+            conferir('e aos 80% do tempo ainda sobra giro que se veja',
+                1 - curvaGiro(0.8) > 0.012, `sobra ${((1 - curvaGiro(0.8)) * 100).toFixed(2)}%`);
             conferir('o comeco e legivel: nao despeja metade do giro em 15% do tempo',
                 curvaGiro(0.15) < 0.5, `${(curvaGiro(0.15) * 100).toFixed(0)}% em 15% do tempo`);
 
@@ -296,7 +305,7 @@
                 (falhou === 0 ? ' <span class="ok">— tudo certo</span>' : '');
         };
     </script>
-    <script type="module" src="/menu/js/menu-roleta.js?v=8"></script>
+    <script type="module" src="/menu/js/menu-roleta.js?v=9"></script>
 </body>
 
 </html>

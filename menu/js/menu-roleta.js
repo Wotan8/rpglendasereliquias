@@ -11,7 +11,7 @@ import { doc, getDoc, collection, getDocs } from 'https://www.gstatic.com/fireba
 import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 import { toast } from '../../shared/dialogo.js?v=2';
 import { fatias, rotacaoFinal, fatiaSobASeta, ANGULO_SETA } from '../../shared/roleta-geometria.js?v=1';
-import { curvaGiro, forcaGiro } from '../../shared/roleta-curva.js?v=2';
+import { curvaGiro } from '../../shared/roleta-curva.js?v=3';
 
 let janela = null;        // <dialog>, criado uma vez
 let premios = [];         // o que está desenhado na roda
@@ -25,9 +25,18 @@ let itensDeGiro = [];     // itens da Loja que vendem giros
    lugares (tema, resize, abertura, fim do giro) e nenhum deles sabe nada sobre
    giro: com a roda parada os três valem zero/null e o desenho volta a ser o de
    sempre, sem um `if` espalhado por cada chamada. */
-let forcaAtual = 0;       // 0 parada, 1 no pico — comanda rastro, agulha e som
+let forcaAtual = 0;       // 0 parada, 1 a toda — comanda rastro, agulha e som
 let flickAgulha = 0;      // graus de torção da agulha pelo cravo que acabou de passar
 let destaque = null;      // { indice, pulso } da fatia que ganhou
+
+/** Quanto dura um giro, em ms. Igual para todo mundo — ver o comentário em
+ *  `girarRoletaAgora` sobre por que o caso calmo não encurta mais. */
+const DURACAO_GIRO = 5600;
+/* Velocidade, em graus por segundo, a partir da qual o borrão está no máximo.
+   `forcaAtual` é medida em graus por segundo DE VERDADE, quadro a quadro, e não
+   na curva: assim um giro manso (poucas voltas no mesmo tempo) borra pouco
+   sozinho, sem precisar de um segundo caminho no desenho. */
+const VELOCIDADE_CHEIA = 900;
 
 const CHAVE_SOM = 'lr_roleta_som';
 let somLigado = localStorage.getItem(CHAVE_SOM) !== '0';
@@ -404,6 +413,8 @@ function animarAte(alvo, duracaoMs) {
         const inicio = performance.now();
         const de = rotacao;
         const delta = alvo - de;
+        let rotacaoAnterior = de;
+        let instanteAnterior = inicio;
 
         // Bordas em ordem, para saber quando a agulha cruza uma linha e tocar
         const bordas = listaFatias.map(f => f.inicio).sort((a, b) => a - b);
@@ -413,7 +424,15 @@ function animarAte(alvo, duracaoMs) {
             if (terminou) return;
             const t = Math.min(1, (agora - inicio) / duracaoMs);
             rotacao = de + delta * curvaGiro(t);
-            forcaAtual = forcaGiro(t);
+
+            /* Quão rápida ela está AGORA, medido entre este quadro e o anterior.
+               Vem daqui e não da curva porque borrão é distância percorrida
+               DURANTE o quadro: numa tela de 30 Hz, num giro de poucas voltas ou
+               num aparelho engasgado a conta muda, e a curva não saberia. */
+            const dt = Math.max(1, agora - instanteAnterior);
+            forcaAtual = Math.min(1, Math.abs(rotacao - rotacaoAnterior) / dt * 1000 / VELOCIDADE_CHEIA);
+            rotacaoAnterior = rotacao;
+            instanteAnterior = agora;
 
             /* Quantos cravos já passaram, com casa decimal. A parte inteira diz
                QUANDO tocar o tic; a fracionária diz QUANTO a agulha ainda está
@@ -495,19 +514,23 @@ window.girarRoletaAgora = async function () {
 
     if (typeof window.updateGirosDisplay === 'function') window.updateGirosDisplay(dados.novosGiros);
 
-    /* MENOS MOVIMENTO NÃO É MOVIMENTO NENHUM.
-       Antes, quem tivesse `prefers-reduced-motion` — e no Windows basta ter
-       desligado as animações do sistema — pulava direto para a rotação final:
-       a roleta "girava" mostrando só o resultado. Isso não é a versão calma da
-       animação, é a ausência dela, e some justamente com o que a pessoa clicou
-       para ver. Ela ganha um giro curto e manso: uma volta em vez de seis, e
-       um segundo e meio em vez de cinco e meio. */
+    /* MENOS MOVIMENTO NÃO É MOVIMENTO NENHUM, E TAMBÉM NÃO É MOVIMENTO CURTO.
+       Isto já errou duas vezes. Primeiro quem tinha `prefers-reduced-motion` —
+       e no Windows basta ter desligado as animações do sistema — pulava direto
+       para a rotação final: a roleta "girava" mostrando só o resultado. Depois
+       ganhou um giro de um segundo e meio, que continuou parecendo um resultado
+       piscando na tela.
+
+       O TEMPO é a espera, e a espera é a graça da roleta: ele não muda para
+       ninguém. O que o caso calmo perde são VOLTAS — duas em vez de cinco a
+       sete, então a roda passeia em vez de voar, e o borrão some sozinho porque
+       `forcaAtual` mede graus por segundo de verdade. */
     const calmo = menosMovimento();
-    const voltas = calmo ? 1 : 5 + Math.floor(Math.random() * 3);
+    const voltas = calmo ? 2 : 5 + Math.floor(Math.random() * 3);
     const desvio = (Math.random() - 0.5) * 0.7;
     const alvo = rotacaoFinal(listaFatias, dados.indice, voltas, desvio);
 
-    await animarAte(alvo, calmo ? 1500 : 5600);
+    await animarAte(alvo, DURACAO_GIRO);
     acenderFatia(dados.indice, !calmo);
     fanfarra();
 

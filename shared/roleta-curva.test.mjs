@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { curvaGiro, forcaGiro, _curvaInterna } from './roleta-curva.js';
+import { curvaGiro, _curvaInterna } from './roleta-curva.js';
 
 const { ARRANQUE } = _curvaInterna;
 
@@ -77,14 +77,11 @@ assert.ok(curvaGiro(0.15) < 0.5,
     `em 15% do tempo já andou ${(curvaGiro(0.15) * 100).toFixed(0)}% do caminho — rápido demais para o olho`);
 assert.ok(curvaGiro(0.30) > 0.5, 'e em 30% do tempo já tinha de ter passado da metade');
 
-/* 10) forcaGiro é a régua da encenação: 0 parada, 1 no pico. O rastro e o tic
-       penduram nela, então ela tem de bater com a curva, não flutuar solta. */
-assert.equal(forcaGiro(0), 0, 'parada no instante zero');
-assert.equal(forcaGiro(1), 0, 'parada no fim');
-let picoForca = 0;
-for (let i = 0; i <= 200; i++) picoForca = Math.max(picoForca, forcaGiro(i / 200));
-assert.ok(Math.abs(picoForca - 1) < 0.01, `o pico da força tinha de ser 1, deu ${picoForca.toFixed(3)}`);
-assert.ok(forcaGiro(0.5) > forcaGiro(0.8) && forcaGiro(0.8) > forcaGiro(0.95),
-    'a força tem de cair sem recuperar');
+/* 10) E ELA TEM DE ANDAR ATÉ TARDE. Era a queixa: o giro cumpria o relógio,
+       mas os últimos segundos andavam tão pouco que a roda parecia parada.
+       Aos 80% do tempo ainda tem de sobrar percurso que se veja. */
+const sobraNoFim = 1 - curvaGiro(0.8);
+assert.ok(sobraNoFim > 0.012,
+    `aos 80% do tempo sobrava só ${(sobraNoFim * 100).toFixed(2)}% do giro — o resto parece parado`);
 
-console.log('ok — curva da roleta: pontas, monotonia, pico cedo, queda contínua, parada em tempo finito e régua de força');
+console.log('ok — curva da roleta: pontas, monotonia, pico cedo, queda contínua, parada em tempo finito e percurso sobrando no fim');

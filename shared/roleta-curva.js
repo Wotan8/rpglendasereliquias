@@ -34,8 +34,13 @@
    - a velocidade sobe no arranque, chega ao pico cedo e cai daí em diante;
    - termina quase parada, para o último grau ser um sussurro. */
 
-/** Atrito viscoso: some proporcional à própria velocidade. Menor = voa mais. */
-const K = 3.0;
+/* Atrito viscoso: some proporcional à própria velocidade. Menor = voa mais.
+   Já foi 5,6 (só viscoso) e depois 3,0. Caiu para 2,6 porque a queixa era de
+   giro CURTO: com 3,0 a roda ainda cumpria os cinco segundos e meio de relógio,
+   mas os últimos dois ela andava tão pouco que o olho já a dava por parada.
+   Em 2,6 ela ainda faz uns 90°/s aos quatro segundos — continua visivelmente
+   girando até quase o fim, que é onde mora a espera. */
+const K = 2.6;
 /** Fatia do tempo gasta no empurrão inicial. */
 const ARRANQUE = 0.10;
 const AMOSTRAS = 240;
@@ -65,15 +70,6 @@ const TABELA = (() => {
     return acum;
 })();
 
-/* Pico, medido na mesma malha da tabela. Serve de régua para a encenação:
-   quem desenha o rastro e quem toca o tic precisam de "quão rápido ela está
-   AGORA" numa escala de 0 a 1, não em graus por segundo. */
-const V_PICO = (() => {
-    let m = 0;
-    for (let i = 0; i <= AMOSTRAS; i++) m = Math.max(m, velocidade(i / AMOSTRAS));
-    return m || 1;
-})();
-
 /**
  * Fração do percurso já andada no instante `t` ∈ [0,1].
  * `curvaGiro(0) === 0` e `curvaGiro(1) === 1`.
@@ -86,14 +82,5 @@ export function curvaGiro(t) {
     return TABELA[i] + (TABELA[i + 1] - TABELA[i]) * (x - i);
 }
 
-/**
- * Quão rápida a roda está no instante `t`, de 0 (parada) a 1 (no pico).
- * É o que o rastro e o som usam para saber a força do momento.
- */
-export function forcaGiro(t) {
-    if (!(t > 0) || t >= 1) return 0;
-    return velocidade(t) / V_PICO;
-}
-
 /** Exposto só para o teste conferir o formato do movimento. */
-export const _curvaInterna = { K, C, ARRANQUE, AMOSTRAS, velocidade, V_PICO };
+export const _curvaInterna = { K, C, ARRANQUE, AMOSTRAS, velocidade };
