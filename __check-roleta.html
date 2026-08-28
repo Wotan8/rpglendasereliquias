@@ -254,8 +254,34 @@
             conferir('a página não ganhou rolagem horizontal',
                 document.documentElement.scrollWidth <= largura);
 
-            // --- som não pode explodir se o navegador negar áudio ---
-            conferir('o botão de som existe', !!document.getElementById('roletaSom'));
+            /* --- O SOM ---
+               Ele so toca num giro de verdade, entao sem esta fresta ninguem
+               nunca o executa fora de producao. E ele mexe com BufferSource,
+               BiquadFilter e rampa exponencial, onde um zero no lugar errado
+               vira excecao no meio do giro. */
+            conferir('o botao de som existe', !!document.getElementById('roletaSom'));
+            {
+                const btSom = document.getElementById('roletaSom');
+                const estavaMudo = btSom.textContent.trim() === '🔇';
+                if (estavaMudo) window.roletaAlternarSom();
+
+                const ctx = window.__roletaSoar.garantirAudio();
+                conferir('o contexto de audio nasce', !!ctx);
+
+                let estourou = '';
+                try {
+                    // as duas pontas da forca, e o meio
+                    [1, 0.5, 0, undefined].forEach(f => window.__roletaSoar.tic(f));
+                    window.__roletaSoar.fanfarra();
+                } catch (e) { estourou = e.message; }
+                conferir('estalo e badalada tocam sem estourar', !estourou, estourou);
+
+                if (estavaMudo) window.roletaAlternarSom();
+            }
+            conferir('o estalo e ruido filtrado, nao onda quadrada',
+                fonte.includes("banda.type = 'bandpass'") && !fonte.includes("osc.type = 'square'"));
+            conferir('e o ruido e gerado uma vez so, nao a cada cravo',
+                fonte.includes('if (ruidoBuf) return ruidoBuf;'));
 
             // --- FECHADA, A JANELA TEM DE SUMIR ---
             // O navegador esconde <dialog> fechado com
@@ -305,7 +331,7 @@
                 (falhou === 0 ? ' <span class="ok">— tudo certo</span>' : '');
         };
     </script>
-    <script type="module" src="/menu/js/menu-roleta.js?v=9"></script>
+    <script type="module" src="/menu/js/menu-roleta.js?v=10"></script>
 </body>
 
 </html>

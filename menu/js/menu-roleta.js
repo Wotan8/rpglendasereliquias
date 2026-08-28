@@ -46,9 +46,15 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // ---------------------------------------------
-// SOM — sem arquivo e sem <audio>: um oscilador curto por fatia que passa.
+// SOM — sem arquivo e sem <audio>, tudo sintetizado na hora.
 // O AudioContext nasce dentro do clique em Girar, que já é o gesto do usuário
 // que o navegador exige para deixar tocar.
+//
+// A primeira versão era onda quadrada pura no cravo e um arpejo maior de
+// triângulo no fim: soava a console de oito bits, não a roda de madeira numa
+// taverna. Onda pura NÃO faz barulho de impacto — madeira, couro e metal
+// batendo são um transiente de RUÍDO filtrado, com um corpo grave por baixo.
+// É essa a receita aqui.
 // ---------------------------------------------
 let audio = null;
 
@@ -60,41 +66,107 @@ function garantirAudio() {
     return audio;
 }
 
-/* O tic acompanha a roda: agudo e seco enquanto ela voa, grave e mais aberto
-   quando está morrendo. Custa dois números no oscilador e é metade da sensação
-   de perder força — o ouvido percebe a desaceleração antes do olho. */
+/* Ruído branco, quatro décimos de segundo, gerado UMA vez e reaproveitado por
+   todos os estalos do giro. São uns dezoito mil números: refazer isso a cada
+   cravo, cento e poucas vezes por segundo, engasgaria a animação junto. */
+let ruidoBuf = null;
+function ruido() {
+    if (ruidoBuf) return ruidoBuf;
+    const n = Math.floor(audio.sampleRate * 0.4);
+    ruidoBuf = audio.createBuffer(1, n, audio.sampleRate);
+    const dados = ruidoBuf.getChannelData(0);
+    for (let i = 0; i < n; i++) dados[i] = Math.random() * 2 - 1;
+    return ruidoBuf;
+}
+
+/* O ESTALO DO CRAVO.
+   Duas camadas: o ruído filtrado, que é o estalo, e um corpo grave por baixo,
+   que é a madeira ressoando. O que a velocidade muda é o BRILHO, não a
+   afinação — cravo nenhum troca de nota porque a roda desacelerou. Roda a toda
+   dá um estalo curto e claro; roda morrendo dá um baque escuro e mais demorado,
+   e é assim que o ouvido percebe a desaceleração antes do olho. */
 function tic(forca = 1) {
     if (!somLigado || !audio) return;
     const f = Math.max(0, Math.min(1, forca));
     const t = audio.currentTime;
-    const osc = audio.createOscillator();
-    const vol = audio.createGain();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(660 + 520 * f, t);
-    vol.gain.setValueAtTime(0.0001, t);
-    vol.gain.exponentialRampToValueAtTime(0.05 + 0.05 * f, t + 0.004);
-    vol.gain.exponentialRampToValueAtTime(0.0001, t + 0.05 + 0.05 * (1 - f));
-    osc.connect(vol).connect(audio.destination);
-    osc.start(t);
-    osc.stop(t + 0.06);
+    const dur = 0.05 + 0.045 * (1 - f);   // devagar, o baque demora mais a morrer
+
+    const estalo = audio.createBufferSource();
+    estalo.buffer = ruido();
+    const banda = audio.createBiquadFilter();
+    banda.type = 'bandpass';
+    banda.Q.value = 1.4;
+    // O filtro fecha durante o próprio estalo: é isso que faz um golpe, e não
+    // um chiado de meio segundo.
+    banda.frequency.setValueAtTime(1250 + 1750 * f, t);
+    banda.frequency.exponentialRampToValueAtTime(420 + 380 * f, t + dur);
+    const volEstalo = audio.createGain();
+    volEstalo.gain.setValueAtTime(0.0001, t);
+    volEstalo.gain.exponentialRampToValueAtTime(0.10 + 0.26 * f, t + 0.003);
+    volEstalo.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    estalo.connect(banda).connect(volEstalo).connect(audio.destination);
+    estalo.start(t);
+    estalo.stop(t + dur + 0.02);
+
+    const corpo = audio.createOscillator();
+    const volCorpo = audio.createGain();
+    corpo.type = 'triangle';
+    corpo.frequency.setValueAtTime(190, t);
+    corpo.frequency.exponentialRampToValueAtTime(85, t + dur * 0.7);
+    volCorpo.gain.setValueAtTime(0.0001, t);
+    /* Quanto mais lenta, mais o corpo PESA na mistura — o estalo some e sobra o
+       baque. Mas o conjunto fica mais BAIXO, porque cravo batido devagar bate
+       mais fraco. Os ganhos brutos enganam: passar ruído por um passa-banda de
+       Q 1,4 come quase dois terços da amplitude, então 0,36 aqui sai como 0,12
+       de pico. Medido em OfflineAudioContext, não estimado. */
+    volCorpo.gain.exponentialRampToValueAtTime(0.06 + 0.06 * (1 - f), t + 0.005);
+    volCorpo.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    corpo.connect(volCorpo).connect(audio.destination);
+    corpo.start(t);
+    corpo.stop(t + dur + 0.02);
 }
 
-/** Acorde curto de vitória, quando a roda para. */
-function fanfarra() {
-    if (!somLigado || !audio) return;
-    [523.25, 659.25, 783.99].forEach((hz, i) => {
-        const t = audio.currentTime + i * 0.09;
+/* A BADALADA DA PARADA.
+   Era um arpejo dó-mi-sol de triângulo — som de fase completa de videogame, e o
+   Portal não é isso. Agora são dois sinos, o segundo uma quinta acima.
+   Sino não é acorde: as parciais dele são DESAFINADAS entre si (2,00 / 2,98 /
+   4,12 / 5,43 do fundamental, em vez de 2 / 3 / 4), cada uma com cauda de
+   tamanho diferente. É essa desafinação que separa bronze batido de teclado. */
+function badalada(base, atraso, peso) {
+    const t = audio.currentTime + 0.03 + atraso;
+    [[1.00, 1.00, 2.4], [2.00, 0.52, 1.6], [2.98, 0.34, 1.1],
+     [4.12, 0.20, 0.7], [5.43, 0.11, 0.45]].forEach(([mult, forca, cauda]) => {
         const osc = audio.createOscillator();
         const vol = audio.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(hz, t);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(base * mult, t);
         vol.gain.setValueAtTime(0.0001, t);
-        vol.gain.exponentialRampToValueAtTime(0.14, t + 0.02);
-        vol.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+        vol.gain.exponentialRampToValueAtTime(0.12 * forca * peso, t + 0.006);
+        vol.gain.exponentialRampToValueAtTime(0.0001, t + cauda);
         osc.connect(vol).connect(audio.destination);
         osc.start(t);
-        osc.stop(t + 0.55);
+        osc.stop(t + cauda + 0.05);
     });
+}
+
+function fanfarra() {
+    if (!somLigado || !audio) return;
+    badalada(196.00, 0, 1);        // sol grave
+    badalada(293.66, 0.20, 0.8);   // ré, uma quinta acima
+
+    /* E um sopro grave por baixo das duas, para a badalada ter chão. Sem ele o
+       sino fica pendurado no ar e o momento não pesa nada. */
+    const t = audio.currentTime + 0.03;
+    const chao = audio.createOscillator();
+    const vol = audio.createGain();
+    chao.type = 'sine';
+    chao.frequency.setValueAtTime(98, t);
+    vol.gain.setValueAtTime(0.0001, t);
+    vol.gain.exponentialRampToValueAtTime(0.10, t + 0.09);
+    vol.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+    chao.connect(vol).connect(audio.destination);
+    chao.start(t);
+    chao.stop(t + 1.85);
 }
 
 window.roletaAlternarSom = function () {
@@ -578,6 +650,9 @@ window.__roletaAnimarPara = async function (indice, ms = 350) {
 window.__roletaEstado = () => ({ forcaAtual, flickAgulha, destaque, rotacao });
 // E a mão contrária: posa a roda num instante do giro sem precisar cronometrar
 // a animação. É como a bancada fotografa o rastro e o destaque.
+// E os sons, que só tocam num giro de verdade: a bancada precisa poder
+// dispará-los sem servidor para saber se explodem.
+window.__roletaSoar = { garantirAudio, tic, fanfarra };
 window.__roletaPor = (e = {}) => {
     if (e.rotacao != null) rotacao = e.rotacao;
     if (e.forcaAtual != null) forcaAtual = e.forcaAtual;
