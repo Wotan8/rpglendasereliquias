@@ -11,7 +11,7 @@ import { doc, getDoc, collection, getDocs } from 'https://www.gstatic.com/fireba
 import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 import { toast } from '../../shared/dialogo.js?v=2';
 import { fatias, rotacaoFinal, fatiaSobASeta, ANGULO_SETA } from '../../shared/roleta-geometria.js?v=1';
-import { curvaGiro } from '../../shared/roleta-curva.js?v=1';
+import { curvaGiro, forcaGiro } from '../../shared/roleta-curva.js?v=2';
 
 let janela = null;        // <dialog>, criado uma vez
 let premios = [];         // o que está desenhado na roda
@@ -19,6 +19,15 @@ let listaFatias = [];
 let rotacao = 0;          // graus, estado da roda
 let girando = false;
 let itensDeGiro = [];     // itens da Loja que vendem giros
+
+/* ESTADO DA ENCENAÇÃO — três números que o laço do giro escreve e o desenho lê.
+   Ficam fora de `animarAte` porque `desenhar()` é chamado de outros quatro
+   lugares (tema, resize, abertura, fim do giro) e nenhum deles sabe nada sobre
+   giro: com a roda parada os três valem zero/null e o desenho volta a ser o de
+   sempre, sem um `if` espalhado por cada chamada. */
+let forcaAtual = 0;       // 0 parada, 1 no pico — comanda rastro, agulha e som
+let flickAgulha = 0;      // graus de torção da agulha pelo cravo que acabou de passar
+let destaque = null;      // { indice, pulso } da fatia que ganhou
 
 const CHAVE_SOM = 'lr_roleta_som';
 let somLigado = localStorage.getItem(CHAVE_SOM) !== '0';
@@ -42,16 +51,20 @@ function garantirAudio() {
     return audio;
 }
 
-function tic() {
+/* O tic acompanha a roda: agudo e seco enquanto ela voa, grave e mais aberto
+   quando está morrendo. Custa dois números no oscilador e é metade da sensação
+   de perder força — o ouvido percebe a desaceleração antes do olho. */
+function tic(forca = 1) {
     if (!somLigado || !audio) return;
+    const f = Math.max(0, Math.min(1, forca));
     const t = audio.currentTime;
     const osc = audio.createOscillator();
     const vol = audio.createGain();
     osc.type = 'square';
-    osc.frequency.setValueAtTime(1080, t);
+    osc.frequency.setValueAtTime(660 + 520 * f, t);
     vol.gain.setValueAtTime(0.0001, t);
-    vol.gain.exponentialRampToValueAtTime(0.09, t + 0.004);
-    vol.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    vol.gain.exponentialRampToValueAtTime(0.05 + 0.05 * f, t + 0.004);
+    vol.gain.exponentialRampToValueAtTime(0.0001, t + 0.05 + 0.05 * (1 - f));
     osc.connect(vol).connect(audio.destination);
     osc.start(t);
     osc.stop(t + 0.06);
@@ -225,15 +238,82 @@ function desenhar() {
     const chave = chaveDoDisco(px);
     if (chave !== discoChave) { disco = construirDisco(px); discoChave = chave; }
 
+    const rDisco = raio - px * 0.045;
+
     // O disco gira; o miolo e a agulha ficam parados por cima dele.
     ctx.save();
     ctx.translate(raio, raio);
+    ctx.save();
     ctx.rotate(rad(rotacao));
     ctx.drawImage(disco, -raio, -raio);
     ctx.restore();
 
+    /* RASTRO. Um disco nítido a 1000°/s não parece rápido: parece um desenho
+       trocando de ângulo. Falta o borrão que o olho espera de algo girando.
+       Como o disco já está cacheado, o borrão sai de graça — quatro cópias
+       dele por cima, defasadas de alguns graus e quase transparentes. O
+       espalhamento e a opacidade penduram na força do momento, então o rastro
+       nasce no arranque, engrossa no pico e some sozinho quando ela morre.
+       Nada disso roda com a roda parada: `forcaAtual` é 0 fora do giro. */
+    if (forcaAtual > 0.05) {
+        const espalho = 6 * forcaAtual;          // graus entre uma cópia e outra
+        ctx.globalAlpha = 0.26 * forcaAtual;
+        for (let i = 1; i <= 2; i++) {
+            for (const lado of [-1, 1]) {
+                ctx.save();
+                ctx.rotate(rad(rotacao + lado * espalho * i));
+                ctx.drawImage(disco, -raio, -raio);
+                ctx.restore();
+            }
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    /* A FATIA QUE GANHOU. Quando a roda para, o cartão do prêmio nasce lá
+       embaixo — e nada na roda dizia ONDE ela parou. Sem isto o olho tem de
+       conferir a agulha contra 37 rótulos girados. */
+    if (destaque) {
+        const f = listaFatias.find(x => x.indice === destaque.indice);
+        if (f) {
+            const cunha = () => {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, rDisco, rad(f.inicio), rad(f.fim));
+                ctx.closePath();
+            };
+            ctx.save();
+            ctx.rotate(rad(rotacao));
+
+            /* Clarear a fatia sozinha não bastava: numa roda de 37 cores todas
+               berrando, mais uma cor clara é só mais uma cor. O que separa é
+               apagar as OUTRAS — véu escuro na roda inteira e a vencedora
+               recortada de volta ao brilho pleno. Vira holofote. */
+            ctx.beginPath();
+            ctx.arc(0, 0, rDisco, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(6,8,12,${0.36 + 0.16 * destaque.pulso})`;
+            ctx.fill();
+
+            ctx.save();
+            cunha();
+            ctx.clip();
+            ctx.drawImage(disco, -raio, -raio);   // a cor original, sem o véu
+            cunha();
+            ctx.fillStyle = `rgba(255,246,214,${0.08 + 0.22 * destaque.pulso})`;
+            ctx.fill();
+            ctx.restore();
+
+            cunha();
+            ctx.strokeStyle = `rgba(255,228,130,${0.55 + 0.45 * destaque.pulso})`;
+            ctx.lineWidth = Math.max(1.5, px * 0.006);
+            ctx.shadowColor = 'rgba(255,215,110,.9)';
+            ctx.shadowBlur = px * 0.025 * (0.4 + destaque.pulso);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+    ctx.restore();
+
     ctx.translate(raio, raio);
-    const rDisco = raio - px * 0.045;
 
     // Miolo: anel de ouro com poço escuro, para a agulha ter de onde sair
     ctx.beginPath(); ctx.arc(0, 0, px * 0.082, 0, Math.PI * 2);
@@ -246,9 +326,22 @@ function desenhar() {
     ctx.fillStyle = brilho; ctx.fill();
 
     /* Agulha no topo, apontando para dentro — é ela que lê o resultado.
-       A sombra é o que a levanta do disco em vez de deixá-la colada nele. */
+       A sombra é o que a levanta do disco em vez de deixá-la colada nele.
+
+       E ela BALANÇA: cada cravo que passa por baixo a empurra no sentido da
+       roda, e ela volta. O giro inteiro é um disco de cor rodando, sem nada
+       parado por perto para o olho medir contra — a agulha tremendo é essa
+       referência, e é ela que transforma "a imagem mudou" em "tem uma coisa
+       batendo aqui". O pino fica na BASE, lá no aro: girar em torno do centro
+       da roda faria a agulha inteira orbitar, que é outro movimento. */
     ctx.save();
     ctx.rotate(rad(ANGULO_SETA));
+    if (flickAgulha) {
+        const pino = rDisco + px * 0.048;
+        ctx.translate(pino, 0);
+        ctx.rotate(rad(flickAgulha));
+        ctx.translate(-pino, 0);
+    }
     ctx.shadowColor = 'rgba(0,0,0,.55)';
     ctx.shadowBlur = Math.max(2, px * 0.012);
     ctx.shadowOffsetX = Math.max(1, px * 0.004);
@@ -291,6 +384,9 @@ function animarAte(alvo, duracaoMs) {
             clearTimeout(guarda);
             document.removeEventListener('visibilitychange', aoEsconder);
             rotacao = alvo % 360;
+            // Parada é parada: sem rastro e com a agulha de volta ao prumo.
+            forcaAtual = 0;
+            flickAgulha = 0;
             desenhar();
             resolve();
         };
@@ -317,13 +413,27 @@ function animarAte(alvo, duracaoMs) {
             if (terminou) return;
             const t = Math.min(1, (agora - inicio) / duracaoMs);
             rotacao = de + delta * curvaGiro(t);
+            forcaAtual = forcaGiro(t);
+
+            /* Quantos cravos já passaram, com casa decimal. A parte inteira diz
+               QUANDO tocar o tic; a fracionária diz QUANTO a agulha ainda está
+               torcida pelo último — ela é chutada no instante da passagem e
+               volta ao prumo antes do cravo seguinte.
+               O expoente 0.35 é o que salva o final: se a torção fosse
+               proporcional à força, os últimos cravos — os que importam — a
+               moveriam meio pixel. Assim ela ainda bate visivelmente quando a
+               roda está andando de fatia em fatia. */
+            const passos = (rotacao - de) / 360 * bordas.length;
+            const cruzadas = Math.floor(passos);
+            const golpe = Math.min(1, Math.pow(forcaAtual, 0.35) * 1.6);
+            flickAgulha = 20 * golpe * (0.22 + 0.78 * Math.exp(-6 * (passos - cruzadas)));
+
             desenhar();
 
             // Uma fatia cruzada = um tic. Conta pelo total de bordas já
             // ultrapassadas, então nenhum tic se perde num quadro engasgado.
-            const cruzadas = Math.floor((rotacao - de) / 360 * bordas.length);
             if (cruzadas !== ultimaContagem) {
-                if (ultimaContagem >= 0 && cruzadas > ultimaContagem) tic();
+                if (ultimaContagem >= 0 && cruzadas > ultimaContagem) tic(forcaAtual);
                 ultimaContagem = cruzadas;
             }
 
@@ -334,6 +444,24 @@ function animarAte(alvo, duracaoMs) {
     });
 }
 
+/* Acende a fatia vencedora: três batidas fortes e depois um brilho fixo, que
+   fica até o próximo giro. Não é aguardado — o cartão do prêmio não tem por que
+   esperar uma luz piscar. */
+function acenderFatia(indice, animar) {
+    destaque = { indice, pulso: animar ? 1 : 0.5 };
+    desenhar();
+    if (!animar) return;
+    const inicio = performance.now();
+    const DURACAO = 1100;
+    (function pulso(agora) {
+        if (!destaque || destaque.indice !== indice) return;   // outro giro assumiu
+        const u = Math.min(1, (agora - inicio) / DURACAO);
+        destaque.pulso = 0.35 + 0.65 * Math.abs(Math.cos(Math.PI * 3 * u)) * (1 - u);
+        desenhar();
+        if (u < 1) requestAnimationFrame(pulso);
+    })(inicio);
+}
+
 window.girarRoletaAgora = async function () {
     if (girando) return;
     const btn = document.getElementById('roletaBtnGirar');
@@ -341,6 +469,7 @@ window.girarRoletaAgora = async function () {
     girando = true;
     if (btn) { btn.disabled = true; btn.textContent = 'Girando...'; }
     if (painel) painel.innerHTML = '';
+    destaque = null;   // a fatia acesa é a do giro passado; apaga antes de rodar
 
     garantirAudio();
     if (audio?.state === 'suspended') { try { await audio.resume(); } catch (e) { /* segue mudo */ } }
@@ -366,15 +495,20 @@ window.girarRoletaAgora = async function () {
 
     if (typeof window.updateGirosDisplay === 'function') window.updateGirosDisplay(dados.novosGiros);
 
+    /* MENOS MOVIMENTO NÃO É MOVIMENTO NENHUM.
+       Antes, quem tivesse `prefers-reduced-motion` — e no Windows basta ter
+       desligado as animações do sistema — pulava direto para a rotação final:
+       a roleta "girava" mostrando só o resultado. Isso não é a versão calma da
+       animação, é a ausência dela, e some justamente com o que a pessoa clicou
+       para ver. Ela ganha um giro curto e manso: uma volta em vez de seis, e
+       um segundo e meio em vez de cinco e meio. */
+    const calmo = menosMovimento();
+    const voltas = calmo ? 1 : 5 + Math.floor(Math.random() * 3);
     const desvio = (Math.random() - 0.5) * 0.7;
-    const alvo = rotacaoFinal(listaFatias, dados.indice, 6, desvio);
+    const alvo = rotacaoFinal(listaFatias, dados.indice, voltas, desvio);
 
-    if (menosMovimento()) {
-        rotacao = alvo % 360;
-        desenhar();
-    } else {
-        await animarAte(alvo, 5200);
-    }
+    await animarAte(alvo, calmo ? 1500 : 5600);
+    acenderFatia(dados.indice, !calmo);
     fanfarra();
 
     if (painel) {
@@ -415,6 +549,20 @@ window.__roletaAnimarPara = async function (indice, ms = 350) {
     await animarAte(rotacaoFinal(listaFatias, indice, 2, (Math.random() - 0.5) * 0.7), ms);
     return fatiaSobASeta(listaFatias, rotacao).indice;
 };
+
+// Janelinha para a bancada ler a encenação: força, torção da agulha e fatia
+// acesa. Só lê — quem escreve esses três é o laço do giro.
+window.__roletaEstado = () => ({ forcaAtual, flickAgulha, destaque, rotacao });
+// E a mão contrária: posa a roda num instante do giro sem precisar cronometrar
+// a animação. É como a bancada fotografa o rastro e o destaque.
+window.__roletaPor = (e = {}) => {
+    if (e.rotacao != null) rotacao = e.rotacao;
+    if (e.forcaAtual != null) forcaAtual = e.forcaAtual;
+    if (e.flickAgulha != null) flickAgulha = e.flickAgulha;
+    if ('destaque' in e) destaque = e.destaque;
+    desenhar();
+};
+window.__roletaAcender = acenderFatia;
 
 function atualizarBotaoGirar(saldo) {
     const btn = document.getElementById('roletaBtnGirar');

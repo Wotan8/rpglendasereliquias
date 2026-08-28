@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { curvaGiro, _curvaInterna } from './roleta-curva.js';
+import { curvaGiro, forcaGiro, _curvaInterna } from './roleta-curva.js';
 
 const { ARRANQUE } = _curvaInterna;
 
@@ -59,4 +59,32 @@ const antiga = (t) => 1 - Math.pow(1 - t, 4);
 assert.ok(curvaGiro(0.5) < antiga(0.5),
     'na metade do tempo a curva nova tem de ter andado MENOS que a antiga');
 
-console.log('ok — curva da roleta: pontas, monotonia, pico cedo, queda contínua e parada suave');
+
+/* 7) O ATRITO SECO TEM DE EXISTIR — sem ele a roda morre por assíntota e nunca
+      dá o clique final. Com ele a velocidade zera em tempo FINITO: em t=1 ela
+      está parada de verdade, não "quase". */
+assert.ok(_curvaInterna.C > 0, 'o atrito seco sumiu da conta');
+assert.ok(Math.abs(_curvaInterna.velocidade(1)) < 1e-12,
+    `em t=1 a roda tinha de estar parada, mas ainda anda ${_curvaInterna.velocidade(1)}`);
+
+/* 8) e não pode parar ANTES do fim: roda que trava faltando tempo deixa a
+      animação rodando parada, o que se lê como travamento. */
+assert.ok(_curvaInterna.velocidade(0.97) > 0, 'parou antes da hora');
+
+/* 9) O COMEÇO PRECISA SER LEGÍVEL. A versão só-viscosa despejava metade do
+      percurso em 12% do tempo — isso é borrão, não roda girando. */
+assert.ok(curvaGiro(0.15) < 0.5,
+    `em 15% do tempo já andou ${(curvaGiro(0.15) * 100).toFixed(0)}% do caminho — rápido demais para o olho`);
+assert.ok(curvaGiro(0.30) > 0.5, 'e em 30% do tempo já tinha de ter passado da metade');
+
+/* 10) forcaGiro é a régua da encenação: 0 parada, 1 no pico. O rastro e o tic
+       penduram nela, então ela tem de bater com a curva, não flutuar solta. */
+assert.equal(forcaGiro(0), 0, 'parada no instante zero');
+assert.equal(forcaGiro(1), 0, 'parada no fim');
+let picoForca = 0;
+for (let i = 0; i <= 200; i++) picoForca = Math.max(picoForca, forcaGiro(i / 200));
+assert.ok(Math.abs(picoForca - 1) < 0.01, `o pico da força tinha de ser 1, deu ${picoForca.toFixed(3)}`);
+assert.ok(forcaGiro(0.5) > forcaGiro(0.8) && forcaGiro(0.8) > forcaGiro(0.95),
+    'a força tem de cair sem recuperar');
+
+console.log('ok — curva da roleta: pontas, monotonia, pico cedo, queda contínua, parada em tempo finito e régua de força');

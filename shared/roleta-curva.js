@@ -1,17 +1,32 @@
 /* ROLETA — a curva do giro
    ------------------------
-   Era `easeOutQuart`: 1-(1-t)^4. Ela freia, mas freia ERRADO para uma roda —
-   despeja quase todo o ângulo no primeiro terço e depois se arrasta, então a
-   roda parece que travou e só então escorrega até parar.
+   Duas trocas, nesta ordem:
 
-   Uma roda de verdade perde força por ATRITO: a velocidade cai um tanto
-   PROPORCIONAL a ela mesma a cada instante, ω(t) = ω₀·e^(−k·t). E ela não
-   arranca no talo: quem gira dá um empurrão, que leva um instante.
+   1) Era `easeOutQuart`: 1-(1-t)^4. Ela freia, mas freia ERRADO para uma roda —
+      despeja quase todo o ângulo no primeiro terço e depois se arrasta.
 
-   A soma dos dois não tem primitiva bonita, então em vez de espremer uma
-   fórmula fechada a gente integra numericamente UMA vez, no carregamento, e
-   guarda numa tabela. São 240 amostras — custo irrisório, e a cada quadro do
-   giro sobra uma interpolação linear.
+   2) Era atrito só VISCOSO, ω(t) = ω₀·e^(−k·t), com k alto. Corrigiu o formato,
+      mas trouxe dois defeitos próprios: o pico ficava tão alto que o primeiro
+      meio segundo virava borrão ilegível, e uma exponencial NUNCA chega a zero
+      — a roda ia morrendo por assíntota, sem nunca dar o clique final. O olho
+      lê isso como "a animação acabou antes da roda parar".
+
+   Roda de verdade tem os DOIS atritos: o viscoso, que é forte enquanto ela voa,
+   e o SECO do eixo, uma força constante que não liga para a velocidade e é
+   quem de fato a mata. Juntos:
+
+       dω/dt = −(a + b·ω)   →   ω(t) = (ω₀ + a/b)·e^(−b·t) − a/b
+
+   Isso para em tempo FINITO. Escolhendo a/b para o zero cair exatamente em
+   t = 1, a roda chega ao fim andando de fatia em fatia e trava — que é o que
+   dá o último clique. E como o seco já faz o serviço da freada, o viscoso pode
+   ser bem mais brando: o giro sustenta velocidade legível por mais tempo em
+   vez de gastar tudo no arranque.
+
+   A soma não tem primitiva bonita depois do empurrão inicial, então a gente
+   integra numericamente UMA vez, no carregamento, e guarda numa tabela. São
+   240 amostras — custo irrisório, e a cada quadro do giro sobra uma
+   interpolação linear.
 
    O que a curva promete (e o teste ao lado cobra):
    - sai do zero e chega exatamente em 1;
@@ -19,11 +34,15 @@
    - a velocidade sobe no arranque, chega ao pico cedo e cai daí em diante;
    - termina quase parada, para o último grau ser um sussurro. */
 
-/** Atrito. Maior = perde força mais rápido e para mais cedo. */
-const K = 5.6;
+/** Atrito viscoso: some proporcional à própria velocidade. Menor = voa mais. */
+const K = 3.0;
 /** Fatia do tempo gasta no empurrão inicial. */
 const ARRANQUE = 0.10;
 const AMOSTRAS = 240;
+
+/* Atrito seco, calibrado para ω(1) === 0: é ele que dá a parada de verdade.
+   De (1+c)·e^(−K) − c = 0. */
+const C = Math.exp(-K) / (1 - Math.exp(-K));
 
 /* Suavizada de Hermite: começa e termina com aceleração zero, então o
    empurrão não dá solavanco nem no início nem ao encostar no atrito. */
@@ -31,7 +50,7 @@ const suave = (x) => x * x * (3 - 2 * x);
 
 /** Velocidade angular (em unidade arbitrária) no instante t ∈ [0,1]. */
 const velocidade = (t) =>
-    (t < ARRANQUE ? suave(t / ARRANQUE) : 1) * Math.exp(-K * t);
+    (t < ARRANQUE ? suave(t / ARRANQUE) : 1) * Math.max(0, (1 + C) * Math.exp(-K * t) - C);
 
 /* Integra a velocidade e normaliza para o percurso total dar 1. */
 const TABELA = (() => {
@@ -46,6 +65,15 @@ const TABELA = (() => {
     return acum;
 })();
 
+/* Pico, medido na mesma malha da tabela. Serve de régua para a encenação:
+   quem desenha o rastro e quem toca o tic precisam de "quão rápido ela está
+   AGORA" numa escala de 0 a 1, não em graus por segundo. */
+const V_PICO = (() => {
+    let m = 0;
+    for (let i = 0; i <= AMOSTRAS; i++) m = Math.max(m, velocidade(i / AMOSTRAS));
+    return m || 1;
+})();
+
 /**
  * Fração do percurso já andada no instante `t` ∈ [0,1].
  * `curvaGiro(0) === 0` e `curvaGiro(1) === 1`.
@@ -58,5 +86,14 @@ export function curvaGiro(t) {
     return TABELA[i] + (TABELA[i + 1] - TABELA[i]) * (x - i);
 }
 
+/**
+ * Quão rápida a roda está no instante `t`, de 0 (parada) a 1 (no pico).
+ * É o que o rastro e o som usam para saber a força do momento.
+ */
+export function forcaGiro(t) {
+    if (!(t > 0) || t >= 1) return 0;
+    return velocidade(t) / V_PICO;
+}
+
 /** Exposto só para o teste conferir o formato do movimento. */
-export const _curvaInterna = { K, ARRANQUE, AMOSTRAS, velocidade };
+export const _curvaInterna = { K, C, ARRANQUE, AMOSTRAS, velocidade, V_PICO };

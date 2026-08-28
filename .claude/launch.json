@@ -60,6 +60,12 @@
             "runtimeExecutable": "python",
             "runtimeArgs": ["-m", "http.server", "5411"],
             "port": 5411
+        },
+        {
+            "name": "site-node-5420",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["-y", "serve", "-l", "5420", "."],
+            "port": 5420
         }
     ]
 }
