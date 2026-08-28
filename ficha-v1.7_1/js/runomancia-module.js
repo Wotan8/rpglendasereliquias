@@ -120,8 +120,34 @@
         .runo-chip b{color:var(--lr-abyssal)}
         .runo-chip .runo-conc{font-style:normal;font-size:.66rem;color:#fbbf24;margin-left:4px}
         .runo-chip:hover{border-color:var(--lr-abyssal)}
-        .runo-add-select{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-        .runo-add-select select{flex:1;min-width:180px;background:var(--lr-bg-1);border:1px solid rgba(148,163,184,.15);color:var(--text,#e2e8f0);border-radius:6px;padding:5px 8px;font-size:.78rem}
+        .runo-search{position:relative;margin-top:8px}
+        .runo-search-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+        .runo-search-in{flex:1;min-width:200px;background:var(--lr-bg-1);border:1px solid rgba(148,163,184,.15);color:var(--text,#e2e8f0);border-radius:6px;padding:6px 10px;font-size:.78rem}
+        .runo-search-in:focus{outline:none;border-color:rgba(139,92,246,.55);box-shadow:0 0 0 2px rgba(139,92,246,.15)}
+        .runo-filters{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+        .runo-fchip{font-size:.68rem;border:1px solid rgba(148,163,184,.2);border-radius:999px;padding:2px 9px;cursor:pointer;color:var(--lr-text-2);background:var(--lr-bg-1);user-select:none}
+        .runo-fchip:hover{border-color:rgba(139,92,246,.45)}
+        .runo-fchip.on{border-color:rgba(139,92,246,.6);background:rgba(139,92,246,.18);color:#e9d5ff}
+        .runo-pop{position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:60;max-height:320px;overflow:auto;background:#141327;border:1px solid rgba(139,92,246,.35);border-radius:10px;box-shadow:0 12px 30px rgba(2,6,23,.6);padding:4px}
+        .runo-pop[hidden]{display:none}
+        .runo-grp{position:sticky;top:0;background:#141327;font-size:.64rem;letter-spacing:.06em;text-transform:uppercase;color:var(--lr-abyssal);font-weight:700;padding:6px 8px 3px}
+        .runo-opt{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:5px 8px;border-radius:7px;cursor:pointer;font-size:.78rem;color:var(--text,#e2e8f0)}
+        .runo-opt:hover,.runo-opt.hl{background:rgba(139,92,246,.18)}
+        .runo-opt .lat{font-size:.66rem;color:var(--lr-text-2);font-style:italic;margin-left:4px}
+        .runo-opt .cost{font-size:.68rem;color:var(--lr-text-2);white-space:nowrap}
+        .runo-opt mark,.runo-chip mark{background:rgba(139,92,246,.35);color:#e9d5ff;border-radius:3px;padding:0 1px}
+        .runo-opt.off{opacity:.45;cursor:not-allowed}
+        .runo-opt.off:hover{background:none}
+        .runo-opt .tag{font-size:.62rem;border:1px solid rgba(148,163,184,.25);border-radius:999px;padding:1px 6px;color:var(--lr-text-2);white-space:nowrap}
+        .runo-pop-empty{font-size:.74rem;color:var(--muted,#94a3b8);padding:10px}
+        .runo-sel{font-size:.72rem;color:var(--lr-text-2);margin-top:6px;min-height:1em}
+        .runo-link{color:var(--lr-abyssal);text-decoration:underline;cursor:pointer}
+        .runo-cat-bar{position:sticky;top:-18px;z-index:2;background:#141327;padding:8px 0 6px;margin-bottom:2px;box-shadow:0 6px 10px -8px rgba(2,6,23,.9)}
+        .runo-cat-bar .runo-search-in{width:100%;box-sizing:border-box}
+        .runo-cat-grp{font-size:.72rem;color:var(--lr-abyssal);font-weight:700;margin:10px 0 4px;text-transform:uppercase}
+        .runo-cat-n{font-size:.64rem;color:var(--lr-text-2);font-weight:600}
+        .runo-cat-rodape{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;font-size:.7rem;color:var(--lr-text-2)}
+        .runo-btn:disabled{opacity:.45;cursor:not-allowed}
         .runo-lab-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:12px;padding:14px;border-radius:12px;
             border:1px solid rgba(139,92,246,.5);background:linear-gradient(135deg,var(--lr-abyssal-soft),var(--lr-abyssal-soft));
             color:#e9d5ff;font-weight:800;font-size:1rem;letter-spacing:.06em;cursor:pointer;text-transform:uppercase}
@@ -350,32 +376,7 @@
         // --- Adicionar estudo ---
         const total = _slots(cfg);
         if (runo.estudos.length < total) {
-            const add = document.createElement('div');
-            add.className = 'runo-add-select no-print';
-            const opts = els.map(el => {
-                const atual = _nivelEfetivo(el.id);
-                const max = el.maxNivel || (el.tipoElemento === 'sigilus' ? 3 : 5);
-                if (atual >= max) return '';
-                const emEstudo = runo.estudos.some(e => e.elementId === el.id);
-                if (emEstudo) return '';
-                const alvo = atual + 1;
-                const grupo = el.tipoElemento === 'sigilus' ? (CAT_LABEL[el.categoria] || 'Sigilus') : TIPO_LABEL[el.tipoElemento];
-                return `<option value="${el.id}">${grupo} · ${el.nome} → Nv${alvo} (${_sessoesNecessarias(el, alvo, cfg)} sessões, ${_custoExp(el, alvo, cfg)} EXP)</option>`;
-            }).filter(Boolean).join('');
-            add.innerHTML = `
-                <select id="runoAddSelect"><option value="">— Adicionar elemento à Lista de Estudo —</option>${opts}</select>
-                <button class="runo-btn" id="runoAddBtn">➕ Estudar</button>
-                <button class="runo-btn" id="runoBrowseBtn" title="Ver todos os elementos">🔎 Catálogo</button>`;
-            body.appendChild(add);
-            add.querySelector('#runoAddBtn').onclick = () => {
-                const id = add.querySelector('#runoAddSelect').value;
-                if (!id) return;
-                const el = _elById(id);
-                const alvo = _nivelEfetivo(id) + 1;
-                runo.estudos.push({ elementId: id, nivelAlvo: alvo, sessoesFeitas: 0 });
-                _refresh(cfg); _save();
-            };
-            add.querySelector('#runoBrowseBtn').onclick = () => window.runoOpenCatalog();
+            body.appendChild(_buildBuscaEstudo(runo, els, cfg));
         } else {
             const full = document.createElement('div');
             full.style.cssText = 'font-size:.72rem;color:var(--lr-gold);margin-top:4px';
@@ -424,6 +425,254 @@
             leg.innerHTML = `⚙️ Níveis concedidos automaticamente por: ${fontes.join(', ') || 'mecânicas'} — não consomem EXP nem slots de estudo.`;
             body.appendChild(leg);
         }
+    }
+
+    // =====================================================================
+    // BUSCA DE ELEMENTOS PARA A LISTA DE ESTUDO
+    // =====================================================================
+
+    /** Sem acento e em minúsculas: "sifao" acha "Sifão". */
+    function _norm(s) {
+        return (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    }
+    function _esc(s) {
+        return (s || '').toString().replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    }
+
+    /** Grifa no texto original os trechos que casaram com a busca. */
+    function _grifar(texto, tokens) {
+        texto = (texto || '').toString();
+        if (!tokens.length) return _esc(texto);
+        const alvo = _norm(texto);
+        const faixas = [];
+        tokens.forEach(t => {
+            let i = alvo.indexOf(t);
+            while (i >= 0) { faixas.push([i, i + t.length]); i = alvo.indexOf(t, i + t.length); }
+        });
+        if (!faixas.length) return _esc(texto);
+        faixas.sort((a, b) => a[0] - b[0]);
+        let out = '', cur = 0;
+        faixas.forEach(([a, b]) => {
+            if (b <= cur) return;
+            a = Math.max(a, cur);
+            out += _esc(texto.slice(cur, a)) + '<mark>' + _esc(texto.slice(a, b)) + '</mark>';
+            cur = b;
+        });
+        return out + _esc(texto.slice(cur));
+    }
+
+    /** Peso do casamento: nome pelo começo > nome > latim > resto do verbete. */
+    function _score(el, tokens) {
+        if (!tokens.length) return 0;
+        const nome = _norm(el.nome);
+        if (tokens.every(t => nome.includes(t))) return tokens.some(t => nome.startsWith(t)) ? 3 : 2;
+        const latim = _norm(el.nomeLatim);
+        if (tokens.every(t => (nome + ' ' + latim).includes(t))) return 1;
+        return 0;
+    }
+
+    /** Tudo que a busca varre num elemento, já normalizado. */
+    function _palheiro(el, grupo) {
+        return _norm([el.nome, el.nomeLatim, grupo, TIPO_LABEL[el.tipoElemento],
+            CAT_LABEL[el.categoria], el.complexidade, el.cor, el.descricao]
+            .filter(Boolean).join(' '));
+    }
+
+    /** Grupo de exibição: Sigilus abre por categoria; o resto vai pelo tipo. */
+    function _grupoDe(el, sep) {
+        return el.tipoElemento === 'sigilus'
+            ? `Sigilus ${sep} ${CAT_LABEL[el.categoria] || 'Outros'}`
+            : (TIPO_LABEL[el.tipoElemento] || 'Outros');
+    }
+
+    /**
+     * Campo de busca da Lista de Estudo. O <select> antigo empilhava dezenas
+     * de elementos numa lista rolante única: para achar um Sigilus a pessoa
+     * tinha que varrer tudo com o olho. Aqui ela digita ("sifao", "sigilus",
+     * "captador", "vermelha") e a lista filtra na hora — agrupada por tipo,
+     * com o custo do próximo nível à direita e seta/Enter no teclado.
+     *
+     * Elementos que não podem entrar (já em estudo, nível máximo) continuam
+     * aparecendo, apagados e com o motivo: sumir sem explicação faz a pessoa
+     * procurar de novo achando que digitou errado.
+     */
+    function _buildBuscaEstudo(runo, els, cfg) {
+        const wrap = document.createElement('div');
+        wrap.className = 'runo-search no-print';
+
+        const cands = els.map(el => {
+            const atual = _nivelEfetivo(el.id);
+            const max = el.maxNivel || (el.tipoElemento === 'sigilus' ? 3 : 5);
+            const alvo = Math.min(atual + 1, max);
+            const emEstudo = runo.estudos.some(e => e.elementId === el.id);
+            const grupo = _grupoDe(el, '·');
+            return {
+                el, atual, alvo, grupo,
+                bloqueio: emEstudo ? 'já em estudo' : (atual >= max ? `nível máximo (Nv${max})` : ''),
+                sess: _sessoesNecessarias(el, alvo, cfg),
+                exp: _custoExp(el, alvo, cfg),
+                hay: _palheiro(el, grupo)
+            };
+        });
+
+        const tipos = [...new Set(cands.map(c => c.el.tipoElemento).filter(Boolean))];
+        let filtro = '';    // tipoElemento ativo ('' = todos)
+        let sel = null;     // candidato escolhido
+        let hl = -1;        // índice destacado pelo teclado
+        let visiveis = [];  // candidatos livres na ordem renderizada
+
+        wrap.innerHTML = `
+            <div class="runo-search-bar">
+                <input id="runoBuscaIn" class="runo-search-in" type="text" autocomplete="off" spellcheck="false"
+                       placeholder="🔎 Buscar elemento por nome, tipo ou categoria…">
+                <button class="runo-btn" id="runoAddBtn" disabled>➕ Estudar</button>
+                <button class="runo-btn" id="runoBrowseBtn" title="Ver todos os elementos">📖 Catálogo</button>
+            </div>
+            ${tipos.length > 1 ? `<div class="runo-filters">
+                <span class="runo-fchip on" data-t="">Todos</span>
+                ${tipos.map(t => `<span class="runo-fchip" data-t="${t}">${TIPO_ICON[t] || 'ᛟ'} ${TIPO_LABEL[t] || t}</span>`).join('')}
+            </div>` : ''}
+            <div class="runo-pop" id="runoBuscaPop" hidden></div>
+            <div class="runo-sel" id="runoBuscaSel"></div>`;
+
+        const input = wrap.querySelector('#runoBuscaIn');
+        const pop = wrap.querySelector('#runoBuscaPop');
+        const btn = wrap.querySelector('#runoAddBtn');
+        const selInfo = wrap.querySelector('#runoBuscaSel');
+
+        function _destacar() {
+            pop.querySelectorAll('.runo-opt.hl').forEach(n => n.classList.remove('hl'));
+            if (hl < 0) return;
+            const n = pop.querySelector(`.runo-opt[data-i="${hl}"]`);
+            if (n) { n.classList.add('hl'); n.scrollIntoView({ block: 'nearest' }); }
+        }
+
+        function _pintar() {
+            const tokens = _norm(input.value).split(/\s+/).filter(Boolean);
+            const lista = cands.filter(c =>
+                (!filtro || c.el.tipoElemento === filtro) &&
+                tokens.every(t => c.hay.includes(t)));
+            visiveis = [];
+
+            if (!lista.length) {
+                pop.innerHTML = `<div class="runo-pop-empty">Nenhum elemento casa com “${_esc(input.value)}”.</div>`;
+                hl = -1;
+                return;
+            }
+
+            // Quem casou pelo NOME vem antes de quem casou só pelo tipo ou pela
+            // descrição — digitar "si" tem que mostrar Sifão antes de todo
+            // Sigilus do compêndio. O agrupamento sobrevive: ordenamos os
+            // grupos pelo melhor casamento que cada um tem dentro.
+            const porGrupo = new Map();
+            lista.filter(c => !c.bloqueio).forEach(c => {
+                const g = porGrupo.get(c.grupo) || { best: -1, itens: [] };
+                const s = _score(c.el, tokens);
+                g.best = Math.max(g.best, s);
+                g.itens.push({ c, s });
+                porGrupo.set(c.grupo, g);
+            });
+
+            let html = '';
+            [...porGrupo.entries()].sort((a, b) => b[1].best - a[1].best).forEach(([grupo, info]) => {
+                html += `<div class="runo-grp">${_esc(grupo)}</div>`;
+                info.itens.sort((a, b) => b.s - a.s).forEach(({ c }) => {
+                    const i = visiveis.push(c) - 1;
+                    html += `<div class="runo-opt" data-i="${i}">
+                    <span>${TIPO_ICON[c.el.tipoElemento] || 'ᛟ'} ${_grifar(c.el.nome, tokens)}${c.el.nomeLatim ? `<span class="lat">${_grifar(c.el.nomeLatim, tokens)}</span>` : ''}
+                        <small style="color:var(--lr-text-2)">${c.atual ? `Nv${c.atual} → ` : ''}Nv${c.alvo}</small></span>
+                    <span class="cost">${c.sess} sess · ${c.exp} EXP</span>
+                </div>`;
+                });
+            });
+
+            const presos = lista.filter(c => c.bloqueio);
+            if (presos.length) {
+                html += '<div class="runo-grp">Indisponíveis</div>';
+                presos.forEach(c => {
+                    html += `<div class="runo-opt off" title="${_esc(c.bloqueio)}">
+                        <span>${TIPO_ICON[c.el.tipoElemento] || 'ᛟ'} ${_grifar(c.el.nome, tokens)}</span>
+                        <span class="tag">${_esc(c.bloqueio)}</span></div>`;
+                });
+            }
+
+            pop.innerHTML = html;
+            hl = (tokens.length && visiveis.length) ? 0 : -1;
+            _destacar();
+        }
+
+        function _abrir() { _pintar(); pop.hidden = false; }
+        function _fechar() { pop.hidden = true; }
+
+        function _limparEscolha() {
+            sel = null;
+            btn.disabled = true;
+            selInfo.textContent = '';
+        }
+
+        function _escolher(c) {
+            sel = c;
+            input.value = c.el.nome;
+            btn.disabled = false;
+            selInfo.innerHTML = `Selecionado: <b style="color:var(--lr-abyssal)">${_esc(c.el.nome)} → Nv${c.alvo}</b> — ${c.sess} sessões, ${c.exp} EXP · <span class="runo-link">ver detalhes</span>`;
+            selInfo.querySelector('.runo-link').onclick = () => window.runoOpenElementModal(c.el.id, c.alvo);
+            _fechar();
+        }
+
+        function _estudar() {
+            if (!sel) { input.focus(); return; }
+            runo.estudos.push({ elementId: sel.el.id, nivelAlvo: sel.alvo, sessoesFeitas: 0 });
+            _refresh(cfg); _save();
+        }
+
+        input.addEventListener('input', () => { _limparEscolha(); _abrir(); });
+        input.addEventListener('focus', _abrir);
+        input.addEventListener('keydown', e => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (pop.hidden) { _abrir(); if (hl < 0 && visiveis.length) { hl = 0; _destacar(); return; } }
+                if (!visiveis.length) return;
+                hl = e.key === 'ArrowDown'
+                    ? (hl + 1) % visiveis.length
+                    : (hl <= 0 ? visiveis.length - 1 : hl - 1);
+                _destacar();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!pop.hidden && hl >= 0 && visiveis[hl]) _escolher(visiveis[hl]);
+                else if (sel) _estudar();
+            } else if (e.key === 'Escape') {
+                if (!pop.hidden) { e.stopPropagation(); _fechar(); }
+            }
+        });
+
+        pop.addEventListener('mousedown', e => e.preventDefault()); // não rouba o foco do campo
+        pop.addEventListener('click', e => {
+            const opt = e.target.closest('.runo-opt');
+            if (!opt || opt.classList.contains('off')) return;
+            const c = visiveis[+opt.dataset.i];
+            if (c) _escolher(c);
+        });
+
+        wrap.querySelectorAll('.runo-fchip').forEach(chip => {
+            chip.onclick = () => {
+                filtro = chip.dataset.t || '';
+                wrap.querySelectorAll('.runo-fchip').forEach(c => c.classList.toggle('on', c === chip));
+                input.focus(); _abrir();
+            };
+        });
+
+        btn.onclick = _estudar;
+        wrap.querySelector('#runoBrowseBtn').onclick = () => window.runoOpenCatalog();
+
+        // Clique fora fecha a lista. O listener se remove sozinho quando o
+        // módulo é re-renderizado e este wrap sai do DOM.
+        const onDoc = e => {
+            if (!wrap.isConnected) { document.removeEventListener('click', onDoc, true); return; }
+            if (!wrap.contains(e.target)) _fechar();
+        };
+        document.addEventListener('click', onDoc, true);
+
+        return wrap;
     }
 
     /**
@@ -548,6 +797,31 @@
     };
 
     // =====================================================================
+    // MODAIS
+    // =====================================================================
+
+    /**
+     * Fecha o modal com Esc — e só o do topo. Com o detalhe de um elemento
+     * aberto por cima do catálogo, o primeiro Esc tira o detalhe e o segundo
+     * tira o catálogo. Devolve a função de fechar, que também tira o listener.
+     */
+    function _fecharComEsc(bk) {
+        function onKey(e) {
+            if (e.key !== 'Escape') return;
+            const abertos = [...document.querySelectorAll('.runo-modal-bk')];
+            if (abertos[abertos.length - 1] !== bk) return;
+            e.stopPropagation();
+            fechar();
+        }
+        function fechar() {
+            document.removeEventListener('keydown', onKey, true);
+            bk.remove();
+        }
+        document.addEventListener('keydown', onKey, true);
+        return fechar;
+    }
+
+    // =====================================================================
     // MODAL DE DETALHES DO ELEMENTO
     // =====================================================================
     window.runoOpenElementModal = function (elementId, nivelDestaque) {
@@ -576,7 +850,8 @@
 
         const bk = document.createElement('div');
         bk.className = 'runo-modal-bk';
-        bk.onclick = e => { if (e.target === bk) bk.remove(); };
+        const fechar = _fecharComEsc(bk);
+        bk.onclick = e => { if (e.target === bk) fechar(); };
         bk.innerHTML = `
         <div class="runo-modal">
             ${el.imagemUrl ? `<img class="img" src="${el.imagemUrl}" alt="">` : ''}
@@ -589,34 +864,112 @@
             <tbody>${rows || '<tr><td colspan="5">Sem níveis cadastrados.</td></tr>'}</tbody></table>
             <div style="font-size:.68rem;color:var(--lr-text-2)">Nível dominado pelo personagem: <b style="color:var(--lr-abyssal)">${atual || 'nenhum'}</b>${concedido > 0 ? ` <span style="color:var(--lr-gold)">(${estudado} estudado + ${concedido} concedido por mecânica)</span>` : ''}.
                 Custos e tempos vêm do cadastro no Painel do Criador; descontos aplicados pela configuração do módulo (Parte XI).</div>
-            <div style="text-align:right;margin-top:10px"><button class="runo-btn" onclick="this.closest('.runo-modal-bk').remove()">Fechar</button></div>
+            <div style="text-align:right;margin-top:10px"><button class="runo-btn" id="runoElFechar">Fechar</button></div>
         </div>`;
+        bk.querySelector('#runoElFechar').onclick = fechar;
         document.body.appendChild(bk);
     };
 
-    // Catálogo completo (lista clicável de todos os elementos)
+    // Catálogo completo (lista clicável de todos os elementos), com a mesma
+    // busca da Lista de Estudo: digita e filtra na hora, sem acento, por nome,
+    // tipo, categoria, cor ou descrição — e com o casamento grifado.
     window.runoOpenCatalog = function () {
         const els = _elements();
-        const runo = _runoState();
-        const groups = {};
-        els.forEach(el => {
-            const g = el.tipoElemento === 'sigilus' ? `Sigilus — ${CAT_LABEL[el.categoria] || 'Outros'}` : TIPO_LABEL[el.tipoElemento] || 'Outros';
-            (groups[g] = groups[g] || []).push(el);
+        const itens = els.map(el => {
+            const grupo = _grupoDe(el, '—');
+            return { el, grupo, hay: _palheiro(el, grupo) };
         });
+        const tipos = [...new Set(els.map(e => e.tipoElemento).filter(Boolean))];
+        let filtro = '';
+
         const bk = document.createElement('div');
         bk.className = 'runo-modal-bk';
-        bk.onclick = e => { if (e.target === bk) bk.remove(); };
-        bk.innerHTML = `<div class="runo-modal"><h3>ᛟ Catálogo de Elementos Rúnicos</h3>
+        bk.innerHTML = `<div class="runo-modal">
+            <h3>ᛟ Catálogo de Elementos Rúnicos</h3>
             <div class="sub">${els.length} elementos cadastrados — clique para ver custos de EXP e tempo de estudo</div>
-            ${Object.entries(groups).map(([g, list]) => `
-                <div style="font-size:.72rem;color:var(--lr-abyssal);font-weight:700;margin:10px 0 4px;text-transform:uppercase">${g}</div>
-                <div class="runo-learned">${list.map(el => {
-            const lv = _nivelEfetivo(el.id);
-            const conc = _nivelConcedido(el.id);
-            return `<span class="runo-chip" onclick="runoOpenElementModal('${el.id}')">${el.nome}${lv ? ` <b>Nv${lv}</b>` : ''}${conc ? ` <em class="runo-conc">⚙️+${conc}</em>` : ''}</span>`;
-        }).join('')}</div>`).join('')}
-            <div style="text-align:right;margin-top:10px"><button class="runo-btn" onclick="this.closest('.runo-modal-bk').remove()">Fechar</button></div>
+            <div class="runo-cat-bar">
+                <input id="runoCatIn" class="runo-search-in" type="text" autocomplete="off" spellcheck="false"
+                       placeholder="🔎 Buscar por nome, tipo, categoria ou descrição…">
+                ${tipos.length > 1 ? `<div class="runo-filters">
+                    <span class="runo-fchip on" data-t="">Todos</span>
+                    ${tipos.map(t => `<span class="runo-fchip" data-t="${t}">${TIPO_ICON[t] || 'ᛟ'} ${TIPO_LABEL[t] || t}</span>`).join('')}
+                </div>` : ''}
+            </div>
+            <div id="runoCatLista"></div>
+            <div class="runo-cat-rodape">
+                <span id="runoCatCont"></span>
+                <button class="runo-btn" id="runoCatFechar">Fechar</button>
+            </div>
         </div>`;
+
+        const input = bk.querySelector('#runoCatIn');
+        const lista = bk.querySelector('#runoCatLista');
+        const cont = bk.querySelector('#runoCatCont');
+        let achados = [];
+
+        function _pintarCat() {
+            const tokens = _norm(input.value).split(/\s+/).filter(Boolean);
+            achados = itens.filter(it =>
+                (!filtro || it.el.tipoElemento === filtro) &&
+                tokens.every(t => it.hay.includes(t)));
+
+            cont.textContent = achados.length === els.length
+                ? `${els.length} elementos`
+                : `${achados.length} de ${els.length} elementos`;
+
+            if (!achados.length) {
+                lista.innerHTML = `<div class="runo-pop-empty">Nenhum elemento casa com “${_esc(input.value)}”.</div>`;
+                return;
+            }
+
+            // Mesma regra da Lista de Estudo: o grupo com o melhor casamento de
+            // nome sobe, e dentro dele o nome vem antes do tipo/descrição.
+            const porGrupo = new Map();
+            achados.forEach(it => {
+                const g = porGrupo.get(it.grupo) || { best: -1, itens: [] };
+                const s = _score(it.el, tokens);
+                g.best = Math.max(g.best, s);
+                g.itens.push({ it, s });
+                porGrupo.set(it.grupo, g);
+            });
+
+            lista.innerHTML = [...porGrupo.entries()]
+                .sort((a, b) => b[1].best - a[1].best)
+                .map(([grupo, info]) => `
+                <div class="runo-cat-grp">${_esc(grupo)} <span class="runo-cat-n">${info.itens.length}</span></div>
+                <div class="runo-learned">${info.itens.sort((a, b) => b.s - a.s).map(({ it }) => {
+                    const lv = _nivelEfetivo(it.el.id);
+                    const conc = _nivelConcedido(it.el.id);
+                    return `<span class="runo-chip" data-id="${it.el.id}">${TIPO_ICON[it.el.tipoElemento] || 'ᛟ'} ${_grifar(it.el.nome, tokens)}${lv ? ` <b>Nv${lv}</b>` : ''}${conc ? ` <em class="runo-conc">⚙️+${conc}</em>` : ''}</span>`;
+                }).join('')}</div>`).join('');
+        }
+
+        const _fecharCat = _fecharComEsc(bk);
+
+        bk.onclick = e => { if (e.target === bk) _fecharCat(); };
+        bk.querySelector('#runoCatFechar').onclick = _fecharCat;
+        lista.addEventListener('click', e => {
+            const chip = e.target.closest('.runo-chip[data-id]');
+            if (chip) window.runoOpenElementModal(chip.dataset.id);
+        });
+        input.addEventListener('input', _pintarCat);
+        input.addEventListener('keydown', e => {
+            // Um resultado só: Enter abre direto, sem precisar do mouse.
+            if (e.key === 'Enter' && achados.length === 1) {
+                e.preventDefault();
+                window.runoOpenElementModal(achados[0].el.id);
+            }
+        });
+        bk.querySelectorAll('.runo-fchip').forEach(chip => {
+            chip.onclick = () => {
+                filtro = chip.dataset.t || '';
+                bk.querySelectorAll('.runo-fchip').forEach(c => c.classList.toggle('on', c === chip));
+                input.focus(); _pintarCat();
+            };
+        });
+
+        _pintarCat();
         document.body.appendChild(bk);
+        input.focus();
     };
 })();
