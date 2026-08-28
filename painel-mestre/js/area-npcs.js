@@ -846,12 +846,14 @@ function _npcSecaoMecanica() {
             <div class="npcv2-attrs-grid" id="npcAttrsGrid">
                 ${ATTR_SIGLAS.map(a => `
                     <div class="npcv2-attr-cell">
-                        <div class="npcv2-attr-label"
+                        <div class="npcv2-attr-label" tabindex="0" role="button"
                              data-tt-title="${escapeHtml(_nomeDoAtributo(a))}"
                              data-tt-desc="${escapeHtml(_descDoAtributo(a))}"
                              onmouseenter="handleNpcTooltipEnter(event, this)"
                              onmouseleave="hideNpcTooltip()"
-                             onmousemove="moveNpcTooltip(event)">${a}</div>
+                             onmousemove="moveNpcTooltip(event)"
+                             onclick="abrirDetalheNpc(this)"
+                             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirDetalheNpc(this)}">${a}</div>
                         <input type="number" class="form-input npcv2-attr-input" id="npcAttr_${a}" value="0"
                             oninput="F.npc.atributos['${a}']=parseInt(this.value)||0;recalcStats()">
                         <div class="npcv2-attr-eff" id="npcAttrEff_${a}"></div>
@@ -1777,13 +1779,15 @@ function renderDvGrid() {
                 : '';
             return `<div class="npcv2-dv-cell ${locked ? 'locked' : ''}" data-dvkey="${dv.key}">
                 ${removeBtn}
-                <div class="npcv2-dv-label" 
-                     data-tt-title="${escapeHtml(dv.nome)}" data-tt-icone="${escapeHtml(dv.icone || '')}" 
-                     data-tt-desc="${escapeHtml(desc)}" 
+                <div class="npcv2-dv-label" tabindex="0" role="button"
+                     data-tt-title="${escapeHtml(dv.nome)}" data-tt-icone="${escapeHtml(dv.icone || '')}"
+                     data-tt-desc="${escapeHtml(desc)}"
                      data-tt-formula="${escapeHtml(tip)}"
-                     onmouseenter="handleNpcTooltipEnter(event, this)" 
-                     onmouseleave="hideNpcTooltip()" 
-                     onmousemove="moveNpcTooltip(event)">
+                     onmouseenter="handleNpcTooltipEnter(event, this)"
+                     onmouseleave="hideNpcTooltip()"
+                     onmousemove="moveNpcTooltip(event)"
+                     onclick="abrirDetalheNpc(this)"
+                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirDetalheNpc(this)}">
                      ${dv.icone ? dv.icone + ' ' : ''}${escapeHtml(dv.nome)}${porItem ? ' 🎒' : ''}${locked ? ' 🔒' : ''}
                 </div>
                 <div class="npcv2-dv-value">
@@ -1834,13 +1838,15 @@ function renderDvGrid() {
                     : `${d.arma} — o alcance da arma, que a FOR sustenta inteiro.`;
 
         return `<div class="npcv2-dv-cell npcv2-dv-calc${d.limitadoPorFor ? ' is-limitado' : ''}">
-                <div class="npcv2-dv-label"
+                <div class="npcv2-dv-label" tabindex="0" role="button"
                      data-tt-title="Alcance do Disparo" data-tt-icone="🏹"
                      data-tt-desc="${escapeHtml(dica)}"
                      data-tt-nota="Sai da arma equipada e da FOR — não é Valor Derivado."
                      onmouseenter="handleNpcTooltipEnter(event, this)"
                      onmouseleave="hideNpcTooltip()"
-                     onmousemove="moveNpcTooltip(event)">
+                     onmousemove="moveNpcTooltip(event)"
+                     onclick="abrirDetalheNpc(this)"
+                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirDetalheNpc(this)}">
                      🏹 Alcance do Disparo${d.limitadoPorFor ? ' ⚠️' : ''}
                 </div>
                 <div class="npcv2-dv-value"><b class="npcv2-dv-calc-val">${escapeHtml(valor)}</b></div>
@@ -2245,12 +2251,14 @@ window.renderStructuredSkills = function() {
         grouped[cat].sort((a,b) => (a.s.nome||'').localeCompare(b.s.nome||'')).forEach(item => {
             const { ps, s, idx } = item;
             html += `<div class="npcv2-attr-cell" style="flex-direction: row; align-items: center; justify-content: space-between; padding: 4px 8px;">
-                <div class="npcv2-attr-label" style="text-align:left; flex:1; font-size: 0.85rem;" 
+                <div class="npcv2-attr-label" style="text-align:left; flex:1; font-size: 0.85rem;" tabindex="0" role="button"
                      data-tt-title="${escapeHtml(s.nome)}"
                      data-tt-desc="${escapeHtml(s.descricao || 'Sem descrição.')}"
-                     onmouseenter="handleNpcTooltipEnter(event, this)" 
-                     onmouseleave="hideNpcTooltip()" 
-                     onmousemove="moveNpcTooltip(event)">
+                     onmouseenter="handleNpcTooltipEnter(event, this)"
+                     onmouseleave="hideNpcTooltip()"
+                     onmousemove="moveNpcTooltip(event)"
+                     onclick="abrirDetalheNpc(this)"
+                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirDetalheNpc(this)}">
                      ${escapeHtml(s.nome)}
                 </div>
                 <div style="display:flex; align-items:center; gap:5px;">

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check — Detalhe de valor na ficha de NPC</title>
+
+<link rel="stylesheet" href="painel-mestre/css/base.css">
+<link rel="stylesheet" href="painel-mestre/css/layout.css">
+<link rel="stylesheet" href="painel-mestre/css/area-npcs.css">
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/lendas-reliquias.css">
+<link rel="stylesheet" href="shared/detalhe.css">
+<script type="module">import './shared/detalhe.js';</script>
+
+<style>
+  .chk-bar { position: fixed; top:0; left:0; right:0; z-index: 9999;
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      padding:8px 12px; background: var(--lr-bg-1);
+      border-bottom: 1px solid var(--lr-border);
+      font: 600 .82rem/1.4 var(--lr-font-body); color: var(--lr-text-1); }
+  .chk-bar button { padding:4px 10px; border:1px solid var(--lr-border);
+      border-radius:6px; background: var(--lr-surface); color: var(--lr-text-1); font:inherit; }
+  .chk-stage { padding: 56px 16px 16px; max-width: 900px; margin: 0 auto; }
+  #chkLog { white-space: pre-wrap; font: 12px/1.7 ui-monospace, monospace;
+      color: var(--lr-text-2); background: var(--lr-bg-1);
+      border: 1px solid var(--lr-border); border-radius: 8px; padding: 12px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="chk-bar">
+  <strong>Check — Detalhe de valor (NPC)</strong>
+  <button onclick="document.documentElement.classList.toggle('dark')">Alternar tema</button>
+  <button onclick="chkDetalhe()">Clicar nos rotulos</button>
+  <span id="chkResumo"></span>
+</div>
+
+<div class="chk-stage">
+  <p>O hover promete "Clique para ver detalhes". Este check clica em cada rotulo
+  com o markup real da ficha de NPC e confere que a janela abre com as
+  <b>formulas</b> e o <b>usado em</b> — nao so a descricao.</p>
+
+  <div class="npcv2-dv-grid" id="chkGrid"></div>
+  <div id="chkLog">Clique em "Clicar nos rotulos".</div>
+</div>
+
+<script type="module" src="__check-detalhe-npc.js"></script>
+</body>
+</html>

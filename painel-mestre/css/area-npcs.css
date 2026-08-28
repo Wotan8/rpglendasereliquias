@@ -534,9 +534,21 @@
     border-color: var(--lr-gold);
     box-shadow: var(--lr-glow-gold);
 }
+/* Rótulo de valor: o hover explica em resumo, o CLIQUE abre a janela com a
+   fórmula inteira e o "usado em" (shared/detalhe.js). Por isso `help` e não
+   `default` — e o foco tem de aparecer, porque dá para chegar pelo teclado. */
 .npcv2-attr-label {
     font-size: var(--lr-fs-xs); font-weight: 700;
     letter-spacing: 0.03em; color: var(--lr-text-2);
+    cursor: help;
+}
+.npcv2-attr-label:hover,
+.npcv2-dv-label:hover { color: var(--lr-gold-2); }
+.npcv2-attr-label:focus-visible,
+.npcv2-dv-label:focus-visible {
+    outline: 2px solid var(--lr-gold);
+    outline-offset: 2px;
+    border-radius: var(--lr-radius-sm);
 }
 .npcv2-attr-input.form-input {
     border: none; background: transparent; padding: 2px 0;

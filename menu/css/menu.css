@@ -3108,6 +3108,10 @@ html:not(.dark) .meta-card {
     width: min(880px, calc(100vw - 32px));
     max-height: min(calc(100dvh - 32px), 760px);
     padding: 0;
+    /* O reset do Portal zera a margem (`* { margin: 0 }`), e é dela que o
+       navegador se serve para centralizar um <dialog> modal — sem isto a
+       roleta nasce no canto superior esquerdo. */
+    margin: auto;
     border: var(--lr-border-w) solid var(--lr-border);
     border-radius: var(--lr-radius-lg);
     background: var(--lr-surface);

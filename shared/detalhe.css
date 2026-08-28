@@ -145,6 +145,10 @@
     width: min(560px, calc(100vw - var(--lr-space-5) * 2));
     max-height: min(80vh, 720px);
     padding: 0;
+    /* As quatro telas que abrem esta janela zeram a margem no reset
+       (`* { margin: 0 }`), e é dela que o navegador se serve para centralizar
+       um <dialog> modal — sem isto a janela nasce no canto superior esquerdo. */
+    margin: auto;
     overflow: hidden;
     background: var(--lr-surface);
     color: var(--lr-text-1);

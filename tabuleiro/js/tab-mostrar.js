@@ -882,7 +882,7 @@ function _tbEnsureAliadoModalDom() {
 async function abrirFichaMestreNpc(npc) {
     try {
         _tbInjectCss('../painel-mestre/css/modais.css', 'tbCssPmModais');
-        _tbInjectCss('../painel-mestre/css/area-npcs.css?v=12', 'tbCssPmAreaNpcs');
+        _tbInjectCss('../painel-mestre/css/area-npcs.css?v=13', 'tbCssPmAreaNpcs');
         // O que a aba Inventário do modal usa e o Tabuleiro não tem: o seletor
         // de mecânicas (.mechsel-*, em layout.css) e os modais de item/equipar
         // da ficha. Sem eles o formulário de item abre cru, sem caixa nem grade.

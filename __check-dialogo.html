@@ -78,6 +78,16 @@ let p = confirmar('Excluir esta nota?');
 await espera(0);
 teste('T9 · abre como dialog MODAL (foco preso e camada de topo vêm do navegador)',
     !!$('.lr-dialogo') && $('.lr-dialogo').open && $('.lr-dialogo').matches(':modal'));
+
+// O reset das telas (`* { margin: 0 }`) apaga o `margin: auto` com que o
+// navegador centraliza um <dialog> modal, e ele nascia no canto superior
+// esquerdo. Este teste passava sem notar: modal ele já era.
+{
+    const c = $('.lr-dialogo').getBoundingClientRect();
+    teste('T9b · e nasce centralizado, não no canto',
+        Math.abs((c.x + c.width / 2) - innerWidth / 2) < 12
+        && Math.abs((c.y + c.height / 2) - innerHeight / 2) < 12);
+}
 clicar('.lr-dialogo-ok');
 teste('T10 · Confirmar devolve true', await p === true);
 teste('T11 · o diálogo sai do DOM ao fechar', !$('.lr-dialogo'));

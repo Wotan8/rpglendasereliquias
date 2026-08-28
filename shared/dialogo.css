@@ -70,6 +70,10 @@
     max-height: calc(100vh - var(--lr-space-6) * 2);
     padding: 0;
     overflow: auto;
+    /* Toda tela que abre este diálogo zera a margem no reset
+       (`* { margin: 0 }`), e é dela que o navegador se serve para centralizar
+       um <dialog> modal — sem isto ele nasce no canto superior esquerdo. */
+    margin: auto;
 }
 .lr-dialogo::backdrop { background: rgb(0 0 0 / 0.55); }
 
