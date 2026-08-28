@@ -625,6 +625,12 @@ export function fmtGraus(g) { return g > 0 ? '+' + g : String(g); }
 // sincronizado com a ficha) e na exibição, que também recebe valor sujo de fora.
 export const vNum = (v) => Math.round((Number(v) || 0) * 100) / 100;
 
+/** ❤️ Vitalidade, Sanidade e Energia na TELA: sempre arredondadas para CIMA.
+ *  A conta continua quebrada (é vNum que grava e sincroniza com a ficha) — na
+ *  mesa ninguém marca meio ponto de vida, então 20,4 aparece como 21. Mesma
+ *  regra da ficha de personagem (vitalExibido, em derived-values.js). */
+export const vitalTela = (v) => Math.ceil(Number(v) || 0);
+
 /** Valor "de mesa" de um VD com `arredondaMesa` — mesma regra da ficha
  *  (dvValorDeMesa): piso, com mínimo 1 quando o valor é positivo. */
 export function dvMesa(v) {

@@ -3,6 +3,8 @@
  *
  * Regras verificadas:
  *  • status vital "Atual" soma e subtrai, sempre com clamp em [0, Máximo];
+ *  • cura quebrada fecha para CIMA (mesma régua de derived-values.js);
+ *  • Máximo 0 (ficha que ainda não calculou os vitais) não vira teto;
  *  • "_MAX" é ignorado no uso (é bônus de equipar, não efeito de consumo);
  *  • condição vinculada entra em state.conditions e não duplica;
  *  • consumir decrementa a quantidade e remove o item na última unidade;
@@ -37,22 +39,35 @@ const CODIGO = [
 
 /** Sandbox: campos da ficha viram objetos simples; Firestore vira um log. */
 function montaAmbiente({ items, catalog = [], vitais, conditions = [], systemConditions = [], mechanics = [] }) {
-  // Na ficha o Atual é <input> e o Máximo é um display de texto — dois elementos.
+  // Como a ficha realmente endereça os dois campos (ficha-v1.7_1.html):
+  //   Atual  → <input data-key="vit_atual">      (SEM id)
+  //   Máximo → <input id="vit_max_display">      (número em .value)
+  // O mock separa os dois caminhos de propósito: se o código voltar a procurar
+  // o Atual por getElementById, ou a ler o Máximo em .textContent, ele acha
+  // null/undefined aqui e o teste quebra — foi exatamente esse o bug.
   const DISPLAY = { vit_atual: 'vit_max_display', ener_atual: 'ener_max_display', san_atual: 'san_max_display' };
-  const campos = {};
+  const campos = {};        // tudo junto, só para as asserções lerem
+  const porId = {};         // o que a ficha expõe por id
+  const porDataKey = {};    // o que a ficha expõe por data-key
   for (const [id, v] of Object.entries(vitais)) {
-    campos[id] = { value: String(v.atual), dispatchEvent() {} };
-    campos[DISPLAY[id]] = { textContent: String(v.max) };
+    campos[id] = porDataKey[id] = { value: String(v.atual), dispatchEvent() {} };
+    campos[DISPLAY[id]] = porId[DISPLAY[id]] = { value: String(v.max) };
   }
 
   const gravado = [];
   const state = { conditions };
   const ctx = {
     console: { log() {}, warn() {}, error() {} },
-    alert: msg => gravado.push({ op: 'alert', msg }),
+    LRDialogo: { toast: (msg) => gravado.push({ op: 'alert', msg }) },
     Event: class { constructor(t) { this.type = t; } },
     state,
-    document: { getElementById: id => campos[id] || null },
+    document: {
+      getElementById: id => porId[id] || null,
+      querySelector: (sel) => {
+        const m = /^\[data-key="([^"]+)"\]$/.exec(sel);
+        return m ? (porDataKey[m[1]] || null) : null;
+      },
+    },
     _firestoreSetDoc: async (col, id, data) => { gravado.push({ op: 'set', id, data }); },
     _firestoreDeleteDoc: async (col, id) => { gravado.push({ op: 'del', id }); },
     renderEquippedItems() {}, renderInventoryTab() {}, recalcInventoryPressure() {},
@@ -87,6 +102,26 @@ const item = extra => ({ id: 'i1', nome: 'Loção', tipo: 'Consumível', quantid
   });
   await ctx.usarItem('i1');
   assert.equal(campos.vit_atual.value, 7, '3 + 4 = 7');
+}
+
+// --- cura quebrada fecha para cima -----------------------------------------
+{
+  const { ctx, campos } = montaAmbiente({
+    items: [item({ statusVitaisVinculados: [{ id: 'VIT_ATUAL', modificador: 1.5 }] })],
+    vitais: { vit_atual: { atual: 3, max: 10 } },
+  });
+  await ctx.usarItem('i1');
+  assert.equal(campos.vit_atual.value, 5, '3 + 1,5 = 4,5 → 5: meia Vitalidade não existe na mesa');
+}
+
+// --- Máximo ainda não calculado não vira teto ------------------------------
+{
+  const { ctx, campos } = montaAmbiente({
+    items: [item({ statusVitaisVinculados: [CURA] })],
+    vitais: { vit_atual: { atual: 2, max: 0 } },
+  });
+  await ctx.usarItem('i1');
+  assert.equal(campos.vit_atual.value, 6, 'Máximo 0 é ficha sem vitais calculados, não teto zero');
 }
 
 // --- clamp no piso (modificador negativo) ----------------------------------

@@ -579,21 +579,27 @@ function _vitalKeyFor(sigla) {
     return hit ? (hit.key || hit.id) : null;
 }
 
+/* ❤️ Vitalidade, Sanidade e Energia na tela: sempre arredondadas para CIMA.
+   O cálculo do NPC (npc-calc-engine) segue quebrado no registro — o que sobe
+   para cima é só o número que a mesa lê e marca. Mesma regra da ficha de
+   personagem (vitalExibido) e do tabuleiro (vitalTela). */
+const _alVitalTela = (v) => Math.ceil(Number(v) || 0);
+
 function _vitalMax(npc, sigla) {
     const vd = npc.valoresDer || {};
     const ov = vd.overrides || {};
-    if (ov[sigla] != null && ov[sigla] !== '') return ov[sigla];
+    if (ov[sigla] != null && ov[sigla] !== '') return _alVitalTela(ov[sigla]);
     const k = _vitalKeyFor(sigla);
-    if (k && ov[k] != null && ov[k] !== '') return ov[k];
-    if (vd[sigla] != null && vd[sigla] !== '') return vd[sigla];
+    if (k && ov[k] != null && ov[k] !== '') return _alVitalTela(ov[k]);
+    if (vd[sigla] != null && vd[sigla] !== '') return _alVitalTela(vd[sigla]);
     return 0;
 }
 
 function _vitalAtual(npc, sigla) {
     const at = (npc.valoresDer || {}).atual || {};
-    if (at[sigla] != null && at[sigla] !== '') return at[sigla];
+    if (at[sigla] != null && at[sigla] !== '') return _alVitalTela(at[sigla]);
     const k = _vitalKeyFor(sigla);
-    if (k && at[k] != null && at[k] !== '') return at[k];
+    if (k && at[k] != null && at[k] !== '') return _alVitalTela(at[k]);
     return '';
 }
 

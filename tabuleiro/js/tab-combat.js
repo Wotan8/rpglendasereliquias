@@ -3,7 +3,7 @@
 // Sincroniza com Painel do Mestre > Mesas > Combate
 // =============================================
 import { db, doc, setDoc, updateDoc, getDoc } from '../../painel-mestre/js/firebase-config.js';
-import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, patchVitalAtualNpc, markDirty,
+import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, vitalTela, patchVitalAtualNpc, markDirty,
          registrarFlutuante, trazerParaFrente } from './tab-state.js';
 import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
 import { VITAIS, vdsCombateDaFonte, espelhosDoVitalNpc, fonteDoParticipante } from './tab-hud.js';
@@ -204,13 +204,15 @@ function render() {
     body.innerHTML = abas + topo + parts.map((p, i) => {
         const atual = !!cena.iniciado && i === turno % parts.length;
         const podeCtrl = secreto;
+        // ❤️ VIT/ENER/SAN: o número mostrado arredonda para CIMA (vitalTela); a
+        // barra e o que é gravado seguem com o valor quebrado.
         const barra = (label, cur, max, cor) => {
             const pct = max > 0 ? Math.max(0, Math.min(100, (cur / max) * 100)) : 0;
             return `<div class="tb-cstat">
                 ${podeCtrl ? `<button class="tb-cstat-btn" onclick="tbCombStat('${p.id}','${label}',-1)">−</button>` : ''}
                 <span class="tb-cstat-lb">${label}</span>
                 <div class="tb-cstat-bar"><div style="width:${pct}%;background:${cor}"></div></div>
-                <span class="tb-cstat-v">${vNum(cur)}/${vNum(max)}</span>
+                <span class="tb-cstat-v">${vitalTela(cur)}/${vitalTela(max)}</span>
                 ${podeCtrl ? `<button class="tb-cstat-btn" onclick="tbCombStat('${p.id}','${label}',1)">+</button>` : ''}
             </div>`;
         };
@@ -718,7 +720,10 @@ window.tbCombStat = async function(pid, stat, amt) {
         }
     }
 
-    const novoVal = vNum(Math.max(0, Math.min(curVal + amt, maxVal)));
+    // ❤️ O Atual é inteiro, arredondado para CIMA — inclusive o teto, que sai
+    // quebrado do cálculo (Máximo 20,4 segura 21). Sem isso o combate gravava
+    // 20,4 e a ficha, que arredonda, devolvia 21 no save seguinte: pisca-pisca.
+    const novoVal = vitalTela(Math.max(0, Math.min(curVal + amt, vitalTela(maxVal))));
     p[cur] = novoVal;
     await salvar(parts);
 

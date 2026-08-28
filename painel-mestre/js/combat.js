@@ -9,11 +9,12 @@ import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 
 let combatListeners = {};
 
-// Vitais aceitam meio ponto (VIT 21,9), e somar/subtrair 1 repetidas vezes em
-// float acumula lixo: virava "9.899999999999999/21.9" na tela e no doc. Arredonda
-// na CONTA (o que é gravado e sincronizado com a ficha) e na exibição, que
-// também mostra valor vindo sujo de fora.
-const vNum = (v) => Math.round((Number(v) || 0) * 100) / 100;
+// ❤️ Vitalidade, Sanidade e Energia arredondam SEMPRE para CIMA: na mesa
+// ninguém marca meio ponto de vida. Vale para o que aparece e para o Atual que
+// é gravado — o Máximo continua quebrado no cálculo, que é de onde ele vem.
+// De quebra mata o lixo de float que somar/subtrair 1 acumulava
+// ("9.899999999999999/21.9" na tela e no doc).
+const vTela = (v) => Math.ceil(Number(v) || 0);
 
 // ===== PERSISTÊNCIA (sincroniza com o Tabuleiro/VTT) =====
 // Doc de combate como veio do servidor — a base para remontar as CENAS sem
@@ -258,7 +259,7 @@ function updateParticipantStats(pid) {
         const pct = max > 0 ? (cur/max)*100 : 0;
         const el = document.getElementById(`combat-${stat}-${pid}`);
         const fill = document.getElementById(`combat-${stat}-fill-${pid}`);
-        if (el) el.textContent = `${vNum(cur)}/${vNum(max)}`;
+        if (el) el.textContent = `${vTela(cur)}/${vTela(max)}`;
         if (fill) { fill.style.width = pct + '%'; if (stat === 'vit') fill.style.background = pct <= 25 ? 'linear-gradient(90deg,#dc2626,#ef4444)' : 'linear-gradient(90deg,#10b981,#34d399)'; if (stat === 'san') fill.style.background = pct <= 25 ? 'linear-gradient(90deg,#dc2626,#ef4444)' : 'linear-gradient(90deg,#6366f1,#8b5cf6)'; }
     });
 }
@@ -326,9 +327,13 @@ window.confirmAddCustom = function() {
 window.adjustCombatStat = function(pid, stat, amt, ev) {
     if (ev) ev.stopPropagation();
     const p = S.combatParticipants.find(x => x.id === pid); if (!p) return;
-    if (stat === 'vit') p.hpCurrent = vNum(Math.max(0, Math.min(p.hpCurrent + amt, p.hpMax)));
-    else if (stat === 'ener') p.enerCurrent = vNum(Math.max(0, Math.min(p.enerCurrent + amt, p.enerMax)));
-    else if (stat === 'san') p.sanCurrent = vNum(Math.max(0, Math.min(p.sanCurrent + amt, p.sanMax)));
+    // ❤️ O Atual é inteiro e arredonda para CIMA — inclusive o teto, que sai
+    // quebrado do cálculo (Máximo 20,4 segura 21 de marcação). Sem isso o
+    // combate gravava 20,4 e a ficha, que arredonda, devolvia 21 no save.
+    const ateOTeto = (cur, max) => vTela(Math.max(0, Math.min(cur + amt, vTela(max))));
+    if (stat === 'vit') p.hpCurrent = ateOTeto(p.hpCurrent, p.hpMax);
+    else if (stat === 'ener') p.enerCurrent = ateOTeto(p.enerCurrent, p.enerMax);
+    else if (stat === 'san') p.sanCurrent = ateOTeto(p.sanCurrent, p.sanMax);
     updateParticipantStats(pid);
     persistCombat();
 
@@ -439,9 +444,9 @@ function pintarCombate() {
             const btn = (stat, id) => hasCtrl ? `<button class="combat-stat-btn" onclick="adjustCombatStat('${p.id}','${stat}',-1,event)">−</button>` : '';
             const btnP = (stat, id) => hasCtrl ? `<button class="combat-stat-btn" onclick="adjustCombatStat('${p.id}','${stat}',1,event)">+</button>` : '';
             stats = `<div class="combat-stats">
-                <div class="combat-stat-item ${hasCtrl?'combat-stat-npc':''}">${btn('vit')}<span class="combat-stat-label">❤️ VIT</span><div class="combat-stat-bar"><div class="combat-stat-fill" id="combat-vit-fill-${p.id}" style="width:${vp}%;background:${vc}"></div></div><span class="combat-stat-value" id="combat-vit-${p.id}">${vNum(p.hpCurrent)}/${vNum(p.hpMax)}</span>${btnP('vit')}</div>
-                <div class="combat-stat-item ${hasCtrl?'combat-stat-npc':''}">${btn('ener')}<span class="combat-stat-label">🔥 ENER</span><div class="combat-stat-bar"><div class="combat-stat-fill" id="combat-ener-fill-${p.id}" style="width:${ep}%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div><span class="combat-stat-value" id="combat-ener-${p.id}">${vNum(p.enerCurrent)}/${vNum(p.enerMax)}</span>${btnP('ener')}</div>
-                <div class="combat-stat-item ${hasCtrl?'combat-stat-npc':''}">${btn('san')}<span class="combat-stat-label">🧠 SAN</span><div class="combat-stat-bar"><div class="combat-stat-fill" id="combat-san-fill-${p.id}" style="width:${sp}%;background:${sc}"></div></div><span class="combat-stat-value" id="combat-san-${p.id}">${vNum(p.sanCurrent)}/${vNum(p.sanMax)}</span>${btnP('san')}</div>
+                <div class="combat-stat-item ${hasCtrl?'combat-stat-npc':''}">${btn('vit')}<span class="combat-stat-label">❤️ VIT</span><div class="combat-stat-bar"><div class="combat-stat-fill" id="combat-vit-fill-${p.id}" style="width:${vp}%;background:${vc}"></div></div><span class="combat-stat-value" id="combat-vit-${p.id}">${vTela(p.hpCurrent)}/${vTela(p.hpMax)}</span>${btnP('vit')}</div>
+                <div class="combat-stat-item ${hasCtrl?'combat-stat-npc':''}">${btn('ener')}<span class="combat-stat-label">🔥 ENER</span><div class="combat-stat-bar"><div class="combat-stat-fill" id="combat-ener-fill-${p.id}" style="width:${ep}%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div><span class="combat-stat-value" id="combat-ener-${p.id}">${vTela(p.enerCurrent)}/${vTela(p.enerMax)}</span>${btnP('ener')}</div>
+                <div class="combat-stat-item ${hasCtrl?'combat-stat-npc':''}">${btn('san')}<span class="combat-stat-label">🧠 SAN</span><div class="combat-stat-bar"><div class="combat-stat-fill" id="combat-san-fill-${p.id}" style="width:${sp}%;background:${sc}"></div></div><span class="combat-stat-value" id="combat-san-${p.id}">${vTela(p.sanCurrent)}/${vTela(p.sanMax)}</span>${btnP('san')}</div>
             </div>`;
         }
         if (isCustom) abil = `<div class="combat-abilities-container" onclick="event.stopPropagation()"><label class="combat-abilities-label">⚔️ Habilidades:</label><textarea class="combat-abilities-input" onchange="updateCustomAbilities('${p.id}',this.value)">${p.combatAbilities||''}</textarea></div>`;

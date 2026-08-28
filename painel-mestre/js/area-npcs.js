@@ -1634,9 +1634,16 @@ function renderDvGrid() {
             const desc = (sysRef.descricao || 'Sem descrição cadastrada.') + (porItem ? AVISO_ITEM : '');
             const tip = dv.fontes.length ? dv.fontes.map(f => `${f.fonte}: ${f.texto}`).join('\n') : 'Sem mecânicas aplicáveis (base 0)';
             const editable = rapido || locked;
+            // ❤️ Status Vital (Vitalidade, Sanidade, Energia) aparece SEMPRE
+            // arredondado para CIMA — ninguém marca meio ponto de vida na mesa.
+            // O cálculo continua quebrado em F.calc.derived[key].final, que é o
+            // que os VDs por item e o espelho legado do doc leem.
+            const paraTela = (v) => dv.isVital && v !== '' && v !== null && v !== undefined
+                ? Math.ceil(Number(v) || 0) : v;
+            const atualVal = paraTela(F.npc.valoresDer.atual?.[dv.key] ?? '');
             const atual = dv.campoAtual
                 ? `<input type="number" class="npcv2-dv-atual" title="Valor atual" placeholder="atual"
-                     value="${F.npc.valoresDer.atual?.[dv.key] ?? ''}"
+                     value="${atualVal}"
                      oninput="F.npc.valoresDer.atual['${dv.key}']=this.value===''?null:parseFloat(this.value)">`
                 : '';
             const removeBtn = removable
@@ -1654,7 +1661,7 @@ function renderDvGrid() {
                      ${dv.icone ? dv.icone + ' ' : ''}${escapeHtml(dv.nome)}${porItem ? ' 🎒' : ''}${locked ? ' 🔒' : ''}
                 </div>
                 <div class="npcv2-dv-value">
-                    <input type="number" class="form-input npcv2-dv-input" value="${dv.final}" ${editable ? '' : 'readonly'}
+                    <input type="number" class="form-input npcv2-dv-input" value="${paraTela(dv.final)}" ${editable ? '' : 'readonly'}
                         onfocus="if(!${rapido}&&!${locked})startDvOverride('${dv.key}',this)"
                         oninput="setDvOverride('${dv.key}',this.value)"
                         onchange="recalcStats()">
@@ -2315,7 +2322,9 @@ window.saveNpc = async function() {
             data.valoresDer.atual = data.valoresDer.atual || {};
             for (const dv of Object.values(calcNovo.derived)) {
                 if (dv.isVital && (data.valoresDer.atual[dv.key] === undefined || data.valoresDer.atual[dv.key] === null || data.valoresDer.atual[dv.key] === '')) {
-                    data.valoresDer.atual[dv.key] = dv.final;
+                    // Nasce cheio no número que a mesa vê: o Máximo arredondado
+                    // para CIMA. O máximo em si continua quebrado no cálculo.
+                    data.valoresDer.atual[dv.key] = Math.ceil(Number(dv.final) || 0);
                 }
             }
             // Espelho legado (VIT/ENER/SAN...) para módulos que leem siglas fixas

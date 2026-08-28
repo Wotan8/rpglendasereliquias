@@ -2078,11 +2078,20 @@ window.usarItem = async function(itemId) {
         const campos = VITAL_CAMPOS[m[1]];
         if (!campos) { console.warn(`⚠️ [usarItem] status vital desconhecido: ${sv.id}`); continue; }
 
-        const el = document.getElementById(campos.atual);
+        // O campo Atual é endereçado por [data-key], não por id, e o Máximo é
+        // um <input> — o número dele está em .value, não em .textContent.
+        // Buscando errado, `el` vinha null e o teto vinha Infinity: o
+        // consumível não curava nada e o clamp no Máximo nunca valia.
+        const el = document.querySelector(`[data-key="${campos.atual}"]`);
         if (!el) continue;
-        const antes = parseInt(el.value) || 0;
-        const teto = parseInt(document.getElementById(campos.max)?.textContent) || Infinity;
-        const depois = Math.max(0, Math.min(antes + mod, teto));
+        const antes = Math.ceil(parseFloat(String(el.value).replace(',', '.'))) || 0;
+        // Máximo 0 é ficha que ainda não calculou os vitais — aí não há teto a
+        // respeitar, senão o consumível cura para zero.
+        const tetoLido = parseFloat(document.getElementById(campos.max)?.value);
+        const teto = tetoLido > 0 ? tetoLido : Infinity;
+        // Status Vital arredonda para CIMA (ver derived-values.js): poção que
+        // cura 1,5 fecha em 2.
+        const depois = Math.ceil(Math.max(0, Math.min(antes + mod, teto)));
         el.value = depois;
         el.dispatchEvent(new Event('input', { bubbles: true }));
         if (depois !== antes) efeitos.push(`${campos.nome} ${antes} → ${depois}`);

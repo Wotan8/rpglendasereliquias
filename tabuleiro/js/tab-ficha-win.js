@@ -17,7 +17,7 @@ import {
     db, doc, setDoc, updateDoc, deleteDoc, addDoc, collection, onSnapshot, getDocs, query, where, writeBatch
 } from '../../painel-mestre/js/firebase-config.js';
 import {
-    T, esc, toast, markDirty, vNum, dvMesa, normChave, patchVitalAtualNpc, valorComponente, dividirPilha
+    T, esc, toast, markDirty, vitalTela, dvMesa, normChave, patchVitalAtualNpc, valorComponente, dividirPilha
 } from './tab-state.js';
 import { refCombate } from './tab-main.js';
 import { VITAIS, dvsVinculadosChar, dvAplicaChar, espelhosDoVitalNpc } from './tab-hud.js';
@@ -363,7 +363,9 @@ function condicoesDoc(win) {
 // ===== Edições (auto-save na ficha) =====
 function setVital(win, sig, val) {
     const { max } = valorVital(win, sig);
-    const v = vNum(Math.max(0, Math.min(val, max)));
+    // Atual de Status Vital é inteiro e arredonda para CIMA — o teto também,
+    // porque o Máximo sai quebrado do cálculo (20,4 segura 21 de marcação).
+    const v = vitalTela(Math.max(0, Math.min(val, vitalTela(max))));
     if (win.tipo === 'npc') {
         const n = dadosNpc(win.id); if (!n) return;
         n.valoresDer = n.valoresDer || {};
@@ -776,8 +778,8 @@ function htmlCombate(win, fonte) {
             <div class="tb-fwin-vwrap">
                 <div class="tb-fwin-vbar"><i style="width:${pct}%;background:${cor}"></i></div>
             </div>
-            <input class="tb-fwin-vcur" data-vcur data-sig="${sig}" inputmode="decimal" value="${vNum(cur)}" aria-label="${rot} atual">
-            <span class="tb-fwin-vmax">/ ${vNum(max)}</span>
+            <input class="tb-fwin-vcur" data-vcur data-sig="${sig}" inputmode="decimal" value="${vitalTela(cur)}" aria-label="${rot} atual">
+            <span class="tb-fwin-vmax">/ ${vitalTela(max)}</span>
             <button class="tb-cstat-btn" data-vdelta="1" data-sig="${sig}">+</button>
         </div>`;
     }).join('');

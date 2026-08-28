@@ -116,10 +116,20 @@ function setupRealtimeListeners(charId) {
         // Se a mudança for local (feita por nós mesmos), o Firestore avisa em metadata.
         // Mas a forma mais segura é checar e atualizar apenas se diferir do DOM para não apagar o que o usuário digita.
         
-        const vitAtual = data.derivedValues?.vit_atual ?? data.hpCurrent;
-        const enerAtual = data.derivedValues?.ener_atual ?? data.enerCurrent;
-        const sanAtual = data.derivedValues?.san_atual ?? data.sanCurrent;
-        
+        // ❤️ Atual dos Status Vitais arredonda para CIMA, igual ao Máximo — o
+        // doc pode trazer fração (ficha antiga, ou outra tela que gravou meio
+        // ponto) e a mesa marca inteiro. Arredondar ANTES de comparar com o DOM
+        // evita o pisca-pisca: senão o snapshot devolvia 20,4 no campo que a
+        // ficha acabara de deixar em 21, a cada atualização do doc.
+        const _atualParaCima = (v) => {
+            if (v === undefined || v === null || v === '') return v;
+            const n = parseFloat(String(v).replace(',', '.'));
+            return Number.isFinite(n) ? Math.ceil(n) : v;
+        };
+        const vitAtual = _atualParaCima(data.derivedValues?.vit_atual ?? data.hpCurrent);
+        const enerAtual = _atualParaCima(data.derivedValues?.ener_atual ?? data.enerCurrent);
+        const sanAtual = _atualParaCima(data.derivedValues?.san_atual ?? data.sanCurrent);
+
         const updateField = (key, newValue) => {
             // '' = nunca preenchido no doc; não sobrescrever o que a ficha já calculou
             // (ex: Atual = Máximo de personagem novo) com vazio.

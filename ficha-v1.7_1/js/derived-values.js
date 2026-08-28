@@ -1141,6 +1141,18 @@ function dvFormatarExibicao(value, dvDef) {
     return Number.isInteger(value) ? value : parseFloat(value.toFixed(2));
 }
 
+/* ===== EXIBIÇÃO DOS STATUS VITAIS =====
+ * Vitalidade, Sanidade e Energia saem fracionadas do motor de mecânicas
+ * (Vigor + Tamanho, metades de peculiaridade, ×1,1 de Gigantismo...), mas na
+ * mesa ninguém marca meio ponto de vida. O número EXIBIDO arredonda para
+ * CIMA; o valor guardado em state.derived segue quebrado, e é ele que as
+ * mecânicas seguintes leem. Vale para o Máximo e para o Atual, em toda tela
+ * que mostra os três — ficha, tabuleiro e painel do mestre. */
+function vitalExibido(v) {
+    return Math.ceil(Number(v) || 0);
+}
+window.vitalExibido = vitalExibido;
+
 /* ===== VD ESPELHO =====
  * Um VD com `espelhaVD` herda o valor de outro (Blindagem Cortante lê Blindagem)
  * e só existe para o caso em que uma peça vestida cede ou resiste àquele tipo.
@@ -1193,16 +1205,15 @@ function updateDerivedField(key, value) {
     const mapping = DERIVED_FIELDS_MAP[key];
     if (!mapping) return;
 
+    // Status Vital: o campo mostra o inteiro arredondado para cima; o valor
+    // quebrado fica em state.derived, que é o que as mecânicas leem.
     const displayEl = document.getElementById(mapping.display);
-    if (displayEl) {
-        const dvDef = (window.DERIVED_VALUES || []).find(d => d.key === key);
-        displayEl.value = dvFormatarExibicao(value, dvDef);
-    }
+    if (displayEl) displayEl.value = vitalExibido(value);
 
     if (mapping.atual) {
         const atualEl = document.querySelector(`[data-key="${mapping.atual}"]`);
         if (atualEl) {
-            atualEl.max = value;
+            atualEl.max = vitalExibido(value);
             // Sem clamp automático: o valor digitado pelo jogador é preservado.
             // Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
         }
@@ -1223,6 +1234,10 @@ function fillVitalsToMax() {
     // Garantir máximos finais agora (não depender dos recalcs agendados por timer)
     if (typeof recalcAll === 'function') recalcAll();
 
+    // Ficha antiga pode trazer Atual quebrado do doc (a régua de cima é nova).
+    // O carregamento é o momento de acertar: daqui em diante o listener segura.
+    arredondarVitaisAtuais();
+
     let filled = false;
     for (const mapping of Object.values(DERIVED_FIELDS_MAP)) {
         if (!mapping.atual) continue;
@@ -1237,21 +1252,56 @@ function fillVitalsToMax() {
 }
 window.fillVitalsToMax = fillVitalsToMax;
 
-/* Validação: ATUAL — sem clamp automático.
- * O valor digitado pelo jogador é preservado como está.
- * Mecânicas do tipo "limitar" (teto/piso) tratam limites quando necessário.
+/* ===== ATUAL DOS STATUS VITAIS: SEMPRE PARA CIMA =====
+ * Mesma régua do Máximo (vitalExibido): meia Vitalidade não existe na mesa.
+ * O campo Atual É o valor guardado, então aqui o arredondamento não é só de
+ * tela — ele fica. Quem produz fração é o passo fracionado do HUD de Combate,
+ * o consumível que cura pela metade e a ficha antiga; nos três casos o número
+ * que a mesa marca é o inteiro de cima.
  */
-function validateAtualField(atualKey, maxDisplayId) {
-    // No-op: removido clamp hardcoded para permitir que o jogador
-    // defina qualquer valor no campo atual.
+function arredondarAtualParaCima(el) {
+    if (!el) return;
+    const bruto = String(el.value ?? '').trim().replace(',', '.');
+    if (bruto === '') return;
+    const n = parseFloat(bruto);
+    if (!Number.isFinite(n)) return;
+    const cima = String(Math.ceil(n));
+    if (el.value !== cima) el.value = cima;
+}
+
+/** Passa a régua nos três campos Atual de uma vez. */
+function arredondarVitaisAtuais() {
+    for (const mapping of Object.values(DERIVED_FIELDS_MAP)) {
+        if (!mapping.atual) continue;
+        arredondarAtualParaCima(document.querySelector(`[data-key="${mapping.atual}"]`));
+    }
+}
+window.arredondarVitaisAtuais = arredondarVitaisAtuais;
+
+/* Liga a régua no campo Atual de um Status Vital (era `validateAtualField`,
+ * um no-op desde que o clamp automático saiu).
+ * - `change` (sai do campo): o jogador digitou 20,4 → vira 21.
+ * - `input` NÃO confiável: escrita de outro módulo (passo do HUD de Combate,
+ *   usar consumível), que sempre chega com o número inteirado. O `input` do
+ *   próprio teclado fica de fora de propósito: arredondar a cada tecla
+ *   atropelaria quem ainda está digitando "2" antes do "0".
+ */
+function ligarArredondamentoAtual(atualKey) {
+    const el = document.querySelector(`[data-key="${atualKey}"]`);
+    // initDerivedListeners roda em dois caminhos (app.js e storage.js): sem a
+    // marca, o mesmo campo ganhava o listener duas vezes.
+    if (!el || el.dataset.arredondaCima === '1') return;
+    el.dataset.arredondaCima = '1';
+    el.addEventListener('change', () => arredondarAtualParaCima(el));
+    el.addEventListener('input', (e) => { if (!e.isTrusted) arredondarAtualParaCima(el); });
 }
 
 /* Inicializar listeners e renderizar grid dinâmica */
 function initDerivedListeners() {
-    // Validação de campos ATUAL ≤ MAX (Status Vitais — mecânicas do Firebase)
-    validateAtualField('vit_atual', 'vit_max_display');
-    validateAtualField('ener_atual', 'ener_max_display');
-    validateAtualField('san_atual', 'san_max_display');
+    // Campos ATUAL dos Status Vitais: arredondam para cima (Máximo faz o mesmo)
+    ligarArredondamentoAtual('vit_atual');
+    ligarArredondamentoAtual('ener_atual');
+    ligarArredondamentoAtual('san_atual');
 
     // Renderizar grid dinâmica de valores derivados
     renderDerivedValuesGrid();
