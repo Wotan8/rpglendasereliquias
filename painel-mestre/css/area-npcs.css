@@ -57,6 +57,15 @@
     text-overflow: ellipsis;
 }
 
+/* Tipo e ⚡ Poder lado a lado, embaixo do nome. */
+.npc-card-selos {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--lr-space-1);
+    margin-top: var(--lr-space-1);
+}
+
 .npc-type-badge {
     display: inline-block;
     padding: 3px var(--lr-space-2);
@@ -67,7 +76,22 @@
     letter-spacing: 0.03em;
     background: var(--lr-abyssal-soft);
     color: var(--lr-text-1);
-    margin-top: var(--lr-space-1);
+    margin-top: var(--lr-space-1);   /* usado solto na lista de NPCs da Mesa */
+}
+.npc-card-selos .npc-type-badge { margin-top: 0; }
+
+/* ⚡ Poder = EXP Total da ficha. Dourado, como todo número que mede valor. */
+.npc-poder-badge {
+    display: inline-block;
+    padding: 3px var(--lr-space-2);
+    border-radius: var(--lr-radius-sm);
+    font-size: var(--lr-fs-xs);
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    background: var(--lr-gold-soft);
+    color: var(--lr-gold);
+    font-variant-numeric: tabular-nums;
+    cursor: help;
 }
 
 .npc-image-container {
@@ -272,6 +296,66 @@
     -webkit-overflow-scrolling: touch;
     padding: 0;
     scroll-behavior: smooth;
+}
+
+/* ----- Cabeçalho: quem é + quanto vale --------------------- */
+/* O título ("Editar NPC / Criatura") diz o que a janela faz; este bloco diz
+   com QUEM se está lidando e o ⚡ Poder (EXP Total) da ficha. Fica no
+   cabeçalho preso, então acompanha o Mestre em todas as abas. */
+#npcModal .npcv2-hdr {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lr-space-3);
+}
+.npcv2-hdr-quem { min-width: 0; }
+.npcv2-hdr-nome {
+    font-weight: 800;
+    font-size: var(--lr-fs-md);
+    color: var(--lr-text-1);
+    line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.npcv2-hdr-nome.npcv2-hdr-vazio { color: var(--lr-text-2); font-weight: 600; font-style: italic; opacity: .75; }
+.npcv2-hdr-sub {
+    display: flex; align-items: center; gap: var(--lr-space-2);
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+    line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.npcv2-hdr-sub:empty { display: none; }
+.npcv2-hdr-sep { opacity: .45; }
+
+.npcv2-hdr-poder {
+    flex: 0 0 auto;
+    display: inline-flex; align-items: baseline; gap: var(--lr-space-2);
+    padding: var(--lr-space-1) var(--lr-space-3);
+    border: var(--lr-border-w) solid var(--lr-gold);
+    border-radius: var(--lr-radius);
+    background: var(--lr-gold-soft);
+    cursor: help;
+}
+.npcv2-hdr-poder-rotulo {
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--lr-gold);
+}
+.npcv2-hdr-poder-valor {
+    font-size: var(--lr-fs-lg);
+    font-weight: 800;
+    color: var(--lr-gold);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Estreito: o título some, porque nome e Poder valem mais que ele. */
+@media (max-width: 640px) {
+    #npcModal .modal-title { display: none; }
+    #npcModal .npcv2-hdr { gap: var(--lr-space-2); }
 }
 
 /* ----- Barra fixa: modo + ações + seções -------------------- */

@@ -14,7 +14,7 @@
 <!-- 1. CSS local dos módulos -->
 <link rel="stylesheet" href="painel-mestre/css/base.css">
 <link rel="stylesheet" href="painel-mestre/css/modais.css">
-<link rel="stylesheet" href="painel-mestre/css/area-npcs.css?v=6">
+<link rel="stylesheet" href="painel-mestre/css/area-npcs.css?v=12">
 <!-- 2. Tokens -->
 <link rel="stylesheet" href="shared/tokens.css">
 <!-- 3. Identidade -->
@@ -68,7 +68,20 @@
 <!-- ================= FICHA DE NPC / CRIATURAS ================= -->
 <div id="npcModal" class="modal">
   <div class="modal-content" style="max-width:900px">
-    <div class="modal-header"><span class="modal-title" id="npcModalTitle">Vigia do Portão Baixo</span><button class="modal-close">✕</button></div>
+    <div class="modal-header">
+      <span class="modal-title" id="npcModalTitle">Editar NPC / Criatura</span>
+      <div id="npcHdrInfo" class="npcv2-hdr">
+        <div class="npcv2-hdr-quem">
+          <div class="npcv2-hdr-nome" id="npcHdrNome">Albrix Muro-de-Ferro</div>
+          <div class="npcv2-hdr-sub" id="npcHdrSub">🧬 Humano<span class="npcv2-hdr-sep">·</span>⚔️ Guerreiro</div>
+        </div>
+        <div class="npcv2-hdr-poder" id="npcHdrPoder" title="⚡ Poder = EXP Total">
+          <span class="npcv2-hdr-poder-rotulo">⚡ Poder</span>
+          <strong class="npcv2-hdr-poder-valor" id="npcHdrPoderValor">438</strong>
+        </div>
+      </div>
+      <button class="modal-close">✕</button>
+    </div>
     <div class="modal-body" id="npcModalBody">
 
       <div class="npcv2-topbar">

@@ -5,6 +5,7 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassModule } from './npc-system-data.js?v=1.5';
 import { calcularNpc, ATTR_SIGLAS, ATTR_NOMES } from './npc-calc-engine.js?v=1.10';
+import { calcularPoderNpc, resumoPoderNpc } from './npc-poder.js?v=1';
 import './npc-inventario.js?v=9'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 import { npcNaMesa, mesasDoNpc, espelhoMesaId } from '../../shared/npc-mesas.js';
 import { melhorDisparo, bracoDeArremesso, METROS_POR_FOR } from '../../shared/alcance-disparo.js';
@@ -23,7 +24,9 @@ async function loadAllNpcs() {
             const data = d.data();
             npcs.push({ id: d.id, ...data });
         });
+        _poderCache.clear();   // documentos novos: o ⚡ Poder de cada um é recalculado
         S.setAllNpcs(npcs); window.restoreNpcFiltersState ? window.restoreNpcFiltersState() : (window.filterNpcs && window.filterNpcs());
+        garantirSysDaLista();   // sem await: os cards aparecem já, o ⚡ Poder entra quando os registros chegam
     } catch (e) { console.error(e); showAlert('❌ Erro NPCs', 'danger'); }
 }
 window.loadAllNpcs = loadAllNpcs;
@@ -126,13 +129,57 @@ window.moveNpcTooltip = function(event) {
     npcTooltipEl.style.top = top + 'px'; npcTooltipEl.style.left = left + 'px';
 };
 
+/* Registros do sistema para o ⚡ Poder dos cards. A lista abre antes de
+   qualquer ficha, então a carga acontece aqui e os cards são redesenhados
+   quando ela chega — sem isso o selo só apareceria depois de abrir um NPC. */
+let _sysLista = null;
+let _sysListaCarregando = false;
+async function garantirSysDaLista() {
+    // `loaded` false = carga parcial (coleção que falhou): a próxima entrada na
+    // aba tenta de novo em vez de congelar um registro incompleto.
+    if (_sysLista?.loaded || _sysListaCarregando) return _sysLista;
+    _sysListaCarregando = true;
+    try { _sysLista = await ensureNpcSystemData(); }
+    catch (e) { console.warn('⚠️ Poder do card: registros do sistema não carregaram', e); return null; }
+    finally { _sysListaCarregando = false; }
+    _poderCache.clear();
+    if (window.filterNpcs) window.filterNpcs();
+    return _sysLista;
+}
+
+/* O Poder de cada NPC é calculado uma vez por carga da lista: ordenar por ele
+   chamaria o cálculo a cada comparação, e a lista passa de cem fichas. Limpo
+   em loadAllNpcs (documentos novos) e quando os registros chegam. */
+const _poderCache = new Map();
+function poderDoNpc(n) {
+    if (!_sysLista) return null;
+    if (_poderCache.has(n.id)) return _poderCache.get(n.id);
+    const p = calcularPoderNpc(n, _sysLista, {
+        attrSiglas: ATTR_SIGLAS,
+        resolveModulo: v => resolveNpcClassModule(v, _sysLista)
+    });
+    _poderCache.set(n.id, p);
+    return p;
+}
+
+/** Selo ⚡ Poder do card. Devolve '' enquanto os registros não chegaram. */
+function _seloPoderCard(n) {
+    const poder = poderDoNpc(n);
+    // Ficha sem nada comprado (Modo Rápido, ficha v1) daria "⚡ 0" em toda a
+    // lista sem dizer nada — nesse caso o selo não aparece.
+    if (!poder || !poder.total) return '';
+    // O resumo carrega nomes de registro; aspas neles fechariam o title=.
+    const resumo = escapeHtml(resumoPoderNpc(poder)).replace(/"/g, '&quot;');
+    return `<span class="npc-poder-badge" title="${resumo}">⚡ ${poder.total}</span>`;
+}
+
 function renderNpcs(npcs) {
     const el = document.getElementById('npcsList'); if (!el) return;
     if (!npcs.length) { el.innerHTML = '<div class="no-npcs">Nenhum NPC encontrado</div>'; return; }
     el.innerHTML = npcs.map(n => {
         const tags = (n.tags||'').split(',').filter(t=>t.trim()).map(t=>`<span class="npc-tag">${escapeHtml(t.trim())}</span>`).join('');
         return `<div class="npc-card" onclick="if(!event.target.classList.contains('npc-checkbox'))openNpcModal('${n.id}')">
-            <div class="npc-card-header"><input type="checkbox" class="npc-checkbox" data-npc-id="${n.id}" onclick="event.stopPropagation()"><div class="npc-card-info"><div class="npc-name">${escapeHtml(n.nome||'Sem nome')}</div><span class="npc-type-badge">${n.tipo==='criatura'?'🐉 Criatura':n.tipo==='eco'?'ᛉ Eco':'👤 NPC'}</span></div></div>
+            <div class="npc-card-header"><input type="checkbox" class="npc-checkbox" data-npc-id="${n.id}" onclick="event.stopPropagation()"><div class="npc-card-info"><div class="npc-name">${escapeHtml(n.nome||'Sem nome')}</div><div class="npc-card-selos"><span class="npc-type-badge">${n.tipo==='criatura'?'🐉 Criatura':n.tipo==='eco'?'ᛉ Eco':'👤 NPC'}</span>${_seloPoderCard(n)}</div></div></div>
             ${n.imagem?`<div class="npc-image-container"><img src="${n.imagem}" class="npc-card-image"></div>`:''}
             ${n.rolePlay?.personalidade?.[0]?`<div style="font-size:.82rem;color:var(--muted);margin-top:6px">- ${escapeHtml(n.rolePlay.personalidade[0])}</div>`:''}
             ${n.rolePlay?.trejeitos?`<div style="font-size:.82rem;color:var(--muted)">🎭 ${escapeHtml(n.rolePlay.trejeitos)}</div>`:''}
@@ -313,6 +360,10 @@ window.filterNpcs = function() {
     else if (sortVal === 'ai-asc') filtered.sort((a,b) => (a.ai||0) - (b.ai||0));
     else if (sortVal === 'vit-desc') filtered.sort((a,b) => (b.valoresDer?.VIT||0) - (a.valoresDer?.VIT||0));
     else if (sortVal === 'vit-asc') filtered.sort((a,b) => (a.valoresDer?.VIT||0) - (b.valoresDer?.VIT||0));
+    // ⚡ Poder: enquanto os registros do sistema não chegam todo mundo vale 0 e
+    // a ordem fica como estava — garantirSysDaLista reordena quando eles chegam.
+    else if (sortVal === 'poder-desc') filtered.sort((a,b) => (poderDoNpc(b)?.total||0) - (poderDoNpc(a)?.total||0));
+    else if (sortVal === 'poder-asc') filtered.sort((a,b) => (poderDoNpc(a)?.total||0) - (poderDoNpc(b)?.total||0));
     else if (sortVal === 'antigo') filtered.sort((a,b) => (a.lastUpdate||0) - (b.lastUpdate||0));
     else if (sortVal === 'recente') filtered.sort((a,b) => (b.lastUpdate||0) - (a.lastUpdate||0));
     else if (sortVal === 'random') filtered.sort(() => Math.random() - 0.5);
@@ -491,6 +542,77 @@ function hybNome(hyb, byId) {
     return hyb.custom || '';
 }
 
+/* ===== CABEÇALHO DA FICHA =====
+   Quem é o NPC e quanto ele vale, na barra de cima — visível de qualquer aba,
+   sem rolar até Identidade. O ⚡ Poder é o EXP Total da ficha (npc-poder.js):
+   a soma do que custaria comprar atributos, perícias, peculiaridades e itens
+   de módulo do zero. É o número de comparar duas fichas sem abrir as duas.
+
+   A marcação nasce daqui, e não do HTML, porque o modal de NPC é montado em
+   dois lugares (painel-mestre.html e o Tabuleiro) — criar por JS faz os dois
+   ganharem o cabeçalho de uma vez. */
+function _npcMontarCabecalho() {
+    const title = document.getElementById('npcModalTitle');
+    const header = title?.closest('.modal-header');
+    if (!header) return null;
+    let info = header.querySelector('#npcHdrInfo');
+    if (info) return info;
+
+    info = document.createElement('div');
+    info.id = 'npcHdrInfo';
+    info.className = 'npcv2-hdr';
+    info.innerHTML = `
+        <div class="npcv2-hdr-quem">
+            <div class="npcv2-hdr-nome" id="npcHdrNome"></div>
+            <div class="npcv2-hdr-sub" id="npcHdrSub"></div>
+        </div>
+        <div class="npcv2-hdr-poder" id="npcHdrPoder">
+            <span class="npcv2-hdr-poder-rotulo">⚡ Poder</span>
+            <strong class="npcv2-hdr-poder-valor" id="npcHdrPoderValor">0</strong>
+        </div>`;
+    title.insertAdjacentElement('afterend', info);
+    return info;
+}
+
+/** Redesenha nome, raça, classe e Poder na barra de cima. */
+window.atualizarCabecalhoNpc = function() {
+    if (!F.npc || !F.sys) return;
+    const info = _npcMontarCabecalho(); if (!info) return;
+
+    const nome = (document.getElementById('npcNome')?.value || F.npc.nome || '').trim();
+    const raca = hybNome(F.npc.racaRef, F.sys.racesById);
+    const classe = hybNome(F.npc.classeRef, F.sys.classesById);
+
+    const elNome = document.getElementById('npcHdrNome');
+    if (elNome) {
+        elNome.textContent = nome || 'Sem nome';
+        elNome.classList.toggle('npcv2-hdr-vazio', !nome);
+    }
+
+    const elSub = document.getElementById('npcHdrSub');
+    if (elSub) {
+        const partes = [];
+        if (raca) partes.push(`🧬 ${escapeHtml(raca)}`);
+        if (classe) partes.push(`⚔️ ${escapeHtml(classe)}`);
+        elSub.innerHTML = partes.join('<span class="npcv2-hdr-sep">·</span>');
+    }
+
+    const poder = calcularPoderNpc(F.npc, F.sys, {
+        attrSiglas: ATTR_SIGLAS,
+        resolveModulo: v => resolveNpcClassModule(v, F.sys)
+    });
+    const valor = document.getElementById('npcHdrPoderValor');
+    if (valor) valor.textContent = poder.total;
+    const selo = document.getElementById('npcHdrPoder');
+    if (selo) selo.title = resumoPoderNpc(poder);
+};
+
+/** Digitar o nome muda o cabeçalho na hora (o campo só é lido no salvar). */
+window.onNpcNomeInput = function(valor) {
+    if (F.npc) F.npc.nome = valor;
+    window.atualizarCabecalhoNpc();
+};
+
 /* ===== ABERTURA DO MODAL ===== */
 window.openNpcModal = async function(npcId = null) {
     const modal = document.getElementById('npcModal'); if (!modal) return;
@@ -517,7 +639,7 @@ window.openNpcModal = async function(npcId = null) {
 
     body.innerHTML = buildNpcForm();
     fillNpcForm(F.npc);
-    recalcStats();
+    recalcStats();   // já redesenha o cabeçalho (nome, raça, classe e ⚡ Poder)
     npcSwitchSection('identidade');
 
     if (_npcModalUnsubscribe) {
@@ -606,7 +728,7 @@ function _npcSecaoIdentidade() {
         <div class="npcv2-block-title">📋 Quem é</div>
         <div class="form-group"><label class="form-label">🖼️ Imagem</label>${CampoImagem.html({ id: 'npcImagem', classe: 'form-input', pasta: 'imagens/npcs', preview: false })}<div id="npcImgPreview" style="display:none;margin-top:8px;text-align:center"><img id="npcImgTag" style="max-height:200px;border-radius:10px"></div></div>
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px">
-            <div class="form-group"><label class="form-label">Nome *</label><input type="text" class="form-input" id="npcNome" placeholder="Nome do NPC"></div>
+            <div class="form-group"><label class="form-label">Nome *</label><input type="text" class="form-input" id="npcNome" placeholder="Nome do NPC" oninput="onNpcNomeInput(this.value)"></div>
             <div class="form-group"><label class="form-label">Tipo *</label><select class="form-select" id="npcTipo"><option value="npc">👤 NPC</option><option value="criatura">🐉 Criatura</option><option value="eco">ᛉ Eco da Alma</option></select></div>
             <div class="form-group"><label class="form-label">Nível</label><input type="number" class="form-input" id="npcNivel" value="1" min="1" oninput="F_set('nivel',parseInt(this.value)||1);recalcStats()"></div>
         </div>
@@ -1064,6 +1186,7 @@ function hybridFieldHtml(campo, label, colName) {
 window.onHybCustomInput = function(campo, valor) {
     const ref = F.npc[campo + 'Ref'];
     ref.custom = valor;
+    window.atualizarCabecalhoNpc();
     // No modo rápido o texto livre substitui a referência do registro
     if (F.npc.modoFicha === 'rapido' && ref.refId) {
         const prev = ref.refId;
@@ -1426,6 +1549,8 @@ function renderNpcClassModules() {
         }).join('');
     }
     renderNpcModPicker();
+    // Item de módulo custa EXP: entrar ou sair um muda o Poder do cabeçalho.
+    if (typeof window.atualizarCabecalhoNpc === 'function') window.atualizarCabecalhoNpc();
     // A lista é reconstruída a cada edição de campo: o botão "tudo" precisa
     // reencontrar as dobras novas. `ligarSanfona` é idempotente.
     window.LRSanfona?.ligarSanfona(document.getElementById('npcClassModulesWrap'));
@@ -1531,6 +1656,7 @@ window.recalcStats = function() {
     renderDvGrid();
     renderNpcAtaques();
     renderInfos();
+    if (typeof window.atualizarCabecalhoNpc === 'function') window.atualizarCabecalhoNpc();
 };
 
 /* ===== ATAQUES E EFEITOS ATIVOS =====
