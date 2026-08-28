@@ -35,13 +35,29 @@ function blocoDoItem(texto) {
             </div>`;
 }
 
-const CARTAO = (id, titulo, msg) => {
+/* Copia de tituloComNome() de avisos.js (sem escapeHtml: o check nao recebe
+   dado de fora). */
+function tituloComNome(titulo, nome) {
+    const t = String(titulo || 'Aviso');
+    const n = String(nome || '').trim();
+    if (!n) return t;
+    const solto = (c) => c === undefined || !/[\p{L}\p{N}]/u.test(c);
+    let i = t.indexOf(n), de = 0;
+    while (i >= 0 && !(solto(t[i - 1]) && solto(t[i + n.length]))) {
+        de = i + 1;
+        i = t.indexOf(n, de);
+    }
+    if (i < 0) return t;
+    return t.slice(0, i) + `<span class="aviso-titulo-nome">${n}</span>` + t.slice(i + n.length);
+}
+
+const CARTAO = (id, titulo, msg, nomeRef) => {
     const { aviso, item } = separarMensagem(msg);
     return `
     <div class="aviso" data-id="${id}">
         <div class="aviso-icone">&#127873;</div>
         <div class="aviso-corpo">
-            <div class="aviso-titulo">${titulo}</div>
+            <div class="aviso-titulo">${tituloComNome(titulo, nomeRef)}</div>
             <div class="aviso-msg">${aviso}</div>
             ${blocoDoItem(item)}
             ${item.length > 260 ? `<button type="button" class="aviso-mais" onclick="avisoVerTudo(this)">Ver tudo</button>` : ''}
@@ -91,10 +107,11 @@ window.abrirAvisos = function () {
         <div class="avisos-lista" id="avisosLista">
             ${CARTAO('a1', 'Igor mandou 1x Influencia para a mesa',
                 'A peca saiu do Repertorio de Igor e esta na Caixa do Mestre de Bugigangas. '
-                + 'Falta voce coloca-la no mundo para o jogador encontrar.')}
-            ${CARTAO('a2', 'Igor mandou 1x TEste para a mesa',
+                + 'Falta voce coloca-la no mundo para o jogador encontrar. — "ISSAE"', 'Influencia')}
+            ${CARTAO('a2', 'Igor mandou 1x Medalhao do Viajante para a mesa',
                 'A peca saiu do Repertorio de Igor e esta na Caixa do Mestre de Bugigangas. '
-                + 'Falta voce coloca-la no mundo para o jogador encontrar. — "' + FICHA + '"')}
+                + 'Falta voce coloca-la no mundo para o jogador encontrar. — "' + FICHA + '"',
+                'Medalhao do Viajante')}
         </div>`;
     document.body.appendChild(janela);
     janela.addEventListener('click', e => { if (e.target === janela) janela.close(); });
@@ -131,6 +148,23 @@ window.chkTexto = function () {
         + 'Propriedades Magicas Sorte do Viajante mais um tanto de texto corrido aqui para passar de cento e vinte.');
     teste('paragrafo unico nao vira nome dourado', !p.querySelector('.aviso-item-nome'));
     teste('paragrafo unico continua inteiro no corpo', p.querySelector('.aviso-item-corpo').textContent.startsWith('NOME (Amuleto +5)'));
+
+    // O nome do item dourado DENTRO do titulo que o servidor escreveu.
+    const tit = (t, n) => { const d = document.createElement('div'); d.innerHTML = tituloComNome(t, n); return d; };
+    const t1 = tit('Igor mandou 1x Influencia para a mesa', 'Influencia');
+    teste('o nome do item acende no titulo', t1.querySelector('.aviso-titulo-nome')?.textContent === 'Influencia');
+    teste('o titulo continua inteiro', t1.textContent === 'Igor mandou 1x Influencia para a mesa');
+    teste('personagem entregue tambem acende',
+        tit('Corvo foi entregue por um jogador', 'Corvo').querySelector('.aviso-titulo-nome')?.textContent === 'Corvo');
+    // "Pa" nao pode acender o "pa" de "para".
+    teste('nao acende no meio de outra palavra',
+        !tit('Igor mandou 1x Pa para a mesa', 'Pa').innerHTML.includes('<span class="aviso-titulo-nome">Pa</span> ra'));
+    teste('nome curto casa a palavra certa',
+        tit('Igor mandou 1x Pa para a mesa', 'Pa').querySelector('.aviso-titulo-nome')?.textContent === 'Pa');
+    teste('aviso sem referencia sai sem destaque',
+        !tit('Aviso qualquer do sistema', '').querySelector('.aviso-titulo-nome'));
+    teste('nome que nao aparece no titulo nao quebra nada',
+        tit('Igor mandou algo para a mesa', 'Outra Coisa').textContent === 'Igor mandou algo para a mesa');
 
     document.getElementById('chkLog').textContent = log.join('\n');
     document.getElementById('chkResumo').textContent = falhas ? `${falhas} regra(s) de texto quebrada(s)` : 'texto OK';
@@ -170,6 +204,9 @@ window.chkClicar = async function () {
         window.abrirAvisos();
         const bt = janela.querySelectorAll('button')[i];
         const rot = (bt.textContent.trim() || bt.title || bt.id || '?').slice(0, 24).padEnd(24);
+        // A lista rola. Medir um botao que esta rolado para fora da vista
+        // acusa "nao alcanca" onde a pessoa so precisaria rolar ate ele.
+        bt.scrollIntoView({ block: 'center' });
         const b = bt.getBoundingClientRect();
         const emCima = document.elementFromPoint(
             Math.round(b.left + b.width / 2), Math.round(b.top + b.height / 2));

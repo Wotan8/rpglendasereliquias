@@ -541,6 +541,10 @@ html.dark .mechsel-search-bar select {
 .aviso-icone { font-size: 1.15rem; line-height: 1.2; }
 .aviso-titulo { font-weight: 700; margin-bottom: 3px; line-height: 1.35; }
 
+/* O nome do item (ou do personagem) dentro do título: é o QUE chegou, e é o
+   que o Mestre varre com o olho na lista. Ouro, como todo nome próprio aqui. */
+.aviso-titulo-nome { color: var(--lr-gold); font-weight: 800; }
+
 /* O recado do servidor: duas linhas, sempre inteiro. */
 .aviso-msg {
     font-size: .86rem;

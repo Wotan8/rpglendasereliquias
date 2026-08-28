@@ -98,6 +98,32 @@ function separarMensagem(msg) {
     return { aviso: s.slice(0, corte).trim(), item: s.slice(corte + 4, -1).trim() };
 }
 
+/**
+ * O título vem pronto do servidor ("Igor mandou 1x Influência para a mesa"),
+ * mas o aviso carrega `referencia.nome` à parte — dá para achar o nome dentro
+ * da frase e doura-lo. É o que o Mestre procura na lista: o QUE chegou.
+ *
+ * Casa só em fronteira de palavra: item chamado "Pá" não pode acender o "pa"
+ * de "para". Sem casamento limpo, o título sai inteiro como está.
+ */
+function tituloComNome(titulo, nome) {
+    const t = String(titulo || 'Aviso');
+    const n = String(nome || '').trim();
+    if (!n) return escapeHtml(t);
+
+    const solto = (c) => c === undefined || !/[\p{L}\p{N}]/u.test(c);
+    let i = t.indexOf(n), de = 0;
+    while (i >= 0 && !(solto(t[i - 1]) && solto(t[i + n.length]))) {
+        de = i + 1;
+        i = t.indexOf(n, de);
+    }
+    if (i < 0) return escapeHtml(t);
+
+    return escapeHtml(t.slice(0, i))
+        + `<span class="aviso-titulo-nome">${escapeHtml(n)}</span>`
+        + escapeHtml(t.slice(i + n.length));
+}
+
 /** O texto do item, com a primeira linha (o nome) em destaque. */
 function blocoDoItem(texto) {
     if (!texto) return '';
@@ -142,7 +168,7 @@ function pintarLista() {
         <div class="aviso" data-id="${escapeHtml(a.id)}">
             <div class="aviso-icone">${ICONE[a.tipo] || ICONE.geral}</div>
             <div class="aviso-corpo">
-                <div class="aviso-titulo">${escapeHtml(a.titulo || 'Aviso')}</div>
+                <div class="aviso-titulo">${tituloComNome(a.titulo, a.referencia?.nome)}</div>
                 <div class="aviso-msg">${escapeHtml(aviso)}</div>
                 ${blocoDoItem(item)}
                 ${comprida ? `<button type="button" class="aviso-mais" onclick="avisoVerTudo(this)">Ver tudo</button>` : ''}
