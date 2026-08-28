@@ -541,21 +541,52 @@ html.dark .mechsel-search-bar select {
 .aviso-icone { font-size: 1.15rem; line-height: 1.2; }
 .aviso-titulo { font-weight: 700; margin-bottom: 3px; line-height: 1.35; }
 
-/* A mensagem pode ser a ficha inteira de um item colada pelo jogador. Ela é
-   consulta, não leitura: quatro linhas e um "ver tudo" no clique, para um
-   aviso comprido não empurrar os outros para fora da tela. */
+/* O recado do servidor: duas linhas, sempre inteiro. */
 .aviso-msg {
     font-size: .86rem;
     color: var(--lr-text-2);
     line-height: 1.5;
     overflow-wrap: anywhere;
+}
+
+/* A ficha do item, escrita pelo JOGADOR. Bloco próprio com filete dourado
+   para nao se confundir com o recado acima, e `pre-wrap` porque as quebras de
+   linha sao dele: o texto vem de um textarea, e o HTML as engolia — era o que
+   transformava a ficha num paredao. */
+.aviso-item {
+    margin-top: var(--lr-space-2);
+    padding: var(--lr-space-2) var(--lr-space-3);
+    border-left: 2px solid var(--lr-gold);
+    border-radius: 0 var(--lr-radius) var(--lr-radius) 0;
+    background: var(--lr-bg-1);
+}
+
+/* A primeira linha é o nome do item — dourada, como todo nome próprio aqui. */
+.aviso-item-nome {
+    font-weight: 800;
+    font-size: .88rem;
+    line-height: 1.35;
+    color: var(--lr-gold);
+    margin-bottom: var(--lr-space-1);
+    overflow-wrap: anywhere;
+}
+
+/* Consulta, nao leitura: oito linhas e um "ver tudo" no clique, para um aviso
+   comprido nao empurrar os outros para fora da tela. */
+.aviso-item-corpo {
+    font-size: .84rem;
+    color: var(--lr-text-2);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
-    line-clamp: 4;
+    -webkit-line-clamp: 8;
+    line-clamp: 8;
     overflow: hidden;
 }
-.aviso.aberto .aviso-msg { -webkit-line-clamp: none; line-clamp: none; overflow: visible; }
+.aviso-item-corpo:empty { display: none; }
+.aviso.aberto .aviso-item-corpo { -webkit-line-clamp: none; line-clamp: none; overflow: visible; }
 
 .aviso-mais {
     align-self: start;

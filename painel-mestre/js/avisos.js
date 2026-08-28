@@ -82,6 +82,38 @@ export function avisosTrocouDeMesa() {
 }
 window.avisosTrocouDeMesa = avisosTrocouDeMesa;
 
+/**
+ * A mensagem de "item para a mesa" é duas coisas coladas: o aviso que o
+ * SERVIDOR escreve ("A peça saiu do Repertório de X...") e, depois de ` — "`,
+ * a descrição que o JOGADOR escreveu, entre aspas.
+ *
+ * Vale separar porque as duas se leem diferente: a primeira é recado curto, a
+ * segunda é a ficha do item, com as quebras de linha que o jogador digitou no
+ * textarea — e que o HTML engolia, virando o paredão de texto.
+ */
+function separarMensagem(msg) {
+    const s = String(msg || '').trim();
+    const corte = s.lastIndexOf(' — "');
+    if (corte < 0 || !s.endsWith('"')) return { aviso: s, item: '' };
+    return { aviso: s.slice(0, corte).trim(), item: s.slice(corte + 4, -1).trim() };
+}
+
+/** O texto do item, com a primeira linha (o nome) em destaque. */
+function blocoDoItem(texto) {
+    if (!texto) return '';
+    const linhas = texto.split(/\r?\n/);
+    const primeira = linhas[0].trim();
+    // Primeira linha curta é o nome do item. Se o jogador colou tudo num
+    // paragrafo só, não há nome para destacar — dourar o paredão inteiro seria
+    // pior que não dourar nada.
+    const temNome = linhas.length > 1 && primeira.length <= 120;
+    const resto = temNome ? linhas.slice(1).join('\n').replace(/^\s*\n/, '') : texto;
+    return `<div class="aviso-item">
+                ${temNome ? `<div class="aviso-item-nome">${escapeHtml(primeira)}</div>` : ''}
+                <div class="aviso-item-corpo">${escapeHtml(resto)}</div>
+            </div>`;
+}
+
 function pintarLista() {
     const lista = document.getElementById('avisosLista');
     if (!lista) return;
@@ -102,16 +134,17 @@ function pintarLista() {
     }
 
     lista.innerHTML = daMesa.map(a => {
-        const msg = String(a.mensagem || '');
+        const { aviso, item } = separarMensagem(a.mensagem);
         // Ficha de item colada pelo jogador passa fácil de mil caracteres: o
         // cartão mostra o começo e abre o resto no clique (o corte é do CSS).
-        const comprida = msg.length > 220;
+        const comprida = item.length > 260;
         return `
         <div class="aviso" data-id="${escapeHtml(a.id)}">
             <div class="aviso-icone">${ICONE[a.tipo] || ICONE.geral}</div>
             <div class="aviso-corpo">
                 <div class="aviso-titulo">${escapeHtml(a.titulo || 'Aviso')}</div>
-                <div class="aviso-msg">${escapeHtml(msg)}</div>
+                <div class="aviso-msg">${escapeHtml(aviso)}</div>
+                ${blocoDoItem(item)}
                 ${comprida ? `<button type="button" class="aviso-mais" onclick="avisoVerTudo(this)">Ver tudo</button>` : ''}
                 <div class="aviso-pe">
                     ${a.jogador ? `<span>👤 ${escapeHtml(a.jogador)}</span>` : ''}
