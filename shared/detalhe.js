@@ -117,14 +117,21 @@ export function indiceDeUso(sys) {
     return idx;
 }
 
-/** Sem repetir o mesmo alvo duas vezes, e sem apontar para si mesmo. */
-function usosDe(nome, sys) {
+/**
+ * Sem repetir o mesmo alvo duas vezes, e sem apontar para si mesmo.
+ *
+ * `temAlvo` é o filtro da ficha: o índice do registro é global e cita valores
+ * que ESTA ficha pode não ter (a Vitalidade entra na Resistência de Voo, e o
+ * pescador que não voa via isso na janela dele). Sem filtro, tudo passa.
+ */
+function usosDe(nome, sys, temAlvo) {
     const chave = chaveDoAlvo(nome);
     const vistos = new Set();
     return (indiceDeUso(sys).consome[chave] || [])
         .filter(u => {
             const k = chaveDoAlvo(u.alvo);
             if (k === chave || vistos.has(k)) return false;
+            if (typeof temAlvo === 'function' && !temAlvo(u.alvo)) return false;
             vistos.add(k);
             return true;
         })
@@ -149,7 +156,7 @@ export function temDetalhe(o = {}) {
     if (!o.sys) return false;
     const chave = chaveDoAlvo(o.nome);
     const idx = indiceDeUso(o.sys);
-    return !!(idx.alimenta[chave] || []).length || !!usosDe(o.nome, o.sys).length;
+    return !!(idx.alimenta[chave] || []).length || !!usosDe(o.nome, o.sys, o.temAlvo).length;
 }
 
 const bloco = (titulo, itens, classe) => !itens.length ? '' : `
@@ -189,25 +196,47 @@ export function detalheHTML(o = {}, modo = 'completo') {
     </div>`;
     }
 
-    const daTela = (o.formula || []).filter(f => f && (f.texto || f.fonte));
-    const doRegistro = o.sys ? formulasDe(nome, o.sys) : [];
-    // a tela vem primeiro: ela conhece o valor deste personagem, o registro só
-    // conhece a regra geral. Sem repetir o mesmo par fonte+texto.
-    const formula = [];
-    for (const f of [...daTela, ...doRegistro]) {
-        if (!formula.some(x => x.fonte === f.fonte && x.texto === f.texto)) formula.push(f);
-    }
-    const usos = o.sys ? usosDe(nome, o.sys) : [];
+    /* DOIS blocos, e não um só embaralhado.
+       Antes a conta desta ficha e a regra do registro caíam na mesma lista, sem
+       rótulo: dava sete linhas soltas, com "Fórmula (Vitalidade) +3" ao lado de
+       "Vitalidade + VIG + Tamanho", e ninguém sabia qual explicava qual.
+
+         · A CONTA DESTA FICHA vem em ordem de aplicação, com o acumulado
+           depois de cada passo e o total no fim. É o caminho do número.
+         · A REGRA NO REGISTRO é o que vale para qualquer personagem. Fica
+           embaixo, como referência. */
+    const passos = (o.formula || []).filter(f => f && (f.texto || f.fonte));
+    const regra = o.sys ? formulasDe(nome, o.sys) : [];
+    const usos = o.sys ? usosDe(nome, o.sys, o.temAlvo) : [];
+    const temTotal = o.total !== undefined && o.total !== null && o.total !== '';
+
+    const linhaPasso = (f, i) => `
+        <div class="lr-det-linha lr-det-passo">
+            <span class="lr-det-passo-n">${i + 1}</span>
+            <span class="lr-det-fonte">${esc(f.fonte)}</span>
+            <span class="lr-det-valor">${esc(f.texto)}</span>
+            ${f.parcial !== undefined ? `<span class="lr-det-parcial">${esc(f.parcial)}</span>` : ''}
+        </div>`;
 
     return `
     <div class="lr-det">
         <div class="lr-det-nome">${o.icone ? esc(o.icone) + ' ' : ''}${esc(nome)}</div>
         ${o.descricao ? `<div class="lr-det-desc">${esc(o.descricao)}</div>` : ''}
-        ${bloco('🧮 Fórmula', formula.map(f => `
+        ${bloco('🧮 A conta desta ficha', [
+            ...(passos.some(f => f.parcial !== undefined)
+                ? ['<div class="lr-det-legenda">passo a passo, na ordem em que se aplicam — a coluna da direita é quanto o valor vale depois de cada um</div>']
+                : []),
+            ...passos.map(linhaPasso),
+            temTotal ? `<div class="lr-det-linha lr-det-total">
+                <span class="lr-det-fonte">Resultado</span>
+                <span class="lr-det-parcial">${esc(o.total)}</span>
+            </div>` : '',
+        ].filter(Boolean), 'lr-det-formula')}
+        ${bloco('📐 A regra no registro', regra.map(f => `
             <div class="lr-det-linha">
                 <span class="lr-det-fonte">${esc(f.fonte)}</span>
                 <span class="lr-det-valor">${esc(f.texto)}</span>
-            </div>`), 'lr-det-formula')}
+            </div>`), 'lr-det-regra')}
         ${bloco('🔗 Usado em', usos.map(u => `
             <div class="lr-det-linha">
                 <span class="lr-det-fonte">${esc(u.alvo)}</span>

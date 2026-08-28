@@ -68,7 +68,7 @@ async function carregarSys() {
     // publica computeGolpesDesarmados — a MESMA função da tabela da ficha.
     const [m, eng] = await Promise.all([
         import('../../painel-mestre/js/npc-system-data.js'),
-        import('../../painel-mestre/js/npc-calc-engine.js?v=1.10'),
+        import('../../painel-mestre/js/npc-calc-engine.js?v=1.11'),
         import('../../ficha-v1.7_1/js/item-scope-calc.js?v=3'),
     ]);
     _resolveMod = m.resolveNpcClassModule;

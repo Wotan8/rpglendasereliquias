@@ -842,30 +842,30 @@ function applyOpsToValue(target, baseValue, ops, limites, ctx, fontes) {
     for (const o of mine) {
         if (o.op === '=') {
             value = valorDaOp(o);
-            fontes.push({ fonte: o.fonte, texto: `= ${fmt(value)}` });
+            fontes.push({ fonte: o.fonte, texto: `= ${fmt(value)}`, parcial: fmt(value) });
         }
     }
     // 2) Somas e subtrações
     for (const o of mine) {
         const v = (o.op === '+' || o.op === '-') ? valorDaOp(o) : null;
-        if (o.op === '+') { value += v; fontes.push({ fonte: o.fonte, texto: `+${fmt(v)}` }); }
-        else if (o.op === '-') { value -= v; fontes.push({ fonte: o.fonte, texto: `-${fmt(v)}` }); }
+        if (o.op === '+') { value += v; fontes.push({ fonte: o.fonte, texto: `+${fmt(v)}`, parcial: fmt(value) }); }
+        else if (o.op === '-') { value -= v; fontes.push({ fonte: o.fonte, texto: `−${fmt(v)}`, parcial: fmt(value) }); }
     }
     // 3) Multiplicações e divisões
     for (const o of mine) {
-        if (o.op === '×' || o.op === '*') { const v = valorDaOp(o); value *= v; fontes.push({ fonte: o.fonte, texto: `×${fmt(v)}` }); }
-        else if (o.op === '÷' || o.op === '/') { const v = valorDaOp(o); if (v !== 0) value /= v; fontes.push({ fonte: o.fonte, texto: `÷${fmt(v)}` }); }
+        if (o.op === '×' || o.op === '*') { const v = valorDaOp(o); value *= v; fontes.push({ fonte: o.fonte, texto: `×${fmt(v)}`, parcial: fmt(value) }); }
+        else if (o.op === '÷' || o.op === '/') { const v = valorDaOp(o); if (v !== 0) value /= v; fontes.push({ fonte: o.fonte, texto: `÷${fmt(v)}`, parcial: fmt(value) }); }
     }
     // 4) Limites
     for (const l of limites.filter(x => x.target === target)) {
-        if (l.tipoLimite === 'bloqueio') { value = 0; fontes.push({ fonte: l.fonte, texto: 'bloqueado (= 0)' }); }
-        else if (l.tipoLimite === 'maximo') { const m = resolveCalcValue(l.calc, ctx); if (value > m) { value = m; fontes.push({ fonte: l.fonte, texto: `máx ${fmt(m)}` }); } }
-        else if (l.tipoLimite === 'minimo') { const m = resolveCalcValue(l.calc, ctx); if (value < m) { value = m; fontes.push({ fonte: l.fonte, texto: `mín ${fmt(m)}` }); } }
+        if (l.tipoLimite === 'bloqueio') { value = 0; fontes.push({ fonte: l.fonte, texto: 'bloqueado (= 0)', parcial: 0 }); }
+        else if (l.tipoLimite === 'maximo') { const m = resolveCalcValue(l.calc, ctx); if (value > m) { value = m; fontes.push({ fonte: l.fonte, texto: `no máximo ${fmt(m)}`, parcial: fmt(value) }); } }
+        else if (l.tipoLimite === 'minimo') { const m = resolveCalcValue(l.calc, ctx); if (value < m) { value = m; fontes.push({ fonte: l.fonte, texto: `no mínimo ${fmt(m)}`, parcial: fmt(value) }); } }
         else if (l.tipoLimite === 'clamp') {
             const max = resolveCalcValue(l.calc, ctx);
             const min = parseFloat(l.calc.valorMinimo) || 0;
             const clamped = Math.min(Math.max(value, min), max);
-            if (clamped !== value) { value = clamped; fontes.push({ fonte: l.fonte, texto: `entre ${fmt(min)} e ${fmt(max)}` }); }
+            if (clamped !== value) { value = clamped; fontes.push({ fonte: l.fonte, texto: `entre ${fmt(min)} e ${fmt(max)}`, parcial: fmt(value) }); }
         }
     }
     return value;
@@ -949,7 +949,14 @@ export function calcularNpc(npc, sys, opts = {}) {
             for (const calc of calculos) {
                 // Alvo implícito e explícito das intrínsecas: SEMPRE o próprio DV
                 const alvoTarget = 'DV:' + def.key;
-                intrinsecas.push({ target: alvoTarget, op: calc.operacao || '+', calc, fonte: `Fórmula (${def.nome})` });
+                /* O nome da MECÂNICA, e não "Fórmula (Vitalidade)": duas
+                   mecânicas intrínsecas do mesmo VD saíam com o rótulo
+                   idêntico, e a janela de detalhe listava "Fórmula
+                   (Vitalidade) +3" e "Fórmula (Vitalidade) ×3" sem dizer o que
+                   era cada uma. O nome cadastrado distingue, e é o mesmo que o
+                   registro usa no bloco da regra geral. */
+                intrinsecas.push({ target: alvoTarget, op: calc.operacao || '+', calc,
+                    fonte: mech.nome || `Fórmula base (${def.nome})` });
             }
         }
     }

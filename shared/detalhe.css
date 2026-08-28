@@ -77,6 +77,62 @@
 }
 
 /* "Usado em" é informação, não ação: azul arcano, e o "via" bem discreto. */
+/* ---------- A conta, passo a passo ----------
+   O número da esquerda dá a ORDEM (o motor aplica =, depois +/−, depois ×/÷,
+   depois os limites) e o acumulado da direita mostra quanto o valor vale
+   depois de cada passo. Sem os dois, a lista era um punhado de operações
+   soltas e ninguém remontava a conta. */
+.lr-det-legenda {
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+    opacity: var(--lr-op-muted);
+    line-height: 1.4;
+    margin-bottom: var(--lr-space-1);
+}
+
+.lr-det-passo-n {
+    flex: 0 0 auto;
+    min-width: 1.35em;
+    height: 1.35em;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--lr-surface-2);
+    color: var(--lr-text-2);
+    font-size: .72em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* O acumulado tem coluna própria à direita, alinhada entre as linhas. */
+.lr-det-parcial {
+    flex: 0 0 auto;
+    margin-left: auto;
+    min-width: 3.2em;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    color: var(--lr-text-1);
+}
+.lr-det-passo .lr-det-valor { color: var(--lr-gold); font-weight: 600; }
+
+.lr-det-total {
+    margin-top: var(--lr-space-1);
+    padding-top: var(--lr-space-1);
+    border-top: 1px solid var(--lr-border);
+}
+.lr-det-total .lr-det-fonte {
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--lr-track-title);
+    font-size: .92em;
+}
+.lr-det-total .lr-det-parcial { color: var(--lr-gold); font-size: 1.15em; }
+
+/* A regra geral é referência, não a conta — fica um tom abaixo. */
+.lr-det-regra .lr-det-fonte { color: var(--lr-text-2); }
+.lr-det-regra .lr-det-valor { color: var(--lr-gold-2); font-weight: 600; }
+
 .lr-det-uso .lr-det-fonte { color: var(--lr-arcane); }
 .lr-det-via { flex: 0 0 auto; font-size: var(--lr-fs-xs); color: var(--lr-text-2); opacity: var(--lr-op-muted); }
 

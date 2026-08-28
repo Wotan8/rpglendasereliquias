@@ -4,7 +4,7 @@ import * as S from './state.js';
 import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassModule } from './npc-system-data.js?v=1.5';
-import { calcularNpc, ATTR_SIGLAS, ATTR_NOMES } from './npc-calc-engine.js?v=1.10';
+import { calcularNpc, ATTR_SIGLAS, ATTR_NOMES } from './npc-calc-engine.js?v=1.11';
 import { calcularPoderNpc, resumoPoderNpc } from './npc-poder.js?v=1';
 import './npc-inventario.js?v=9'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 import { npcNaMesa, mesasDoNpc, espelhoMesaId } from '../../shared/npc-mesas.js';
@@ -56,30 +56,59 @@ function ensureNpcTooltip() {
     return npcTooltipEl;
 }
 /**
- * `data-tt-formula` traz a conta DESTE NPC — uma linha por fonte, no formato
- * "fonte: texto", que é como o motor (npc-calc-engine.js) já a entregava. Ela
- * vem antes da regra geral que o registro conhece: esta sabe o valor deste
- * NPC, aquela só sabe a regra.
+ * `data-tt-formula` traz a conta DESTE NPC — uma linha por passo, no formato
+ * "fonte: texto ⟹ acumulado", que é como o motor (npc-calc-engine.js) a
+ * entrega. O acumulado é o que torna a conta legível: sem ele a janela
+ * mostrava sete operações soltas e nenhum caminho entre elas.
  */
 function _formulaDoRotulo(el) {
     return (el.getAttribute('data-tt-formula') || '')
         .split('\n').map(l => l.trim()).filter(Boolean)
         .map(linha => {
-            const i = linha.indexOf(':');
-            return i < 0 ? { fonte: linha, texto: '' }
-                         : { fonte: linha.slice(0, i).trim(), texto: linha.slice(i + 1).trim() };
+            const [passo, parcial] = linha.split('⟹').map(s => s.trim());
+            const i = passo.indexOf(':');
+            const base = i < 0 ? { fonte: passo, texto: '' }
+                               : { fonte: passo.slice(0, i).trim(), texto: passo.slice(i + 1).trim() };
+            if (parcial !== undefined && parcial !== '') base.parcial = parcial;
+            return base;
         });
+}
+
+/**
+ * Um alvo do "usado em" só conta se ESTE NPC o tiver.
+ *
+ * O índice do registro é global: ele sabe que a Vitalidade entra na conta da
+ * Resistência de Voo, e mandava isso para a janela de qualquer NPC — mesmo o
+ * pescador que não voa e não tem esse VD vinculado na ficha.
+ *
+ * Só filtra o que é Valor Derivado. Atributo, perícia e o que mais o registro
+ * cite passam direto: quem não está na lista de VDs não é ausência, é outra
+ * coisa — e esconder viraria um segundo bug.
+ */
+function _alvoExisteNaFicha(nomeAlvo) {
+    if (!F.npc || !F.sys || !window.LRDetalhe) return true;
+    const chave = window.LRDetalhe.chaveDoAlvo(nomeAlvo);
+    const eDv = (F.sys.derivedValues || []).some(d => window.LRDetalhe.chaveDoAlvo(d.nome) === chave);
+    if (!eDv) return true;
+    // Status Vital (Vitalidade, Energia, Sanidade) todo NPC tem.
+    if ((F.sys.vitalStats || []).some(v => window.LRDetalhe.chaveDoAlvo(v.nome) === chave)) return true;
+    const vinculados = new Set(F.npc.valoresDer?.vinculados || []);
+    return (F.sys.derivedValues || [])
+        .some(d => window.LRDetalhe.chaveDoAlvo(d.nome) === chave && vinculados.has(d.key));
 }
 
 /** O descritor deste rótulo — serve ao resumo do hover e à janela do clique. */
 function _descritorDoRotulo(el) {
+    const total = el.getAttribute('data-tt-total');
     return {
         nome: el.getAttribute('data-tt-title') || '',
         icone: el.getAttribute('data-tt-icone') || '',
         descricao: el.getAttribute('data-tt-desc') || '',
         formula: _formulaDoRotulo(el),
+        total: (total === null || total === '') ? undefined : total,
         nota: el.getAttribute('data-tt-nota') || '',
         sys: window._npcSys || window._systemData || null,
+        temAlvo: _alvoExisteNaFicha,
     };
 }
 
@@ -1760,7 +1789,12 @@ function renderDvGrid() {
             const porItem = sysRef.escopoItem === 'coluna';
             const AVISO_ITEM = ' — 🎒 calculado POR ITEM equipado: o total sai na linha de cada arma (aba Inventário). Aqui é a base, e 0 é o esperado.';
             const desc = (sysRef.descricao || 'Sem descrição cadastrada.') + (porItem ? AVISO_ITEM : '');
-            const tip = dv.fontes.length ? dv.fontes.map(f => `${f.fonte}: ${f.texto}`).join('\n') : 'Sem mecânicas aplicáveis (base 0)';
+            // "fonte: passo ⟹ acumulado" — o acumulado deixa a janela mostrar
+            // o caminho da conta, e não sete operações soltas.
+            const tip = dv.fontes.length
+                ? dv.fontes.map(f => `${f.fonte}: ${f.texto}`
+                    + (f.parcial !== undefined && f.parcial !== null ? ` ⟹ ${f.parcial}` : '')).join('\n')
+                : 'Sem mecânicas aplicáveis (base 0)';
             const editable = rapido || locked;
             // ❤️ Status Vital (Vitalidade, Sanidade, Energia) aparece SEMPRE
             // arredondado para CIMA — ninguém marca meio ponto de vida na mesa.
@@ -1783,6 +1817,7 @@ function renderDvGrid() {
                      data-tt-title="${escapeHtml(dv.nome)}" data-tt-icone="${escapeHtml(dv.icone || '')}"
                      data-tt-desc="${escapeHtml(desc)}"
                      data-tt-formula="${escapeHtml(tip)}"
+                     data-tt-total="${escapeHtml(String(paraTela(dv.final)))}"
                      onmouseenter="handleNpcTooltipEnter(event, this)"
                      onmouseleave="hideNpcTooltip()"
                      onmousemove="moveNpcTooltip(event)"
