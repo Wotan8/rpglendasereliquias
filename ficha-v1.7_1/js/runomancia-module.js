@@ -128,7 +128,9 @@
         .runo-fchip{font-size:.68rem;border:1px solid rgba(148,163,184,.2);border-radius:999px;padding:2px 9px;cursor:pointer;color:var(--lr-text-2);background:var(--lr-bg-1);user-select:none}
         .runo-fchip:hover{border-color:rgba(139,92,246,.45)}
         .runo-fchip.on{border-color:rgba(139,92,246,.6);background:rgba(139,92,246,.18);color:#e9d5ff}
-        .runo-pop{position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:60;max-height:320px;overflow:auto;background:#141327;border:1px solid rgba(139,92,246,.35);border-radius:10px;box-shadow:0 12px 30px rgba(2,6,23,.6);padding:4px}
+        /* A lista mora no <body> e é fixed: dentro do módulo ela era cortada
+           pelo overflow:hidden do cartão. Posição calculada na abertura. */
+        .runo-pop{position:fixed;box-sizing:border-box;z-index:8500;max-height:min(320px,45vh);overflow:auto;background:#141327;border:1px solid rgba(139,92,246,.35);border-radius:10px;box-shadow:0 12px 30px rgba(2,6,23,.6);padding:4px}
         .runo-pop[hidden]{display:none}
         .runo-grp{position:sticky;top:0;background:#141327;font-size:.64rem;letter-spacing:.06em;text-transform:uppercase;color:var(--lr-abyssal);font-weight:700;padding:6px 8px 3px}
         .runo-opt{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:5px 8px;border-radius:7px;cursor:pointer;font-size:.78rem;color:var(--text,#e2e8f0)}
@@ -532,11 +534,17 @@
                 <span class="runo-fchip on" data-t="">Todos</span>
                 ${tipos.map(t => `<span class="runo-fchip" data-t="${t}">${TIPO_ICON[t] || 'ᛟ'} ${TIPO_LABEL[t] || t}</span>`).join('')}
             </div>` : ''}
-            <div class="runo-pop" id="runoBuscaPop" hidden></div>
             <div class="runo-sel" id="runoBuscaSel"></div>`;
 
         const input = wrap.querySelector('#runoBuscaIn');
-        const pop = wrap.querySelector('#runoBuscaPop');
+        // A lista de resultados vive no <body>, não dentro do módulo: o cartão
+        // da Runomancia tem overflow:hidden e cortava a lista na borda de baixo.
+        document.getElementById('runoBuscaPop')?.remove();
+        const pop = document.createElement('div');
+        pop.className = 'runo-pop';
+        pop.id = 'runoBuscaPop';
+        pop.hidden = true;
+        document.body.appendChild(pop);
         const btn = wrap.querySelector('#runoAddBtn');
         const selInfo = wrap.querySelector('#runoBuscaSel');
 
@@ -599,10 +607,48 @@
             pop.innerHTML = html;
             hl = (tokens.length && visiveis.length) ? 0 : -1;
             _destacar();
+            _posicionar();   // a lista encolheu ou cresceu: refaz a conta do espaço
         }
 
-        function _abrir() { _pintar(); pop.hidden = false; }
-        function _fechar() { pop.hidden = true; }
+        /**
+         * Cola a lista embaixo do campo. Se não couber para baixo — campo perto
+         * do rodapé da janela —, abre para cima; a altura máxima é o espaço que
+         * sobrar, para nunca vazar da tela.
+         */
+        function _posicionar() {
+            if (pop.hidden) return;
+            const r = input.getBoundingClientRect();
+            // clientHeight, e não innerHeight: é a mesma altura contra a qual o
+            // position:fixed resolve, e ela desconta a barra de rolagem.
+            const vh = document.documentElement.clientHeight || window.innerHeight;
+            const folgaAbaixo = vh - r.bottom - 8;
+            const folgaAcima = r.top - 8;
+            const paraCima = folgaAbaixo < 180 && folgaAcima > folgaAbaixo;
+            const espaco = Math.max(120, Math.min(320, paraCima ? folgaAcima : folgaAbaixo));
+            pop.style.left = `${r.left}px`;
+            pop.style.width = `${r.width}px`;
+            pop.style.maxHeight = `${espaco}px`;
+            if (paraCima) {
+                pop.style.top = 'auto';
+                pop.style.bottom = `${vh - r.top + 4}px`;
+            } else {
+                pop.style.bottom = 'auto';
+                pop.style.top = `${r.bottom + 4}px`;
+            }
+        }
+
+        function _abrir() {
+            _pintar();
+            pop.hidden = false;
+            _posicionar();
+            window.addEventListener('scroll', _posicionar, true);
+            window.addEventListener('resize', _posicionar);
+        }
+        function _fechar() {
+            pop.hidden = true;
+            window.removeEventListener('scroll', _posicionar, true);
+            window.removeEventListener('resize', _posicionar);
+        }
 
         function _limparEscolha() {
             sel = null;
@@ -621,6 +667,7 @@
 
         function _estudar() {
             if (!sel) { input.focus(); return; }
+            _fechar(); pop.remove();   // o módulo vai ser redesenhado; a lista não pode ficar órfã
             runo.estudos.push({ elementId: sel.el.id, nivelAlvo: sel.alvo, sessoesFeitas: 0 });
             _refresh(cfg); _save();
         }
@@ -667,8 +714,12 @@
         // Clique fora fecha a lista. O listener se remove sozinho quando o
         // módulo é re-renderizado e este wrap sai do DOM.
         const onDoc = e => {
-            if (!wrap.isConnected) { document.removeEventListener('click', onDoc, true); return; }
-            if (!wrap.contains(e.target)) _fechar();
+            if (!wrap.isConnected) {
+                document.removeEventListener('click', onDoc, true);
+                _fechar(); pop.remove();   // a lista mora no body: sai junto com o módulo
+                return;
+            }
+            if (!wrap.contains(e.target) && !pop.contains(e.target)) _fechar();
         };
         document.addEventListener('click', onDoc, true);
 

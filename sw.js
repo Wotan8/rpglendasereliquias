@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v340';
+const VERSION = 'v342';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -146,6 +146,7 @@ const PRECACHE_URLS = [
   '/painel-mestre/js/main.js',
   '/painel-mestre/js/npc-calc-engine.js',
   '/painel-mestre/js/npc-inventario.js',
+  '/painel-mestre/js/npc-poder.js',
   '/painel-mestre/js/npc-system-data.js',
   '/painel-mestre/js/repertorio.js',
   '/painel-mestre/js/state.js',
