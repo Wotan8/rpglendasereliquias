@@ -141,7 +141,7 @@ window.avisoVerTudo = function (bt) {
 
 function montarJanela() {
     janela = document.createElement('dialog');
-    janela.className = 'lr-avisos';
+    janela.className = 'lr-caixa-avisos';
     janela.innerHTML = `
         <div class="avisos-topo">
             <span class="avisos-titulo">📣 Avisos dos jogadores <span class="avisos-conta" id="avisosConta"></span>

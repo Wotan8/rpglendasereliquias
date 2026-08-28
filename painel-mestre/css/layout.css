@@ -430,7 +430,12 @@ html.dark .mechsel-search-bar select {
     text-align: center;
 }
 
-.lr-avisos {
+/* ⚠️ `lr-caixa-avisos`, e NÃO `lr-avisos`: esse nome já é da pilha de toasts
+   de shared/dialogo.css, que carrega depois desta folha e traz
+   `pointer-events: none` para os toasts não roubarem clique do mapa. Com o
+   nome repetido, a janela inteira ficava sem receber clique — os botões
+   apareciam e nenhum funcionava. */
+.lr-caixa-avisos {
     width: min(620px, calc(100vw - 32px));
     max-height: calc(100vh - 64px);
     padding: 0;
@@ -450,9 +455,9 @@ html.dark .mechsel-search-bar select {
     display: flex;
     flex-direction: column;
 }
-.lr-avisos:not([open]) { display: none; }
+.lr-caixa-avisos:not([open]) { display: none; }
 
-.lr-avisos::backdrop { background: rgba(0, 0, 0, .7); }
+.lr-caixa-avisos::backdrop { background: rgba(0, 0, 0, .7); }
 
 .avisos-topo {
     flex: 0 0 auto;

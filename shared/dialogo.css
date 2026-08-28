@@ -10,7 +10,12 @@
 /* ---------- PILHA DE AVISOS ----------
    Sem "toast" no nome de propósito: lendas-reliquias.css neutraliza
    `[class*="toast"] [class*="toast"]`, então um container "toasts" apagaria
-   o estilo de todos os filhos. */
+   o estilo de todos os filhos.
+
+   ⚠️ `.lr-avisos` é DESTA pilha, e o `pointer-events: none` abaixo pega
+   qualquer elemento que use o nome. Não reaproveite a classe: a caixa de
+   avisos do Painel do Mestre já tentou e ficou com a janela inteira sem
+   receber clique — ela se chama `.lr-caixa-avisos`. */
 .lr-avisos {
     position: fixed;
     top: var(--lr-space-4);
