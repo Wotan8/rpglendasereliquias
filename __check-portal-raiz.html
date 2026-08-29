@@ -10,6 +10,7 @@
   table#saida td { border:1px solid var(--lr-border); padding:2px 6px; }
   .ok { color: var(--lr-nature); } .fail { color: var(--lr-blood-2); font-weight:700; }
   #placar { font-weight:800; margin:8px 0 16px; padding-top:8px; border-top:1px solid var(--lr-border); }
+  .pulado { color:#a16207; font-weight:600; }
   h1 { font-size:1rem; margin:0 0 4px; } p.nota { margin:0 0 10px; color:var(--lr-text-2); font-size:.8rem; }
   iframe { width: 1100px; height: 700px; border:1px dashed var(--lr-border); border-radius:8px; }
 </style></head>
@@ -28,8 +29,42 @@
 
 <script type="module">
 const linhas = [];
+let pulados = 0;
 const t = (nome, cond) => linhas.push(
     `<tr><td>${nome}</td><td class="${cond ? 'ok' : 'fail'}">${cond ? 'OK' : 'FALHOU'}</td></tr>`);
+
+/* ESTE PAINEL PODE NÃO RECOMPOR LAYOUT.
+   Rodando dentro de um painel embutido ou oculto, o navegador congela o
+   layout: mexer no CSS não muda medida nenhuma, e `getBoundingClientRect`
+   devolve o valor da última composição — dentro da MESMA tarefa de script,
+   sem chance de esperar. Um teste de medida aí não falha por defeito, falha
+   por não ter onde medir. E guarda que falha por motivo alheio ensina todo
+   mundo a ignorar guarda, que é pior do que não ter guarda.
+   Então a sonda mede uma vez, e o que depende de medida VIVA sai como PULADO
+   com o motivo escrito, contado à parte no placar. Em navegador de verdade a
+   sonda passa e nada muda: tudo roda como sempre rodou. */
+const layoutVivo = (() => {
+    const sonda = document.createElement('div');
+    sonda.style.cssText = 'position:absolute;visibility:hidden;width:10px';
+    document.body.appendChild(sonda);
+    sonda.style.height = '100px';
+    const a = sonda.getBoundingClientRect().height;
+    sonda.style.height = '500px';
+    const b = sonda.getBoundingClientRect().height;
+    sonda.remove();
+    return a === 100 && b === 500;
+})();
+
+const pular = (nome, motivo) => {
+    pulados++;
+    linhas.push(`<tr><td>${nome}</td><td class="pulado">PULADO — ${motivo}</td></tr>`);
+};
+
+/** Roda o teste só onde dá para medir; onde não dá, pula dizendo por quê. */
+const tMedido = (nome, avaliar) => {
+    if (!layoutVivo) return pular(nome, 'este navegador não recompõe layout');
+    t(nome, avaliar());
+};
 
 /* ===== A) o endereço serve o Portal, e o antigo não some ===== */
 {
@@ -305,27 +340,47 @@ t('T11b · o Portal do iframe subiu com a versão atual dos módulos', prontoIfr
     /* ---- celular: o cabeçalho tem de continuar inteiro ---- */
     const antes = fr.style.width;
     fr.style.width = '375px';
-    // O `matchMedia` do iframe lê a largura do ELEMENTO: estreitar o quadro é
-    // estreitar o "celular". Espera o media query disparar antes de medir.
-    await new Promise(r => setTimeout(r, 250));
-    t('T37b · o media query do celular chegou ao iframe',
-        w.matchMedia('(max-width: 640px)').matches);
-    if (typeof w.atalhosNoLugar !== 'function') {
-        t('T37c · atalhosNoLugar exposto pelo Portal', false);
-    } else {
-        w.atalhosNoLugar();
-    }
-    await new Promise(r => setTimeout(r, 80));
+    /* O `matchMedia` do iframe lê a largura do ELEMENTO: estreitar o quadro é
+       estreitar o "celular". Esperar 250ms cravados era chute — num painel que
+       não recompõe, esperar mil não adianta, e num aparelho lento 250 podia não
+       bastar. Agora espera pelo FATO: o media query virou, ou o prazo estourou
+       e a gente sabe que não virou. */
+    const virou = await (async () => {
+        const prazo = Date.now() + 1500;
+        while (Date.now() < prazo) {
+            if (w.matchMedia('(max-width: 640px)').matches) return true;
+            await new Promise(r => setTimeout(r, 30));
+        }
+        return false;
+    })();
 
-    t('T38 · em 375px a marca continua inteira, sem virar "Lend…"',
-        cx(d.querySelector('.portal-marca')).width > 100);
-    t('T39 · os atalhos de cargo mudam para a faixa de navegação, que rola',
-        d.querySelector('.portal-atalhos').parentElement === abas);
-    const ult2 = [...conta.children].filter(e => e.offsetParent).pop();
-    t(`T40 · e a faixa da conta cabe em 375px (termina em ${Math.round(cx(ult2).right)})`,
-        cx(ult2).right <= 376);
-    t('T41 · sem rolagem lateral no celular',
-        d.documentElement.scrollWidth <= d.documentElement.clientWidth + 1);
+    if (!virou && !layoutVivo) {
+        for (const nome of [
+            'T37b · o media query do celular chegou ao iframe',
+            'T38 · em 375px a marca continua inteira, sem virar "Lend…"',
+            'T39 · os atalhos de cargo mudam para a faixa de navegação, que rola',
+            'T40 · e a faixa da conta cabe em 375px',
+            'T41 · sem rolagem lateral no celular',
+        ]) pular(nome, 'estreitar o quadro não redispara o media query aqui');
+    } else {
+        t('T37b · o media query do celular chegou ao iframe', virou);
+        if (typeof w.atalhosNoLugar !== 'function') {
+            t('T37c · atalhosNoLugar exposto pelo Portal', false);
+        } else {
+            w.atalhosNoLugar();
+        }
+        await new Promise(r => setTimeout(r, 80));
+
+        t('T38 · em 375px a marca continua inteira, sem virar "Lend…"',
+            cx(d.querySelector('.portal-marca')).width > 100);
+        t('T39 · os atalhos de cargo mudam para a faixa de navegação, que rola',
+            d.querySelector('.portal-atalhos').parentElement === abas);
+        const ult2 = [...conta.children].filter(e => e.offsetParent).pop();
+        t(`T40 · e a faixa da conta cabe em 375px (termina em ${Math.round(cx(ult2).right)})`,
+            cx(ult2).right <= 376);
+        t('T41 · sem rolagem lateral no celular',
+            d.documentElement.scrollWidth <= d.documentElement.clientWidth + 1);
+    }
     /* O piso de 40px vem de `@media (pointer: coarse)`, e este navegador é
        `fine` — a regra não aplica aqui. Dá para conferir as duas coisas que
        importam mesmo assim: a folha ainda promete o piso, e o CSS do celular
@@ -367,7 +422,9 @@ t('T11b · o Portal do iframe subiu com a versão atual dos módulos', prontoIfr
                 && r.left >= -1 && r.right <= fr.clientWidth + 1;
         };
         let fora = [];
-        for (const v of cantos) for (const h of lados) {
+        /* Sem layout vivo esta varredura passava À TOA: nada se move, nada sai
+           da tela, verde. Falso verde e pior que vermelho — pula. */
+        for (const v of (layoutVivo ? cantos : [])) for (const h of lados) {
             aplicar({ titulo: true, cta: true, vertical: v, horizontal: h });
             await new Promise(r => setTimeout(r, 20));
             const cta = palco.querySelector('.portal-hero-cta');
@@ -375,8 +432,8 @@ t('T11b · o Portal do iframe subiu com a versão atual dos módulos', prontoIfr
             if (cta && !cta.hidden && !dentro(cta)) fora.push(`botão em ${v}/${h}`);
             if (txt && !txt.hidden && !dentro(txt)) fora.push(`título em ${v}/${h}`);
         }
-        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · nas 9 posições nada sai da tela`,
-            fora.length === 0);
+        tMedido(`T${(linhas.length + 1).toString().padStart(2, '0')} · nas 9 posições nada sai da tela`,
+            () => fora.length === 0);
         if (fora.length) linhas.push(
             `<tr><td colspan="2" style="color:var(--lr-blood-2)">saiu: ${fora.join(', ')}</td></tr>`);
 
@@ -402,26 +459,32 @@ t('T11b · o Portal do iframe subiu com a versão atual dos módulos', prontoIfr
 
         // ---- tamanho ----
         const larguras = {};
-        for (const tam of ['minimo', 'medio', 'grande']) {
+        for (const tam of (layoutVivo ? ['minimo', 'medio', 'grande'] : [])) {
             aplicar({ titulo: true, cta: true, ctaTam: tam });
             await new Promise(r => setTimeout(r, 20));
             larguras[tam] = palco.querySelector('.portal-hero-cta').getBoundingClientRect().width;
         }
-        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · os três tamanhos de botão são mesmo diferentes `
-          + `(${Math.round(larguras.minimo)} / ${Math.round(larguras.medio)} / ${Math.round(larguras.grande)}px)`,
-            larguras.minimo < larguras.medio && larguras.medio < larguras.grande);
+        tMedido(`T${(linhas.length + 1).toString().padStart(2, '0')} · os três tamanhos de botão são mesmo diferentes `
+          + (layoutVivo ? ` (${Math.round(larguras.minimo)} / ${Math.round(larguras.medio)} / ${Math.round(larguras.grande)}px)` : ''),
+            () => larguras.minimo < larguras.medio && larguras.medio < larguras.grande);
 
         // ---- ritmo: trilho mais alto = mais rolagem por quadro ----
         const trilho = d.getElementById('heroTrilho');
         const alturas = {};
-        for (const ritmo of ['rapido', 'normal', 'lento', 'bem-lento']) {
+        for (const ritmo of (layoutVivo ? ['rapido', 'normal', 'lento', 'bem-lento'] : [])) {
             aplicar({ titulo: true, cta: true, ritmo });
+            /* A altura vem do CSS, e o aplicador troca o atributo na hora: o
+               que falta é o navegador refazer a conta. Ler o retângulo já força
+               isso onde há layout — a espera é só folga para o estilo assentar. */
             await new Promise(r => setTimeout(r, 20));
             alturas[ritmo] = trilho.getBoundingClientRect().height;
         }
-        t(`T${(linhas.length + 1).toString().padStart(2, '0')} · a velocidade da animação muda a rolagem por quadro `
-          + `(${Object.values(alturas).map(Math.round).join(' < ')})`,
-            alturas.rapido < alturas.normal && alturas.normal < alturas.lento
+        // O laço deixa o trilho no último ritmo; os testes seguintes medem o
+        // padrão, e um resto de "bem-lento" contaminava os dois de baixo.
+        aplicar({ titulo: true, cta: true });
+        tMedido(`T${(linhas.length + 1).toString().padStart(2, '0')} · a velocidade da animação muda a rolagem por quadro `
+          + (layoutVivo ? ` (${Object.values(alturas).map(Math.round).join(' < ')})` : ''),
+            () => alturas.rapido < alturas.normal && alturas.normal < alturas.lento
             && alturas.lento < alturas['bem-lento']);
 
         aplicar({ titulo: true, cta: true });   // devolve o palco ao padrão
@@ -477,16 +540,16 @@ t('T11b · o Portal do iframe subiu com a versão atual dos módulos', prontoIfr
         return tr.getBoundingClientRect().height / svh;
     };
     const estreito = fr.clientWidth <= 720;
-    const normal = emTelas(null);
-    const lentissimo = emTelas('bem-lento');
+    const normal = layoutVivo ? emTelas(null) : 0;
+    const lentissimo = layoutVivo ? emTelas('bem-lento') : 0;
     emTelas(null);
-    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · o hero cabe em poucas telas `
-      + `(${normal.toFixed(2)} normal, ${lentissimo.toFixed(2)} no mais lento — quadro de ${fr.clientWidth}px)`,
-        estreito ? (normal <= 1.4 && lentissimo <= 2.5) : (normal <= 2.5 && lentissimo <= 5.5));
+    tMedido(`T${(linhas.length + 1).toString().padStart(2, '0')} · o hero cabe em poucas telas `
+      + (layoutVivo ? ` (${normal.toFixed(2)} normal, ${lentissimo.toFixed(2)} no mais lento — quadro de ${fr.clientWidth}px)` : ''),
+        () => estreito ? (normal <= 1.4 && lentissimo <= 2.5) : (normal <= 2.5 && lentissimo <= 5.5));
     /* E o mais lento tem de continuar sendo o mais lento: encolher no celular
        nao pode achatar os quatro passos num so. */
-    t(`T${(linhas.length + 1).toString().padStart(2, '0')} · os passos de velocidade continuam distintos`,
-        emTelas('rapido') < emTelas(null) && emTelas(null) < emTelas('lento')
+    tMedido(`T${(linhas.length + 1).toString().padStart(2, '0')} · os passos de velocidade continuam distintos`,
+        () => emTelas('rapido') < emTelas(null) && emTelas(null) < emTelas('lento')
         && emTelas('lento') < emTelas('bem-lento'));
     emTelas(null);
 }
@@ -737,8 +800,13 @@ t('T11b · o Portal do iframe subiu com a versão atual dos módulos', prontoIfr
 
 document.getElementById('saida').innerHTML = linhas.join('');
 const falhas = linhas.filter(l => l.includes('FALHOU')).length;
+/* Pulado NÃO conta como aprovado — o placar tira do denominador e diz quantos
+   foram, senão "60/60 tudo certo" cobriria meia dúzia de guardas que nem
+   chegaram a rodar. Num navegador de verdade este número é zero. */
+const conferidos = linhas.length - pulados;
 document.getElementById('placar').innerHTML =
-    `<span class="${falhas ? 'fail' : 'ok'}">${linhas.length - falhas}/${linhas.length}</span>`
-    + (falhas ? ` — ${falhas} falha(s)` : ' — tudo certo');
+    `<span class="${falhas ? 'fail' : 'ok'}">${conferidos - falhas}/${conferidos}</span>`
+    + (falhas ? ` — ${falhas} falha(s)` : ' — tudo certo')
+    + (pulados ? ` · <span class="pulado">${pulados} pulado(s): este navegador não recompõe layout</span>` : '');
 </script>
 </body></html>
