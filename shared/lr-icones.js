@@ -65,6 +65,10 @@
         '<symbol id="i-cadeado" viewBox="0 0 24 24"><path d="M5.5 10.5h13v10h-13z"/><path d="M8.5 10.5V7a3.5 3.5 0 017 0v3.5"/></symbol>' +
         '<symbol id="i-cadeado-aberto" viewBox="0 0 24 24"><path d="M5.5 10.5h13v10h-13z"/><path d="M8.5 10.5V7a3.5 3.5 0 016.9-.9"/></symbol>' +
         '<symbol id="i-dado" viewBox="0 0 24 24"><path d="M4.5 4.5h15v15h-15z"/><path d="M8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01"/></symbol>' +
+        // A roleta e roda, raios e AGULHA. Um dado de seis faces (o i-dado,
+        // que este botao usava) simboliza sorte, nao roleta: a agulha em cima
+        // e o que faz a leitura ser imediata.
+        '<symbol id="i-roleta" viewBox="0 0 24 24"><path d="M19.8 13.2a7.8 7.8 0 11-15.6 0 7.8 7.8 0 0115.6 0"/><path d="M4.2 13.2h15.6M8.1 6.4l7.8 13.6M15.9 6.4L8.1 20"/><path d="M12 6.4L9.9 2.2h4.2z"/></symbol>' +
         '<symbol id="i-balao" viewBox="0 0 24 24"><path d="M20.5 11a7 7 0 01-7 7H9l-5.5 3.5V11a7 7 0 017-7h3a7 7 0 017 7z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></symbol>' +
         '<symbol id="i-fantasma" viewBox="0 0 24 24"><path d="M12 2.5A7.5 7.5 0 004.5 10v11.5l2.5-2 2.5 2 2.5-2 2.5 2 2.5-2 2.5 2V10A7.5 7.5 0 0012 2.5z"/><path d="M9.7 10h.01M14.3 10h.01"/></symbol>' +
         '<symbol id="i-brilho" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></symbol>' +
