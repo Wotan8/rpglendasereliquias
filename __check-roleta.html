@@ -24,6 +24,7 @@
         body { font-family: system-ui, sans-serif; padding: 20px; background: var(--lr-bg-0); color: var(--lr-text-1); }
         #saida { font-family: ui-monospace, monospace; font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
         .ok { color: #16a34a; } .falha { color: #dc2626; font-weight: 700; }
+        .pulado { color: #a16207; }
         button.acao { margin: 4px 6px 12px 0; padding: 8px 14px; cursor: pointer; }
     </style>
 </head>
@@ -62,12 +63,43 @@
             descricoes: { fake7: 'Uma pista forte que destrava um objetivo.' },
         };
 
-        let ok = 0, falhou = 0;
+        let ok = 0, falhou = 0, pulados = 0;
         const linhas = [];
         const conferir = (nome, condicao, detalhe = '') => {
             if (condicao) { ok++; linhas.push(`<span class="ok">✔</span> ${nome}`); }
             else { falhou++; linhas.push(`<span class="falha">✘ ${nome}${detalhe ? ' — ' + detalhe : ''}</span>`); }
         };
+        const pular = (nome, motivo) => {
+            pulados++;
+            linhas.push(`<span class="pulado">— ${nome} · PULADO: ${motivo}</span>`);
+        };
+
+        /* ONDE ESTA BANCADA ESTA RODANDO PODE NAO HAVER QUADRO NEM LAYOUT.
+           Num painel embutido ou oculto o navegador congela as duas coisas: o
+           `requestAnimationFrame` nunca dispara e o `getBoundingClientRect`
+           devolve a medida da ultima composicao, dentro da MESMA tarefa de
+           script. Guarda que falha por motivo alheio ensina todo mundo a
+           ignorar guarda; e guarda que PASSA sem medir nada e pior ainda,
+           porque aprova o vazio. Entao as duas coisas sao sondadas e o que
+           depende delas sai como PULADO, com o motivo escrito e contado a
+           parte no placar. Em navegador de verdade as sondas passam e tudo
+           roda como sempre. */
+        const layoutVivo = () => {
+            const sonda = document.createElement('div');
+            sonda.style.cssText = 'position:absolute;visibility:hidden;width:10px';
+            document.body.appendChild(sonda);
+            sonda.style.height = '100px';
+            const a = sonda.getBoundingClientRect().height;
+            sonda.style.height = '500px';
+            const b = sonda.getBoundingClientRect().height;
+            sonda.remove();
+            return a === 100 && b === 500;
+        };
+        const quadrosVivos = () => new Promise(resolve => {
+            let veio = false;
+            requestAnimationFrame(() => { veio = true; });
+            setTimeout(() => resolve(veio), 250);
+        });
 
         /* Varre o CODIGO, sem os comentarios. A primeira versao destes testes
            acusava `crossOrigin` e `getImageData` no hero: o comentario que
@@ -78,8 +110,10 @@
             .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');
 
         window.rodar = async function () {
-            ok = 0; falhou = 0; linhas.length = 0;
+            ok = 0; falhou = 0; pulados = 0; linhas.length = 0;
             const saida = document.getElementById('saida');
+            const temLayout = layoutVivo();
+            const temQuadros = await quadrosVivos();
 
             await window.abrirRoleta();
             const dialogo = document.querySelector('dialog.lr-roleta');
@@ -257,10 +291,21 @@
                 await window.__roletaAnimarPara(9, 900);
                 clearInterval(espiar);
 
-                conferir('durante o giro a roda ganha forca de verdade', picoForca > 0.5,
-                    `pico ${picoForca.toFixed(2)}`);
-                conferir('e a agulha chega a balancar', picoAgulha > 4,
-                    `${picoAgulha.toFixed(1)}deg`);
+                /* Sem quadro nao ha giro: `animarAte` vai direto ao fim de
+                   proposito, para o botao nunca ficar preso em "Girando..."
+                   com o premio ja entregue. Medir forca ai e medir o nada. */
+                if (!temQuadros) {
+                    pular('durante o giro a roda ganha forca de verdade',
+                        'este navegador nao entrega quadros de animacao');
+                    pular('e a agulha chega a balancar',
+                        'este navegador nao entrega quadros de animacao');
+                } else {
+                    conferir('durante o giro a roda ganha forca de verdade', picoForca > 0.5,
+                        `pico ${picoForca.toFixed(2)}`);
+                    conferir('e a agulha chega a balancar', picoAgulha > 4,
+                        `${picoAgulha.toFixed(1)}deg`);
+                }
+                // Esta vale sempre: com ou sem quadro, o fim tem de repousar.
                 const dep = window.__roletaEstado();
                 conferir('no fim ela volta ao repouso', dep.forcaAtual === 0 && dep.flickAgulha === 0,
                     `forca=${dep.forcaAtual}, agulha=${dep.flickAgulha}`);
@@ -456,9 +501,13 @@
                 semComentarios('/* crossOrigin */ var a = 1;').indexOf('crossOrigin') === -1
                 && semComentarios('var crossOrigin = 1;').indexOf('crossOrigin') >= 0);
 
+            /* Pulado NAO entra em "passaram": um placar que soma o que nem
+               chegou a rodar mente com numero redondo, que e a pior forma. */
             saida.innerHTML = linhas.join('\n') +
                 `\n\n<b>${ok} passaram, ${falhou} falharam</b>` +
-                (falhou === 0 ? ' <span class="ok">— tudo certo</span>' : '');
+                (falhou === 0 ? ' <span class="ok">— tudo certo</span>' : '') +
+                (pulados ? `\n<span class="pulado">${pulados} pulado(s) — este navegador nao entrega `
+                    + `${!temQuadros && !temLayout ? 'quadro nem layout' : (!temQuadros ? 'quadros de animacao' : 'layout vivo')}</span>` : '');
         };
     </script>
     <script type="module" src="/menu/js/menu-roleta.js?v=12"></script>
