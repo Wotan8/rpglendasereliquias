@@ -61,6 +61,33 @@ export function rotacaoFinal(listaFatias, indicePremio, voltas = 6, desvio = 0) 
     return voltas * 360 + (base + 360) % 360;
 }
 
+/**
+ * Qual fatia está sob um PONTO da roda — o dedo ou o cursor.
+ *
+ * `dx`/`dy` são o deslocamento do ponto em relação ao CENTRO do disco, em
+ * pixels do canvas, com y crescendo para baixo. É a mesma convenção do desenho,
+ * então `Math.atan2(dy, dx)` já devolve o ângulo horário que as fatias usam —
+ * não há conversão escondida aqui, e é de propósito: um sinal trocado neste
+ * ponto vira fatia errada num toque, que é erro silencioso e convincente.
+ *
+ * Devolve `null` fora do disco e dentro do miolo, porque nenhum dos dois é
+ * fatia: o miolo é o eixo, e fora do aro é o fundo da janela.
+ *
+ * @param {ReturnType<fatias>} listaFatias
+ * @param {number} rotacao graus que a roda está girada
+ * @param {number} dx      pixels à direita do centro
+ * @param {number} dy      pixels ABAIXO do centro
+ * @param {number} raio    raio do disco desenhado
+ * @param {number} raioMiolo raio do eixo, que não conta como fatia
+ */
+export function fatiaNoPonto(listaFatias, rotacao, dx, dy, raio, raioMiolo = 0) {
+    const dist = Math.hypot(dx, dy);
+    if (!(dist <= raio) || dist < raioMiolo) return null;
+    const angulo = Math.atan2(dy, dx) * 180 / Math.PI;
+    const ponto = ((angulo - rotacao) % 360 + 360) % 360;
+    return listaFatias.find(f => ponto >= f.inicio && ponto < f.fim) || null;
+}
+
 /** Qual fatia está sob a seta com a roda girada em `rotacao` graus. */
 export function fatiaSobASeta(listaFatias, rotacao) {
     const ponto = ((ANGULO_SETA - rotacao) % 360 + 360) % 360;

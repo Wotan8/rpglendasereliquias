@@ -10,7 +10,7 @@
 import { doc, getDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 import { toast } from '../../shared/dialogo.js?v=2';
-import { fatias, rotacaoFinal, fatiaSobASeta, ANGULO_SETA } from '../../shared/roleta-geometria.js?v=1';
+import { fatias, rotacaoFinal, fatiaSobASeta, fatiaNoPonto, ANGULO_SETA } from '../../shared/roleta-geometria.js?v=2';
 import { curvaGiro } from '../../shared/roleta-curva.js?v=3';
 
 let janela = null;        // <dialog>, criado uma vez
@@ -19,6 +19,8 @@ let listaFatias = [];
 let rotacao = 0;          // graus, estado da roda
 let girando = false;
 let itensDeGiro = [];     // itens da Loja que vendem giros
+let descricoes = {};      // itemId -> descrição, só para a janela de espiada
+let espiando = null;      // índice do prêmio aberto na espiada, ou null
 
 /* ESTADO DA ENCENAÇÃO — três números que o laço do giro escreve e o desenho lê.
    Ficam fora de `animarAte` porque `desenhar()` é chamado de outros quatro
@@ -440,6 +442,20 @@ function desenhar() {
     ctx.restore();
 }
 
+/* MEDIDAS DA RODA EM PIXELS DE TELA.
+   `desenhar()` trabalha no buffer, que é a tela vezes o devicePixelRatio. O
+   dedo chega em pixels de CSS. Estas três frações são as MESMAS de lá — mudar
+   o desenho sem mudar aqui faz o toque cair na fatia errada, que é um erro que
+   ninguém vê acontecer, só acredita no resultado. */
+const FRACAO_ARO = 0.045;    // quanto do lado sobra entre o disco e a borda
+const FRACAO_MIOLO = 0.082;  // raio do eixo, que não é fatia de ninguém
+
+function medidasNaTela(canvas) {
+    const caixa = canvas.getBoundingClientRect();
+    const lado = caixa.width;
+    return { caixa, lado, centro: lado / 2, raio: lado / 2 - lado * FRACAO_ARO, miolo: lado * FRACAO_MIOLO };
+}
+
 // Repinta quando o tema troca — mesmo truque do selo do Portal
 new MutationObserver(() => { if (janela?.open) desenhar(); })
     .observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
@@ -535,6 +551,64 @@ function animarAte(alvo, duracaoMs) {
     });
 }
 
+/* ESPIAR UMA FATIA.
+   A roda diz a chance de cada prêmio em porcentagem miúda girada de lado; a
+   legenda diz em texto, mas ao lado. Ninguém liga uma coisa na outra sem
+   apontar o dedo. Tocar a fatia abre o prêmio dela por cima da roda, e o
+   holofote que já existia para a vitória marca QUAL fatia é — é a mesma
+   pergunta ("esta aqui"), então é o mesmo desenho. */
+function abrirEspiada(indice) {
+    const cartao = document.getElementById('roletaEspiada');
+    const premio = premios[indice];
+    if (!cartao || !premio) return;
+
+    const total = premios.reduce((soma, x) => soma + (Number(x.chance) > 0 ? Number(x.chance) : 0), 0);
+    const pct = total > 0 ? Number(premio.chance) / total * 100 : 0;
+    const desc = descricoes[premio.itemId] || '';
+    /* "1 em 21 giros" existe porque 4,7% não diz nada a quase ninguém. É a
+       mesma informação, na unidade em que a pessoa vive: giros. */
+    const umEm = pct > 0 ? Math.round(100 / pct) : 0;
+
+    espiando = indice;
+    destaque = { indice, pulso: 0.55 };
+    desenhar();
+
+    cartao.innerHTML = `
+        <button class="roleta-espiada-x" onclick="roletaFecharEspiada()" aria-label="Fechar">✕</button>
+        ${premio.imagem ? `<img src="${esc(premio.imagem)}" alt="" onerror="this.remove()">` : ''}
+        <div class="roleta-espiada-nome">${esc(premio.nome)}</div>
+        ${desc ? `<div class="roleta-espiada-desc">${esc(desc)}</div>` : ''}
+        <div class="roleta-espiada-chance">
+            <b>${pct.toFixed(pct < 1 ? 2 : 1).replace('.', ',')}%</b>
+            <span>${umEm > 0 ? `cerca de 1 em ${umEm} giro${umEm > 1 ? 's' : ''}` : 'não sai nesta roda'}</span>
+        </div>`;
+    cartao.hidden = false;
+}
+
+window.roletaFecharEspiada = function () {
+    const cartao = document.getElementById('roletaEspiada');
+    if (cartao) { cartao.hidden = true; cartao.innerHTML = ''; }
+    // Só apaga o holofote se era a espiada que o tinha aceso: fechar a espiada
+    // não pode apagar a fatia que a pessoa acabou de ganhar.
+    if (espiando !== null) { espiando = null; destaque = null; desenhar(); }
+};
+
+/** Toque na legenda — é o mesmo cartão, e é o caminho de quem usa teclado. */
+window.roletaEspiar = function (indice) {
+    if (girando) return;
+    if (espiando === indice) window.roletaFecharEspiada();
+    else abrirEspiada(indice);
+};
+
+function aoTocarNaRoda(ev) {
+    if (girando || !listaFatias.length) return;
+    const { caixa, centro, raio, miolo } = medidasNaTela(ev.currentTarget);
+    const fatia = fatiaNoPonto(listaFatias, rotacao,
+        ev.clientX - caixa.left - centro, ev.clientY - caixa.top - centro, raio, miolo);
+    if (!fatia) return window.roletaFecharEspiada();   // aro ou eixo: só fecha
+    window.roletaEspiar(fatia.indice);
+}
+
 /* Acende a fatia vencedora: três batidas fortes e depois um brilho fixo, que
    fica até o próximo giro. Não é aguardado — o cartão do prêmio não tem por que
    esperar uma luz piscar. */
@@ -560,6 +634,7 @@ window.girarRoletaAgora = async function () {
     girando = true;
     if (btn) { btn.disabled = true; btn.textContent = 'Girando...'; }
     if (painel) painel.innerHTML = '';
+    window.roletaFecharEspiada();
     destaque = null;   // a fatia acesa é a do giro passado; apaga antes de rodar
 
     garantirAudio();
@@ -653,6 +728,7 @@ window.__roletaEstado = () => ({ forcaAtual, flickAgulha, destaque, rotacao });
 // E os sons, que só tocam num giro de verdade: a bancada precisa poder
 // dispará-los sem servidor para saber se explodem.
 window.__roletaSoar = { garantirAudio, tic, fanfarra };
+window.__roletaEspiada = () => ({ espiando, medidas: medidasNaTela(document.getElementById('roletaCanvas')) });
 window.__roletaPor = (e = {}) => {
     if (e.rotacao != null) rotacao = e.rotacao;
     if (e.forcaAtual != null) forcaAtual = e.forcaAtual;
@@ -677,11 +753,15 @@ function renderLegenda() {
     const el = document.getElementById('roletaLegenda');
     if (!el) return;
     const total = premios.reduce((s, p) => s + (Number(p.chance) > 0 ? Number(p.chance) : 0), 0);
+    /* Cada linha é um BOTÃO, não um <li> com onclick: a roda só responde a
+       ponteiro, e uma fatia de 0,3% tem três pixels de largura. A legenda é o
+       caminho de quem usa teclado e o de quem não consegue acertar a fatia. */
     el.innerHTML = listaFatias.map((f, i) => {
         const p = premios[f.indice];
         const pct = total > 0 ? (Number(p.chance) / total * 100) : 0;
-        return `<li><i style="background:${paleta().fatias[i % 4]}"></i>
-            <span>${esc(p.nome)}</span><b>${pct.toFixed(pct < 1 ? 2 : 1)}%</b></li>`;
+        return `<li><button type="button" class="roleta-legenda-bt" onclick="roletaEspiar(${f.indice})">
+            <i style="background:${paleta().fatias[i % 4]}"></i>
+            <span>${esc(p.nome)}</span><b>${pct.toFixed(pct < 1 ? 2 : 1)}%</b></button></li>`;
     }).join('');
 }
 
@@ -720,6 +800,7 @@ async function carregarDados() {
     if (window.__roletaBancada) {
         premios = window.__roletaBancada.premios || [];
         itensDeGiro = window.__roletaBancada.itensDeGiro || [];
+        descricoes = window.__roletaBancada.descricoes || {};
         listaFatias = fatias(premios);
         return;
     }
@@ -730,8 +811,13 @@ async function carregarDados() {
 
     const loja = await getDocs(collection(window.db, 'loja_itens'));
     itensDeGiro = [];
+    descricoes = {};
     loja.forEach(d => {
         const v = d.data();
+        // `config/roleta` guarda só nome, imagem e chance — a descrição fica no
+        // item da Loja. Como a Loja já está sendo lida aqui para achar os itens
+        // de giro, colher as descrições de carona não custa uma leitura a mais.
+        if (v.descricao) descricoes[d.id] = v.descricao;
         if (v.isRoleta && v.isVendaAtiva !== false) itensDeGiro.push({ id: d.id, ...v });
     });
     itensDeGiro.sort((a, b) => (Number(a.roletaGiros) || 0) - (Number(b.roletaGiros) || 0));
@@ -752,10 +838,14 @@ function montarJanela() {
 
         <div class="roleta-corpo">
             <div class="roleta-roda">
-                <canvas id="roletaCanvas" aria-label="Roleta de prêmios"></canvas>
+                <div class="roleta-palco">
+                    <canvas id="roletaCanvas" aria-label="Roleta de prêmios — toque numa fatia para ver o prêmio"></canvas>
+                    <div id="roletaEspiada" class="roleta-espiada" hidden></div>
+                </div>
                 <div class="roleta-saldo-linha">
                     Giros: <strong id="roletaSaldo">0</strong>
                 </div>
+                <div class="roleta-dica">Toque numa fatia para ver o prêmio e a chance.</div>
                 <button class="btn-modal btn-confirm roleta-girar" id="roletaBtnGirar"
                     onclick="girarRoletaAgora()">🎰 GIRAR</button>
                 <div id="roletaResultado"></div>
@@ -769,9 +859,23 @@ function montarJanela() {
             </div>
         </div>`;
     document.body.appendChild(janela);
+    document.getElementById('roletaCanvas').addEventListener('click', aoTocarNaRoda);
+
     // Clique fora fecha, como a janela de leitura do Repertório
-    janela.addEventListener('click', e => { if (e.target === janela && !girando) janela.close(); });
-    janela.addEventListener('cancel', e => { if (girando) e.preventDefault(); });
+    janela.addEventListener('click', e => {
+        if (e.target === janela && !girando) return janela.close();
+        // Clique em qualquer outro lugar da janela desfaz a espiada. A roda e a
+        // legenda ficam de fora porque elas TROCAM de fatia, não fecham.
+        if (!e.target.closest('#roletaEspiada, #roletaCanvas, .roleta-legenda')) {
+            window.roletaFecharEspiada();
+        }
+    });
+    janela.addEventListener('cancel', e => {
+        if (girando) return e.preventDefault();
+        // Esc com a espiada aberta fecha só a espiada: a pessoa está lendo um
+        // prêmio, não pedindo para sair da roleta.
+        if (espiando !== null) { e.preventDefault(); window.roletaFecharEspiada(); }
+    });
 }
 
 window.abrirRoleta = async function () {
@@ -789,6 +893,7 @@ window.abrirRoleta = async function () {
         return;
     }
 
+    window.roletaFecharEspiada();
     renderLegenda();
     renderCompraDeGiros();
 

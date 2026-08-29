@@ -9,7 +9,7 @@
          faltava aqui: e ele que desenha botao, campo e <dialog> do projeto, e
          sem ele a bancada media um Portal sem metade da roupa. -->
     <link rel="stylesheet" href="/shared/dialogo.css?v=3">
-    <link rel="stylesheet" href="/menu/css/menu.css?v=31">
+    <link rel="stylesheet" href="/menu/css/menu.css?v=43">
     <link rel="stylesheet" href="/shared/tokens.css?v=11">
     <link rel="stylesheet" href="/shared/lendas-reliquias.css?v=2">
     <!-- Quebra-cache: sem isto o navegador servia a folha ANTIGA e a bancada
@@ -42,7 +42,7 @@
 
     <script type="module" src="/shared/dialogo.js?v=2"></script>
     <script type="module">
-        import { fatias, fatiaSobASeta, rotacaoFinal } from '/shared/roleta-geometria.js?v=1';
+        import { fatias, fatiaSobASeta, rotacaoFinal, fatiaNoPonto } from '/shared/roleta-geometria.js?v=2';
         import { curvaGiro } from '/shared/roleta-curva.js?v=3';
 
         // As 37 chances reais do documento de mesa, incluindo as de 0,3%
@@ -59,6 +59,7 @@
                 { id: 'g1', nome: 'Roleta 1x', roletaGiros: 1, valorFrag: 10, valorReal: 1000 },
                 { id: 'g3', nome: 'Roleta 3x', roletaGiros: 3, valorFrag: 25, valorReal: 2000 },
             ],
+            descricoes: { fake7: 'Uma pista forte que destrava um objetivo.' },
         };
 
         let ok = 0, falhou = 0;
@@ -250,6 +251,97 @@
             conferir('o comeco e legivel: nao despeja metade do giro em 15% do tempo',
                 curvaGiro(0.15) < 0.5, `${(curvaGiro(0.15) * 100).toFixed(0)}% em 15% do tempo`);
 
+            /* --- ESPIAR UMA FATIA ---
+               A roda diz a chance em porcentagem miuda girada de lado, a legenda
+               diz em texto do outro lado, e ninguem liga uma na outra sem apontar
+               o dedo. Tocar a fatia tem de abrir O PREMIO DAQUELA fatia: errar
+               aqui e pior que nao mostrar nada, porque a pessoa acredita. */
+            {
+                const canvas = document.getElementById('roletaCanvas');
+                const cartao = document.getElementById('roletaEspiada');
+                const listaF = fatias(window.__roletaBancada.premios);
+                const nomeDe = i => window.__roletaBancada.premios[i].nome;
+
+                const tocar = (indice) => {
+                    const { caixa, centro, raio } = window.__roletaEspiada().medidas;
+                    const fa = listaF.find(x => x.indice === indice);
+                    const a = (fa.meio + window.__roletaEstado().rotacao) * Math.PI / 180;
+                    canvas.dispatchEvent(new MouseEvent('click', {
+                        bubbles: true,
+                        clientX: caixa.left + centro + Math.cos(a) * raio * 0.62,
+                        clientY: caixa.top + centro + Math.sin(a) * raio * 0.62,
+                    }));
+                };
+
+                conferir('o cartao de espiada nasce escondido', cartao && cartao.hidden);
+
+                let errou = '';
+                for (const alvo of [0, 7, 20, 36]) {
+                    window.roletaFecharEspiada();
+                    tocar(alvo);
+                    const lido = cartao.querySelector('.roleta-espiada-nome')?.textContent;
+                    if (cartao.hidden || lido !== nomeDe(alvo)) {
+                        errou = `toquei na fatia ${alvo} (${nomeDe(alvo)}) e li "${lido}"`;
+                        break;
+                    }
+                }
+                conferir('tocar a fatia abre o premio DAQUELA fatia (4 alvos, incluindo o de 0,3%)',
+                    !errou, errou);
+
+                // o cartao tem de ficar SOBRE a roda, nao fora dela
+                {
+                    const c = cartao.getBoundingClientRect();
+                    const { caixa } = window.__roletaEspiada().medidas;
+                    conferir('e o cartao abre por cima da roda',
+                        c.left >= caixa.left - 1 && c.right <= caixa.right + 1
+                        && c.top >= caixa.top - 1 && c.bottom <= caixa.bottom + 1);
+                }
+
+                // a chance mostrada e a mesma da legenda, ou o cartao mente
+                {
+                    window.roletaFecharEspiada();
+                    tocar(7);
+                    const noCartao = cartao.querySelector('.roleta-espiada-chance b').textContent;
+                    const naLegenda = [...document.querySelectorAll('#roletaLegenda li')]
+                        .find(li => li.querySelector('span').textContent === nomeDe(7))
+                        ?.querySelector('b').textContent;
+                    conferir('a chance do cartao bate com a da legenda',
+                        noCartao.replace(',', '.') === naLegenda, `${noCartao} contra ${naLegenda}`);
+                    conferir('e a descricao do item aparece',
+                        /pista forte/.test(cartao.querySelector('.roleta-espiada-desc')?.textContent || ''));
+                }
+
+                // a fatia espiada fica acesa: e como se sabe QUAL foi tocada
+                conferir('a fatia espiada acende na roda',
+                    window.__roletaEstado().destaque?.indice === 7);
+
+                // tocar de novo na mesma fatia fecha
+                tocar(7);
+                conferir('tocar de novo na mesma fatia fecha', cartao.hidden);
+
+                // o eixo nao e fatia de ninguem
+                {
+                    tocar(7);
+                    const { caixa, centro } = window.__roletaEspiada().medidas;
+                    canvas.dispatchEvent(new MouseEvent('click', {
+                        bubbles: true, clientX: caixa.left + centro, clientY: caixa.top + centro,
+                    }));
+                    conferir('tocar o eixo fecha, nao abre fatia nenhuma', cartao.hidden);
+                }
+
+                // e a legenda faz o mesmo, que e o caminho de quem usa teclado
+                {
+                    const bt = document.querySelector('#roletaLegenda .roleta-legenda-bt');
+                    conferir('cada linha da legenda e um botao de verdade',
+                        bt && bt.tagName === 'BUTTON');
+                    bt?.click();
+                    conferir('e clicar nela abre a mesma espiada', !cartao.hidden);
+                    window.roletaFecharEspiada();
+                    conferir('fechada, a espiada apaga o holofote junto',
+                        cartao.hidden && !window.__roletaEstado().destaque);
+                }
+            }
+
             conferir('a janela cabe na largura da tela', caixa && caixa.width <= largura, `${caixa?.width?.toFixed(0)} de ${largura}`);
             conferir('a página não ganhou rolagem horizontal',
                 document.documentElement.scrollWidth <= largura);
@@ -331,7 +423,7 @@
                 (falhou === 0 ? ' <span class="ok">— tudo certo</span>' : '');
         };
     </script>
-    <script type="module" src="/menu/js/menu-roleta.js?v=10"></script>
+    <script type="module" src="/menu/js/menu-roleta.js?v=11"></script>
 </body>
 
 </html>

@@ -3181,13 +3181,110 @@ html:not(.dark) .meta-card {
 
 .roleta-roda { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 
+/* O PALCO é quem carrega a largura máxima, não mais o canvas: a janela de
+   espiada se posiciona em relação a ele, e se a caixa fosse maior que a roda o
+   cartão apareceria descentralizado sobre o disco. */
+.roleta-palco {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+}
+
 /* O canvas é quadrado por aspect-ratio; o JS só copia a largura medida para o
    buffer. Sem isto a roda vira elipse quando a janela é estreita. */
 #roletaCanvas {
     width: 100%;
-    max-width: 380px;
     aspect-ratio: 1;
     display: block;
+    cursor: pointer;
+    /* sem isto o toque numa fatia espera o segundo toque do zoom antes de valer */
+    touch-action: manipulation;
+}
+
+.roleta-dica {
+    font-size: .75rem;
+    color: var(--lr-text-2);
+    text-align: center;
+}
+
+/* A JANELA DE ESPIADA — o prêmio da fatia tocada, por cima da roda.
+   Não precisa de véu próprio: o desenho já escurece a roda inteira e recorta a
+   fatia escolhida de volta ao brilho, então o fundo do cartão JÁ é o holofote. */
+.roleta-espiada {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    width: min(78%, 250px);
+    padding: 14px 16px 12px;
+    border: var(--lr-border-w) solid var(--lr-gold);
+    border-radius: var(--lr-radius);
+    background: var(--lr-surface);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .6);
+    text-align: center;
+    animation: roletaEspiadaEntra .18s var(--lr-ease, ease) both;
+}
+
+/* O [hidden] do HTML perde para qualquer display de autor, e este cartão está
+   dentro de uma cascata que dá display a quase tudo. */
+.roleta-espiada[hidden] { display: none; }
+
+.roleta-espiada-x {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    background: none;
+    border: 0;
+    padding: 4px 6px;
+    line-height: 1;
+    color: var(--lr-text-2);
+    cursor: pointer;
+    border-radius: 4px;
+}
+.roleta-espiada-x:hover,
+.roleta-espiada-x:focus-visible { color: var(--lr-gold-2); }
+
+.roleta-espiada img {
+    width: 68px;
+    height: 68px;
+    object-fit: contain;
+    margin: 0 auto 6px;
+    display: block;
+}
+
+.roleta-espiada-nome {
+    font-weight: 800;
+    color: var(--lr-gold);
+    line-height: 1.2;
+}
+
+.roleta-espiada-desc {
+    font-size: .78rem;
+    color: var(--lr-text-2);
+    margin-top: 4px;
+    max-height: 4.6em;
+    overflow: hidden;
+}
+
+.roleta-espiada-chance { margin-top: 10px; }
+.roleta-espiada-chance b {
+    display: block;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--lr-text-1);
+    font-variant-numeric: tabular-nums;
+}
+.roleta-espiada-chance span {
+    display: block;
+    margin-top: 3px;
+    font-size: .72rem;
+    color: var(--lr-text-2);
+}
+
+@keyframes roletaEspiadaEntra {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(.88); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 .roleta-saldo-linha { font-size: .9rem; color: var(--lr-text-2); }
@@ -3239,12 +3336,29 @@ html:not(.dark) .meta-card {
 }
 
 .roleta-legenda li {
+    display: block;
+    border-bottom: 1px solid var(--lr-border-soft);
+}
+
+/* A linha inteira é um botão: a fatia de 0,3% tem três pixels na roda, e quem
+   usa teclado não tem ponteiro para mirar nela. */
+.roleta-legenda-bt {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 3px 0;
-    border-bottom: 1px solid var(--lr-border-soft);
+    width: 100%;
+    margin: 0;
+    padding: 4px 4px;
+    background: none;
+    border: 0;
+    border-radius: 4px;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
 }
+.roleta-legenda-bt:hover,
+.roleta-legenda-bt:focus-visible { background: var(--lr-gold-soft); }
 
 .roleta-legenda i {
     width: 10px;
@@ -3293,7 +3407,8 @@ html:not(.dark) .meta-card {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .roleta-premio { animation: none; }
+    .roleta-premio,
+    .roleta-espiada { animation: none; }
 }
 
 @media (max-width: 768px) {
@@ -3303,7 +3418,7 @@ html:not(.dark) .meta-card {
     }
 
     .roleta-legenda { max-height: 180px; }
-    #roletaCanvas { max-width: 300px; }
+    .roleta-palco { max-width: 300px; }
 }
 
 /* Botão de usar item do Repertório (hoje só o EXP). Fica dentro do corpo do
