@@ -289,6 +289,23 @@ body {
 
 .tabs::-webkit-scrollbar { display: none; }
 
+/* A BOLINHA DE NOTIFICAÇÃO NÃO PODE SER CORTADA.
+   Ela mora em `top: -6px` na aba, ou seja, ESCAPA da caixa de propósito — é o
+   que faz um selo de canto parecer um selo de canto. Só que esta faixa rola na
+   horizontal, e `overflow-x: auto` obriga o navegador a tratar o eixo vertical
+   como `hidden`: não existe `overflow-y: visible` num container que rola no
+   outro eixo. A bolinha aparecia cortada ao meio.
+   A saída é reservar o espaço POR DENTRO e devolvê-lo por fora: 8px de padding
+   em cima abrem a folga de que ela precisa, e a mesma medida em margem negativa
+   sobe a faixa de volta ao lugar. Altura do cabeçalho, posição das abas e o
+   token `--portal-abas-h` ficam exatamente como estavam; o que muda é só onde a
+   caixa começa a recortar. O pedaço que ela passa a invadir é a folga vazia
+   embaixo da linha da conta, que é justamente onde o selo tem de aparecer. */
+.portal-topo .tabs {
+    padding-top: 8px;
+    margin-top: -8px;
+}
+
 /* Visitante não tem mesa: sem abas até entrar. */
 .portal-deslogado .tabs,
 .portal-deslogado .frag-wallet { display: none; }

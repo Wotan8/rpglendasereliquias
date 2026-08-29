@@ -255,8 +255,30 @@ t('T11b · o Portal do iframe subiu com a versão atual dos módulos', prontoIfr
     await new Promise(r => setTimeout(r, 60));
 
     const cx = (e) => e.getBoundingClientRect();
+    /* Mede a primeira ABA, não a caixa que as contém. A caixa sobe 8px por
+       cima da faixa da conta de propósito — é a folga que a bolinha de
+       notificação ocupa (T32b logo abaixo). Quem tem de ficar embaixo é a
+       navegação que se lê, e essa não se mexeu. */
     t('T32 · o cabeçalho tem duas faixas: conta em cima, navegação embaixo',
-        !!conta && cx(abas).top >= cx(conta).bottom - 1);
+        !!conta && cx(abas.querySelector('.tab')).top >= cx(conta).bottom - 1);
+
+    /* A BOLINHA DE NOTIFICAÇÃO NÃO PODE SAIR CORTADA.
+       Ela mora em `top: -6px` na aba, fora da caixa; e a caixa rola na
+       horizontal, o que obriga o navegador a recortar o eixo vertical —
+       `overflow-y: visible` não existe num container que rola no outro eixo.
+       Era o defeito do print: metade da bolinha comida pela borda de cima. */
+    {
+        const selo = d.getElementById('notificationBadge');
+        const mostrava = selo.style.display;
+        selo.style.display = '';
+        selo.textContent = '3';
+        const sobra = cx(selo).top - cx(abas).top;
+        t(`T32b · a bolinha de notificação cabe inteira na faixa (${sobra.toFixed(1)}px de folga em cima)`,
+            sobra >= 0);
+        t('T32c · e a faixa não cresceu para isso — o texto das abas ficou onde estava',
+            Math.abs(cx(abas.querySelector('.tab')).top - cx(conta).bottom) < 1);
+        selo.style.display = mostrava;
+    }
     t('T33 · a faixa da conta cabe numa linha só',
         [...conta.children].filter(e => e.offsetParent).every(e => Math.abs(cx(e).top - cx(conta).top) < 30));
 
