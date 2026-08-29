@@ -1,19 +1,67 @@
 // Rodar: node shared/roleta-geometria.test.mjs
 import assert from 'node:assert/strict';
-import { fatias, rotacaoFinal, fatiaSobASeta, fatiaNoPonto, ANGULO_SETA } from './roleta-geometria.js';
+import { fatias, rotacaoFinal, fatiaSobASeta, fatiaNoPonto, minimoDeFatia, GRAU_MINIMO, ANGULO_SETA } from './roleta-geometria.js';
 
-// As 37 chances reais do documento de mesa, incluindo as de 0,3%
+// As 37 chances reais do documento de mesa, incluindo a de 0,09% que sumia
 const REAIS = [1, 1, 1, 3, 3, 3, 3, 5, 3, 5, 5, 1, 3, 3, 3, 3, 3, 5, 5, 3, 5, 3, 3, 1, 1, 1,
-    0.5, 3, 3, 3, 3, 5, 1, 1, 0.5, 0.3, 0.3].map((chance, i) => ({ nome: 'p' + i, chance }));
+    0.5, 3, 3, 3, 3, 5, 1, 1, 0.5, 0.3, 0.09].map((chance, i) => ({ nome: 'p' + i, chance }));
 
 const f = fatias(REAIS);
 assert.equal(f.length, 37, 'as 37 entram na roda');
 assert.ok(Math.abs(f[f.length - 1].fim - 360) < 1e-9, 'as fatias fecham exatamente 360 graus');
 
-// tamanho proporcional: a de 5% tem de ser ~16,7x a de 0,3%
-const cinco = f.find(x => REAIS[x.indice].chance === 5);
-const tresDecimos = f.find(x => REAIS[x.indice].chance === 0.3);
-assert.ok(Math.abs(cinco.tamanho / tresDecimos.tamanho - 5 / 0.3) < 1e-9, 'proporcao preservada');
+/* --- TAMANHO MINIMO, E PROPORCAO EXATA ACIMA DELE ---
+   A de 0,09% em proporcao pura ocupa 0,32 grau: meio pixel de arco, some. E
+   fatia que some diz a coisa errada — quem olha conclui que o premio nao esta
+   na roda, e ele esta. Entao ha um piso, e ele custa alguma coisa: o teste
+   cobra as duas metades do trato. */
+const minimo = minimoDeFatia(REAIS.length);
+assert.equal(minimo, GRAU_MINIMO, 'com 37 fatias o minimo nao precisa encolher');
+
+// 1) ninguem some
+for (const fatia of f) {
+    assert.ok(fatia.tamanho >= minimo - 1e-9,
+        `a fatia ${fatia.indice} ficou com ${fatia.tamanho.toFixed(3)} grau, abaixo do minimo`);
+}
+assert.ok(f.some(x => x.inflada), 'com uma chance de 0,09% alguem TEM de ter sido inflado');
+
+// 2) quem ja cabia mantem proporcao EXATA entre si
+const livres = f.filter(x => !x.inflada);
+const a = livres[0], b = livres.find(x => REAIS[x.indice].chance !== REAIS[a.indice].chance);
+assert.ok(Math.abs(a.tamanho / b.tamanho - REAIS[a.indice].chance / REAIS[b.indice].chance) < 1e-9,
+    'entre as fatias nao infladas a proporcao tem de ser exata');
+const cinco = f.find(x => REAIS[x.indice].chance === 5 && !x.inflada);
+const um = f.find(x => REAIS[x.indice].chance === 1 && !x.inflada);
+assert.ok(Math.abs(cinco.tamanho / um.tamanho - 5) < 1e-9, 'a de 5% tem de ser 5x a de 1%');
+
+// 3) mais chance nunca da fatia menor — o piso nao pode inverter a ordem
+for (const x of f) {
+    for (const y of f) {
+        if (REAIS[x.indice].chance > REAIS[y.indice].chance) {
+            assert.ok(x.tamanho >= y.tamanho - 1e-9,
+                `${REAIS[x.indice].chance}% ficou menor que ${REAIS[y.indice].chance}%`);
+        }
+    }
+}
+
+// 4) o piso encolhe sozinho quando ha fatia demais, senao os minimos passariam
+//    de 360 e nao sobraria roda para repartir
+{
+    const muitas = Array.from({ length: 300 }, (_, i) => ({ chance: i + 1 }));
+    const g = fatias(muitas);
+    const min300 = minimoDeFatia(300);
+    assert.ok(min300 < GRAU_MINIMO, 'com 300 fatias o minimo tinha de encolher');
+    assert.ok(min300 * 300 < 360, 'os minimos somados nao podem passar da roda inteira');
+    assert.ok(g.every(x => x.tamanho >= min300 - 1e-9), 'e ninguem some nem assim');
+    assert.ok(Math.abs(g[g.length - 1].fim - 360) < 1e-6, '300 fatias ainda fecham 360');
+}
+
+// 5) uma roda so de iguais nao infla ninguem
+{
+    const g = fatias([{ chance: 1 }, { chance: 1 }, { chance: 1 }]);
+    assert.ok(g.every(x => Math.abs(x.tamanho - 120) < 1e-9), 'tres iguais dao 120 graus cada');
+    assert.ok(g.every(x => !x.inflada), 'e nenhuma delas precisou de piso');
+}
 
 // --- INVARIANTE PRINCIPAL: girar pelo premio X para com X sob a seta ---
 for (const fatia of f) {
@@ -25,10 +73,16 @@ for (const fatia of f) {
     }
 }
 
-// --- vale tambem para a menor fatia possivel, de 1,12 grau ---
-const minusculo = f.find(x => x.tamanho < 1.2);
-assert.ok(minusculo, 'existe fatia menor que 1,2 grau para testar');
+/* --- e vale tambem para a MENOR fatia, a que so existe por causa do piso ---
+   Ela agora tem exatamente `minimo` graus. Antes tinha 1,12 e o teste cobrava
+   isso; hoje uma fatia abaixo do piso seria o proprio defeito. */
+const minusculo = f.find(x => x.inflada);
+assert.ok(Math.abs(minusculo.tamanho - minimo) < 1e-9, 'a inflada fica exatamente no piso');
 assert.equal(fatiaSobASeta(f, rotacaoFinal(f, minusculo.indice, 8, 0)).indice, minusculo.indice);
+for (const desvio of [-0.5, 0, 0.5]) {
+    assert.equal(fatiaSobASeta(f, rotacaoFinal(f, minusculo.indice, 8, desvio)).indice,
+        minusculo.indice, 'o desvio nao pode empurrar o ponteiro para fora da fatia minima');
+}
 
 // --- premio desligado (chance 0) nao ocupa espaco nem pode ser alvo ---
 const comDesligado = [{ chance: 5 }, { chance: 0 }, { chance: 5 }];

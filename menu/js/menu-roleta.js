@@ -10,7 +10,7 @@
 import { doc, getDoc, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 import { toast } from '../../shared/dialogo.js?v=2';
-import { fatias, rotacaoFinal, fatiaSobASeta, fatiaNoPonto, ANGULO_SETA } from '../../shared/roleta-geometria.js?v=2';
+import { fatias, rotacaoFinal, fatiaSobASeta, fatiaNoPonto, ANGULO_SETA } from '../../shared/roleta-geometria.js?v=3';
 import { curvaGiro } from '../../shared/roleta-curva.js?v=3';
 
 let janela = null;        // <dialog>, criado uma vez
@@ -753,14 +753,27 @@ function renderLegenda() {
     const el = document.getElementById('roletaLegenda');
     if (!el) return;
     const total = premios.reduce((s, p) => s + (Number(p.chance) > 0 ? Number(p.chance) : 0), 0);
+    /* DO MAIS RARO PARA O MAIS COMUM.
+       Em ordem de roda a lista era a ordem em que o mestre cadastrou, que não
+       diz nada a ninguém. O que a pessoa procura aqui é o prêmio grande — e o
+       prêmio grande é justamente o improvável. Ele agora abre a lista, em vez
+       de estar enterrado no meio de trinta e sete linhas.
+       O quadradinho de cor continua saindo da posição na RODA, não da posição
+       na lista: é ele que liga a linha à fatia, e se mudasse com a ordenação
+       deixaria de ligar coisa nenhuma. */
+    const cor = paleta().fatias;
+    const linhas = listaFatias.map((f, naRoda) => ({
+        f, cor: cor[naRoda % cor.length], chance: Number(premios[f.indice].chance) || 0,
+    })).sort((a, b) => a.chance - b.chance);
+
     /* Cada linha é um BOTÃO, não um <li> com onclick: a roda só responde a
-       ponteiro, e uma fatia de 0,3% tem três pixels de largura. A legenda é o
+       ponteiro, e a fatia mais rara é a mais fina de todas. A legenda é o
        caminho de quem usa teclado e o de quem não consegue acertar a fatia. */
-    el.innerHTML = listaFatias.map((f, i) => {
+    el.innerHTML = linhas.map(({ f, cor, chance }) => {
         const p = premios[f.indice];
-        const pct = total > 0 ? (Number(p.chance) / total * 100) : 0;
-        return `<li><button type="button" class="roleta-legenda-bt" onclick="roletaEspiar(${f.indice})">
-            <i style="background:${paleta().fatias[i % 4]}"></i>
+        const pct = total > 0 ? (chance / total * 100) : 0;
+        return `<li><button type="button" class="roleta-legenda-bt" data-indice="${f.indice}" onclick="roletaEspiar(${f.indice})">
+            <i style="background:${cor}"></i>
             <span>${esc(p.nome)}</span><b>${pct.toFixed(pct < 1 ? 2 : 1)}%</b></button></li>`;
     }).join('');
 }

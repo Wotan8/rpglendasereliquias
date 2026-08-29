@@ -11,12 +11,38 @@
 
 export const ANGULO_SETA = 270;
 
+/** Menor pedaço da roda, em graus, que uma fatia pode ocupar. */
+export const GRAU_MINIMO = 3;
+
+/**
+ * O mínimo de fato, dado quantas fatias existem. Os mínimos somados nunca podem
+ * passar de dois terços da roda: acima disso sobraria tão pouco para repartir
+ * que a proporção entre as fatias grandes viraria decoração.
+ */
+export function minimoDeFatia(quantidade) {
+    return quantidade > 0 ? Math.min(GRAU_MINIMO, (360 * 0.66) / quantidade) : 0;
+}
+
 /**
  * Divide a roda em fatias com tamanho proporcional à chance de cada prêmio.
  * Prêmio com chance <= 0 não ocupa espaço nenhum — se ele não pode sair, não
  * pode aparecer na roda, senão a fatia mente sobre a probabilidade.
+ *
+ * PROPORÇÃO EXATA E VISIBILIDADE NÃO CABEM JUNTAS.
+ * Um prêmio de 0,09% em proporção exata ocupa 0,32° — meio pixel de arco, que
+ * some. E fatia que some diz a coisa errada: quem olha conclui que o prêmio não
+ * está na roda, e ele está. Então quem não alcança `minimoDeFatia` recebe esse
+ * mínimo, e o que sobra da roda é repartido em proporção EXATA entre os outros.
+ * Repete-se até ninguém mais cair abaixo do mínimo, porque tirar espaço dos
+ * grandes pode empurrar um médio para baixo da linha.
+ *
+ * O que isso custa: entre as fatias infladas o tamanho deixa de ser leitura da
+ * chance — duas mínimas parecem iguais mesmo com chances diferentes. A
+ * porcentagem de verdade está na legenda e na janela de espiada, que saem da
+ * `chance`, nunca do tamanho desenhado.
+ *
  * @param {Array<{chance:number}>} premios
- * @returns {Array<{indice:number, inicio:number, fim:number, meio:number, tamanho:number}>}
+ * @returns {Array<{indice:number, inicio:number, fim:number, meio:number, tamanho:number, inflada:boolean}>}
  */
 export function fatias(premios) {
     const validos = (premios || [])
@@ -26,15 +52,44 @@ export function fatias(premios) {
     const total = validos.reduce((s, p) => s + p.chance, 0);
     if (total <= 0) return [];
 
+    const minimo = minimoDeFatia(validos.length);
+    const tamanhos = new Map();
+    const noMinimo = new Set();
+
+    /* Ponto fixo. Cada volta trava quem ficou abaixo do mínimo e reparte o que
+       sobra entre os livres; travar alguém encolhe o bolo, o que pode derrubar
+       o próximo. Uma volta trava pelo menos um, então não passa de
+       `validos.length` voltas. E nunca trava TODOS: `minimoDeFatia` garante que
+       os mínimos somem no máximo dois terços da roda, então o último livre fica
+       com mais de um terço dela — bem acima do mínimo. */
+    for (let volta = 0; volta <= validos.length; volta++) {
+        const sobra = 360 - noMinimo.size * minimo;
+        const somaLivre = validos.reduce(
+            (soma, p) => noMinimo.has(p.indice) ? soma : soma + p.chance, 0);
+        const caindo = [];
+        for (const p of validos) {
+            if (noMinimo.has(p.indice)) { tamanhos.set(p.indice, minimo); continue; }
+            const tamanho = (p.chance / somaLivre) * sobra;
+            tamanhos.set(p.indice, tamanho);
+            if (tamanho < minimo) caindo.push(p.indice);
+        }
+        if (!caindo.length) break;
+        caindo.forEach(i => noMinimo.add(i));
+    }
+
     let cursor = 0;
     return validos.map(p => {
-        const tamanho = (p.chance / total) * 360;
+        const tamanho = tamanhos.get(p.indice);
         const fatia = {
             indice: p.indice,
             inicio: cursor,
             fim: cursor + tamanho,
             meio: cursor + tamanho / 2,
             tamanho,
+            /* Marca quem foi inflado. Quem desenha não usa — fatia é fatia —,
+               mas quem AUDITA a roda precisa saber onde o tamanho deixou de ser
+               leitura da chance. */
+            inflada: noMinimo.has(p.indice),
         };
         cursor += tamanho;
         return fatia;

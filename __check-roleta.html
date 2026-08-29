@@ -42,12 +42,12 @@
 
     <script type="module" src="/shared/dialogo.js?v=2"></script>
     <script type="module">
-        import { fatias, fatiaSobASeta, rotacaoFinal, fatiaNoPonto } from '/shared/roleta-geometria.js?v=2';
+        import { fatias, fatiaSobASeta, rotacaoFinal, fatiaNoPonto, minimoDeFatia } from '/shared/roleta-geometria.js?v=3';
         import { curvaGiro } from '/shared/roleta-curva.js?v=3';
 
         // As 37 chances reais do documento de mesa, incluindo as de 0,3%
         const CHANCES = [1, 1, 1, 3, 3, 3, 3, 5, 3, 5, 5, 1, 3, 3, 3, 3, 3, 5, 5, 3, 5, 3, 3, 1, 1, 1,
-            0.5, 3, 3, 3, 3, 5, 1, 1, 0.5, 0.3, 0.3];
+            0.5, 3, 3, 3, 3, 5, 1, 1, 0.5, 0.3, 0.09];
 
         window.__roletaBancada = {
             premios: CHANCES.map((chance, i) => ({
@@ -122,9 +122,47 @@
             }
             conferir('a agulha para na fatia sorteada (7 alvos, incluindo os de 0,3%)', erros === 0, pior);
 
-            // a menor fatia realmente é minúscula — o teste acima vale alguma coisa
+            /* --- NENHUMA FATIA SOME ---
+               A de 0,09% em proporcao pura da 0,32 grau: meio pixel de arco. E
+               fatia que some diz a coisa errada — quem olha conclui que o premio
+               nao esta na roda, e ele esta. */
             const menor = lista.reduce((a, b) => a.tamanho < b.tamanho ? a : b);
-            conferir('a menor fatia é mesmo estreita (< 1,5°)', menor.tamanho < 1.5, menor.tamanho.toFixed(2) + '°');
+            const piso = minimoDeFatia(lista.length);
+            conferir('nenhuma fatia fica abaixo do piso de ' + piso.toFixed(1) + '°',
+                menor.tamanho >= piso - 1e-9, 'a menor tem ' + menor.tamanho.toFixed(2) + '°');
+            conferir('e a de 0,09% ficou visivel de verdade (>= 6px de arco na roda)',
+                (piso / 360) * 2 * Math.PI * (canvas.clientWidth / 2 * 0.9) >= 6,
+                ((piso / 360) * 2 * Math.PI * (canvas.clientWidth / 2 * 0.9)).toFixed(1) + 'px');
+            conferir('mas quem ja cabia manteve proporcao exata',
+                Math.abs(lista.find(x => CHANCES[x.indice] === 5 && !x.inflada).tamanho
+                    / lista.find(x => CHANCES[x.indice] === 1 && !x.inflada).tamanho - 5) < 1e-9);
+
+            /* --- A LEGENDA ABRE PELO MAIS RARO ---
+               A ordem de cadastro nao diz nada a ninguem. O que a pessoa procura
+               e o premio grande, e o premio grande e o improvavel. */
+            {
+                const pcts = [...document.querySelectorAll('#roletaLegenda li b')]
+                    .map(b => parseFloat(b.textContent));
+                conferir('a legenda vai do mais raro para o mais comum',
+                    pcts.every((v, i) => i === 0 || pcts[i - 1] <= v + 1e-9),
+                    pcts.slice(0, 4).join(' , ') + ' ... ' + pcts.slice(-2).join(' , '));
+                conferir('e o primeiro da lista e mesmo o de menor chance',
+                    Math.abs(pcts[0] - Math.min(...pcts)) < 1e-9);
+                /* O quadradinho de cor sai da posicao na RODA, nao na lista: e
+                   ele que liga a linha a fatia. Ordenar nao pode reembaralhar. */
+                const primeiro = document.querySelector('#roletaLegenda .roleta-legenda-bt');
+                const indice = Number(primeiro.dataset.indice);
+                const naRoda = lista.findIndex(x => x.indice === indice);
+                const esperada = ['--lr-gold', '--lr-blood-2', '--lr-bronze', '--lr-arcane'][naRoda % 4];
+                const css = getComputedStyle(document.documentElement).getPropertyValue(esperada).trim();
+                // O navegador reescreve o hex do style inline como rgb(), entao
+                // passo a cor esperada pela MESMA reescrita antes de comparar.
+                const sonda = document.createElement('i');
+                sonda.style.background = css;
+                conferir('e a cor da linha continua sendo a cor da fatia na roda',
+                    primeiro.querySelector('i').style.background === sonda.style.background,
+                    primeiro.querySelector('i').style.background + ' contra ' + sonda.style.background);
+            }
 
             // --- responsivo ---
             const largura = document.documentElement.clientWidth;
@@ -423,7 +461,7 @@
                 (falhou === 0 ? ' <span class="ok">— tudo certo</span>' : '');
         };
     </script>
-    <script type="module" src="/menu/js/menu-roleta.js?v=11"></script>
+    <script type="module" src="/menu/js/menu-roleta.js?v=12"></script>
 </body>
 
 </html>
