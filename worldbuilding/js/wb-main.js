@@ -77,14 +77,51 @@ async function activate(tool) {
     }
 }
 
+/* ── Última aba aberta ─────────────────────────────────────────
+   Quem estava no Escritório e volta amanhã cai no Dashboard e navega de
+   novo. Categoria legada e ferramenta nova são o MESMO `.nav-category` no
+   DOM, e as duas reagem a `click` — então gravar qual foi e CLICAR nela na
+   volta serve para as duas, sem uma linha no wb-core.js (que tem outra
+   frente trabalhando em cima). */
+export const KEY_ABA = 'wb-ultima-aba';
+const chaveDoItem = (el) =>
+    el.dataset.tool ? 'tool:' + el.dataset.tool
+        : el.dataset.category ? 'cat:' + el.dataset.category : '';
+
+export function lembrarAba() {
+    document.getElementById('sidebarNav')?.addEventListener('click', (e) => {
+        const item = e.target.closest('.nav-category'); if (!item) return;
+        const chave = chaveDoItem(item);
+        if (chave) { try { localStorage.setItem(KEY_ABA, chave); } catch { /* sem memória, paciência */ } }
+    });
+}
+
+export function restaurarAba() {
+    let salvo = '';
+    try { salvo = localStorage.getItem(KEY_ABA) || ''; } catch { return; }
+    const [tipo, valor] = salvo.split(':');
+    // O valor vira seletor: só nome de aba passa. Lixo no localStorage
+    // (versão antiga, mão humana) estouraria o querySelector e derrubaria
+    // o resto da inicialização junto.
+    if (!/^[\w-]+$/.test(valor || '') || (tipo !== 'tool' && tipo !== 'cat')) return;
+    const el = document.querySelector(
+        tipo === 'tool' ? `.nav-category[data-tool="${valor}"]` : `.nav-category[data-category="${valor}"]`);
+    el?.click();
+}
+
 /* Espera o núcleo carregar os dados reais antes de habilitar as ferramentas. */
 document.addEventListener('wb:data-ready', async () => {
     await Eco.load();            // raças, classes, tribos mecânicas, personagens e linhagens
     await Calendario.load();     // regras do calendário (usadas por timeline)
     injectModal();
     injectNav();
+    // Antes do injectSidebarToggle: ele escuta clique na sidebar para recolher
+    // o drawer no celular, e o clique programático daqui recolheria o menu
+    // sozinho a cada abertura da página.
+    restaurarAba();
     wireGlobalSearch();          // busca única: a barra do topo abre a paleta
     injectSidebarToggle();       // recolher/expandir menu lateral
+    lembrarAba();
     Busca.init();                // atalho Ctrl/Cmd-K
     console.log('⚒️ Ferramentas do Cronista prontas.');
 }, { once: true });

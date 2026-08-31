@@ -49,6 +49,15 @@ export const deleteDoc = async (d) => {
     const col = DADOS[d.nome];
     if (col) { const i = col.findIndex(x => x.id === d.id); if (i > -1) col.splice(i, 1); }
 };
+/* Os outros modulos do Worldbuilding (calendario, mural, grafos...) tambem
+   importam daqui — o duble precisa exportar a superficie inteira, senao o
+   import do wb-main.js estoura antes de qualquer teste rodar. */
+export const updateDoc = (d, data) => setDoc(d, data, { merge: true });
+export const addDoc = async (c, data) => {
+    const id = 'novo_' + ((DADOS[c.nome] || []).length + 1);
+    await setDoc({ nome: c.nome, id }, data);
+    return { id };
+};
 export const storage = null;
 export const ref = () => null;
 export const uploadBytes = async () => null;

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Check — ultima aba do Worldbuilding</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/lendas-reliquias.css">
+<script src="shared/theme.js"></script>
+
+<!-- Mesmo esquema do __check-livro-modal: o Firestore vira duble, para
+     importar o wb-main.js DE VERDADE. O ?v= sobe junto a cada mexida —
+     modulo com query e outro modulo para o navegador, e sem isso o check
+     roda o que ficou no cache. -->
+<script type="importmap">
+{ "imports": {
+    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=4",
+    "/worldbuilding/js/wb-main.js": "/worldbuilding/js/wb-main.js?v=1"
+} }
+</script>
+
+<style>
+  body { font: 400 .9rem/1.5 system-ui, sans-serif; padding: 1rem; background: var(--lr-bg-0); color: var(--lr-text-1); }
+  #sidebarNav { display: flex; flex-wrap: wrap; gap: .4rem; margin: .8rem 0; }
+  .nav-category { border: 1px solid var(--lr-border); border-radius: 6px; padding: .3rem .7rem; cursor: pointer; background: var(--lr-surface); }
+  .nav-category.active { border-color: var(--lr-gold); color: var(--lr-gold); }
+  #chkOut { font-weight: 600; }
+  #log { white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: .8rem; color: var(--lr-text-2); }
+</style>
+</head>
+<body>
+
+<h1>Check — última aba do Worldbuilding</h1>
+<p>Sidebar de mentira com as duas espécies de aba: categoria legada (<code>data-category</code>) e ferramenta nova (<code>data-tool</code>).</p>
+
+<!-- A sidebar real mistura os dois; o restaurador tem de servir para os dois. -->
+<div id="sidebarNav">
+    <div class="nav-category" data-category="dashboard">Dashboard</div>
+    <div class="nav-category" data-category="npcs">NPCs</div>
+    <div class="nav-category" data-category="geography">Locais</div>
+    <div class="nav-category" data-tool="timeline">Linha do Tempo</div>
+    <div class="nav-category" data-tool="editor">Escritório do Cronista</div>
+</div>
+
+<button id="chkRun">▶ Rodar asserts</button>
+<span id="chkOut"></span>
+<div id="log"></div>
+
+<script type="module">
+import { KEY_ABA, lembrarAba, restaurarAba } from './worldbuilding/js/wb-main.js';
+
+const $ = (s) => document.querySelector(s);
+// Quem foi clicado de verdade — o wb-core faz o roteamento no clique, aqui
+// so precisamos saber que o clique CHEGOU no item certo.
+let ultimoClique = '';
+$('#sidebarNav').addEventListener('click', (e) => {
+    const it = e.target.closest('.nav-category');
+    if (it) ultimoClique = it.dataset.tool ? 'tool:' + it.dataset.tool : 'cat:' + it.dataset.category;
+});
+lembrarAba();
+
+$('#chkRun').onclick = () => {
+    const ok = [], erro = [];
+    const t = (nome, cond) => (cond ? ok : erro).push(nome);
+    const clicar = (sel) => { ultimoClique = ''; document.querySelector(sel).click(); };
+
+    // 1. Clicar grava — nas duas espécies de aba.
+    localStorage.removeItem(KEY_ABA);
+    clicar('[data-tool="editor"]');
+    t('clicar numa ferramenta grava', localStorage.getItem(KEY_ABA) === 'tool:editor');
+    clicar('[data-category="npcs"]');
+    t('clicar numa categoria legada grava', localStorage.getItem(KEY_ABA) === 'cat:npcs');
+
+    // 2. Restaurar clica de volta no item certo.
+    localStorage.setItem(KEY_ABA, 'tool:editor');
+    ultimoClique = '';
+    restaurarAba();
+    t('restaura a ferramenta salva', ultimoClique === 'tool:editor');
+
+    localStorage.setItem(KEY_ABA, 'cat:geography');
+    ultimoClique = '';
+    restaurarAba();
+    t('restaura a categoria legada salva', ultimoClique === 'cat:geography');
+
+    // 3. Nada salvo = nada acontece (o nucleo fica com o Dashboard dele).
+    localStorage.removeItem(KEY_ABA);
+    ultimoClique = '';
+    restaurarAba();
+    t('sem nada salvo, nao clica em nada', ultimoClique === '');
+
+    // 4. Aba que nao existe mais (ferramenta removida) nao quebra.
+    localStorage.setItem(KEY_ABA, 'tool:ferramenta-que-nao-existe');
+    ultimoClique = '';
+    let estourou = false;
+    try { restaurarAba(); } catch { estourou = true; }
+    t('aba que sumiu nao estoura', !estourou && ultimoClique === '');
+
+    // 5. Lixo no localStorage nao vira seletor. `"]` fecharia o atributo e
+    //    faria o querySelector estourar, derrubando a inicializacao junto.
+    for (const lixo of ['tool:"] , *', 'cat:a"]', 'editor', ':', 'xxx:npcs', '']) {
+        localStorage.setItem(KEY_ABA, lixo);
+        ultimoClique = '';
+        let caiu = false;
+        try { restaurarAba(); } catch { caiu = true; }
+        t(`lixo ${JSON.stringify(lixo)} nao estoura nem clica`, !caiu && ultimoClique === '');
+    }
+
+    localStorage.removeItem(KEY_ABA);
+    $('#log').textContent = erro.length ? 'falhou: ' + erro.join('\n') : ok.join('\n');
+    $('#chkOut').innerHTML = erro.length
+        ? '<span style="color:var(--lr-blood)">✗ ' + erro.length + ' falha(s)</span>'
+        : '<span style="color:var(--lr-nature)">✓ ' + ok.length + '/' + ok.length + ' passaram</span>';
+};
+</script>
+</body>
+</html>
