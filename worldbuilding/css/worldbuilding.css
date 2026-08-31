@@ -2134,10 +2134,14 @@
             color: white;
         }
 
+        /* `color: white` sobre `--lr-divine` a 20% sumia no tema claro: o
+           Branco Divino e branco nos DOIS temas (e o token de texto sobre
+           cor), entao no papel era branco sobre branco. Tokens que viram
+           com o tema, e o vermelho do hover e o mesmo do .wbt-x. */
         .modal-close {
-            background: color-mix(in srgb, var(--lr-divine) 20%, transparent);
-            border: none;
-            color: white;
+            background: var(--lr-bg-1);
+            border: var(--lr-border-w) solid var(--lr-border);
+            color: var(--lr-text-1);
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -2147,7 +2151,9 @@
         }
 
         .modal-close:hover {
-            background: color-mix(in srgb, var(--lr-divine) 30%, transparent);
+            background: var(--lr-blood-soft);
+            border-color: var(--lr-blood);
+            color: var(--lr-blood);
             transform: rotate(90deg);
         }
 

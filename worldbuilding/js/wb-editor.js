@@ -27,7 +27,7 @@ import { PUBLICACOES, pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.
 import { confirmar } from '../../shared/dialogo.js?v=2';
 
 export const Editor = (() => {
-    let books = [], artigos = [], estantes = [], atual = null;
+    let books = [], artigos = [], estantes = [], lixeira = [], atual = null;
     let rich = null;   // mesa de diagramação (wb-rich.js) do editor aberto
     let mentionRange = null, mentionIdx = 0, saveTimer = null, refType = 'all';
     let view = 'library';   // 'library' | 'editor'
@@ -53,16 +53,47 @@ export const Editor = (() => {
     const guardado = (chave, alt) => { try { return JSON.parse(localStorage.getItem(chave)) ?? alt; } catch { return alt; } };
     const guardar = (chave, v) => { try { localStorage.setItem(chave, JSON.stringify(v)); } catch { /* sem memória, paciência */ } };
 
+    /* ── Arquivos de apoio (histórico e lixeira) ───────────────
+       Os dois moram em `worldbuilding-settings`, um doc cada, porque a regra
+       do Firestore para essa coleção já é curinga (`{settingId}`, escrita só
+       do mestre). Subcoleção nova exigiria mexer em firestore.rules, e o
+       texto de um capítulo não vale uma regra nova.
+
+       Documento do Firestore tem teto de 1 MB, e capítulo longo passa de
+       100 KB. Toda lista guardada aqui é aparada por TAMANHO, não só por
+       contagem: guarda do mais novo para o mais velho até estourar o teto.
+       Isso é um teto real e não um palpite — passar dele, o write falha. */
+    const TETO_DOC = 700_000;   // ~70% de 1 MB, folga para o resto do doc
+    const aparar = (lista, maxItens) => {
+        const out = []; let bytes = 0;
+        for (const it of lista.slice(0, maxItens)) {
+            bytes += JSON.stringify(it).length;
+            if (bytes > TETO_DOC && out.length) break;
+            out.push(it);
+        }
+        return out;
+    };
+    const lerApoio = async (docId, campo) => {
+        try {
+            const s = await getDoc(doc(db, 'worldbuilding-settings', docId));
+            return s.exists() ? (s.data()[campo] || []) : [];
+        } catch (e) { console.warn('[editor] apoio', docId, e); return []; }
+    };
+    const gravarApoio = (docId, campo, lista) =>
+        setDoc(doc(db, 'worldbuilding-settings', docId), { [campo]: lista });
+
     async function loadAll() {
         try {
-            const [bSnap, aSnap, eSnap] = await Promise.all([
+            const [bSnap, aSnap, eSnap, lix] = await Promise.all([
                 getDocs(collection(db, 'worldbuilding-books')),
                 getDocs(collection(db, 'worldbuilding-articles')),
                 getDoc(doc(db, 'worldbuilding-settings', 'estantes')),
+                lerApoio('lixeira', 'itens'),
             ]);
             books = bSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             artigos = aSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             estantes = eSnap.exists() ? (eSnap.data().lista || []) : [];
+            lixeira = lix;
         } catch (e) { console.warn('[editor] load', e); books = books || []; artigos = artigos || []; estantes = estantes || []; }
     }
 
@@ -175,6 +206,10 @@ export const Editor = (() => {
                 ${(ativo && !avulsos.length) ? '' : estanteHTML({ id: '__avulsos', nome: 'Textos avulsos', icone: '📄' }, avulsos,
                     'Nenhum texto avulso. Bons textos avulsos podem virar capítulos depois.',
                     (lista) => `<div class="wb-loose-list">${lista.map(a => articleRow(a)).join('')}</div>`)}
+                ${(ativo || !lixeira.length) ? '' : estanteHTML({ id: '__lixeira', nome: 'Lixeira', icone: '🗑️' }, lixeira, '',
+                    (lista) => `<div class="wb-loose-list">${lista.map(lixoRow).join('')}</div>
+                        <p class="wbt-muted wb-bkhint">Guarda os ${LIXO_MAX} últimos, ou o que couber no doc. Textos mais antigos caem sozinhos.
+                        <button class="btn btn-danger btn-sm" id="libEsvaziar">Esvaziar lixeira</button></p>`)}
             </div>
             ${ativo && !achados ? '<p class="wbt-empty">Nada casou com a busca. Tente outra palavra ou limpe o filtro.</p>' : ''}
         </div>`;
@@ -192,7 +227,7 @@ export const Editor = (() => {
        buscar e receber uma fileira de estantes fechadas não seria busca. */
     function estanteHTML(e, lista, vazioMsg, render = (l) => l.map(bookCard).join('')) {
         if (!lista) return '';
-        const fixa = e.id === ESTANTE_TODAS || e.id === '__avulsos';
+        const fixa = [ESTANTE_TODAS, '__avulsos', '__lixeira'].includes(e.id);   // sem ⚙️: nao se renomeia nem se exclui
         const corpo = lista.length ? render(lista) : `<p class="wbt-muted">${vazioMsg}</p>`;
         return `
         <div class="wb-estante" data-estante="${esc(e.id)}">
@@ -284,8 +319,54 @@ export const Editor = (() => {
                 <div class="wb-chapter__meta">${statusBadge(a.status)} ${pubBadge(a.public)} <span class="wbt-muted">${palavras} palavras · ${fmtDate(a.updatedAt)}</span></div>
             </div>
             <button class="btn btn-secondary btn-sm" data-dupart="${a.id}" title="Duplicar este texto">⧉</button>
-            <button class="btn btn-secondary btn-sm" data-delart="${a.id}" title="Excluir">🗑️</button>
+            <button class="btn btn-secondary btn-sm" data-delart="${a.id}" title="Mandar para a lixeira">🗑️</button>
         </div>`;
+    }
+
+    /* Linha da lixeira: sem clique para abrir — o texto não existe mais em
+       `worldbuilding-articles`, e abrir o editor em cima de um fantasma
+       gravaria o doc de volta pela porta dos fundos. Resgate primeiro. */
+    function lixoRow(it) {
+        const livro = books.find(b => b.id === it.bookId);
+        return `
+        <div class="wb-chapter is-lixo">
+            <span class="wb-chapter__num">🗑️</span>
+            <div class="wb-chapter__body">
+                <div class="wb-chapter__title">${esc(it.title || 'Sem título')}</div>
+                <div class="wb-chapter__meta">
+                    <span class="wb-badge wb-badge--soft">${livro ? '📗 ' + esc(livro.title || '') : '📄 avulso'}</span>
+                    <span class="wbt-muted">${palavrasDe(it)} palavras · apagado em ${fmtDate(it.apagadoEm)}</span>
+                </div>
+            </div>
+            <button class="btn btn-secondary btn-sm" data-restlix="${it.id}" title="Devolver para a Biblioteca">↩ Resgatar</button>
+            <button class="btn btn-secondary btn-sm" data-dellix="${it.id}" title="Apagar de vez">✕</button>
+        </div>`;
+    }
+
+    /* ── Lixeira ───────────────────────────────────────────────
+       O texto SAI mesmo de `worldbuilding-articles` — a cópia de segurança
+       fica no doc de apoio. Marcar `arquivado: true` e deixar o doc onde
+       está seria menos código aqui e uma armadilha lá fora: são SEIS telas
+       que leem essa coleção por conta própria (ficha, Tabuleiro, Painel do
+       Criador, Laboratorium, Cronista público, leitor compartilhado), e
+       esquecer uma faria um capítulo "excluído" continuar na ficha de um
+       jogador. Excluído é excluído para todo mundo; o resgate é aqui. */
+    const LIXO_MAX = 40;
+    async function paraLixeira(a) {
+        lixeira = aparar([{ ...a, apagadoEm: now(), apagadoPor: WB().user?.email || '' }, ...lixeira], LIXO_MAX);
+        await gravarApoio('lixeira', 'itens', lixeira);
+        await deleteDoc(doc(db, 'worldbuilding-articles', a.id));
+        artigos = artigos.filter(x => x.id !== a.id);
+    }
+    async function restaurarDaLixeira(id) {
+        const it = lixeira.find(x => x.id === id); if (!it) return;
+        const { apagadoEm, apagadoPor, ...a } = it;
+        // O livro pode ter sido excluído nesse meio-tempo: volta como avulso.
+        if (a.bookId && !books.some(b => b.id === a.bookId)) a.bookId = null;
+        await gravarArtigo(a);
+        lixeira = lixeira.filter(x => x.id !== id);
+        await gravarApoio('lixeira', 'itens', lixeira);
+        renderLibrary();
     }
 
     /* ── Duplicar ──────────────────────────────────────────────
@@ -351,11 +432,28 @@ export const Editor = (() => {
         contentBody().querySelectorAll('[data-delart]').forEach(b =>
             b.onclick = async (e) => {
                 e.stopPropagation();
-                if (!await confirmar('Excluir este texto? Esta ação não pode ser desfeita.', { perigo: true })) return;
-                await deleteDoc(doc(db, 'worldbuilding-articles', b.dataset.delart));
-                artigos = artigos.filter(x => x.id !== b.dataset.delart);
+                if (!await confirmar('Mandar este texto para a lixeira?\nEle sai da Biblioteca e de toda tela que mostra livros — dá para resgatar pela estante 🗑️ Lixeira.', { perigo: true })) return;
+                await paraLixeira(artigos.find(x => x.id === b.dataset.delart));
                 renderLibrary();
             });
+        contentBody().querySelectorAll('[data-restlix]').forEach(b =>
+            b.onclick = (e) => { e.stopPropagation(); restaurarDaLixeira(b.dataset.restlix); });
+        contentBody().querySelectorAll('[data-dellix]').forEach(b =>
+            b.onclick = async (e) => {
+                e.stopPropagation();
+                const it = lixeira.find(x => x.id === b.dataset.dellix);
+                if (!await confirmar(`Apagar "${it?.title || 'este texto'}" de vez?\nEsta é a que não tem volta.`, { perigo: true })) return;
+                lixeira = lixeira.filter(x => x.id !== b.dataset.dellix);
+                await gravarApoio('lixeira', 'itens', lixeira);
+                renderLibrary();
+            });
+        const esvaziar = $('#libEsvaziar');
+        if (esvaziar) esvaziar.onclick = async () => {
+            if (!await confirmar(`Esvaziar a lixeira?\nOs ${lixeira.length} textos somem de vez.`, { perigo: true })) return;
+            lixeira = [];
+            await gravarApoio('lixeira', 'itens', lixeira);
+            renderLibrary();
+        };
 
         /* Busca: re-renderiza a cada tecla e devolve o cursor onde estava —
            sem isso, digitar a segunda letra já é em outro campo. */
@@ -704,7 +802,8 @@ export const Editor = (() => {
                             title="${lendo ? 'Voltar a editar o texto' : 'Ler sem as ferramentas de edição'}">${lendo ? '✒️ Modo escrita' : '📖 Modo leitura'}</button>
                     <button class="btn btn-secondary btn-sm" id="toggleRefs" title="Painel de consulta">Consulta ⇄</button>
                     <button class="btn btn-secondary btn-sm" id="focusMode" title="Modo foco">Foco ⛶</button>
-                    <button class="btn btn-success btn-sm" id="saveArticle">💾 Salvar</button>
+                    <button class="btn btn-secondary btn-sm" id="verVersoes" title="Versões guardadas deste texto">🕐 Versões</button>
+                    <button class="btn btn-success btn-sm" id="saveArticle" title="Salvar e guardar uma versão (Ctrl+S)">💾 Salvar</button>
                 </div>
                 ${navCapsHTML()}
                 <input id="articleTitle" class="wbt-article-title" placeholder="Título do conto, capítulo ou cena…" value="${esc(a.title || '')}" ${lendo ? 'readonly' : ''}>
@@ -848,8 +947,66 @@ export const Editor = (() => {
         } else if (e.key === 'Escape') hide();
     }
 
+    /* ── Histórico de versão ───────────────────────────────────
+       Só o salvamento DELIBERADO (💾 ou Ctrl+S) guarda versão. O autosave
+       de 4s dispara a cada frase — encher o histórico com ele daria um
+       carretel de rascunho onde deveria haver marcos, e o autor não
+       acharia nada. É por isso que o botão diz "Salvar e guardar versão". */
+    const HIST_MAX = 15;
+    const histDoc = (artId) => `hist_${artId}`;
+    async function guardarVersao(a) {
+        const versoes = await lerApoio(histDoc(a.id), 'versoes');
+        if (versoes[0]?.html === a.contentHTML) return;   // nada mudou desde a última
+        const nova = { t: now(), by: WB().user?.email || '', title: a.title, words: a.words, html: a.contentHTML };
+        await gravarApoio(histDoc(a.id), 'versoes', aparar([nova, ...versoes], HIST_MAX));
+    }
+
+    async function abrirVersoes() {
+        const a = atual;
+        const versoes = await lerApoio(histDoc(a.id), 'versoes');
+        ToolModal.open(`
+            <h2>🕐 Versões de “${esc(a.title || 'Sem título')}”</h2>
+            ${versoes.length ? `<div class="wb-versoes">${versoes.map((v, i) => `
+                <div class="wb-versao" data-versao="${i}">
+                    <div class="wb-versao__cab">
+                        <div class="wb-versao__quando">
+                            <b>${new Date(v.t).toLocaleString('pt-BR')}</b>
+                            ${i === 0 ? '<span class="wb-badge wb-badge--ver">mais recente</span>' : ''}
+                            <span class="wbt-muted">${v.words ?? 0} palavras${v.by ? ' · ' + esc(v.by) : ''}</span>
+                        </div>
+                        <div class="wb-versao__acoes">
+                            <button type="button" class="wbt-microbtn" data-vver>Ver ▾</button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-vrest>↩ Restaurar</button>
+                        </div>
+                    </div>
+                    <div class="wb-versao__corpo texto-mundo" hidden></div>
+                </div>`).join('')}</div>`
+                : '<p class="wbt-muted">Nenhuma versão guardada ainda. Cada 💾 Salvar (ou Ctrl+S) guarda uma.</p>'}
+            <p class="wbt-muted wb-bkhint">Guarda as ${HIST_MAX} últimas, ou o que couber no documento. Restaurar joga o texto de volta no editor — e guarda o texto de agora como versão antes, então dá para voltar atrás do voltar atrás.</p>`);
+
+        document.querySelectorAll('[data-versao]').forEach(card => {
+            const i = +card.dataset.versao;
+            card.querySelector('[data-vver]').onclick = () => {
+                const box = card.querySelector('.wb-versao__corpo');
+                const abrir = box.hidden;
+                if (abrir && !box.dataset.pronto) { box.innerHTML = versoes[i].html || ''; box.dataset.pronto = '1'; }
+                box.hidden = !abrir;
+                card.querySelector('[data-vver]').textContent = abrir ? 'Ver ▴' : 'Ver ▾';
+            };
+            card.querySelector('[data-vrest]').onclick = async () => {
+                if (!await confirmar('Trazer esta versão de volta para o editor?\nO texto de agora vira uma versão antes de ser substituído, e nada é gravado até você salvar.')) return;
+                clearTimeout(saveTimer);
+                await save(true);                       // o texto de agora vira versão
+                $('#richEditor').innerHTML = versoes[i].html || '';
+                ToolModal.close();
+                autosaveHint();
+                $('#editorStatus').textContent = 'Versão trazida de volta — salve para valer.';
+            };
+        });
+    }
+
     /* ── Salvar ─────────────────────────────────────────── */
-    async function save() {
+    async function save(manual = false) {
         const ed = $('#richEditor');
         if (!ed) return;   // saiu do editor antes do autosave disparar
         const mentions = [...ed.querySelectorAll('a.wbt-mention')].map(a => ({ id: a.dataset.entity, cat: a.dataset.cat }));
@@ -873,7 +1030,8 @@ export const Editor = (() => {
         if (!artigos.find(x => x.id === a.id)) artigos.push(a);
         else artigos = artigos.map(x => x.id === a.id ? a : x);
         sujo = false;
-        $('#editorStatus').textContent = `✓ Salvo às ${new Date().toLocaleTimeString('pt-BR')}`;
+        if (manual) await guardarVersao(a);
+        $('#editorStatus').textContent = `✓ Salvo às ${new Date().toLocaleTimeString('pt-BR')}${manual ? ' · versão guardada' : ''}`;
     }
     function autosaveHint() {
         clearTimeout(saveTimer);
@@ -892,13 +1050,14 @@ export const Editor = (() => {
     document.addEventListener('keydown', (e) => {
         if (!(e.key === 's' && (e.ctrlKey || e.metaKey)) || view !== 'editor') return;
         e.preventDefault();
-        clearTimeout(saveTimer); save();
+        clearTimeout(saveTimer); save(true);   // Ctrl+S é deliberado: guarda versão
     });
 
     function bindEditor() {
         $('#backLib').onclick = async () => { clearTimeout(saveTimer); await save(); renderLibrary(); };
         rich = bindRich($('#richEditor'), $('#richToolbar'), autosaveHint);
-        $('#saveArticle').onclick = save;
+        $('#saveArticle').onclick = () => { clearTimeout(saveTimer); save(true); };
+        $('#verVersoes').onclick = abrirVersoes;
         // Salva antes de trocar de modo/capítulo: o texto vivo mora no DOM.
         $('#toggleModo').onclick = async () => {
             clearTimeout(saveTimer); await save();

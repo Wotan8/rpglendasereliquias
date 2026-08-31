@@ -14,15 +14,24 @@
 <link rel="stylesheet" href="shared/acervo.css">
 <link rel="stylesheet" href="shared/dialogo.css">
 <link rel="stylesheet" href="shared/texto-mundo.css">
-<link rel="stylesheet" href="worldbuilding/css/worldbuilding.css">
-<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=14">
+<link rel="stylesheet" href="worldbuilding/css/worldbuilding.css?v=2">
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=15">
 <script src="shared/theme.js"></script>
 <script src="shared/campo-imagem.js"></script>
 
 <!-- Troca o Firestore real por um duble em memoria, para o harness rodar
-     o wb-editor.js DE VERDADE (nao uma copia do markup). -->
+     o wb-editor.js DE VERDADE (nao uma copia do markup).
+
+     O ?v= nas tres linhas abaixo e o MESMO numero de proposito, e sobe junto
+     a cada mexida: modulo com query e outro modulo para o navegador, e sem
+     isso o harness testa o wb-editor.js que ficou no cache — que foi
+     exatamente o que aconteceu na primeira rodada. O duble precisa ser a
+     MESMA instancia que o editor enxerga, senao GRAVADO fica vazio. -->
 <script type="importmap">
-{ "imports": { "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js" } }
+{ "imports": {
+    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=3",
+    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=3"
+} }
 </script>
 
 <style>
@@ -58,7 +67,7 @@
 </div>
 
 <script type="module">
-import { GRAVADO } from './__check-stub-firestore.js';
+import { GRAVADO } from './__check-stub-firestore.js?v=3';
 import { Editor } from './worldbuilding/js/wb-editor.js';
 
 window.WB = { data: {}, user: { email: 'check@harness' } };
@@ -67,6 +76,9 @@ await Editor.render();
 const $ = (s) => document.querySelector(s);
 const abrirCog = () => $('[data-editbook="b1"]').click();
 const espera = (ms = 80) => new Promise(r => setTimeout(r, ms));
+// Salvamento deliberado (o mesmo caminho do botao 💾) e volta a Biblioteca.
+const save2 = async () => { $('#saveArticle').click(); await espera(200); };
+const voltarBiblioteca = async () => { $('#backLib').click(); await espera(250); };
 $('#chkAbrir').onclick = abrirCog;
 
 $('#chkRun').onclick = async () => {
@@ -269,6 +281,76 @@ $('#chkRun').onclick = async () => {
     const saida2 = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(saida2);
     t('depois de salvo, sair nao e barrado', !saida2.defaultPrevented);
+
+    // ── Historico de versao ──
+    const histGravado = () => GRAVADO.filter(g => g.col === 'worldbuilding-settings' && g.id === 'hist_a1');
+    t('Ctrl+S guardou uma versao', histGravado().length === 1);
+    t('a versao carrega o HTML', !!histGravado()[0].data.versoes[0].html);
+    t('o status diz que guardou versao', $('#editorStatus').textContent.includes('versão guardada'));
+
+    GRAVADO.length = 0;
+    await save2();   // salvar de novo, com o MESMO texto
+    t('salvar sem mudanca nao duplica versao', histGravado().length === 0);
+
+    $('#richEditor').innerHTML = '<p>texto novo depois da versao</p>';
+    GRAVADO.length = 0;
+    await save2();
+    t('texto novo vira versao nova', histGravado()[0].data.versoes.length === 2);
+    t('a mais nova vem primeiro', histGravado()[0].data.versoes[0].html.includes('texto novo'));
+
+    // O autosave NAO pode guardar versao — senao o historico vira carretel.
+    GRAVADO.length = 0;
+    $('#richEditor').innerHTML = '<p>rascunho do autosave</p>';
+    $('#richEditor').dispatchEvent(new Event('input'));
+    await espera(4300);
+    t('o autosave gravou o capitulo', GRAVADO.some(g => g.col === 'worldbuilding-articles'));
+    t('mas o autosave NAO guardou versao', histGravado().length === 0);
+
+    // Abrir a janela de versoes e restaurar.
+    $('#verVersoes').click();
+    await espera(150);
+    t('a janela lista as versoes', document.querySelectorAll('[data-versao]').length >= 2);
+    document.querySelector('[data-versao="1"] [data-vver]').click();
+    t('Ver abre a previa da versao', !document.querySelector('[data-versao="1"] .wb-versao__corpo').hidden);
+    document.querySelector('[data-versao="1"] [data-vrest]').click();
+    await espera();
+    document.querySelector('.lr-dialogo .lr-dialogo-ok')?.click();
+    await espera(250);
+    t('restaurar joga a versao no editor', $('#richEditor').innerHTML.includes('um dois tres'));
+    t('restaurar deixa o texto por salvar', $('#editorStatus').textContent.includes('salve'));
+    const vers = histGravado().at(-1)?.data.versoes || [];
+    t('restaurar guardou antes o texto de agora',
+        vers.some(v => (v.html || '').includes('rascunho do autosave')));
+
+    // ── Lixeira ──
+    await voltarBiblioteca();
+    const antesLixo = capsNaTela().length;
+    GRAVADO.length = 0;
+    $('[data-delart="a9"]').click();
+    await espera();
+    document.querySelector('.lr-dialogo .lr-dialogo-ok').click();
+    await espera(250);
+    t('excluir SAI mesmo da colecao de artigos',
+        GRAVADO.some(g => g.col === 'worldbuilding-articles' && g.id === 'a9' && g.apagado));
+    t('o texto foi para a lixeira',
+        GRAVADO.some(g => g.id === 'lixeira' && g.data.itens.some(i => i.id === 'a9')));
+    t('some da Biblioteca', !capsNaTela().includes('a9'));
+    t('a estante Lixeira aparece', !!document.querySelector('[data-estante="__lixeira"]'));
+    t('a Lixeira nao tem ⚙️ de renomear', !document.querySelector('[data-estante="__lixeira"] .wb-estante__cog'));
+    t('a lixeira guarda o texto inteiro',
+        GRAVADO.find(g => g.id === 'lixeira').data.itens[0].contentHTML !== undefined);
+
+    document.querySelector('[data-estante="__lixeira"] summary').click();
+    await espera();
+    GRAVADO.length = 0;
+    $('[data-restlix="a9"]').click();
+    await espera(250);
+    t('resgatar devolve o doc para os artigos',
+        GRAVADO.some(g => g.col === 'worldbuilding-articles' && g.id === 'a9' && !g.apagado));
+    t('resgatar tira da lixeira',
+        GRAVADO.find(g => g.id === 'lixeira').data.itens.every(i => i.id !== 'a9'));
+    t('volta para a Biblioteca', capsNaTela().length === antesLixo);
+    t('a estante Lixeira some quando esvazia', !document.querySelector('[data-estante="__lixeira"]'));
 
     $('#chkOut').innerHTML = erro.length
         ? '<span style="color:var(--lr-blood)">✗ ' + erro.length + ' falha(s): ' + erro.join(' · ') + '</span>'

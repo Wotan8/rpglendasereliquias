@@ -774,3 +774,23 @@ body.wbml-aberto .wb-nav-backdrop { display: none; }
     .wb-capedit__nome { flex: 1 0 100%; order: -1; white-space: normal; }
     .wb-capedit__setas { flex-direction: row; }
 }
+
+/* ── Lixeira e histórico de versão ─────────────────────────── */
+.wb-chapter.is-lixo { cursor: default; opacity: .85; }
+.wb-chapter.is-lixo:hover { background: none; opacity: 1; }
+.wb-chapter.is-lixo .wb-chapter__num { background: var(--lr-blood-soft); font-size: .9rem; }
+
+.wb-versoes { display: flex; flex-direction: column; gap: var(--lr-space-2); max-height: 52vh; overflow-y: auto; }
+.wb-versao { border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius); background: var(--lr-bg-1); }
+.wb-versao__cab { display: flex; align-items: center; gap: var(--lr-space-3); padding: var(--lr-space-2) var(--lr-space-3); }
+.wb-versao__quando { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: var(--lr-space-2); flex-wrap: wrap; }
+.wb-versao__quando b { font-size: var(--lr-fs-sm); color: var(--lr-text-1); white-space: nowrap; }
+.wb-versao__cab .wbt-muted { font-size: var(--lr-fs-xs); }
+.wb-versao__acoes { flex: 0 0 auto; display: flex; align-items: center; gap: var(--lr-space-2); }
+/* Prévia da versão: o mesmo texto-mundo do editor, encolhido — quem compara
+   precisa reconhecer a diagramação, não só as palavras. */
+.wb-versao__corpo {
+    border-top: var(--lr-border-w) solid var(--lr-border);
+    padding: var(--lr-space-3); max-height: 34vh; overflow-y: auto;
+    font-size: .88rem; background: var(--lr-surface);
+}
