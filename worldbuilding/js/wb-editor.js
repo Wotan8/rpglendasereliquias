@@ -265,6 +265,7 @@ export const Editor = (() => {
                 </div>
                 <div class="wb-book__actions">
                     <button class="btn btn-secondary btn-sm" data-editbook="${b.id}" title="Editar livro">⚙️</button>
+                    <button class="btn btn-secondary btn-sm" data-dupbook="${b.id}" title="Duplicar o livro e os capítulos dele">⧉</button>
                     <button class="btn btn-secondary btn-sm" data-addchap="${b.id}" title="Novo capítulo">＋ cap.</button>
                 </div>
             </summary>
@@ -282,8 +283,45 @@ export const Editor = (() => {
                 ${a.synopsis ? `<div class="wb-chapter__syn">${esc(a.synopsis)}</div>` : ''}
                 <div class="wb-chapter__meta">${statusBadge(a.status)} ${pubBadge(a.public)} <span class="wbt-muted">${palavras} palavras · ${fmtDate(a.updatedAt)}</span></div>
             </div>
+            <button class="btn btn-secondary btn-sm" data-dupart="${a.id}" title="Duplicar este texto">⧉</button>
             <button class="btn btn-secondary btn-sm" data-delart="${a.id}" title="Excluir">🗑️</button>
         </div>`;
+    }
+
+    /* ── Duplicar ──────────────────────────────────────────────
+       A cópia nasce SEMPRE despublicada. Duplicar é para rascunhar em
+       cima de algo pronto; herdar 🌐 do original colocaria no ar um texto
+       que ninguém escreveu ainda. */
+    const nomeCopia = (t) => `${t || 'Sem título'} (cópia)`;
+    async function gravarArtigo(a) {
+        const { id, ...data } = a;
+        await setDoc(doc(db, 'worldbuilding-articles', id), data);
+        artigos.push(a);
+    }
+    async function duplicarArtigo(orig, bookId = orig.bookId) {
+        const copia = {
+            ...orig, id: uid('art'), title: nomeCopia(orig.title),
+            bookId, order: chaptersOf(bookId).length,
+            status: 'rascunho', public: false,
+            createdAt: now(), updatedAt: now(), updatedBy: WB().user?.email || '',
+        };
+        await gravarArtigo(copia);
+        return copia;
+    }
+    async function duplicarLivro(orig) {
+        const caps = chaptersOf(orig.id);
+        if (!await confirmar(`Duplicar "${orig.title}"?${caps.length ? `\nOs ${caps.length} capítulos vêm junto.` : ''}\nA cópia nasce como rascunho, sem publicação nenhuma.`)) return;
+        const novo = {
+            ...orig, id: uid('book'), title: nomeCopia(orig.title),
+            order: books.length, versao: '', public: false,
+            pub: Object.fromEntries(PUBLICACOES.map(([k]) => [k, false])),
+            createdAt: now(), updatedAt: now(), updatedBy: WB().user?.email || '',
+        };
+        const { id, ...data } = novo;
+        await setDoc(doc(db, 'worldbuilding-books', id), data);
+        books.push(novo);
+        for (const a of caps) await duplicarArtigo(a, novo.id);
+        renderLibrary();
     }
 
     function bindLibrary() {
@@ -297,8 +335,19 @@ export const Editor = (() => {
             b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openBookModal(books.find(x => x.id === b.dataset.editbook)); });
         contentBody().querySelectorAll('[data-addchap]').forEach(b =>
             b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openArticle(null, b.dataset.addchap); });
+        contentBody().querySelectorAll('[data-dupbook]').forEach(b =>
+            b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); duplicarLivro(books.find(x => x.id === b.dataset.dupbook)); });
         contentBody().querySelectorAll('[data-openart]').forEach(el =>
-            el.onclick = (e) => { if (e.target.closest('[data-delart]')) return; openArticle(artigos.find(x => x.id === el.dataset.openart), null); });
+            el.onclick = (e) => {
+                if (e.target.closest('[data-delart]') || e.target.closest('[data-dupart]')) return;
+                openArticle(artigos.find(x => x.id === el.dataset.openart), null);
+            });
+        contentBody().querySelectorAll('[data-dupart]').forEach(b =>
+            b.onclick = async (e) => {
+                e.stopPropagation();
+                await duplicarArtigo(artigos.find(x => x.id === b.dataset.dupart));
+                renderLibrary();
+            });
         contentBody().querySelectorAll('[data-delart]').forEach(b =>
             b.onclick = async (e) => {
                 e.stopPropagation();
@@ -344,6 +393,27 @@ export const Editor = (() => {
     const STATUS_OPCOES = [['rascunho', '✏️ Rascunho'], ['revisao', '🔍 Em revisão'], ['publicado', '✅ Publicado']];
     const statusOptions = (sel) => STATUS_OPCOES
         .map(([v, l]) => `<option value="${v}" ${(sel || 'rascunho') === v ? 'selected' : ''}>${l}</option>`).join('');
+
+    /* Uma linha da aba 📑 Capítulos. A ordem do sumário é a ordem das linhas
+       no DOM — reordenar é mover o nó, não redesenhar a lista, senão cada
+       arraste apagaria o status e o 🌐 que o autor acabou de mexer. */
+    function linhaCapHTML(a, i) {
+        return `
+        <div class="wb-capedit__row" data-caprow="${a.id}" draggable="true">
+            <span class="wb-capedit__pega" title="Arraste para reordenar">⠿</span>
+            <input type="checkbox" class="wb-capedit__sel" data-capsel="${a.id}" aria-label="Selecionar ${esc(a.title || 'capítulo')}">
+            <span class="wb-chapter__num">${i + 1}</span>
+            <span class="wb-capedit__nome" title="${esc(a.title || 'Sem título')}">${esc(a.title || 'Sem título')}</span>
+            <span class="wb-capedit__mudou" hidden></span>
+            <span class="wb-capedit__setas">
+                <button type="button" class="wbt-microbtn" data-capsobe aria-label="Subir capítulo">↑</button>
+                <button type="button" class="wbt-microbtn" data-capdesce aria-label="Descer capítulo">↓</button>
+            </span>
+            <select class="form-select wb-capedit__st" data-capst="${a.id}">${statusOptions(a.status)}</select>
+            <label class="wb-capedit__pub" title="Capítulo visível para quem já enxerga o livro">
+                <input type="checkbox" data-cappub="${a.id}" ${a.public ? 'checked' : ''}> 🌐</label>
+        </div>`;
+    }
 
     function openBookModal(book = null) {
         const b = book || { id: uid('book'), title: '', description: '', cover: '', public: false, order: books.length };
@@ -398,19 +468,18 @@ export const Editor = (() => {
                         </select>
                         <button type="button" class="btn btn-secondary btn-sm" data-bulkpub="1" disabled>🌐 Público</button>
                         <button type="button" class="btn btn-secondary btn-sm" data-bulkpub="0" disabled>🔒 Privado</button>
+                        <select id="capBulkLivro" class="form-select" disabled title="Mover os capítulos marcados para outro livro">
+                            <option value="">Mover para…</option>
+                            <option value="${b.id}">↩ Continuar aqui</option>
+                            ${books.filter(x => x.id !== b.id).map(x => `<option value="${x.id}">📗 ${esc(x.title || 'Sem título')}</option>`).join('')}
+                            <option value="__avulso">📄 Textos avulsos</option>
+                        </select>
                     </div>
                     <div class="wb-capedit">
-                        ${caps.map((a, i) => `
-                        <div class="wb-capedit__row">
-                            <input type="checkbox" class="wb-capedit__sel" data-capsel="${a.id}" aria-label="Selecionar ${esc(a.title || 'capítulo')}">
-                            <span class="wb-chapter__num">${i + 1}</span>
-                            <span class="wb-capedit__nome" title="${esc(a.title || 'Sem título')}">${esc(a.title || 'Sem título')}</span>
-                            <select class="form-select wb-capedit__st" data-capst="${a.id}">${statusOptions(a.status)}</select>
-                            <label class="wb-capedit__pub" title="Capítulo visível para quem já enxerga o livro">
-                                <input type="checkbox" data-cappub="${a.id}" ${a.public ? 'checked' : ''}> 🌐</label>
-                        </div>`).join('')}
+                        ${caps.map((a, i) => linhaCapHTML(a, i)).join('')}
                     </div>
-                    <p class="wbt-muted wb-bkhint">🌐 é o que libera o capítulo na ficha e no Tabuleiro. O status ✅ Publicado é o que solta o capítulo no Cronista público.</p>
+                    <p class="wbt-muted wb-bkhint" id="capAviso" hidden></p>
+                    <p class="wbt-muted wb-bkhint">Arraste pelo ⠿ (ou use ↑↓) para mudar a ordem do sumário. 🌐 é o que libera o capítulo na ficha e no Tabuleiro; o status ✅ Publicado é o que solta o capítulo no Cronista público.</p>
                 </section>` : ''}
             </div>
             <div class="wbt-actions">
@@ -452,7 +521,80 @@ export const Editor = (() => {
             document.querySelectorAll('[data-bulkpub]').forEach(btn => btn.onclick = () => {
                 const on = btn.dataset.bulkpub === '1';
                 selecionados().forEach(id => { document.querySelector(`[data-cappub="${id}"]`).checked = on; });
+                aviso();
             });
+
+            /* ── Mover para outro livro ────────────────────────────
+               Marca a linha e só efetiva no Salvar. Sumir com a linha na
+               hora tiraria do autor a chance de desistir — e ele ainda pode
+               estar mexendo no status dela. */
+            const lista = document.querySelector('.wb-capedit');
+            const linha = (id) => document.querySelector(`[data-caprow="${id}"]`);
+            $('#capBulkLivro').onchange = (e) => {
+                const destino = e.target.value; if (!destino) return;
+                selecionados().forEach(id => {
+                    const r = linha(id), tag = r.querySelector('.wb-capedit__mudou');
+                    const fica = destino === b.id;
+                    r.dataset.capmove = fica ? '' : destino;
+                    tag.hidden = fica;
+                    tag.textContent = fica ? '' : '→ ' + (destino === '__avulso'
+                        ? '📄 avulsos' : '📗 ' + (books.find(x => x.id === destino)?.title || ''));
+                });
+                e.target.value = '';
+            };
+
+            /* ── Ordem do sumário ──────────────────────────────────
+               Arrastar (nativo, sem biblioteca) e ↑↓. As setas não são
+               enfeite de acessibilidade: drag-and-drop HTML5 não existe no
+               celular, e metade da mesa edita do celular. */
+            const renumerar = () => [...lista.children].forEach((r, i) => {
+                r.querySelector('.wb-chapter__num').textContent = i + 1;
+                r.querySelector('[data-capsobe]').disabled = i === 0;
+                r.querySelector('[data-capdesce]').disabled = i === lista.children.length - 1;
+            });
+            lista.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-capsobe], [data-capdesce]'); if (!btn) return;
+                const r = btn.closest('[data-caprow]');
+                const vizinho = btn.hasAttribute('data-capsobe') ? r.previousElementSibling : r.nextElementSibling;
+                if (!vizinho) return;
+                btn.hasAttribute('data-capsobe') ? vizinho.before(r) : vizinho.after(r);
+                renumerar(); btn.focus();
+            });
+            let arrastando = null;
+            lista.addEventListener('dragstart', (e) => {
+                arrastando = e.target.closest('[data-caprow]');
+                arrastando.classList.add('is-arrastando');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            lista.addEventListener('dragend', () => {
+                arrastando?.classList.remove('is-arrastando'); arrastando = null; renumerar();
+            });
+            lista.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const alvo = e.target.closest('[data-caprow]');
+                if (!alvo || !arrastando || alvo === arrastando) return;
+                // Metade de cima do alvo = entra antes dele; metade de baixo = depois.
+                const meio = alvo.getBoundingClientRect().top + alvo.offsetHeight / 2;
+                e.clientY < meio ? alvo.before(arrastando) : alvo.after(arrastando);
+            });
+            renumerar();
+
+            /* ── Aviso de publicação órfã ──────────────────────────
+               Capítulo com 🌐 dentro de livro que ninguém publicou é
+               invisível, e nada na tela dizia isso. */
+            const aviso = () => {
+                const semPub = ![...document.querySelectorAll('[data-bkpub]')].some(c => c.checked);
+                const abertos = document.querySelectorAll('[data-cappub]:checked').length;
+                const el = $('#capAviso');
+                el.hidden = !(semPub && abertos);
+                el.innerHTML = el.hidden ? '' :
+                    `⚠️ <b>${abertos} capítulo${abertos > 1 ? 's' : ''} com 🌐, mas o livro não está publicado em lugar nenhum.</b>
+                     Ninguém vai enxergar — marque uma publicação na aba 🌐 Publicação.`;
+                document.querySelector('[data-bktab="caps"]').classList.toggle('is-alerta', !el.hidden);
+            };
+            document.querySelector('[data-bkpanel="pub"]').addEventListener('change', aviso);
+            lista.addEventListener('change', (e) => { if (e.target.matches('[data-cappub]')) aviso(); });
+            aviso();
         }
 
         $('#bkSave').onclick = async () => {
@@ -473,14 +615,25 @@ export const Editor = (() => {
             await setDoc(doc(db, 'worldbuilding-books', id), data);
             if (!books.find(x => x.id === b.id)) books.push(b);
             else books = books.map(x => x.id === b.id ? b : x);
-            // Só grava o capítulo que realmente mudou — o livro cheio são
-            // dezenas de docs e o autor costuma mexer em dois.
-            for (const a of caps) {
-                const st = document.querySelector(`[data-capst="${a.id}"]`).value;
-                const pb = document.querySelector(`[data-cappub="${a.id}"]`).checked;
-                if (st === (a.status || 'rascunho') && pb === !!a.public) continue;
-                a.status = st; a.public = pb; a.updatedAt = now(); a.updatedBy = WB().user?.email || '';
-                await setDoc(doc(db, 'worldbuilding-articles', a.id), { status: st, public: pb, updatedAt: a.updatedAt, updatedBy: a.updatedBy }, { merge: true });
+            /* Capítulos: status, 🌐, ordem do sumário (= ordem das linhas) e
+               destino. Só grava o que realmente mudou — o livro cheio são
+               dezenas de docs e o autor costuma mexer em dois. */
+            const linhas = [...document.querySelectorAll('.wb-capedit [data-caprow]')];
+            const ficam = linhas.filter(r => !r.dataset.capmove);
+            const fimDe = {};   // capítulo que sai entra no FIM do livro de destino
+            for (const r of linhas) {
+                const a = caps.find(x => x.id === r.dataset.caprow);
+                const destino = r.dataset.capmove || '';
+                const bookId = destino === '__avulso' ? null : (destino || b.id);
+                if (destino && fimDe[destino] === undefined) fimDe[destino] = bookId ? chaptersOf(bookId).length : 0;
+                const ordem = destino ? fimDe[destino]++ : ficam.indexOf(r);
+                const st = r.querySelector('[data-capst]').value;
+                const pb = r.querySelector('[data-cappub]').checked;
+                if (st === (a.status || 'rascunho') && pb === !!a.public
+                    && bookId === (a.bookId ?? null) && ordem === (a.order ?? 0)) continue;
+                Object.assign(a, { status: st, public: pb, bookId, order: ordem, updatedAt: now(), updatedBy: WB().user?.email || '' });
+                await setDoc(doc(db, 'worldbuilding-articles', a.id),
+                    { status: st, public: pb, bookId, order: ordem, updatedAt: a.updatedAt, updatedBy: a.updatedBy }, { merge: true });
             }
             ToolModal.close(); renderLibrary();
         };

@@ -754,7 +754,23 @@ body.wbml-aberto .wb-nav-backdrop { display: none; }
 .wb-capedit__st { flex: 0 0 auto; font-size: var(--lr-fs-xs); padding: var(--lr-space-1) var(--lr-space-2); }
 .wb-capedit__pub { display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto; cursor: pointer; font-size: var(--lr-fs-sm); }
 
+/* Reordenar: pega de arrasto + as setas. As setas existem porque
+   drag-and-drop HTML5 nao roda no celular. */
+.wb-capedit__pega { flex: 0 0 auto; cursor: grab; color: var(--lr-text-2); opacity: var(--lr-op-muted); user-select: none; }
+.wb-capedit__row:hover .wb-capedit__pega { opacity: 1; }
+.wb-capedit__row.is-arrastando { opacity: .45; outline: 1px dashed var(--lr-gold); }
+.wb-capedit__setas { display: inline-flex; flex-direction: column; gap: 1px; flex: 0 0 auto; }
+.wb-capedit__setas .wbt-microbtn { line-height: 1; padding: 0 var(--lr-space-1); }
+.wb-capedit__setas .wbt-microbtn[disabled] { opacity: .3; cursor: default; }
+/* Destino de um capitulo que vai mudar de livro — so no Salvar e que muda. */
+.wb-capedit__mudou { flex: 0 0 auto; font-size: var(--lr-fs-xs); color: var(--lr-gold); white-space: nowrap; }
+/* A aba avisa que ha capitulo publicado dentro de livro nao publicado. */
+.wb-bktabs .wbt-chip.is-alerta { border-color: var(--lr-blood); }
+.wb-bktabs .wbt-chip.is-alerta::after { content: " ⚠️"; }
+#capAviso { color: var(--lr-text-1); border-left: 3px solid var(--lr-blood); padding-left: var(--lr-space-2); }
+
 @media (max-width: 560px) {
     .wb-capedit__row { flex-wrap: wrap; }
     .wb-capedit__nome { flex: 1 0 100%; order: -1; white-space: normal; }
+    .wb-capedit__setas { flex-direction: row; }
 }

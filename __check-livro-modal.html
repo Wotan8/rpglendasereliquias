@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="shared/dialogo.css">
 <link rel="stylesheet" href="shared/texto-mundo.css">
 <link rel="stylesheet" href="worldbuilding/css/worldbuilding.css">
-<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=13">
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=14">
 <script src="shared/theme.js"></script>
 <script src="shared/campo-imagem.js"></script>
 
@@ -114,7 +114,37 @@ $('#chkRun').onclick = async () => {
     $('[data-capst="a3"]').value = 'revisao';
     $('[data-cappub="a3"]').checked = true;
 
+    // 6b. Aviso de publicacao orfa: o livro tem pub marcada, entao esta calado.
+    t('sem orfao, o aviso fica escondido', $('#capAviso').hidden);
+    document.querySelectorAll('[data-bkpub]').forEach(c => { c.checked = false; });
+    document.querySelector('[data-bkpanel="pub"]').dispatchEvent(new Event('change', { bubbles: true }));
+    t('livro sem publicacao + capitulo 🌐 acende o aviso', !$('#capAviso').hidden);
+    t('a aba avisa junto', $('[data-bktab="caps"]').classList.contains('is-alerta'));
+    // Repoe a publicacao que o resto do teste espera.
+    $('[data-bkpub="geral"]').checked = true;
+    $('[data-bkpub="conhVinculo"]').checked = true;
+    document.querySelector('[data-bkpanel="pub"]').dispatchEvent(new Event('change', { bubbles: true }));
+    t('repor a publicacao apaga o aviso', $('#capAviso').hidden);
+
+    // 6c. Ordem do sumario pelas setas: desce o a1, sobe o a3.
+    const ordemNaTela = () => [...document.querySelectorAll('.wb-capedit [data-caprow]')].map(r => r.dataset.caprow).join(',');
+    t('ordem inicial e a do sumario', ordemNaTela() === 'a1,a2,a3');
+    t('a primeira linha nao sobe', $('[data-caprow="a1"] [data-capsobe]').disabled);
+    t('a ultima linha nao desce', $('[data-caprow="a3"] [data-capdesce]').disabled);
+    $('[data-caprow="a1"] [data-capdesce]').click();
+    t('descer o a1 troca com o a2', ordemNaTela() === 'a2,a1,a3');
+    t('renumerou depois de mover', $('[data-caprow="a1"] .wb-chapter__num').textContent === '2');
+
+    // 6d. Mover o a3 para o outro livro — marca, nao some, e so vale no Salvar.
+    document.querySelectorAll('[data-capsel]').forEach(c => { c.checked = c.dataset.capsel === 'a3'; });
+    $('[data-capsel="a3"]').dispatchEvent(new Event('change', { bubbles: true }));
+    $('#capBulkLivro').value = 'b2';
+    $('#capBulkLivro').dispatchEvent(new Event('change'));
+    t('a linha marcada continua na lista', ordemNaTela() === 'a2,a1,a3');
+    t('a linha mostra o destino', $('[data-caprow="a3"] .wb-capedit__mudou').textContent.includes('Livro sem'));
+
     // 7. Salvar grava o livro + SO os capitulos que mudaram.
+    document.querySelectorAll('[data-capsel]').forEach(c => { c.checked = false; });
     await $('#bkSave').onclick();
     const livro = GRAVADO.find(g => g.col === 'worldbuilding-books');
     t('gravou o livro', !!livro);
@@ -127,6 +157,11 @@ $('#chkRun').onclick = async () => {
     t('a3 revisao e publico', c('a3').data.status === 'revisao' && c('a3').data.public === true);
     t('capitulo grava por merge', caps.every(x => x.merge === true));
     t('nao tocou no avulso a9', !caps.some(x => x.id === 'a9'));
+    // Ordem: a2 subiu para 0 e a1 desceu para 1 (o a3 saiu do livro).
+    t('gravou a nova ordem do sumario', c('a2').data.order === 0 && c('a1').data.order === 1);
+    t('a3 mudou de livro', c('a3').data.bookId === 'b2');
+    t('a3 entra no fim do livro de destino', c('a3').data.order === 0);
+    t('quem ficou nao mudou de livro', c('a1').data.bookId === 'b1' && c('a2').data.bookId === 'b1');
 
     // 8. Estantes e publicacao do livro sobrevivem ao round-trip.
     t('estanteIds preservado', JSON.stringify(livro.data.estanteIds) === '["e1"]');
@@ -152,7 +187,7 @@ $('#chkRun').onclick = async () => {
     t('busca conta 1 texto', $('#contentBody').textContent.includes('1 texto'));
 
     buscar('Vaugh');
-    t('titulo do livro traz os 3 capitulos dele', String(capsNaTela()) === 'a1,a2,a3');
+    t('titulo do livro traz os capitulos dele', String(capsNaTela()) === 'a1,a2');
 
     buscar('zzzzz');
     t('busca sem resultado avisa', !!document.querySelector('.wbt-empty'));
@@ -178,6 +213,37 @@ $('#chkRun').onclick = async () => {
     // a2 tem words:900 gravado e 2 palavras de HTML. 903 = 900 + a1 (3) + a3 (0):
     // se recontasse o HTML daria 5.
     t('usa o words gravado, nao reconta o HTML', $('#contentBody').textContent.includes('903 palavras'));
+
+    // ── Duplicar ──
+    const antesLivros = livrosNaTela().length, antesCaps = capsNaTela().length;
+    GRAVADO.length = 0;
+    await $('[data-dupart="a2"]').onclick(new Event('click'));
+    await espera();
+    const copiaCap = GRAVADO.find(g => g.col === 'worldbuilding-articles');
+    t('duplicar capitulo grava um doc novo', !!copiaCap && copiaCap.id !== 'a2');
+    t('a copia leva "(copia)" no titulo', copiaCap.data.title.includes('(cópia)'));
+    t('a copia nasce rascunho e privada',
+        copiaCap.data.status === 'rascunho' && copiaCap.data.public === false);
+    t('a copia fica no mesmo livro', copiaCap.data.bookId === 'b1');
+    t('a copia aparece na tela', capsNaTela().length === antesCaps + 1);
+
+    GRAVADO.length = 0;
+    $('[data-dupbook="b1"]').onclick(new Event('click'));   // pergunta antes (shared/dialogo.js)
+    await espera();
+    const okDialogo = document.querySelector('.lr-dialogo .lr-dialogo-ok');
+    t('duplicar livro pergunta antes', !!okDialogo);
+    okDialogo.click();
+    await espera(400);
+    const copiaLivro = GRAVADO.find(g => g.col === 'worldbuilding-books');
+    t('duplicar livro grava o livro', !!copiaLivro && copiaLivro.id !== 'b1');
+    t('a copia do livro nasce sem publicacao',
+        Object.values(copiaLivro.data.pub).every(v => v === false));
+    t('a copia do livro nasce sem versao', copiaLivro.data.versao === '');
+    const capsCopiados = GRAVADO.filter(g => g.col === 'worldbuilding-articles');
+    t('os 3 capitulos vieram junto', capsCopiados.length === 3);
+    t('os capitulos copiados apontam para o livro novo',
+        capsCopiados.every(x => x.data.bookId === copiaLivro.id));
+    t('o livro copiado aparece na tela', livrosNaTela().length === antesLivros + 1);
 
     // ── Editor: aviso de saida com texto nao salvo e Ctrl+S ──
     document.querySelector('[data-estante="__todas"] summary').click();
