@@ -40,7 +40,26 @@
     /** Recusa o que não é imagem ou não cabe. Devolve null quando está tudo bem.
      *  O tipo vem vazio em alguns seletores (Android, .ico no Windows), então a
      *  extensão vale como segunda chance — senão o arquivo certo é recusado. */
-    var EXT_IMG = /\.(png|jpe?g|gif|webp|svg|ico|bmp|avif|heic|heif)$/i;
+    var EXT_IMG = /\.(png|jpe?g|jfif|pjpe?g?|gif|webp|svg|ico|bmp|avif|heic|heif)$/i;
+
+    /* O Storage grava o contentType que o NAVEGADOR pos no File, e ele vem
+       vazio ou 'application/octet-stream' em varios casos reais: .jfif no
+       Windows (a extensao que o Chrome dá ao salvar um JPEG), arquivo vindo
+       de app de terceiro, seletor de alguns Android. Quando a regra do
+       Storage exige `contentType.matches('image/.*')`, esse upload e negado
+       por um motivo que nao tem nada a ver com o arquivo. Carimbamos pela
+       extensao quando o navegador nao soube dizer. */
+    var TIPO_POR_EXT = {
+        png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', jfif: 'image/jpeg',
+        pjp: 'image/jpeg', pjpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp',
+        svg: 'image/svg+xml', ico: 'image/x-icon', bmp: 'image/bmp', avif: 'image/avif',
+        heic: 'image/heic', heif: 'image/heif',
+    };
+    function tipoDe(file) {
+        if (/^image\//.test(file.type || '')) return file.type;
+        var ext = String(file.name || '').split('.').pop().toLowerCase();
+        return TIPO_POR_EXT[ext] || '';
+    }
     function validar(file) {
         if (!file) return 'Nenhum arquivo escolhido.';
         if (!/^image\//.test(file.type || '') && !EXT_IMG.test(file.name || '')) return 'Isso não é uma imagem.';
@@ -65,7 +84,20 @@
         ]);
         var app = mods[0], st = mods[1];
         var alvo = st.ref(st.getStorage(app.getApp()), caminho(pasta, file.name));
-        await st.uploadBytes(alvo, file);
+        var tipo = tipoDe(file);
+        try {
+            await st.uploadBytes(alvo, file, tipo ? { contentType: tipo } : undefined);
+        } catch (e) {
+            /* 'storage/unauthorized' e a regra do Storage dizendo nao, e a
+               mensagem crua do Firebase so mostra o caminho — quem le nao tem
+               como saber se e a pasta, o papel ou o tipo do arquivo. */
+            if (e && e.code === 'storage/unauthorized') {
+                throw new Error('Sem permissao para gravar em "' + String(pasta || 'imagens') +
+                    '". Ou a pasta nao esta liberada no storage.rules, ou a regra pede um papel ' +
+                    '(mestre/criador) que esta conta nao tem. A URL colada continua funcionando.');
+            }
+            throw e;
+        }
         return await st.getDownloadURL(alvo);
     }
 
@@ -181,7 +213,12 @@
             '.ci-prev{display:none;margin-top:8px;max-width:100%;max-height:180px;' +
                 'border-radius:8px;object-fit:contain}' +
             '.ci-prev.on{display:block}' +
-            'dialog.ci-dlg{border:1px solid var(--soft,#3a3a4a);border-radius:12px;padding:18px;' +
+            /* `margin:auto` e o que centraliza um <dialog> modal, e vem do
+               navegador — mas a pagina do Worldbuilding (e boa parte do site)
+               abre com `* { margin: 0 }`, que apaga justamente esse auto e
+               joga a janela no canto superior esquerdo. O componente se
+               defende sozinho: e mais barato do que caçar todo reset. */
+            'dialog.ci-dlg{margin:auto;border:1px solid var(--soft,#3a3a4a);border-radius:12px;padding:18px;' +
                 'width:min(460px,92vw);font:inherit;color:var(--text,#e8e8f0);' +
                 'background:var(--lr-bg-1,#15151f)}' +
             'dialog.ci-dlg::backdrop{background:rgba(0,0,0,.62)}' +

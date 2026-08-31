@@ -34,6 +34,12 @@ export const Editor = (() => {
     let modo = 'escrita';   // 'escrita' | 'leitura' — vale para toda a sessão
     let busca = '', fstatus = '';   // filtros da Biblioteca
     let sujo = false;               // há texto digitado que ainda não foi gravado
+    /* Ligado por padrão: perder texto e pior que gravar demais, e quem
+       desliga fez isso de propósito. A escolha vale para as proximas
+       sessoes — reativar sozinho seria desfazer a decisao do autor.
+       O valor vem do localStorage logo abaixo, quando `guardado()` existe. */
+    const CHAVE_AUTO = 'wb-cronista-autosave';
+    let autoSalva = true;
 
     const $ = (s) => document.querySelector(s);
     const now = () => Date.now();
@@ -52,6 +58,7 @@ export const Editor = (() => {
        lembrar estante aberta é conforto, não pode derrubar o Escritório. */
     const guardado = (chave, alt) => { try { return JSON.parse(localStorage.getItem(chave)) ?? alt; } catch { return alt; } };
     const guardar = (chave, v) => { try { localStorage.setItem(chave, JSON.stringify(v)); } catch { /* sem memória, paciência */ } };
+    autoSalva = guardado(CHAVE_AUTO, true) !== false;
 
     /* ── Arquivos de apoio (histórico e lixeira) ───────────────
        Os dois moram em `worldbuilding-settings`, um doc cada, porque a regra
@@ -795,6 +802,22 @@ export const Editor = (() => {
         contentBody().innerHTML = `
         <div class="wbt-editor-layout${lendo ? ' is-reading' : ''}" id="editorLayout">
             <div class="wbt-editor-main" id="editorMain">
+                <!-- Onde o capítulo MORA (livro, ordem, status, 🌐). É a
+                     ficha catalográfica: consultada de vez em quando, mexida
+                     quase nunca. Ficava num painel do tamanho do texto, entre
+                     a sinopse e a barra de formatação — bem no caminho de
+                     quem só queria escrever. Vira uma tarja fina no topo. -->
+                <div class="wb-editor-props" id="editorProps">
+                    <label>📗 <select id="artBook" class="form-select">${bookOptions(a.bookId)}</select></label>
+                    <label title="Posição no sumário do livro">🔢 <input id="artOrder" type="number" class="form-input" value="${a.order ?? 0}" min="0"></label>
+                    <label>📊 <select id="artStatus" class="form-select">
+                        <option value="rascunho" ${a.status === 'rascunho' ? 'selected' : ''}>✏️ Rascunho</option>
+                        <option value="revisao" ${a.status === 'revisao' ? 'selected' : ''}>🔍 Em revisão</option>
+                        <option value="publicado" ${a.status === 'publicado' ? 'selected' : ''}>✅ Publicado</option>
+                    </select></label>
+                    <label class="wbt-check" title="Libera o capítulo na ficha e no Tabuleiro"><input type="checkbox" id="artPublic" ${a.public ? 'checked' : ''}> 🌐</label>
+                </div>
+
                 <div class="wbt-toolbar wbt-etoolbar">
                     <button class="btn btn-secondary btn-sm" id="backLib">← Biblioteca</button>
                     <span style="flex:1"></span>
@@ -803,28 +826,14 @@ export const Editor = (() => {
                     <button class="btn btn-secondary btn-sm" id="toggleRefs" title="Painel de consulta">Consulta ⇄</button>
                     <button class="btn btn-secondary btn-sm" id="focusMode" title="Modo foco">Foco ⛶</button>
                     <button class="btn btn-secondary btn-sm" id="verVersoes" title="Versões guardadas deste texto">🕐 Versões</button>
+                    <label class="wb-auto" title="Salvar sozinho enquanto você escreve. Desligado, só o 💾 (ou Ctrl+S) grava.">
+                        <input type="checkbox" id="autoSave" ${autoSalva ? 'checked' : ''}> auto
+                    </label>
                     <button class="btn btn-success btn-sm" id="saveArticle" title="Salvar e guardar uma versão (Ctrl+S)">💾 Salvar</button>
                 </div>
                 ${navCapsHTML()}
                 <input id="articleTitle" class="wbt-article-title" placeholder="Título do conto, capítulo ou cena…" value="${esc(a.title || '')}" ${lendo ? 'readonly' : ''}>
                 <input id="articleSyn" class="wb-article-syn" placeholder="Sinopse curta (opcional)…" value="${esc(a.synopsis || '')}" ${lendo ? 'readonly' : ''}>
-
-                <div class="wb-editor-props">
-                    <label>📗 Livro
-                        <select id="artBook" class="form-select">${bookOptions(a.bookId)}</select>
-                    </label>
-                    <label>🔢 Ordem
-                        <input id="artOrder" type="number" class="form-input" value="${a.order ?? 0}" min="0" style="width:80px">
-                    </label>
-                    <label>📊 Status
-                        <select id="artStatus" class="form-select">
-                            <option value="rascunho" ${a.status === 'rascunho' ? 'selected' : ''}>✏️ Rascunho</option>
-                            <option value="revisao" ${a.status === 'revisao' ? 'selected' : ''}>🔍 Em revisão</option>
-                            <option value="publicado" ${a.status === 'publicado' ? 'selected' : ''}>✅ Publicado</option>
-                        </select>
-                    </label>
-                    <label class="wbt-check"><input type="checkbox" id="artPublic" ${a.public ? 'checked' : ''}> 🌐 Público</label>
-                </div>
 
                 <!-- Colada no texto e grudada no topo quando a página rola. -->
                 <div class="wbt-toolbar wb-richbar" id="richToolbar">${TOOLBAR_HTML}</div>
@@ -1036,7 +1045,9 @@ export const Editor = (() => {
     function autosaveHint() {
         clearTimeout(saveTimer);
         sujo = true;
-        const st = $('#editorStatus'); if (st) st.textContent = 'Alterações não salvas…';
+        const st = $('#editorStatus');
+        if (st) st.textContent = autoSalva ? 'Alterações não salvas…' : 'Alterações não salvas — o auto está desligado.';
+        if (!autoSalva) return;
         saveTimer = setTimeout(() => { if (view === 'editor') save(); }, 4000);
     }
 
@@ -1058,6 +1069,17 @@ export const Editor = (() => {
         rich = bindRich($('#richEditor'), $('#richToolbar'), autosaveHint);
         $('#saveArticle').onclick = () => { clearTimeout(saveTimer); save(true); };
         $('#verVersoes').onclick = abrirVersoes;
+        $('#autoSave').onchange = (e) => {
+            autoSalva = e.target.checked;
+            guardar(CHAVE_AUTO, autoSalva);
+            // Ligar com texto pendente grava agora; desligar cancela o relogio
+            // que ja estava correndo, senao ele salvaria depois de desligado.
+            clearTimeout(saveTimer);
+            if (autoSalva && sujo) autosaveHint();
+            else if (!autoSalva) $('#editorStatus').textContent = sujo
+                ? 'Alterações não salvas — o auto está desligado.'
+                : 'Auto desligado. Só o 💾 (ou Ctrl+S) grava.';
+        };
         // Salva antes de trocar de modo/capítulo: o texto vivo mora no DOM.
         $('#toggleModo').onclick = async () => {
             clearTimeout(saveTimer); await save();
