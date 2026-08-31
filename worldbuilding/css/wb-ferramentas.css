@@ -477,6 +477,10 @@ body.wb-sidebar-collapsed .nav-category:hover::after {
 .wb-lib-toolbar { display: flex; align-items: center; gap: var(--lr-space-2); flex-wrap: wrap; margin-bottom: var(--lr-space-2); }
 .wb-lib-stats { display: flex; gap: var(--lr-space-4); color: var(--lr-text-2); font-size: .85rem; }
 .wb-lib-stats b { color: var(--lr-gold); }
+/* Busca + status. Uma linha que envolve: no celular a busca toma a largura
+   e os chips descem para a linha de baixo. */
+.wb-lib-filtros { display: flex; align-items: center; gap: var(--lr-space-2); flex-wrap: wrap; margin-bottom: var(--lr-space-2); }
+.wb-lib-busca { flex: 1 1 16rem; min-width: 0; max-width: 26rem; }
 .wb-lib-section { margin: var(--lr-space-4) 0 var(--lr-space-2); font-family: var(--lr-font-title); color: var(--lr-text-1); font-size: 1.05rem; border-bottom: 1px solid var(--lr-border); padding-bottom: var(--lr-space-1); }
 /* A estante, o card de livro, a linha de capítulo e os selos saíram daqui
    para shared/acervo.css: as cinco telas que listam livro passaram a

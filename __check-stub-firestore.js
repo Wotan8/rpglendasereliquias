@@ -11,7 +11,7 @@ const DADOS = {
     ],
     'worldbuilding-articles': [
         { id: 'a1', bookId: 'b1', order: 0, title: 'A Noite da Bigorna Fria', synopsis: 'Brida descobre quem comprou a dívida.', status: 'rascunho', public: false, contentHTML: '<p>um dois tres</p>' },
-        { id: 'a2', bookId: 'b1', order: 1, title: 'O Recibo Falso', status: 'publicado', public: true, contentHTML: '<p>quatro cinco</p>' },
+        { id: 'a2', bookId: 'b1', order: 1, title: 'O Recibo Falso', status: 'publicado', public: true, words: 900, contentHTML: '<p>quatro cinco</p>' },
         { id: 'a3', bookId: 'b1', order: 2, title: 'Ferro Nao Mente', status: 'rascunho', public: false, contentHTML: '' },
         { id: 'a9', bookId: null, title: 'Nota solta', status: 'rascunho', public: false, contentHTML: '' },
     ],

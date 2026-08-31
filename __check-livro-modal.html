@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="shared/dialogo.css">
 <link rel="stylesheet" href="shared/texto-mundo.css">
 <link rel="stylesheet" href="worldbuilding/css/worldbuilding.css">
-<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=12">
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=13">
 <script src="shared/theme.js"></script>
 <script src="shared/campo-imagem.js"></script>
 
@@ -66,6 +66,7 @@ await Editor.render();
 
 const $ = (s) => document.querySelector(s);
 const abrirCog = () => $('[data-editbook="b1"]').click();
+const espera = (ms = 80) => new Promise(r => setTimeout(r, ms));
 $('#chkAbrir').onclick = abrirCog;
 
 $('#chkRun').onclick = async () => {
@@ -130,6 +131,78 @@ $('#chkRun').onclick = async () => {
     // 8. Estantes e publicacao do livro sobrevivem ao round-trip.
     t('estanteIds preservado', JSON.stringify(livro.data.estanteIds) === '["e1"]');
     t('pub do livro preservado', livro.data.pub.geral === true && livro.data.pub.mestre === false);
+
+    // ── Biblioteca: busca, filtro de status e memoria de estante ──
+    // O mesmo livro aparece em varias estantes — contar por id, nao por no.
+    const unicos = (sel, attr) => [...new Set([...document.querySelectorAll('#contentBody ' + sel)].map(el => el.dataset[attr]))].sort();
+    const capsNaTela = () => unicos('[data-openart]', 'openart');
+    const livrosNaTela = () => unicos('[data-book]', 'book');
+    const buscar = (txt) => { const i = $('#libBusca'); i.value = txt; i.dispatchEvent(new Event('input')); };
+    const filtrar = (v) => document.querySelector('[data-fst="' + v + '"]').click();
+
+    // Estado depois do salvamento acima: a1 publicado/privado, a2 publicado/
+    // privado, a3 revisao/publico, a9 avulso rascunho/privado.
+    t('sem filtro, os 2 livros aparecem', livrosNaTela().length === 2);
+    t('sem filtro, o avulso aparece', capsNaTela().includes('a9'));
+
+    buscar('recibo');
+    t('busca acha so o a2', String(capsNaTela()) === 'a2');
+    t('busca esconde o livro sem match', String(livrosNaTela()) === 'b1');
+    t('busca abre a estante sozinha', document.querySelector('.wb-estante__det').open);
+    t('busca conta 1 texto', $('#contentBody').textContent.includes('1 texto'));
+
+    buscar('Vaugh');
+    t('titulo do livro traz os 3 capitulos dele', String(capsNaTela()) === 'a1,a2,a3');
+
+    buscar('zzzzz');
+    t('busca sem resultado avisa', !!document.querySelector('.wbt-empty'));
+
+    buscar('');
+    filtrar('revisao');
+    t('status revisao acha so o a3', String(capsNaTela()) === 'a3');
+    filtrar('revisao');
+    t('reclicar o chip desliga o filtro', livrosNaTela().length === 2);
+
+    filtrar('privado');
+    t('privado pega a1, a2 e o avulso', String(capsNaTela()) === 'a1,a2,a9');
+    t('privado nao pega o a3 publico', !capsNaTela().includes('a3'));
+    $('#libLimpar').click();
+    t('Limpar zera busca e filtro', livrosNaTela().length === 2 && $('#libBusca').value === '');
+
+    const det = document.querySelector('[data-estante="e1"] .wb-estante__det');
+    det.open = true; det.dispatchEvent(new Event('toggle'));
+    t('estante aberta foi guardada',
+        (localStorage.getItem('wb-cronista-estantes-abertas') || '').includes('e1'));
+
+    // Palavras vem do campo `words` quando existe, sem recontar o HTML.
+    // a2 tem words:900 gravado e 2 palavras de HTML. 903 = 900 + a1 (3) + a3 (0):
+    // se recontasse o HTML daria 5.
+    t('usa o words gravado, nao reconta o HTML', $('#contentBody').textContent.includes('903 palavras'));
+
+    // ── Editor: aviso de saida com texto nao salvo e Ctrl+S ──
+    document.querySelector('[data-estante="__todas"] summary').click();
+    await espera();
+    document.querySelector('[data-book="b1"] summary').click();
+    await espera();
+    $('[data-openart="a1"]').click();
+    await espera();
+    t('capitulo abre no editor', !!$('#richEditor'));
+
+    $('#richEditor').dispatchEvent(new Event('input'));
+    t('digitar avisa que nao salvou', $('#editorStatus').textContent.includes('não salvas'));
+    const saida = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(saida);
+    t('fechar a aba com texto sujo e barrado', saida.defaultPrevented);
+
+    GRAVADO.length = 0;
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true }));
+    await espera(150);
+    t('Ctrl+S grava o capitulo aberto',
+        GRAVADO.some(g => g.col === 'worldbuilding-articles' && g.id === 'a1'));
+    t('Ctrl+S carimba a hora', $('#editorStatus').textContent.startsWith('✓ Salvo'));
+    const saida2 = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(saida2);
+    t('depois de salvo, sair nao e barrado', !saida2.defaultPrevented);
 
     $('#chkOut').innerHTML = erro.length
         ? '<span style="color:var(--lr-blood)">✗ ' + erro.length + ' falha(s): ' + erro.join(' · ') + '</span>'

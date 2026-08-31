@@ -32,6 +32,8 @@ export const Editor = (() => {
     let mentionRange = null, mentionIdx = 0, saveTimer = null, refType = 'all';
     let view = 'library';   // 'library' | 'editor'
     let modo = 'escrita';   // 'escrita' | 'leitura' — vale para toda a sessão
+    let busca = '', fstatus = '';   // filtros da Biblioteca
+    let sujo = false;               // há texto digitado que ainda não foi gravado
 
     const $ = (s) => document.querySelector(s);
     const now = () => Date.now();
@@ -40,7 +42,16 @@ export const Editor = (() => {
         const m = txt.trim().match(/\S+/g);
         return m ? m.length : 0;
     };
+    /* `words` é gravado a cada save(). Recontar o HTML de todos os artigos a
+       cada render da Biblioteca custava caro à toa — só o doc antigo, que
+       nunca passou por um save novo, ainda paga a conta. */
+    const palavrasDe = (a) => a.words ?? wordCount(a.contentHTML);
     const fmtDate = (ts) => ts ? new Date(ts).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+
+    /* localStorage some em aba anônima e estoura com site data bloqueado —
+       lembrar estante aberta é conforto, não pode derrubar o Escritório. */
+    const guardado = (chave, alt) => { try { return JSON.parse(localStorage.getItem(chave)) ?? alt; } catch { return alt; } };
+    const guardar = (chave, v) => { try { localStorage.setItem(chave, JSON.stringify(v)); } catch { /* sem memória, paciência */ } };
 
     async function loadAll() {
         try {
@@ -59,6 +70,8 @@ export const Editor = (() => {
        Todas num doc só (como o mural). A estante padrão é virtual:
        lista TODOS os livros, e é onde o livro sem estante aparece. */
     const ESTANTE_TODAS = '__todas';
+    const CHAVE_ABERTAS = 'wb-cronista-estantes-abertas';
+    let abertas = new Set(guardado(CHAVE_ABERTAS, []));
     const salvarEstantes = () => setDoc(doc(db, 'worldbuilding-settings', 'estantes'), { lista: estantes });
     /* Um livro pode estar em várias estantes. `estanteId` (uma só) é o
        formato legado — quando `estanteIds` existe, é ele que manda. */
@@ -73,6 +86,21 @@ export const Editor = (() => {
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.createdAt ?? 0) - (b.createdAt ?? 0));
     const loose = () => artigos.filter(a => !a.bookId)
         .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+
+    /* ── Filtros da Biblioteca ─────────────────────────────────
+       Uma busca de texto e um status. A regra é uma só: o LIVRO aparece se
+       ele mesmo casar com a busca, ou se sobrar algum capítulo dele depois
+       do filtro. Quando o livro casa pelo próprio título, os capítulos dele
+       não precisam casar de novo — quem procurou o livro quer o livro. */
+    const filtrando = () => !!(busca || fstatus);
+    const bate = (...campos) => !busca || campos.some(c => String(c || '').toLowerCase().includes(busca));
+    const statusPassa = (a) => !fstatus
+        || (fstatus === 'privado' ? !a.public : (a.status || 'rascunho') === fstatus);
+    const capsVisiveis = (b) => chaptersOf(b.id)
+        .filter(a => statusPassa(a) && (bate(b.title, b.description) || bate(a.title, a.synopsis)));
+    const livrosVisiveis = (id) => livrosDaEstante(id).filter(b =>
+        !filtrando() || capsVisiveis(b).length > 0 || (!fstatus && bate(b.title, b.description)));
+    const avulsosVisiveis = () => loose().filter(a => statusPassa(a) && bate(a.title, a.synopsis));
 
     const pubBadge = (isPub) => isPub
         ? '<span class="wb-badge wb-badge--pub">🌐 Público</span>'
@@ -102,8 +130,14 @@ export const Editor = (() => {
         setTitle('📚 Escritório do Cronista');
         document.body.classList.remove('wbt-focus');
 
-        const totalPalavras = artigos.reduce((s, a) => s + wordCount(a.contentHTML), 0);
-        const avulsos = loose();
+        const totalPalavras = artigos.reduce((s, a) => s + palavrasDe(a), 0);
+        const avulsos = avulsosVisiveis();
+        const ativo = filtrando();
+        /* Com filtro ligado, a estante vazia só ocuparia espaço dizendo nada. */
+        const comLivros = (id) => { const l = livrosVisiveis(id); return ativo && !l.length ? null : l; };
+        const achados = ativo
+            ? new Set([...livrosVisiveis(ESTANTE_TODAS).flatMap(b => capsVisiveis(b).map(a => a.id)), ...avulsos.map(a => a.id)]).size
+            : 0;
 
         contentBody().innerHTML = `
         <div class="wb-library">
@@ -119,19 +153,30 @@ export const Editor = (() => {
                 <button class="btn btn-success btn-sm" id="newBook">📗 Novo livro</button>
             </div>
 
+            <div class="wb-lib-filtros">
+                <input id="libBusca" class="form-input wb-lib-busca" type="search" autocomplete="off"
+                       placeholder="🔎 Buscar livro ou capítulo…" value="${esc(busca)}">
+                <div class="wbt-chips" id="libStatus">
+                    ${[['', 'Tudo'], ['rascunho', '✏️ Rascunho'], ['revisao', '🔍 Revisão'],
+                       ['publicado', '✅ Publicado'], ['privado', '🔒 Privado']].map(([v, l]) =>
+                        `<button type="button" class="wbt-chip ${fstatus === v ? 'is-active' : ''}" data-fst="${v}">${l}</button>`).join('')}
+                </div>
+                ${ativo ? `<button class="btn btn-secondary btn-sm" id="libLimpar" title="Limpar busca e filtro">✕ Limpar</button>
+                    <span class="wbt-muted">${achados} ${achados === 1 ? 'texto' : 'textos'}</span>` : ''}
+            </div>
+
             <h3 class="wb-lib-section">📚 Biblioteca</h3>
             <div class="wb-estantes">
                 ${estanteHTML({ id: ESTANTE_TODAS, nome: 'Todos os livros', icone: '📚' },
-                    livrosDaEstante(ESTANTE_TODAS).length,
-                    livrosDaEstante(ESTANTE_TODAS).map(bookCard).join('')
-                        || '<p class="wbt-muted">Nenhum livro ainda. Crie um livro para agrupar capítulos e contos.</p>')}
-                ${estantes.map(e => estanteHTML(e, livrosDaEstante(e.id).length,
-                    livrosDaEstante(e.id).map(bookCard).join('')
-                        || '<p class="wbt-muted">Estante vazia. Escolha esta estante no ⚙️ do livro.</p>')).join('')}
-                ${estanteHTML({ id: '__avulsos', nome: 'Textos avulsos', icone: '📄' }, avulsos.length,
-                    `<div class="wb-loose-list">${avulsos.map(a => articleRow(a)).join('')
-                        || '<p class="wbt-muted">Nenhum texto avulso. Bons textos avulsos podem virar capítulos depois.</p>'}</div>`)}
+                    comLivros(ESTANTE_TODAS),
+                    'Nenhum livro ainda. Crie um livro para agrupar capítulos e contos.')}
+                ${estantes.map(e => estanteHTML(e, comLivros(e.id),
+                    'Estante vazia. Escolha esta estante no ⚙️ do livro.')).join('')}
+                ${(ativo && !avulsos.length) ? '' : estanteHTML({ id: '__avulsos', nome: 'Textos avulsos', icone: '📄' }, avulsos,
+                    'Nenhum texto avulso. Bons textos avulsos podem virar capítulos depois.',
+                    (lista) => `<div class="wb-loose-list">${lista.map(a => articleRow(a)).join('')}</div>`)}
             </div>
+            ${ativo && !achados ? '<p class="wbt-empty">Nada casou com a busca. Tente outra palavra ou limpe o filtro.</p>' : ''}
         </div>`;
 
         bindLibrary();
@@ -140,17 +185,23 @@ export const Editor = (() => {
     /* Bloco compacto de estante: fechada ocupa um tijolinho na grade,
        aberta toma a largura toda e mostra os livros. Puro <details>.
        O ⚙️ fica FORA do <summary> — dentro dele, todo clique abria a
-       estante junto. Ele flutua no canto do cabeçalho (CSS). */
-    function estanteHTML(e, n, corpo) {
+       estante junto. Ele flutua no canto do cabeçalho (CSS).
+
+       `lista` null = estante que o filtro esvaziou, nem desenha. Aberta se o
+       autor a deixou aberta da última vez, ou sempre que há filtro ligado —
+       buscar e receber uma fileira de estantes fechadas não seria busca. */
+    function estanteHTML(e, lista, vazioMsg, render = (l) => l.map(bookCard).join('')) {
+        if (!lista) return '';
         const fixa = e.id === ESTANTE_TODAS || e.id === '__avulsos';
+        const corpo = lista.length ? render(lista) : `<p class="wbt-muted">${vazioMsg}</p>`;
         return `
         <div class="wb-estante" data-estante="${esc(e.id)}">
-            <details class="wb-estante__det">
+            <details class="wb-estante__det" ${abertas.has(e.id) || filtrando() ? 'open' : ''}>
                 <summary class="wb-estante__head">
                     <span class="wb-estante__caret">▸</span>
                     <span class="wb-estante__icon">${esc(e.icone || '🗂️')}</span>
                     <span class="wb-estante__name">${esc(e.nome || 'Estante sem nome')}</span>
-                    <span class="wb-badge wb-badge--soft">${n}</span>
+                    <span class="wb-badge wb-badge--soft">${lista.length}</span>
                 </summary>
                 <div class="wb-estante__body">${corpo}</div>
             </details>
@@ -193,20 +244,23 @@ export const Editor = (() => {
     }
 
     function bookCard(b) {
-        const caps = chaptersOf(b.id);
-        const palavras = caps.reduce((s, a) => s + wordCount(a.contentHTML), 0);
+        const todos = chaptersOf(b.id);
+        const caps = filtrando() ? capsVisiveis(b) : todos;
+        const palavras = todos.reduce((s, a) => s + palavrasDe(a), 0);
+        /* O número do capítulo é o do SUMÁRIO, não o da lista filtrada: achar
+           "cap. 1" quando na verdade é o sétimo do livro seria mentira. */
         const capsHtml = caps.length
-            ? caps.map((a, i) => articleRow(a, i + 1)).join('')
+            ? caps.map(a => articleRow(a, todos.indexOf(a) + 1)).join('')
             : '<p class="wbt-muted" style="margin:.4rem .2rem">Sem capítulos ainda.</p>';
         return `
-        <details class="wb-book" data-book="${b.id}">
+        <details class="wb-book" data-book="${b.id}" ${filtrando() ? 'open' : ''}>
             <summary class="wb-book__head">
                 <span class="wb-book__caret">▸</span>
                 <div class="wb-book__cover" style="${b.cover ? `background-image:url('${esc(b.cover)}')` : ''}"
                      ${b.cover ? `data-zoom="${esc(b.cover)}" data-zoom-alt="${esc(b.title || '')}" title="Ver a capa maior"` : ''}>${b.cover ? '' : '📖'}</div>
                 <div class="wb-book__meta">
                     <div class="wb-book__title">${esc(b.title || 'Livro sem título')}</div>
-                    <div class="wb-book__badges">${seloVersao(b)}${pubBadgesLivro(b)} <span class="wb-badge wb-badge--soft">${caps.length} cap.</span> <span class="wb-badge wb-badge--soft">${palavras.toLocaleString('pt-BR')} palavras</span></div>
+                    <div class="wb-book__badges">${seloVersao(b)}${pubBadgesLivro(b)} <span class="wb-badge wb-badge--soft">${filtrando() && caps.length !== todos.length ? caps.length + ' de ' + todos.length : todos.length} cap.</span> <span class="wb-badge wb-badge--soft">${palavras.toLocaleString('pt-BR')} palavras</span></div>
                     ${b.description ? `<p class="wb-book__desc">${esc(b.description)}</p>` : ''}
                 </div>
                 <div class="wb-book__actions">
@@ -219,7 +273,7 @@ export const Editor = (() => {
     }
 
     function articleRow(a, num) {
-        const palavras = wordCount(a.contentHTML);
+        const palavras = palavrasDe(a);
         return `
         <div class="wb-chapter" data-openart="${a.id}">
             <span class="wb-chapter__num">${num ? num : '—'}</span>
@@ -252,6 +306,34 @@ export const Editor = (() => {
                 await deleteDoc(doc(db, 'worldbuilding-articles', b.dataset.delart));
                 artigos = artigos.filter(x => x.id !== b.dataset.delart);
                 renderLibrary();
+            });
+
+        /* Busca: re-renderiza a cada tecla e devolve o cursor onde estava —
+           sem isso, digitar a segunda letra já é em outro campo. */
+        const cx = $('#libBusca');
+        cx.oninput = () => {
+            const pos = cx.selectionStart;
+            busca = cx.value.trim().toLowerCase();
+            renderLibrary();
+            const novo = $('#libBusca');
+            novo.focus(); novo.setSelectionRange(pos, pos);
+        };
+        $('#libStatus').onclick = (e) => {
+            const c = e.target.closest('[data-fst]'); if (!c) return;
+            fstatus = c.dataset.fst === fstatus ? '' : c.dataset.fst;   // reclicar desliga
+            renderLibrary();
+        };
+        const limpar = $('#libLimpar');
+        if (limpar) limpar.onclick = () => { busca = ''; fstatus = ''; renderLibrary(); };
+
+        /* Estante aberta/fechada sobrevive à próxima visita. Com filtro
+           ligado tudo nasce aberto, e aí a marcação não vale como escolha. */
+        contentBody().querySelectorAll('.wb-estante__det').forEach(d =>
+            d.ontoggle = () => {
+                if (filtrando()) return;
+                const id = d.closest('[data-estante]').dataset.estante;
+                d.open ? abertas.add(id) : abertas.delete(id);
+                guardar(CHAVE_ABERTAS, [...abertas]);
             });
     }
 
@@ -616,6 +698,7 @@ export const Editor = (() => {
     /* ── Salvar ─────────────────────────────────────────── */
     async function save() {
         const ed = $('#richEditor');
+        if (!ed) return;   // saiu do editor antes do autosave disparar
         const mentions = [...ed.querySelectorAll('a.wbt-mention')].map(a => ({ id: a.dataset.entity, cat: a.dataset.cat }));
         const a = atual;
         a.title = $('#articleTitle').value.trim() || 'Sem título';
@@ -636,13 +719,28 @@ export const Editor = (() => {
         await setDoc(doc(db, 'worldbuilding-articles', id), data);
         if (!artigos.find(x => x.id === a.id)) artigos.push(a);
         else artigos = artigos.map(x => x.id === a.id ? a : x);
+        sujo = false;
         $('#editorStatus').textContent = `✓ Salvo às ${new Date().toLocaleTimeString('pt-BR')}`;
     }
     function autosaveHint() {
         clearTimeout(saveTimer);
+        sujo = true;
         const st = $('#editorStatus'); if (st) st.textContent = 'Alterações não salvas…';
         saveTimer = setTimeout(() => { if (view === 'editor') save(); }, 4000);
     }
+
+    /* O autosave é de 4s. Fechar a aba dentro dessa janela levava o
+       parágrafo junto, calado — o navegador é quem sabe perguntar. */
+    window.addEventListener('beforeunload', (e) => {
+        if (view === 'editor' && sujo) { e.preventDefault(); e.returnValue = ''; }
+    });
+    /* Ctrl+S. Registrado uma vez no documento (renderEditor roda de novo a
+       cada capítulo, e listener por render vira pilha de listeners). */
+    document.addEventListener('keydown', (e) => {
+        if (!(e.key === 's' && (e.ctrlKey || e.metaKey)) || view !== 'editor') return;
+        e.preventDefault();
+        clearTimeout(saveTimer); save();
+    });
 
     function bindEditor() {
         $('#backLib').onclick = async () => { clearTimeout(saveTimer); await save(); renderLibrary(); };
