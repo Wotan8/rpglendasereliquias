@@ -35,3 +35,37 @@ python .graphify/labels.py aplicar
 ```
 
 O casamento é por sobreposição de membros, não por ID — os IDs de comunidade mudam a cada extração. Se você nomear comunidades novas à mão, grave com `python .graphify/labels.py salvar`.
+
+# Versionamento de cânone
+
+Todo cadastro que é cânone — livro e capítulo do Cronista, raça, classe, tribo,
+local, NPC, item, magia, peculiaridade, módulo de classe — carrega um número de
+versão. **Mexeu no conteúdo, sobe a versão.** Isso vale para você tanto quanto
+para o criador editando pela tela.
+
+A escada é decimal e fecha em 99:
+
+```
+1.02 → 1.03 → … → 1.98 → 1.99 → 2.00
+```
+
+Ou seja: o incremento normal é de **um centésimo**. A casa inteira só vira
+quando a decimal estoura (1.99 → 2.00), nunca por decisão de "essa mudança foi
+grande". Se o criador quiser marcar uma virada de era, ele digita a versão à
+mão — só ele decide pular.
+
+Regras:
+
+- **Sem versão gravada ainda?** A primeira gravação nasce em `1.00`.
+- **Alterou por conta própria** (script, migração, edição direta no Firestore,
+  patch em massa): incremente. Um cânone que muda sem mudar de versão é a
+  forma mais barata de o jogador ler uma coisa e a mesa jogar outra.
+- **Correção de digitação ou de acento** também sobe. A régua é "o texto que o
+  jogador lê mudou?", não "a mudança foi importante?".
+- **Não sobe** quando o que mudou é metadado que ninguém lê: `updatedAt`,
+  `updatedBy`, ordem no sumário, estante, marcação de publicação.
+- **Migração que toca N documentos** sobe a versão de cada um. Se for grande
+  demais para isso fazer sentido, pergunte antes de rodar.
+- O formato é texto livre no banco (`versao`), normalizado na exibição por
+  `versaoDoLivro()` em `shared/livros-pub.js` — que prefixa `v` quando o autor
+  não escreveu letra. Grave `"1.03"`, não `"v1.03"`.
