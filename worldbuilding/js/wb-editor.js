@@ -255,49 +255,132 @@ export const Editor = (() => {
             });
     }
 
-    /* ══════════════ LIVRO (modal) ══════════════ */
+    /* ══════════════ LIVRO (modal) ══════════════
+       Três abas em vez de um rolo só: o formulário inteiro cabia em ~14
+       blocos empilhados e o autor rolava para achar as publicações. As abas
+       reusam o .wbt-chip que o painel de consulta já usa. */
+    const STATUS_OPCOES = [['rascunho', '✏️ Rascunho'], ['revisao', '🔍 Em revisão'], ['publicado', '✅ Publicado']];
+    const statusOptions = (sel) => STATUS_OPCOES
+        .map(([v, l]) => `<option value="${v}" ${(sel || 'rascunho') === v ? 'selected' : ''}>${l}</option>`).join('');
+
     function openBookModal(book = null) {
         const b = book || { id: uid('book'), title: '', description: '', cover: '', public: false, order: books.length };
         const pub = pubDoLivro(book);   // livro novo nasce sem publicação nenhuma
         if (!book) Object.keys(pub).forEach(k => pub[k] = false);
+        const caps = book ? chaptersOf(b.id) : [];
         ToolModal.open(`
             <h2>${book ? '⚙️ Editar livro' : '📗 Novo livro'}</h2>
-            <div class="wbt-form">
-                <label>Título do livro <input id="bkTitle" class="form-input" value="${esc(b.title)}" placeholder="Ex: Crônicas de Eldoria — Vol. I"></label>
-                <label>Versão <input id="bkVersao" class="form-input" value="${esc(b.versao || '')}" placeholder="Ex: 2.1">
-                    <span class="wbt-muted" style="font-size:.8rem">Aparece como selo em toda tela que lista o livro, antes de abrir.
-                    Texto livre — mude a cada revisão. Vazio = sem selo.</span></label>
-                <div class="wbt-muted" style="margin:.6rem 0 .2rem;font-weight:700">🗂️ Estantes</div>
-                ${estantes.length
-                    ? estantes.map(e => `<label class="wbt-check"><input type="checkbox" id="bkEst_${esc(e.id)}" ${estantesDoLivro(b).includes(e.id) ? 'checked' : ''}>
-                        ${esc(e.icone || '🗂️')} ${esc(e.nome || '')}</label>`).join('')
-                    : '<div class="wbt-muted" style="font-size:.8rem">Nenhuma estante criada ainda — crie uma pelo botão 🗂️ da Biblioteca.</div>'}
-                <div class="wbt-muted" style="font-size:.8rem;margin-top:.2rem">
-                    Pode marcar quantas quiser — o mesmo livro aparece em todas.
-                    Sem nenhuma marcada, ele fica só em “Todos os livros”.
-                </div>
-                <label>Sinopse / descrição <textarea id="bkDesc" class="form-textarea" placeholder="Do que trata este livro?">${esc(b.description || '')}</textarea></label>
-                <label>Capa do livro ${CampoImagem.html({ id: 'bkCover', classe: 'form-input', valor: b.cover || '', pasta: 'worldbuilding-images/capas' })}</label>
-                <div class="wbt-muted" style="margin:.6rem 0 .2rem;font-weight:700">📖 Publicações</div>
-                ${PUBLICACOES.map(([k, label, dica]) => `
-                    <label class="wbt-check"><input type="checkbox" id="bkPub_${k}" ${pub[k] ? 'checked' : ''}>
-                        ${label} <span class="wbt-muted">— ${dica}</span></label>`).join('')}
-                <div class="wbt-muted" style="font-size:.8rem;margin-top:.2rem">
-                    Capítulo a capítulo, quem tranca é a aba Conhecimento do Painel do Criador.
-                </div>
-                <div class="wbt-actions">
-                    ${book ? '<button class="btn btn-danger" id="bkDel">🗑️ Excluir livro</button>' : ''}
-                    <button class="btn btn-success" id="bkSave">💾 Salvar livro</button>
-                </div>
+            <div class="wbt-chips wb-bktabs" id="bkTabs">
+                <button type="button" class="wbt-chip is-active" data-bktab="geral">📖 Livro</button>
+                <button type="button" class="wbt-chip" data-bktab="pub">🌐 Publicação</button>
+                ${caps.length ? `<button type="button" class="wbt-chip" data-bktab="caps">📑 Capítulos <b>${caps.length}</b></button>` : ''}
+            </div>
+            <div class="wbt-form wb-bkform">
+                <section data-bkpanel="geral">
+                    <div class="wbt-row2">
+                        <label>Título do livro <input id="bkTitle" class="form-input" value="${esc(b.title)}" placeholder="Ex: Crônicas de Eldoria — Vol. I"></label>
+                        <label>Versão <input id="bkVersao" class="form-input" value="${esc(b.versao || '')}" placeholder="Ex: 2.1"></label>
+                    </div>
+                    <p class="wbt-muted wb-bkhint">A versão vira selo em toda tela que lista o livro, antes de abrir. Texto livre — vazio = sem selo.</p>
+                    <label>Sinopse / descrição <textarea id="bkDesc" class="form-textarea" rows="3" placeholder="Do que trata este livro?">${esc(b.description || '')}</textarea></label>
+                    <label>Capa do livro ${CampoImagem.html({ id: 'bkCover', classe: 'form-input', valor: b.cover || '', pasta: 'worldbuilding-images/capas' })}</label>
+                    <div class="wb-bkgroup">
+                        <span class="wb-bkgroup__tit">🗂️ Estantes</span>
+                        ${estantes.length
+                            ? `<div class="wb-bkchips">${estantes.map(e => `
+                                <label class="wb-bkchip"><input type="checkbox" data-bkest="${esc(e.id)}" ${estantesDoLivro(b).includes(e.id) ? 'checked' : ''}>
+                                    ${esc(e.icone || '🗂️')} ${esc(e.nome || '')}</label>`).join('')}</div>
+                               <p class="wbt-muted wb-bkhint">Marque quantas quiser. Sem nenhuma, o livro fica só em “Todos os livros”.</p>`
+                            : '<p class="wbt-muted wb-bkhint">Nenhuma estante criada ainda — crie uma pelo botão 🗂️ da Biblioteca.</p>'}
+                    </div>
+                </section>
+
+                <section data-bkpanel="pub" hidden>
+                    <div class="wb-pubgrid">
+                        ${PUBLICACOES.map(([k, label, dica]) => `
+                            <label class="wb-pubopt"><input type="checkbox" data-bkpub="${k}" ${pub[k] ? 'checked' : ''}>
+                                <span><b>${label}</b><small>${esc(dica)}</small></span></label>`).join('')}
+                    </div>
+                    <p class="wbt-muted wb-bkhint">Isto vale para o LIVRO inteiro. Capítulo a capítulo, quem libera é a aba 📑 Capítulos — e quem tranca por requisito é a aba Conhecimento do Painel do Criador.</p>
+                </section>
+
+                ${caps.length ? `
+                <section data-bkpanel="caps" hidden>
+                    <div class="wb-capbulk">
+                        <label class="wbt-check"><input type="checkbox" id="capAll"> Todos</label>
+                        <span class="wbt-muted" id="capSelN">nenhum selecionado</span>
+                        <span style="flex:1"></span>
+                        <select id="capBulkSt" class="form-select" disabled>
+                            <option value="">Status…</option>
+                            ${STATUS_OPCOES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}
+                        </select>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bulkpub="1" disabled>🌐 Público</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bulkpub="0" disabled>🔒 Privado</button>
+                    </div>
+                    <div class="wb-capedit">
+                        ${caps.map((a, i) => `
+                        <div class="wb-capedit__row">
+                            <input type="checkbox" class="wb-capedit__sel" data-capsel="${a.id}" aria-label="Selecionar ${esc(a.title || 'capítulo')}">
+                            <span class="wb-chapter__num">${i + 1}</span>
+                            <span class="wb-capedit__nome" title="${esc(a.title || 'Sem título')}">${esc(a.title || 'Sem título')}</span>
+                            <select class="form-select wb-capedit__st" data-capst="${a.id}">${statusOptions(a.status)}</select>
+                            <label class="wb-capedit__pub" title="Capítulo visível para quem já enxerga o livro">
+                                <input type="checkbox" data-cappub="${a.id}" ${a.public ? 'checked' : ''}> 🌐</label>
+                        </div>`).join('')}
+                    </div>
+                    <p class="wbt-muted wb-bkhint">🌐 é o que libera o capítulo na ficha e no Tabuleiro. O status ✅ Publicado é o que solta o capítulo no Cronista público.</p>
+                </section>` : ''}
+            </div>
+            <div class="wbt-actions">
+                ${book ? '<button class="btn btn-danger" id="bkDel">🗑️ Excluir livro</button>' : ''}
+                <button class="btn btn-secondary" data-close>Cancelar</button>
+                <button class="btn btn-success" id="bkSave">💾 Salvar livro</button>
             </div>`);
+
+        /* Abas */
+        $('#bkTabs').onclick = (e) => {
+            const t = e.target.closest('[data-bktab]'); if (!t) return;
+            $('#bkTabs').querySelectorAll('.wbt-chip').forEach(c => c.classList.toggle('is-active', c === t));
+            document.querySelectorAll('.wb-bkform > section')
+                .forEach(s => s.hidden = s.dataset.bkpanel !== t.dataset.bktab);
+        };
+
+        /* Ações em massa dos capítulos — valem só para o que está marcado. */
+        if (caps.length) {
+            const selecionados = () => [...document.querySelectorAll('[data-capsel]:checked')].map(c => c.dataset.capsel);
+            const refresh = () => {
+                const n = selecionados().length;
+                $('#capSelN').textContent = n ? `${n} selecionado${n > 1 ? 's' : ''}` : 'nenhum selecionado';
+                document.querySelectorAll('#capBulkSt, [data-bulkpub]').forEach(el => el.disabled = !n);
+                $('#capAll').checked = n === caps.length;
+                $('#capAll').indeterminate = n > 0 && n < caps.length;
+            };
+            $('#capAll').onchange = (e) => {
+                document.querySelectorAll('[data-capsel]').forEach(c => c.checked = e.target.checked);
+                refresh();
+            };
+            document.querySelector('.wb-capedit').addEventListener('change', (e) => {
+                if (e.target.matches('[data-capsel]')) refresh();
+            });
+            $('#capBulkSt').onchange = (e) => {
+                const v = e.target.value; if (!v) return;
+                selecionados().forEach(id => { document.querySelector(`[data-capst="${id}"]`).value = v; });
+                e.target.value = '';
+            };
+            document.querySelectorAll('[data-bulkpub]').forEach(btn => btn.onclick = () => {
+                const on = btn.dataset.bulkpub === '1';
+                selecionados().forEach(id => { document.querySelector(`[data-cappub="${id}"]`).checked = on; });
+            });
+        }
+
         $('#bkSave').onclick = async () => {
             b.title = $('#bkTitle').value.trim() || 'Livro sem título';
             b.versao = $('#bkVersao').value.trim();
-            b.estanteIds = estantes.filter(e => document.getElementById('bkEst_' + e.id)?.checked).map(e => e.id);
+            b.estanteIds = [...document.querySelectorAll('[data-bkest]:checked')].map(c => c.dataset.bkest);
             b.estanteId = null;   // legado, ver estantesDoLivro()
             b.description = $('#bkDesc').value.trim();
             b.cover = $('#bkCover').value.trim();
-            b.pub = Object.fromEntries(PUBLICACOES.map(([k]) => [k, $('#bkPub_' + k).checked]));
+            b.pub = Object.fromEntries(PUBLICACOES.map(([k]) => [k, document.querySelector(`[data-bkpub="${k}"]`).checked]));
             // `public` continua gravado só para o legado: uma vez que `pub` existe no
             // doc, é ele que manda em toda leitura (shared/livros-pub.js).
             b.public = !!(b.pub.geral || b.pub.conhGeral || b.pub.conhVinculo);
@@ -308,6 +391,15 @@ export const Editor = (() => {
             await setDoc(doc(db, 'worldbuilding-books', id), data);
             if (!books.find(x => x.id === b.id)) books.push(b);
             else books = books.map(x => x.id === b.id ? b : x);
+            // Só grava o capítulo que realmente mudou — o livro cheio são
+            // dezenas de docs e o autor costuma mexer em dois.
+            for (const a of caps) {
+                const st = document.querySelector(`[data-capst="${a.id}"]`).value;
+                const pb = document.querySelector(`[data-cappub="${a.id}"]`).checked;
+                if (st === (a.status || 'rascunho') && pb === !!a.public) continue;
+                a.status = st; a.public = pb; a.updatedAt = now(); a.updatedBy = WB().user?.email || '';
+                await setDoc(doc(db, 'worldbuilding-articles', a.id), { status: st, public: pb, updatedAt: a.updatedAt, updatedBy: a.updatedBy }, { merge: true });
+            }
             ToolModal.close(); renderLibrary();
         };
         const del = $('#bkDel');

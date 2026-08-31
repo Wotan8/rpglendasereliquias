@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check — Editar livro</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/lendas-reliquias.css">
+<link rel="stylesheet" href="shared/sanfona.css">
+<link rel="stylesheet" href="shared/acervo.css">
+<link rel="stylesheet" href="shared/dialogo.css">
+<link rel="stylesheet" href="shared/texto-mundo.css">
+<link rel="stylesheet" href="worldbuilding/css/worldbuilding.css">
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=12">
+<script src="shared/theme.js"></script>
+<script src="shared/campo-imagem.js"></script>
+
+<!-- Troca o Firestore real por um duble em memoria, para o harness rodar
+     o wb-editor.js DE VERDADE (nao uma copia do markup). -->
+<script type="importmap">
+{ "imports": { "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js" } }
+</script>
+
+<style>
+  .chk-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; display: flex; gap: .5rem;
+      align-items: center; flex-wrap: wrap; padding: .4rem .6rem; background: var(--lr-bg-1);
+      border-bottom: 1px solid var(--lr-border); font: 600 .85rem/1 var(--lr-font-body); color: var(--lr-text-1); }
+  .chk-bar button { padding: .2rem .6rem; border: 1px solid var(--lr-border); border-radius: 6px;
+      background: var(--lr-surface); color: var(--lr-text-1); font: inherit; cursor: pointer; }
+  .main-content { padding-top: 46px; }
+  #chkOut { font-weight: 400; }
+</style>
+</head>
+<body>
+
+<div class="chk-bar">
+    <strong>Check — Editar livro</strong>
+    <button onclick="document.documentElement.classList.toggle('dark')">Tema</button>
+    <button id="chkAbrir">Abrir o ⚙️ do livro 1</button>
+    <button id="chkRun">▶ Rodar asserts</button>
+    <span id="chkOut"></span>
+</div>
+
+<main class="main-content">
+    <div class="content-header"><h1 class="content-title" id="contentTitle">Escritório do Cronista</h1></div>
+    <div class="content-body" id="contentBody"></div>
+</main>
+
+<div class="modal wbt-modal" id="wbToolModal">
+    <div class="modal-content wbt-modal__content">
+        <button class="modal-close wbt-modal__close" data-close>✕</button>
+        <div id="wbToolModalBody"></div>
+    </div>
+</div>
+
+<script type="module">
+import { GRAVADO } from './__check-stub-firestore.js';
+import { Editor } from './worldbuilding/js/wb-editor.js';
+
+window.WB = { data: {}, user: { email: 'check@harness' } };
+await Editor.render();
+
+const $ = (s) => document.querySelector(s);
+const abrirCog = () => $('[data-editbook="b1"]').click();
+$('#chkAbrir').onclick = abrirCog;
+
+$('#chkRun').onclick = async () => {
+    const ok = [], erro = [];
+    const t = (nome, cond) => (cond ? ok : erro).push(nome);
+    GRAVADO.length = 0;
+    abrirCog();
+
+    // 1. Abre na aba Livro, com as outras escondidas.
+    t('abre na aba Livro', !$('[data-bkpanel="geral"]').hidden && $('[data-bkpanel="pub"]').hidden);
+    t('aba Capitulos existe', !!$('[data-bktab="caps"]'));
+
+    // 2. Trocar de aba mostra uma so.
+    $('[data-bktab="caps"]').click();
+    t('aba Capitulos abre sozinha',
+        !$('[data-bkpanel="caps"]').hidden
+        && $('[data-bkpanel="geral"]').hidden && $('[data-bkpanel="pub"]').hidden);
+    t('3 linhas de capitulo', document.querySelectorAll('.wb-capedit__row').length === 3);
+
+    // 3. Acoes em massa nascem travadas e destravam com selecao.
+    t('massa travada sem selecao', $('#capBulkSt').disabled);
+    $('[data-capsel="a1"]').checked = true;
+    $('[data-capsel="a1"]').dispatchEvent(new Event('change', { bubbles: true }));
+    t('massa destrava com 1 marcado', !$('#capBulkSt').disabled);
+    t('contador diz 1', $('#capSelN').textContent.startsWith('1'));
+
+    // 4. So o selecionado muda.
+    $('#capBulkSt').value = 'publicado';
+    $('#capBulkSt').dispatchEvent(new Event('change'));
+    t('massa mudou so o a1',
+        $('[data-capst="a1"]').value === 'publicado' && $('[data-capst="a2"]').value === 'publicado'
+        && $('[data-capst="a3"]').value === 'rascunho');
+    document.querySelector('[data-bulkpub="1"]').click();
+    t('massa publicou so o a1',
+        $('[data-cappub="a1"]').checked && !$('[data-cappub="a3"]').checked);
+
+    // 5. "Todos" pega tudo.
+    $('#capAll').checked = true;
+    $('#capAll').dispatchEvent(new Event('change'));
+    t('Todos marca os 3', document.querySelectorAll('[data-capsel]:checked').length === 3);
+    document.querySelector('[data-bulkpub="0"]').click();
+    t('despublica os 3', document.querySelectorAll('[data-cappub]:checked').length === 0);
+
+    // 6. Edicao individual continua valendo.
+    $('[data-capst="a3"]').value = 'revisao';
+    $('[data-cappub="a3"]').checked = true;
+
+    // 7. Salvar grava o livro + SO os capitulos que mudaram.
+    await $('#bkSave').onclick();
+    const livro = GRAVADO.find(g => g.col === 'worldbuilding-books');
+    t('gravou o livro', !!livro);
+    const caps = GRAVADO.filter(g => g.col === 'worldbuilding-articles');
+    // a1: rascunho->publicado; a2: era publicado+publico, virou privado; a3: ->revisao+publico
+    t('gravou so os 3 alterados', caps.length === 3);
+    const c = (id) => caps.find(x => x.id === id);
+    t('a1 publicado e privado', c('a1').data.status === 'publicado' && c('a1').data.public === false);
+    t('a2 segue publicado, agora privado', c('a2').data.status === 'publicado' && c('a2').data.public === false);
+    t('a3 revisao e publico', c('a3').data.status === 'revisao' && c('a3').data.public === true);
+    t('capitulo grava por merge', caps.every(x => x.merge === true));
+    t('nao tocou no avulso a9', !caps.some(x => x.id === 'a9'));
+
+    // 8. Estantes e publicacao do livro sobrevivem ao round-trip.
+    t('estanteIds preservado', JSON.stringify(livro.data.estanteIds) === '["e1"]');
+    t('pub do livro preservado', livro.data.pub.geral === true && livro.data.pub.mestre === false);
+
+    $('#chkOut').innerHTML = erro.length
+        ? '<span style="color:var(--lr-blood)">✗ ' + erro.length + ' falha(s): ' + erro.join(' · ') + '</span>'
+        : '<span style="color:var(--lr-nature)">✓ ' + ok.length + '/' + ok.length + ' passaram</span>';
+    console.log({ ok, erro, GRAVADO });
+};
+</script>
+</body>
+</html>
