@@ -25,7 +25,7 @@
  */
 import assert from 'node:assert/strict';
 import { calcularDadiva, unidadesDaSobra, tetoDoAtributo, TAXA, RODADAS_POR_CENA, DADIVAS, ATRIBUTOS, TETO_SEM_AURA,
-    dadoSugerido, candidatoDoDado, mesaDeSorteio, rolarSorteio } from './dadiva.js';
+    dadoSugerido, candidatoDoDado, mesaDeSorteio, rolarSorteio, candidatosDaCategoria } from './dadiva.js';
 import { dadivasDoHospede, ehAncestral } from './incorporacao.js';
 
 /* ═══ o teto sai da Aura, não de número solto ═══ */
@@ -287,3 +287,33 @@ assert.equal(ehAncestral({ ecoEstado: 'Ancestral' }), true, 'e o raso antigo con
 assert.equal(ehAncestral({ eco: { estado: 'sereno' } }), false);
 
 console.log('✅ Dádiva OK — tudo por sorteio, valor SOMADO (não sobra), teto cortando inclusive o Ancestral');
+
+/* ═══ Sentidos e Deslocamento sorteiam só o que o hóspede TEM ═══
+ * Era o mesmo furo já fechado nas perícias (o Velho de Muitas Vidas), e que
+ * tinha sobrado no ramo dos VDs por bloco: sortear no catálogo inteiro dava a
+ * um urso terrestre 1 chance em 7 de emprestar o único Deslocamento que ele
+ * possui. A conta do bicho não pode incluir o que o bicho não tem. */
+{
+    const catAmplo = {
+        ...catalogo,
+        derivedValues: [
+            ...catalogo.derivedValues,
+            { nome: 'Desloc. Aéreo', blocoNome: 'Deslocamento' },
+            { nome: 'Desloc. Aquático', blocoNome: 'Deslocamento' },
+            { nome: 'Percepção Tátil', blocoNome: 'Sentidos' },
+        ],
+    };
+    const passo = candidatosDaCategoria({ bloco: 'Deslocamento', sorteia: true }, urso, catAmplo);
+    assert.deepEqual(passo.map(c => c.nome), ['Desloc. Terrestre'],
+        '🔒 o urso só empresta o Deslocamento que tem — voar e nadar não entram no sorteio');
+
+    const olho = candidatosDaCategoria({ bloco: 'Sentidos', sorteia: true }, urso, catAmplo);
+    assert.deepEqual(olho.map(c => c.nome), ['Percepção', 'Percepção Olfativa'],
+        '🔒 e só os Sentidos que ele tem — Percepção Tátil em 0 fica fora');
+
+    const semNada = candidatosDaCategoria({ bloco: 'Deslocamento', sorteia: true },
+        { vds: {}, atributos: {}, pericias: {}, vitais: {} }, catAmplo);
+    assert.equal(semNada.length, 0, 'hóspede sem nenhum Deslocamento não oferece candidato');
+}
+
+console.log('✅ Dádiva OK — Sentidos e Deslocamento sorteiam só o que o hóspede tem');

@@ -1,5 +1,8 @@
 /* ===== PHASE 1 — Raças ===== */
 
+/** Raça de criatura (tag 'Criatura') não entra em lista de escolha de jogador. */
+function ehRacaDeCriatura(r) { return /criatura/i.test(String(r?.tags || '')); }
+
 function initPhase1(container) {
     let html = '';
 
@@ -9,7 +12,8 @@ function initPhase1(container) {
     html += `<div class="selection-grid selection-grid-visual" id="raceGrid">`;
 
     const races = window._systemData.races
-        .filter(r => r.publicado !== false)
+        // raça de bicho é publicada para as fichas de NPC referenciarem; jogador não escolhe
+        .filter(r => r.publicado !== false && !ehRacaDeCriatura(r))
         .sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
 
     for (const race of races) {

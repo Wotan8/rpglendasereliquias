@@ -3,6 +3,9 @@
    As funções ficam disponíveis globalmente. O firebase.js (module)
    chama loadSystemData() passando db/collection/getDocs. */
 
+/** Raça de criatura (tag 'Criatura') não entra em lista de escolha de jogador. */
+function ehRacaDeCriatura(r) { return /criatura/i.test(String(r?.tags || '')); }
+
 window._adjustMechanicForLevel = function(m, level) {
     const prog = m.progressao?.[String(level)];
     if (!prog) return m;
@@ -149,7 +152,8 @@ function populateRaceSelect() {
     racaEl.innerHTML = '<option value="">(Raça)</option>';
 
     const racas = window._systemData.races
-        .filter(r => r.publicado !== false)
+        // raça de bicho é publicada para as fichas de NPC referenciarem; jogador não escolhe
+        .filter(r => r.publicado !== false && !ehRacaDeCriatura(r))
         .sort((a, b) => (a.ordem || 99) - (b.ordem || 99));
 
     racas.forEach(r => {

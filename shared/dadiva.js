@@ -216,8 +216,17 @@ export function candidatosDaCategoria(cat, hospede, catalogo = {}) {
             candidatos.push({ chave: s.nome, nome: s.nome, pericia: true });
         }
     } else {
+        // 🎲 Mesma regra do bloco de perícia acima, e pelo mesmo motivo: sorteia-se
+        // entre o que o HÓSPEDE TEM, não entre o bloco inteiro do catálogo. Sem
+        // isto, um urso terrestre era sorteado contra os seis Deslocamentos —
+        // Flutuação, Desloc. Aéreo, Desloc. Aquático inclusive — e tinha 1 chance
+        // em 7 de emprestar a única coisa que possui. O conserto das perícias
+        // (o caso do Velho de Muitas Vidas) nunca tinha chegado neste ramo.
         for (const dv of catalogo.derivedValues || []) {
-            if (vdNaCategoria(dv, cat)) candidatos.push({ chave: dv.key || dv.nome, nome: dv.nome });
+            if (!vdNaCategoria(dv, cat)) continue;
+            const c = { chave: dv.key || dv.nome, nome: dv.nome };
+            if (!(Number(valorDe(hospede, c)) > 0)) continue;
+            candidatos.push(c);
         }
     }
     return candidatos;

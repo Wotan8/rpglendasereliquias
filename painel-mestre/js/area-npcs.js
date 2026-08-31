@@ -366,7 +366,13 @@ window.filterNpcs = function() {
         // Criatura
         if (n.tipo === 'criatura') {
             const c = n.criatura || {};
-            if (adv.advF_ameaca && c.nivelAmeaca !== adv.advF_ameaca) return false;
+            // O campo guarda a linha inteira do carimbo ("Séria · 0,81× · densidade ·
+            // Domável: …"); o Grau é só o primeiro segmento, e é por ele que se filtra.
+            if (adv.advF_ameaca) {
+                const grau = String(c.nivelAmeaca || '').split(' · ')[0]
+                    .normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+                if (grau !== adv.advF_ameaca) return false;
+            }
             if (adv.advF_habitat && !(c.habitat||'').toLowerCase().includes(adv.advF_habitat.toLowerCase())) return false;
             if (adv.advF_dieta && !(c.dieta||'').toLowerCase().includes(adv.advF_dieta.toLowerCase())) return false;
         }
@@ -2621,6 +2627,7 @@ function _buildNpcTemplate() {
                 "",
                 "CAMPO 'tipo': 'npc' ou 'criatura'",
                 "  Se 'criatura', preencha o objeto 'criatura' com habitat, comportamento, dieta, nivelAmeaca.",
+                "  nivelAmeaca começa pelo Grau: Inofensiva, Praga, Comum, Séria, Grave ou Calamidade.",
                 "",
                 "REFERÊNCIAS HÍBRIDAS (racaRef, classeRef, triboRef):",
                 "  Para usar um registro existente: { 'refId': 'ID_DO_REGISTRO', 'custom': '' }",
@@ -2985,7 +2992,7 @@ O JSON de cada NPC deve ser um objeto (ou um array de objetos) com os seguintes 
     "habitat": "",
     "comportamento": "",
     "dieta": "",
-    "nivelAmeaca": ""             // "inofensivo","baixo","medio","alto","letal"
+    "nivelAmeaca": ""             // começa pelo Grau: "Inofensiva","Praga","Comum","Séria","Grave","Calamidade"
   },
 
   // ===== ITENS DE INVENTÁRIO (opcional — importados junto com o NPC) =====
