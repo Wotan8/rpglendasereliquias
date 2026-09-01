@@ -28,6 +28,11 @@ const QUANDO = (ts) => {
 const ICONE = {
     'personagem-entregue': '📜',
     'item-para-mesa': '🎁',
+    // Dinheiro que voltou, e cobrança que não bateu: os dois vêm do webhook do
+    // Mercado Pago e ninguém mais os cria. Sem ícone próprio caíam no 📣 e se
+    // perdiam no meio da fila.
+    'estorno': '💸',
+    'valor-divergente': '⚠️',
     geral: '📣',
 };
 

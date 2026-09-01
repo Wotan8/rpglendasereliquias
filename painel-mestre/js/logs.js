@@ -34,7 +34,11 @@ export async function addLog(userEmail, action, characterName = '', section = 'g
         }
 
         await addDoc(collection(db, 'logs'), {
-            user: userEmail || currentUser?.email || 'Sistema',
+            /* O autor é sempre a conta logada, nunca o parâmetro. As rules
+               exigem que `user` seja o e-mail do token — trilha que aceita
+               autor forjado não serve de trilha. O parâmetro continua existindo
+               para as chamadas antigas, mas só decide o `userName` exibido. */
+            user: currentUser?.email || userEmail || 'Sistema',
             userName: currentUser?.displayName || userEmail || 'Mestre',
             action: action,
             character: characterName,

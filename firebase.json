@@ -11,7 +11,7 @@
       "**/__check-*",
       "**/__previa.html",
       "**/*.test.mjs",
-      "BRIEFING.md",
+      "**/*.md",
       "temp_path.txt",
       "*.rules"
     ],

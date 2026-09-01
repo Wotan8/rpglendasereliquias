@@ -21,7 +21,7 @@
 <script type="module">import '/shared/detalhe.js?v=6';</script>
 <link rel="stylesheet" href="/shared/dialogo.css?v=3">
 <script type="module">import '/shared/dialogo.js?v=2';</script>
-    <link rel="stylesheet" href="/menu/css/menu.css?v=44">
+    <link rel="stylesheet" href="/menu/css/menu.css?v=46">
     <link rel="stylesheet" href="/shared/tokens.css?v=11">
     <script src="/shared/theme.js"></script>
     <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout Mercado Pago contra bots/abuso. -->
@@ -206,34 +206,45 @@
                     <input type="password" id="cadastroPasswordConfirm" placeholder="Digite a senha novamente" required>
                 </div>
 
-                <!-- SELETOR DE ROLE -->
+                <!-- SELETOR DE ROLE
+                     Mestre e Criador aqui são PEDIDO, não escolha: a conta
+                     nasce Jogador e só muda quando um Criador aprova. -->
                 <div class="role-selector">
                     <label style="margin-bottom:12px;display:block;text-align:center">Escolha seu tipo de
                         conta:</label>
                     <label class="role-option selected" id="roleJogador">
-                        <input type="radio" name="role" value="jogador" checked onchange="toggleMasterCode()">
+                        <input type="radio" name="role" value="jogador" checked onchange="toggleAvisoCargo()">
                         <div class="role-info">
                             <div class="role-title">Jogador</div>
                             <div class="role-desc">Crie e gerencie seu personagem</div>
                         </div>
                     </label>
                     <label class="role-option" id="roleMestre">
-                        <input type="radio" name="role" value="mestre" onchange="toggleMasterCode()">
+                        <input type="radio" name="role" value="mestre" onchange="toggleAvisoCargo()">
                         <div class="role-info">
                             <div class="role-title">Mestre</div>
-                            <div class="role-desc">Veja e monitore todos os jogadores</div>
+                            <div class="role-desc">Conduza mesas e acompanhe os jogadores</div>
+                        </div>
+                    </label>
+                    <label class="role-option" id="roleCriador">
+                        <input type="radio" name="role" value="criador" onchange="toggleAvisoCargo()">
+                        <div class="role-info">
+                            <div class="role-title">Criador</div>
+                            <div class="role-desc">Edite o catálogo e as regras do sistema</div>
                         </div>
                     </label>
                 </div>
 
-                <!-- CÓDIGO SECRETO DO MESTRE -->
-                <div class="master-code-field" id="masterCodeField">
-                    <div class="code-info">Digite o código secreto do Mestre:</div>
-                    <div class="form-group">
-                        <input type="password" id="masterCode" placeholder="Código fornecido pelo administrador"
-                            autocomplete="off">
+                <!-- AVISO DE PEDIDO DE CARGO (aparece em Mestre e Criador) -->
+                <div class="cargo-aviso" id="cargoAviso">
+                    <div class="cargo-aviso-texto">
+                        🔐 Um Criador vai receber o seu pedido de acesso como
+                        <strong id="cargoAvisoNome">Mestre</strong>.
                     </div>
-                    <div class="code-hint">Apenas quem possui o código pode ser Mestre</div>
+                    <div class="cargo-aviso-hint">
+                        Até a aprovação, sua conta funciona normalmente como <strong>Jogador</strong>.
+                        Você é avisado aqui mesmo quando alguém decidir.
+                    </div>
                 </div>
 
                 <button type="submit" class="btn-login">CRIAR CONTA</button>
@@ -659,7 +670,7 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="/menu/js/menu-firebase.js?v=29"></script>
+    <script type="module" src="/menu/js/menu-firebase.js?v=32"></script>
     <!-- A janela da Roleta. Depois do menu-firebase.js: ela usa window.db e
          window.lrFunctions, que nascem lá. -->
     <script type="module" src="/menu/js/menu-roleta.js?v=12"></script>

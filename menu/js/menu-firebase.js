@@ -4,7 +4,7 @@
 // =============================================
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
     getFirestore,
     collection,
@@ -184,6 +184,7 @@ onAuthStateChanged(auth, async (user) => {
         document.body.classList.remove('portal-deslogado');
         atalhosNoLugar();
         document.dispatchEvent(new CustomEvent('portal:logado'));
+        avisarEmailNaoVerificado(user);
     } else {
         // Não autenticado → SEM redirect: a própria página vira o login.
         currentUser = null;
@@ -1032,15 +1033,19 @@ async function loadMetasJogador() {
         // metasData e lojaItensData já vêm de loadLojaItens() no login
         if (!metasData.length) await loadLojaItens();
 
-        // ponytail: soma no cliente varrendo a coleção `users`. Serve para uma mesa
-        // de dezenas de jogadores; virando centenas, trocar por um contador agregado
-        // mantido por Cloud Function (FieldValue.increment em metas_totais/global).
-        const snapUsers = await getDocs(collection(db, 'users'));
+        /* Varre `users_public`, não `users`: a soma é coletiva e precisa do
+           apoio de todo mundo, mas ninguém precisa do e-mail, do saldo nem do
+           histórico de compras dos outros para somar. O espelho traz os apoios
+           no mesmo formato, então `somarMetaTotais` é a mesma de sempre.
+           ponytail: soma no cliente varrendo a coleção. Serve para uma mesa de
+           dezenas de jogadores; virando centenas, trocar por um contador
+           agregado mantido por Cloud Function. */
+        const snapUsers = await getDocs(collection(db, 'users_public'));
         const users = snapUsers.docs.map(d => ({ id: d.id, ...d.data() }));
         const totais = somarMetaTotais(users, metasData);
 
-        // Contribuição pessoal — sai da mesma leitura, sem custo extra
-        const meuDoc = users.find(u => u.uid === currentUser.uid || u.email === currentUser.email);
+        // Contribuição pessoal: o espelho é indexado por uid, então é o meu doc.
+        const meuDoc = users.find(u => u.id === currentUser.uid);
         const meusTotais = somarMetaTotais(meuDoc ? [meuDoc] : [], metasData);
 
         loading.style.display = 'none';
@@ -1318,25 +1323,34 @@ window.logout = async function () {
 // ===== HELPERS =====
 
 // Buscar documento do usuário na coleção 'users'
+/* O documento do jogador é `users/{uid}`. Ponto.
+
+   Havia uma cascata aqui: procurava pelo campo `uid`, depois pelo campo
+   `email`, e só então pelo ID. Os dois primeiros são campos graváveis pelo
+   dono do documento — quem escrevesse `uid: <uid de outra pessoa>` no próprio
+   doc passava a receber tudo que fosse resolvido para ela, inclusive a entrega
+   de uma compra em dinheiro real. E o fallback por e-mail já errava sozinho:
+   três contas do Auth dividem o mesmo endereço, e a consulta devolvia
+   qualquer uma delas.
+
+   Se o documento não existe (conta criada fora do cadastro), ele nasce aqui —
+   vazio, que é exatamente o que uma conta nova é. */
 async function findUserDoc() {
-    // Método 1: por UID field
-    let q = query(collection(db, 'users'), where('uid', '==', currentUser.uid));
-    let snap = await getDocs(q);
-    if (!snap.empty) return snap.docs[0];
+    const ref = doc(db, 'users', currentUser.uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) return snap;
 
-    // Método 2: por email
-    q = query(collection(db, 'users'), where('email', '==', currentUser.email));
-    snap = await getDocs(q);
-    if (!snap.empty) return snap.docs[0];
-
-    // Método 3: doc ID = UID
     try {
-        const docRef = doc(db, 'users', currentUser.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) return docSnap;
-    } catch (e) { /* ignore */ }
-
-    return null;
+        await setDoc(ref, {
+            email: currentUser.email,
+            displayName: currentUser.displayName || '',
+            createdAt: new Date().toISOString()
+        });
+        return await getDoc(ref);
+    } catch (e) {
+        console.warn('Não foi possível criar o documento do usuário:', e);
+        return null;
+    }
 }
 
 function getCpColor(letra) {
@@ -1354,10 +1368,20 @@ function getCpColor(letra) {
    proprio continuam valendo. */
 function showAlert(message, type, duration = 3000) { return toast(message, type, duration); }
 
+/* Escapa TAMBÉM as aspas. O caminho `textContent → innerHTML` que estava aqui
+   escapa `<`, `>` e `&`, mas deixa `"` passar inteiro — e este helper é usado
+   DENTRO de atributos: `<img src="${escapeHtml(item.imagem)}">`,
+   `data-loja-item="${escapeHtml(item.id)}"`. Um valor com aspas fecha o
+   atributo e o que vem depois vira marcação. É a mesma versão que
+   painel-criador e a ficha já usavam, com a mesma razão anotada lá. */
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 function escapeHtmlWithBreaks(text) {
@@ -1885,6 +1909,41 @@ window.confirmPurchaseFrag = async function () {
     }
 };
 
+/* Faixa de "confirme seu e-mail". Em 31/08/2026 nenhuma das 19 contas tinha
+   e-mail confirmado, porque o cadastro nunca mandou a mensagem. Contas antigas
+   não são bloqueadas de comprar (seria trancar a mesa inteira de uma vez), mas
+   precisam de um caminho para confirmar — este aqui. Conta nova, criada depois
+   do corte, o servidor cobra na hora da compra. */
+function avisarEmailNaoVerificado(user) {
+    document.getElementById('avisoEmail')?.remove();
+    if (!user || user.emailVerified) return;
+
+    const faixa = document.createElement('div');
+    faixa.id = 'avisoEmail';
+    faixa.className = 'aviso-email';
+    faixa.innerHTML = `
+        <span>✉️ Confirme seu e-mail (<strong>${escapeHtml(user.email || '')}</strong>)
+        para manter o acesso à sua conta.</span>
+        <button type="button" id="btnReenviarEmail">Reenviar</button>`;
+    document.body.insertBefore(faixa, document.body.firstChild);
+
+    document.getElementById('btnReenviarEmail').addEventListener('click', async (ev) => {
+        const b = ev.currentTarget;
+        b.disabled = true; b.textContent = 'Enviando…';
+        try {
+            await sendEmailVerification(user);
+            showAlert('✅ Mensagem enviada. Procure na caixa de entrada (e no spam).', 'success');
+            b.textContent = 'Enviado';
+        } catch (e) {
+            // O Firebase limita reenvios seguidos; dizer isso é melhor que "erro".
+            showAlert(e?.code === 'auth/too-many-requests'
+                ? '⏳ Já enviamos há pouco. Espere alguns minutos e tente de novo.'
+                : '❌ Não foi possível enviar agora.', 'danger');
+            b.disabled = false; b.textContent = 'Reenviar';
+        }
+    });
+}
+
 // =============================================
 // RETORNO DO MERCADO PAGO (?compra=...)
 // Nenhum benefício é aplicado aqui — a entrega é exclusiva
@@ -1909,11 +1968,10 @@ window.confirmPurchaseFrag = async function () {
 
 // =============================================
 // 🔐 AUTH DO PORTAL — login + cadastro embutidos
-// Portado do index.html antigo (mesmos ids, mesmo fluxo, mesmo código de
-// mestre). Diferença única: NÃO redireciona — o onAuthStateChanged acima
-// troca o estado da própria página.
+// Portado do index.html antigo (mesmos ids, mesmo fluxo). Diferenças: NÃO
+// redireciona — o onAuthStateChanged acima troca o estado da própria página —
+// e o cadastro não concede mais cargo nenhum (ver toggleAvisoCargo).
 // =============================================
-const MASTER_SECRET_CODE = "MESTRE5253";
 
 function authAlert(message, type) {
     const mapa = { success: 'alertSuccess', danger: 'alertError', warning: 'alertWarning' };
@@ -1949,20 +2007,23 @@ window.toggleForm = function () {
     }
 };
 
-window.toggleMasterCode = function () {
-    const roleInput = document.querySelector('input[name="role"]:checked');
-    const masterCodeField = document.getElementById('masterCodeField');
-    const roleJogador = document.getElementById('roleJogador');
-    const roleMestre = document.getElementById('roleMestre');
-    roleJogador.classList.remove('selected');
-    roleMestre.classList.remove('selected');
-    if (roleInput.value === 'mestre') {
-        masterCodeField.classList.add('show');
-        roleMestre.classList.add('selected');
-    } else {
-        masterCodeField.classList.remove('show');
-        roleJogador.classList.add('selected');
-    }
+/* Mestre e Criador no cadastro são PEDIDO, não escolha: a conta nasce Jogador
+   e o cargo só muda quando um Criador aprova (definirCargo). O que aparece
+   aqui é o aviso de que é assim — no lugar do antigo campo de código secreto,
+   que era teatro: a senha estava no bundle e as rules nunca a conferiam. */
+const CARGO_ROTULO = { jogador: 'Jogador', mestre: 'Mestre', criador: 'Criador' };
+
+window.toggleAvisoCargo = function () {
+    const escolhido = document.querySelector('input[name="role"]:checked')?.value || 'jogador';
+    document.querySelectorAll('.role-option').forEach(o => o.classList.remove('selected'));
+    document.querySelector(`input[name="role"][value="${escolhido}"]`)
+        ?.closest('.role-option')?.classList.add('selected');
+
+    const aviso = document.getElementById('cargoAviso');
+    const nome = document.getElementById('cargoAvisoNome');
+    if (!aviso) return;
+    aviso.classList.toggle('show', escolhido !== 'jogador');
+    if (nome && escolhido !== 'jogador') nome.textContent = CARGO_ROTULO[escolhido];
 };
 
 document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
@@ -1995,7 +2056,7 @@ document.getElementById('cadastroForm')?.addEventListener('submit', async (e) =>
     const password = document.getElementById('cadastroPassword').value;
     const passwordConfirm = document.getElementById('cadastroPasswordConfirm').value;
     const roleInput = document.querySelector('input[name="role"]:checked');
-    const role = roleInput ? roleInput.value : 'jogador';
+    const pedido = roleInput ? roleInput.value : 'jogador';
 
     if (password !== passwordConfirm) {
         authAlert('❌ As senhas não coincidem!', 'danger');
@@ -2005,30 +2066,34 @@ document.getElementById('cadastroForm')?.addEventListener('submit', async (e) =>
         authAlert('❌ A senha deve ter pelo menos 6 caracteres!', 'danger');
         return;
     }
-    if (role === 'mestre') {
-        const masterCode = document.getElementById('masterCode').value;
-        if (!masterCode) {
-            authAlert('❌ Digite o código secreto do Mestre!', 'danger');
-            return;
-        }
-        if (masterCode !== MASTER_SECRET_CODE) {
-            authAlert('❌ Código do Mestre incorreto! Apenas o administrador possui este código.', 'danger');
-            return;
-        }
-    }
 
     showAuthLoading(true);
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName: nome });
+        /* Confirmação de e-mail. Faltava desde sempre: dava para se cadastrar
+           com o endereço de outra pessoa, e é sobre esse endereço que qualquer
+           recuperação de conta vai se apoiar depois.
+           Falhar aqui não pode derrubar o cadastro — a conta já existe, e o
+           aviso no topo do Portal deixa reenviar. */
+        try { await sendEmailVerification(userCredential.user); }
+        catch (e) { console.warn('Não foi possível enviar a verificação:', e); }
+        /* Sem `role` de propósito: a rule de create recusa o campo, e ausente
+           já significa Jogador em todo o site. O pedido vai em
+           `cargoSolicitado`, que é livre justamente porque não vale nada
+           sozinho — quem o transforma em cargo é um Criador. */
         await setDoc(doc(db, 'users', userCredential.user.uid), {
             email: userCredential.user.email,
             displayName: nome,
-            role: role,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            ...(pedido !== 'jogador' ? {
+                cargoSolicitado: pedido,
+                cargoSolicitadoEm: new Date().toISOString()
+            } : {})
         });
-        authAlert(role === 'mestre'
-            ? '✅ Conta de MESTRE criada com sucesso! 👑'
+        authAlert(pedido !== 'jogador'
+            ? `✅ Conta criada! Seu pedido de acesso como ${CARGO_ROTULO[pedido]} foi enviado — ` +
+              'até um Criador aprovar, sua conta funciona como Jogador.'
             : '✅ Conta criada com sucesso!', 'success');
     } catch (error) {
         console.error('Erro no cadastro:', error);
@@ -2040,14 +2105,6 @@ document.getElementById('cadastroForm')?.addEventListener('submit', async (e) =>
         authAlert(errorMsg, 'danger');
         showAuthLoading(false);
     }
-});
-
-// Seleção visual dos radio buttons de papel
-document.querySelectorAll('.role-option').forEach(option => {
-    option.addEventListener('click', function () {
-        document.querySelectorAll('.role-option').forEach(opt => opt.classList.remove('selected'));
-        this.classList.add('selected');
-    });
 });
 
 // ===== NAVEGAÇÃO DO PORTAL =====

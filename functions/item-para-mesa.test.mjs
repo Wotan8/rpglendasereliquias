@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { itemParaCaixa, retirarDoRepertorio, devolverAoRepertorio, idDaCaixa, PREFIXO_CAIXA } = require('./item-para-mesa.js');
+const { itemParaCaixa, pecaParaAviso, retirarDoRepertorio, devolverAoRepertorio, idDaCaixa, PREFIXO_CAIXA } = require('./item-para-mesa.js');
 
 // ===== o dono virtual da caixa =====
 assert.equal(idDaCaixa('mesa7'), '__caixa_mestre__mesa7');
@@ -94,6 +94,15 @@ const a = itemParaCaixa({ nome: 'x' }, { mesaId: 'm' });
 const b = itemParaCaixa({ nome: 'x' }, { mesaId: 'm' });
 assert.notEqual(a.id, b.id);
 
+// ===== a peca que o aviso guarda =====
+// E dela que a recusa devolve. O doc de `items` nao serve: o jogador edita.
+const pAviso = pecaParaAviso({ nome: 'Informação x1', descricao: 'pista', imagem: 'http://x/y.png' }, 2);
+assert.deepEqual(pAviso, { nome: 'Informação x1', quantidade: 2, descricao: 'pista', imagem: 'http://x/y.png' });
+assert.equal(pecaParaAviso({}, 0).quantidade, 1, 'quantidade nunca nasce menor que 1');
+assert.equal(pecaParaAviso({}, -9).quantidade, 1);
+assert.equal(pecaParaAviso({}, '3').quantidade, 3, 'aceita texto, como o resto do projeto');
+assert.equal(pecaParaAviso({}, 1).nome, 'Item sem nome');
+
 // ===== a volta: recusa devolve ao Reperterio =====
 const naCaixa = { nome: 'Informação x1 (teste)', origemItemNome: 'Informação x1', quantidade: 2, descricao: 'pista', imagem: 'http://x/y.png' };
 
@@ -129,3 +138,27 @@ devolverAoRepertorio(antes, naCaixa);
 assert.equal(antes[0].quantidade, 1);
 
 console.log('✅ item-para-mesa: todos os casos passaram');
+
+// ===== A FORJA (item 3 da varredura) =====
+// O jogador manda 1 bugiganga para a mesa, vira dono do doc da caixa criando
+// `char/__caixa_mestre__<mesaId>`, e reescreve o doc para 999 unidades com o
+// nome da linha mais cara do Repertorio. A recusa NAO pode olhar para isso.
+const forjado = {
+    nome: 'Bugiganga', origemItemNome: 'Pacote de 500 EXP', quantidade: 999,
+    descricao: 'forjado', imagem: '',
+};
+const repertorio = [{ nome: 'Pacote de 500 EXP', quantidade: 1, isExp: true, expAmount: 500 }];
+
+// o que a recusa usa hoje: a peca do aviso, gravada no envio
+const pecaReal = pecaParaAviso({ nome: 'Bugiganga', descricao: 'nada', imagem: '' }, 1);
+const depois = devolverAoRepertorio(repertorio, pecaReal);
+assert.equal(depois.find(i => i.nome === 'Pacote de 500 EXP').quantidade, 1,
+    'a linha cara nao encosta: o aviso diz que foi 1x Bugiganga');
+assert.equal(depois.find(i => i.nome === 'Bugiganga').quantidade, 1);
+
+// e a prova de que o caminho antigo creditava a forja
+const seLesseODoc = devolverAoRepertorio(repertorio, forjado);
+assert.equal(seLesseODoc.find(i => i.nome === 'Pacote de 500 EXP').quantidade, 1000,
+    'era isto que acontecia lendo o documento de items: 500 mil EXP de graca');
+
+console.log('item-para-mesa.test.mjs: OK');

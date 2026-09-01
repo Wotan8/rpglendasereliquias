@@ -2627,21 +2627,57 @@ html:not(.dark) .meta-card {
 
 .role-option .role-desc { color: var(--lr-text-2); font-size: var(--lr-fs-xs); }
 
-.master-code-field { display: none; }
+/* Faixa de "confirme seu e-mail", no topo de tudo para quem ainda não
+   confirmou. Some sozinha quando o Firebase marca a conta como verificada. */
+.aviso-email {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--lr-space-3);
+    flex-wrap: wrap;
+    background: var(--lr-gold-soft);
+    border-bottom: var(--lr-border-w) solid var(--lr-gold);
+    color: var(--lr-text-1);
+    font-size: var(--lr-fs-sm);
+    padding: var(--lr-space-2) var(--lr-space-4);
+    text-align: center;
+}
 
-.master-code-field.show { display: block; }
+.aviso-email button {
+    background: var(--lr-gold);
+    color: var(--lr-bg-0);
+    border: none;
+    border-radius: var(--lr-radius-sm, 6px);
+    padding: 4px 12px;
+    font-weight: 700;
+    font-size: var(--lr-fs-xs);
+    cursor: pointer;
+}
 
-.master-code-field .code-info {
+.aviso-email button:disabled { opacity: .6; cursor: default; }
+
+/* Aviso de pedido de cargo no cadastro (era o campo do código do mestre). */
+.cargo-aviso { display: none; }
+
+.cargo-aviso.show {
+    display: block;
+    background: var(--lr-gold-soft);
+    border: var(--lr-border-w) solid var(--lr-gold);
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-3) var(--lr-space-4);
+    margin-bottom: var(--lr-space-4);
+}
+
+.cargo-aviso .cargo-aviso-texto {
     font-size: var(--lr-fs-sm);
     font-weight: 600;
     margin-bottom: var(--lr-space-2);
 }
 
-.master-code-field .code-hint {
+.cargo-aviso .cargo-aviso-hint {
     font-size: var(--lr-fs-xs);
     color: var(--lr-text-2);
-    text-align: center;
-    margin-top: var(--lr-space-1);
+    line-height: 1.5;
 }
 
 .auth-loading {

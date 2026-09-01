@@ -2698,6 +2698,74 @@ html.dark #mech_duracao_exp_wrap {
     font-weight: 600;
 }
 
+/* ===== FILA DE PEDIDOS DE CARGO ===== */
+.cargo-pedidos {
+    background: var(--lr-gold-soft, var(--chip));
+    border: 1px solid var(--lr-gold, var(--line));
+    border-radius: var(--radius);
+    padding: 12px;
+    margin: 12px 0;
+}
+
+.cargo-pedidos h4 {
+    margin: 0 0 8px;
+    font-size: 0.85rem;
+    font-weight: 800;
+}
+
+.cargo-pedido {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+    border-top: 1px solid var(--line);
+}
+
+.cargo-pedido:first-of-type { border-top: none; }
+
+.cargo-pedido .cargo-quem { flex: 1 1 200px; min-width: 0; }
+
+.cargo-pedido .cargo-nome { font-weight: 700; }
+
+.cargo-pedido .cargo-email {
+    font-size: 0.75rem;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.cargo-pedido .cargo-quer { font-size: 0.8rem; }
+
+.cargo-pedido button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.cargo-pedido button.cargo-ok { border-color: var(--ok, var(--line)); }
+.cargo-pedido button.cargo-nao { border-color: var(--danger, var(--line)); }
+
+/* Bolinha no ⚙️ e na aba: sem ela, o pedido só existe para quem já abriu
+   Configurações — que é justamente quem não precisa ser avisado. */
+#btnSettings.tem-pedido,
+.settings-tab.tem-pedido { position: relative; }
+
+#btnSettings.tem-pedido::after,
+.settings-tab.tem-pedido::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--danger, #A82C39);
+}
+
 /* ===== BODY PARTS EDITOR ===== */
 .bp-editor {
     background: var(--chip);

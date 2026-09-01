@@ -2,33 +2,21 @@
 // PAINEL DO MESTRE — Auth + Initialization
 // =============================================
 
-import { auth, db, onAuthStateChanged, signOut, collection, query, where, getDocs, getDoc, doc } from './firebase-config.js';
+import { auth, db, onAuthStateChanged, signOut, getDoc, doc } from './firebase-config.js';
 import { setCurrentUser } from './state.js';
 import { showAlert } from './ui-utils.js';
 import { confirmar } from '../../shared/dialogo.js?v=2';
 
 // ===== FIND USER DOC =====
+// `users/{uid}` e nada mais. A busca antiga pelos campos `uid` e `email` lia
+// campos que o dono do documento escreve — e aqui o que se lê é o `role`, que
+// decide quem entra neste painel.
 async function findUserDoc(user) {
     if (!user) return null;
-
-    // Try by uid first
-    let q = query(collection(db, 'users'), where('uid', '==', user.uid));
-    let snap = await getDocs(q);
-    if (!snap.empty) return snap.docs[0];
-
-    // Try by email
-    q = query(collection(db, 'users'), where('email', '==', user.email));
-    snap = await getDocs(q);
-    if (!snap.empty) return snap.docs[0];
-
-    // Try by doc id
     try {
-        const docRef = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) return docSnap;
-    } catch (e) { /* ignore */ }
-
-    return null;
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        return snap.exists() ? snap : null;
+    } catch (e) { return null; }
 }
 
 // ===== AUTH STATE LISTENER =====

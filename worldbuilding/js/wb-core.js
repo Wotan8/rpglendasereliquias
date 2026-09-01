@@ -57,24 +57,13 @@ import { confirmar, toast } from '../../shared/dialogo.js?v=2';
         };
 
         async function checkRole() {
+            // `users/{uid}` e nada mais: a busca pelos campos `uid`/`email` lia
+            // campos graváveis pelo dono do documento para decidir privilégio.
             let userDoc = null;
-            let q = query(collection(db, 'users'), where('uid', '==', currentUser.uid));
-            let snap = await getDocs(q);
-            if (!snap.empty) userDoc = snap.docs[0];
-            
-            if (!userDoc) {
-                q = query(collection(db, 'users'), where('email', '==', currentUser.email));
-                snap = await getDocs(q);
-                if (!snap.empty) userDoc = snap.docs[0];
-            }
-            
-            if (!userDoc) {
-                try {
-                    const docRef = doc(db, 'users', currentUser.uid);
-                    const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) userDoc = docSnap;
-                } catch (e) { /* ignore */ }
-            }
+            try {
+                const docSnap = await getDoc(doc(db, 'users', currentUser.uid));
+                if (docSnap.exists()) userDoc = docSnap;
+            } catch (e) { /* ignore */ }
 
             if (userDoc) {
                 const data = userDoc.data();

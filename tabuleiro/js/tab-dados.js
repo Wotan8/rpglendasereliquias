@@ -5,7 +5,7 @@
 // (ação explícita, sem throttle; mesmo padrão do ping).
 // O histórico é local da sessão: guardar rolagem velha no doc seria write à toa.
 // =============================================
-import { db, doc, setDoc, onSnapshot, collection, query, where, getDocs,
+import { db, doc, getDoc, setDoc, onSnapshot,
     functions, httpsCallable } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, toast, uid } from './tab-state.js';
 import { abrirModal } from './tab-main.js';
@@ -45,13 +45,13 @@ function msgRolagem(r) {
 let saldoReroll = null;      // null = ainda não li
 let ultimaMinha = null;      // a última rolagem FEITA nesta janela
 
-/** O doc do jogador não é sempre `users/{uid}` — daí as duas tentativas. */
+/** O doc do jogador é `users/{uid}`. A busca pelos campos `uid`/`email` saiu:
+    eram campos graváveis pelo dono, e aqui se lê saldo de re-rolagem. */
 async function meuDocUsuario() {
     const u = T.user;
     if (!u) return null;
-    let s = await getDocs(query(collection(db, 'users'), where('uid', '==', u.uid)));
-    if (s.empty && u.email) s = await getDocs(query(collection(db, 'users'), where('email', '==', u.email)));
-    return s.empty ? null : s.docs[0];
+    const s = await getDoc(doc(db, 'users', u.uid));
+    return s.exists() ? s : null;
 }
 
 async function carregarSaldoReroll() {

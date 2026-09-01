@@ -12,6 +12,10 @@
  */
 const { girosDoItem } = require("./roleta-sorteio");
 
+/** Quantas compras ficam guardadas no documento do jogador. Ver o comentário
+ *  no `aplicarCompra`. Hoje o maior histórico tem 16 linhas. */
+const MAX_LOGS_COMPRA = 100;
+
 /**
  * Quanto UMA unidade do item rende na meta a que está vinculado.
  * É o que faz a "Roleta 3x" valer 3 de Lore numa compra só, em vez de 1.
@@ -60,6 +64,14 @@ function aplicarCompra(data, item, pending, origem) {
     compraId: pending.compraId,
     data: new Date().toISOString(),
   });
+  /* Teto, como `notifications` já tem. É a única lista do documento que cresce
+     para sempre por desenho: inventário sobe e desce, apoio acompanha a meta,
+     mas compra nunca é desfeita. Documento de usuário morre em 1 MB, e morrer
+     ali significa não conseguir mais NEM COMPRAR.
+     Cortar aqui não perde história: a trilha imutável e completa está em
+     `real_logs`/`frag_logs`. Isto é a cópia de conveniência que o painel do
+     mestre desenha. */
+  if (logsCompra.length > MAX_LOGS_COMPRA) logsCompra.splice(0, logsCompra.length - MAX_LOGS_COMPRA);
 
   const apoios = data.apoios || [];
   apoios.push({
@@ -95,4 +107,4 @@ function aplicarCompra(data, item, pending, origem) {
   return { inventario, logsCompra, apoios, notifications, quantidade, totalCentavos, valorReais, giros, rerolagens };
 }
 
-module.exports = { aplicarCompra, pesoProducao, rerolagensDoItem };
+module.exports = { aplicarCompra, pesoProducao, rerolagensDoItem, MAX_LOGS_COMPRA };

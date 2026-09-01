@@ -9,12 +9,17 @@ const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
-const { aplicarCompra, pesoProducao, rerolagensDoItem } = require("./entrega-calc");
+const { getAuth } = require("firebase-admin/auth");
+const { aplicarCompra, pesoProducao, rerolagensDoItem, MAX_LOGS_COMPRA } = require("./entrega-calc");
 const { TAXAS_PADRAO, calcularCobranca, EXCLUIR_POR_MEIO } = require("./taxa-gateway");
 const { sortear, aplicarPremio, girosDoItem } = require("./roleta-sorteio");
 const { aplicarExpDeItem } = require("./exp-item");
 const { charParaNpc, devolucaoExpVip, itemDevolucao } = require("./char-para-npc");
-const { itemParaCaixa, retirarDoRepertorio, devolverAoRepertorio, PREFIXO_CAIXA } = require("./item-para-mesa");
+const { itemParaCaixa, pecaParaAviso, retirarDoRepertorio, devolverAoRepertorio, PREFIXO_CAIXA } = require("./item-para-mesa");
+const { decidirCargo } = require("./cargo");
+const { conferirAssinatura, classificarPagamento, conferirValorPago, reais } = require("./mp-webhook");
+const { decidirLimite, esperaEmTexto } = require("./rate-limit");
+const { charIdsVinculados, normalizarDonos, mudou } = require("./npc-donos");
 
 initializeApp();
 const db = getFirestore();
@@ -32,6 +37,13 @@ const MP_ACCESS_TOKEN = defineSecret("MP_ACCESS_TOKEN");
 //   firebase functions:secrets:set RECAPTCHA_SECRET
 const RECAPTCHA_SECRET = defineSecret("RECAPTCHA_SECRET");
 
+// Chave de "Assinatura secreta" do webhook, no painel do Mercado Pago:
+//   firebase functions:secrets:set MP_WEBHOOK_SECRET
+// Sem ela o webhook continua entregando (a integridade vem da reconsulta com
+// o token), mas fica aberto a POST de qualquer origem — ver o comentário na
+// função.
+const MP_WEBHOOK_SECRET = defineSecret("MP_WEBHOOK_SECRET");
+
 // Nota mínima aceita (0.0 = provável bot, 1.0 = provável humano).
 // 0.5 é o padrão recomendado pelo Google.
 const RECAPTCHA_MIN_SCORE = 0.5;
@@ -39,10 +51,15 @@ const RECAPTCHA_MIN_SCORE = 0.5;
 // Verifica o token reCAPTCHA v3 no servidor. Lança HttpsError se reprovar.
 async function verificarRecaptcha(token, acaoEsperada) {
   const secret = RECAPTCHA_SECRET.value();
-  // Se o secret não estiver configurado, não bloqueia (permite operar antes do setup).
+  /* Faltando o secret, ISTO PARA. Antes ele deixava passar com um aviso no
+     log: se a chave sumisse do Secret Manager (rotação, projeto novo, deploy
+     em outro ambiente), a proteção anti-bot desaparecia em silêncio e ninguém
+     ficava sabendo. Falha aberta em caminho de pagamento é a pior espécie —
+     parece que está protegendo e não está. */
   if (!secret) {
-    console.warn("RECAPTCHA_SECRET não configurado — verificação ignorada.");
-    return;
+    console.error("RECAPTCHA_SECRET ausente — compra bloqueada. Configure com: firebase functions:secrets:set RECAPTCHA_SECRET");
+    throw new HttpsError("failed-precondition",
+      "A verificação de segurança está indisponível. Avise o mestre — nenhuma cobrança foi feita.");
   }
   if (!token) {
     throw new HttpsError("failed-precondition", "Verificação de segurança ausente. Recarregue a página e tente novamente.");
@@ -123,6 +140,9 @@ function avisarMestre(tx, aviso) {
     jogador: aviso.jogador || "",
     // Para onde o mestre precisa ir resolver (ex.: npcs/<id>)
     referencia: aviso.referencia || null,
+    /* A cópia fiel do que saiu do Repertório. É por ela que a recusa devolve
+       — nunca pelo documento de `items`, que o jogador consegue editar. */
+    peca: aviso.peca || null,
     mesaId: aviso.mesaId || "",
     acao: aviso.acao || "",
     status: "novo",
@@ -134,19 +154,80 @@ function avisarMestre(tx, aviso) {
 }
 
 // ---------------------------------------------
-// Helper: localizar o documento do usuário
-// (mesma ordem de busca do findUserDoc do frontend:
-//  1) campo uid, 2) campo email, 3) doc com ID = uid)
+// E-MAIL VERIFICADO — só para quem se cadastrar de agora em diante
+//
+// O cadastro nunca mandou e-mail de verificação, e o resultado é medível: em
+// 31/08/2026, ZERO das 19 contas tinham e-mail confirmado — a do criador
+// inclusive. Exigir verificação de todos naquele dia trancaria a Loja para a
+// mesa inteira.
+//
+// Então a régua é por data de criação da conta: quem nasceu depois do corte
+// confirma o e-mail antes de comprar; quem já estava aqui segue como está,
+// com o convite para confirmar aparecendo no Portal.
+//
+// A data vem do Auth (Admin SDK), não do campo `createdAt` do documento — esse
+// o próprio dono escreve, e antedatá-lo pularia a regra.
 // ---------------------------------------------
-async function resolveUserRef(uid, email) {
-  let snap = await db.collection("users").where("uid", "==", uid).limit(1).get();
-  if (!snap.empty) return snap.docs[0].ref;
+const CORTE_VERIFICACAO = Date.parse("2026-09-01T00:00:00Z");
 
-  if (email) {
-    snap = await db.collection("users").where("email", "==", email).limit(1).get();
-    if (!snap.empty) return snap.docs[0].ref;
+async function exigirEmailVerificado(request) {
+  if (request.auth.token.email_verified) return;
+
+  const conta = await getAuth().getUser(request.auth.uid);
+  const criadaEm = Date.parse(conta.metadata.creationTime);
+  if (!Number.isFinite(criadaEm) || criadaEm < CORTE_VERIFICACAO) return;
+
+  throw new HttpsError("failed-precondition",
+    "Confirme seu e-mail antes de comprar. Procure a mensagem do Lendas e Relíquias " +
+    "na sua caixa de entrada — dá para reenviar pelo aviso no topo do Portal.");
+}
+
+// ---------------------------------------------
+// FREIO POR USUÁRIO
+//
+// Nenhuma callable tinha limite. Com um login válido — e o cadastro é aberto —
+// dava para chamar `criarCheckoutMercadoPago` em laço: cada chamada cria uma
+// preferência no Mercado Pago e um documento em `compras_pendentes`. Não rouba
+// nada; enche a conta do MP de lixo, queima cota e custa invocação.
+//
+// Um documento por (uid, ação), em transação. A decisão é pura e está em
+// `rate-limit.js` — aqui só mora o I/O.
+// ---------------------------------------------
+async function limitarChamadas(uid, acao, limite, janelaMs) {
+  const ref = db.collection("rate_limits").doc(`${uid}__${acao}`);
+  const agora = Date.now();
+
+  const r = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const d = decidirLimite(snap.exists ? snap.data() : null, agora, limite, janelaMs);
+    // Chamada recusada não grava: incrementar o contador de quem já estourou
+    // empurraria o fim da espera para frente a cada tentativa.
+    if (d.permitido) tx.set(ref, { ...d.estado, acao, uid, atualizadoEm: agora });
+    return d;
+  });
+
+  if (!r.permitido) {
+    throw new HttpsError("resource-exhausted",
+      `Você fez isso vezes demais. Tente de novo em ${esperaEmTexto(r.esperarMs)}.`);
   }
+}
 
+// ---------------------------------------------
+// Helper: o documento do usuário é `users/{uid}`. Ponto.
+//
+// Antes esta função procurava em cascata — 1) campo `uid`, 2) campo `email`,
+// 3) doc com ID = uid — e os dois primeiros eram campos que o próprio dono do
+// documento podia escrever. Bastava gravar `uid: <uid da vítima>` no próprio
+// doc para que TODA operação da vítima resolvesse para o documento do
+// atacante: o débito de Frag$, o consumo do Repertório e, pelo webhook, a
+// entrega da compra em dinheiro real.
+//
+// A cascata era herança de docs antigos com ID diferente do uid. Não existe
+// mais nenhum: os 18 documentos conferidos em 31/08/2026 têm ID = uid do Auth
+// e nenhum tem o campo `uid`. As rules agora também impedem que `uid`/`email`
+// mintam (identidadeCorreta / naoMexeuNaIdentidade).
+// ---------------------------------------------
+function resolveUserRef(uid) {
   return db.collection("users").doc(uid);
 }
 
@@ -172,6 +253,8 @@ exports.comprarComFragmentos = onCall(
     }
 
     // Item e preço vêm do Firestore — nunca do navegador
+    await exigirEmailVerificado(request);
+
     const itemSnap = await db.collection("loja_itens").doc(itemId).get();
     if (!itemSnap.exists) {
       throw new HttpsError("not-found", "Item não encontrado.");
@@ -215,7 +298,7 @@ exports.comprarComFragmentos = onCall(
       metasNamesStr = nomes.join(", ");
     }
 
-    const userRef = await resolveUserRef(uid, email);
+    const userRef = resolveUserRef(uid);
     let novoSaldo = 0;
     let novosGiros = 0;
     let novasRerolagens = 0;
@@ -257,6 +340,10 @@ exports.comprarComFragmentos = onCall(
         moeda: "Frag$",
         data: new Date().toISOString(),
       });
+      // Mesmo teto do caminho em dinheiro (ver aplicarCompra em entrega-calc).
+      if (logsCompra.length > MAX_LOGS_COMPRA) {
+        logsCompra.splice(0, logsCompra.length - MAX_LOGS_COMPRA);
+      }
 
       const apoios = data.apoios || [];
       const peso = pesoProducao(item);
@@ -310,6 +397,97 @@ exports.comprarComFragmentos = onCall(
 );
 
 // =============================================
+// CARGO — APROVAR, RECUSAR OU DEFINIR (callable)
+//
+// Único caminho para `users.role` desde que o campo entrou na lista de
+// protegidos das rules. Antes o cargo era do dono do documento: bastava
+// `updateDoc(users/meuUid, {role:'criador'})` no console para ganhar o
+// catálogo inteiro — e o "código secreto do mestre" do cadastro era só
+// enfeite de frontend, porque nada no servidor o conferia.
+//
+// Agora o jogador PEDE (`cargoSolicitado`, campo livre que não vale nada
+// sozinho) e um Criador decide aqui.
+//
+//   { uid, cargo: 'mestre' }  → aprova/define o cargo
+//   { uid }                   → recusa: só limpa o pedido, cargo não muda
+// =============================================
+exports.definirCargo = onCall(
+  { region: "southamerica-east1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Você precisa estar logado.");
+    }
+    const autorUid = request.auth.uid;
+    const autorEmail = request.auth.token.email || "";
+
+    // Só Criador decide cargo. Mestre não promove ninguém — senão o primeiro
+    // mestre aprovado vira a porta para todos os outros.
+    const autorSnap = await db.collection("users").doc(autorUid).get();
+    const autorEhCriador = autorSnap.exists && autorSnap.data().role === "criador";
+    if (!autorEhCriador) {
+      throw new HttpsError("permission-denied", "Só um Criador pode decidir cargos.");
+    }
+
+    const { uid, cargo } = request.data || {};
+    if (!uid || typeof uid !== "string") {
+      throw new HttpsError("invalid-argument", "Diga de qual conta é o cargo.");
+    }
+    if (uid === autorUid) {
+      throw new HttpsError("failed-precondition",
+        "Você não pode mexer no próprio cargo. Peça a outro Criador.");
+    }
+    const alvoRef = db.collection("users").doc(uid);
+    let resultado;
+
+    await db.runTransaction(async (tx) => {
+      const alvoSnap = await tx.get(alvoRef);
+      if (!alvoSnap.exists) throw new HttpsError("not-found", "Conta não encontrada.");
+      const alvo = alvoSnap.data();
+
+      let d;
+      try {
+        d = decidirCargo(alvo, cargo == null ? null : cargo);
+      } catch (e) {
+        throw new HttpsError(e.codigo || "failed-precondition", e.message);
+      }
+
+      const patch = { cargoSolicitado: FieldValue.delete() };
+      if (d.role != null) patch.role = d.role;
+
+      const notifications = alvo.notifications || [];
+      notifications.unshift({
+        id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+        type: "master_message",
+        message: d.mensagem,
+        timestamp: Date.now(),
+        isNew: true,
+        data: { highlight: "importante" },
+      });
+      if (notifications.length > 100) notifications.length = 100;
+      patch.notifications = notifications;
+
+      tx.update(alvoRef, patch);
+
+      tx.set(db.collection("cargo_logs").doc(), {
+        uid,
+        jogador: alvo.displayName || alvo.email || "",
+        cargoAntes: d.cargoAntes,
+        cargoDepois: d.cargoDepois,
+        pedido: d.pedido,
+        decisao: d.decisao,
+        autorUid,
+        autor: autorEmail,
+        criadoEm: FieldValue.serverTimestamp(),
+      });
+
+      resultado = { cargo: d.cargoDepois, aprovado: d.decisao === "aprovado" };
+    });
+
+    return { ok: true, ...resultado };
+  }
+);
+
+// =============================================
 // AUDITORIA AUTOMÁTICA DE FRAGMENTOS (gatilho)
 // Dispara em QUALQUER escrita em users/{userId}.
 // Se o campo `fragmentos` mudou, grava um log imutável
@@ -353,6 +531,97 @@ exports.registrarLogFragmentos = onDocumentWritten(
       autor,
       criadoEm: FieldValue.serverTimestamp(),
     });
+  }
+);
+
+// =============================================
+// DONO DO NPC ALIADO (gatilho)
+//
+// A ficha chama de "aliado" o NPC que tem, em `vinculos`, uma entrada
+// `{tipo:'personagem', id:<charId>}`, e deixa o jogador mexer no inventário
+// dele. As rules de `items` sustentavam isso do jeito mais largo possível —
+// "o characterId existe na coleção npcs" — o que dava a QUALQUER conta logada
+// poder de editar e apagar item de QUALQUER NPC do cenário.
+//
+// Rules não sabem varrer lista de objetos. Então o vínculo é achatado aqui em
+// `donosUids`, que elas sabem ler com um `in`. Quem manda continua sendo
+// `vinculos`; este campo é espelho, e é recalculado a cada escrita no NPC —
+// inclusive quando o mestre DESVINCULA, que é a hora em que o acesso tem de
+// sumir.
+// =============================================
+exports.espelharDonoDoNpc = onDocumentWritten(
+  { document: "npcs/{npcId}", region: "southamerica-east1" },
+  async (event) => {
+    if (!event.data.after.exists) return;
+    const npc = event.data.after.data();
+
+    const uids = [];
+    for (const charId of charIdsVinculados(npc)) {
+      // `char` é a coleção viva; `characters` é a legada, e ainda há aliado
+      // apontando para lá.
+      let snap = await db.collection("char").doc(charId).get();
+      if (!snap.exists) snap = await db.collection("characters").doc(charId).get();
+      if (snap.exists && snap.data().ownerUid) uids.push(snap.data().ownerUid);
+    }
+
+    const donos = normalizarDonos(uids);
+    // Sem esta guarda o gatilho se dispara em laço: ele grava no mesmo
+    // documento que o acordou.
+    if (!mudou(npc.donosUids, donos)) return;
+
+    await event.data.after.ref.update({ donosUids: donos });
+  }
+);
+
+// =============================================
+// ESPELHO PÚBLICO DO JOGADOR (gatilho)
+//
+// A coleção `users` era legível por qualquer conta logada — e ali dentro moram
+// e-mail, saldo de Frag$, Repertório inteiro, histórico de compras em reais e
+// as notificações. Duas telas de JOGADOR precisavam mesmo de dado dos outros:
+// as Metas (soma coletiva dos apoios) e o Tabuleiro (nome de quem está na mesa).
+//
+// Então a leitura de `users` fechou e nasceu esta projeção, com o mínimo:
+// o nome de exibição e os apoios SEM o valor em reais.
+//
+// Os apoios saem no MESMO formato que `shared/apoios-calc.js` consome
+// (`tipo`, `montante`, `meta`, `peso`) de propósito: assim o cliente continua
+// somando com a mesma função de sempre. Recalcular aqui exigiria copiar aquela
+// matemática para cá — que é exatamente a divergência silenciosa que o
+// cabeçalho daquele arquivo conta ter acontecido quando cada tela fazia a
+// própria conta.
+// =============================================
+function projecaoPublica(data) {
+  return {
+    displayName: data.displayName || "",
+    apoios: (data.apoios || []).map((a) => ({
+      tipo: a.tipo || "",
+      montante: a.montante == null ? 1 : a.montante,
+      meta: a.meta || "",
+      ...(a.peso === undefined ? {} : { peso: a.peso }),
+    })),
+  };
+}
+
+exports.espelharUsuarioPublico = onDocumentWritten(
+  { document: "users/{userId}", region: "southamerica-east1" },
+  async (event) => {
+    const ref = db.collection("users_public").doc(event.params.userId);
+
+    if (!event.data.after.exists) {
+      await ref.delete();
+      return;
+    }
+
+    const depois = projecaoPublica(event.data.after.data());
+    // Só grava quando a PARTE PÚBLICA muda. Sem esta guarda, cada notificação
+    // nova (e são muitas) geraria uma escrita aqui sem nada de novo dentro.
+    if (event.data.before.exists) {
+      const antes = projecaoPublica(event.data.before.data());
+      if (JSON.stringify(antes) === JSON.stringify(depois)) return;
+    }
+
+    await ref.set({ ...depois, atualizadoEm: FieldValue.serverTimestamp() });
   }
 );
 
@@ -431,7 +700,7 @@ async function entregarCompra(pendingRef, pending, origem, extras = {}) {
     return { linha, item, metasNamesStr };
   }));
 
-  const userRef = await resolveUserRef(pending.uid, pending.email || "");
+  const userRef = resolveUserRef(pending.uid);
 
   await db.runTransaction(async (tx) => {
     const pSnap = await tx.get(pendingRef);
@@ -514,7 +783,7 @@ exports.aplicarExpDoItem = onCall(
       throw new HttpsError("invalid-argument", "Escolha o personagem.");
     }
 
-    const userRef = await resolveUserRef(uid, email);
+    const userRef = resolveUserRef(uid);
     const charRef = db.collection("char").doc(charId);
 
     let resultado;
@@ -631,7 +900,7 @@ exports.enviarItemParaMesa = onCall(
       throw new HttpsError("permission-denied", "Você não joga nessa mesa.");
     }
 
-    const userRef = await resolveUserRef(uid, email);
+    const userRef = resolveUserRef(uid);
     let enviado;
 
     await db.runTransaction(async (tx) => {
@@ -674,6 +943,7 @@ exports.enviarItemParaMesa = onCall(
         jogadorUid: uid,
         jogador,
         referencia: { colecao: "items", id: doc.id, nome: itemNome },
+        peca: pecaParaAviso(retirada.item, qtd),
         mesaId,
         acao: "Abrir a Caixa do Mestre desta mesa",
       });
@@ -700,6 +970,19 @@ async function exigirMestrePorQualquerCaminho(uid) {
   if (m.exists) return true;
   const u = await db.collection("users").doc(uid).get();
   return u.exists && ["mestre", "criador"].includes(u.data().role);
+}
+
+/* Ser mestre em algum lugar não é ser mestre NAQUELA mesa. Sem este recorte,
+   qualquer mestre resolvia aviso de mesa alheia — e a recusa mexe no
+   Repertório de um jogador que nem é dele.
+   A mesa guarda o e-mail de quem a criou (`createdBy`); não há campo de uid.
+   Criador continua passando em tudo: é quem administra o sistema. */
+async function mandaNaMesa(uid, email, mesaId) {
+  const u = await db.collection("users").doc(uid).get();
+  if (u.exists && u.data().role === "criador") return true;
+  if (!mesaId) return false;
+  const mesa = await db.collection("mesas").doc(mesaId).get();
+  return mesa.exists && !!email && mesa.data().createdBy === email;
 }
 
 exports.recusarItemDaMesa = onCall(
@@ -729,7 +1012,11 @@ exports.recusarItemDaMesa = onCall(
     if (!jogadorUid) {
       throw new HttpsError("failed-precondition", "Este aviso não tem jogador para devolver.");
     }
-    const userRef = await resolveUserRef(jogadorUid, "");
+    if (!(await mandaNaMesa(uid, email, previa.data().mesaId))) {
+      throw new HttpsError("permission-denied",
+        "Este aviso é de outra mesa. Só o mestre daquela mesa pode recusar.");
+    }
+    const userRef = resolveUserRef(jogadorUid);
 
     let resultado;
     await db.runTransaction(async (tx) => {
@@ -757,15 +1044,35 @@ exports.recusarItemDaMesa = onCall(
         throw new HttpsError("failed-precondition",
           "A peça já saiu da Caixa do Mestre. Se quiser devolver, use o transferir da caixa.");
       }
+      /* O doc de `items` serve só para confirmar que a peça ainda está na
+         caixa e para apagá-la. Ele NÃO diz o que devolver: o jogador consegue
+         escrever nele. Se ele já não é o que o aviso mandou para lá, a peça
+         foi trocada — e trocar peça é justamente o ataque. */
+      if (item.origemJogadorUid && item.origemJogadorUid !== jogadorUid) {
+        throw new HttpsError("failed-precondition",
+          "A peça na caixa não é mais a que este aviso registrou. Resolva o aviso à mão.");
+      }
 
       const uSnap = await tx.get(userRef);
       if (!uSnap.exists) throw new HttpsError("not-found", "O jogador não foi encontrado.");
       const data = uSnap.data();
 
-      const nome = item.origemItemNome || item.nome || "Item";
-      const qtd = Math.max(1, parseInt(item.quantidade, 10) || 1);
+      /* A VERDADE DA DEVOLUÇÃO é a peça gravada no aviso, e mais nada.
+         Antes vinha de `item.origemItemNome` e `item.quantidade` — dois campos
+         que o jogador editava depois de virar dono do doc (bastava criar
+         `char/__caixa_mestre__<mesaId>` em nome próprio). Mandava 1 unidade de
+         qualquer bugiganga, escrevia 999 e o nome do pacote de EXP mais caro,
+         e a recusa do mestre creditava tudo isso. */
+      const peca = aviso.peca;
+      if (!peca || !peca.nome) {
+        throw new HttpsError("failed-precondition",
+          "Este aviso é anterior à correção e não guarda o que foi enviado. " +
+          "Devolva a peça pelo transferir da caixa.");
+      }
+      const nome = peca.nome;
+      const qtd = Math.max(1, parseInt(peca.quantidade, 10) || 1);
 
-      const inventario = devolverAoRepertorio(data.inventario, item);
+      const inventario = devolverAoRepertorio(data.inventario, peca);
 
       const notifications = data.notifications || [];
       notifications.unshift({
@@ -872,7 +1179,7 @@ exports.encerrarPersonagem = onCall(
     }
 
     // Devolução do EXP VIP + baixa da ficha, na mesma transação.
-    const userRef = await resolveUserRef(uid, email);
+    const userRef = resolveUserRef(uid);
     await db.runTransaction(async (tx) => {
       const uSnap = await tx.get(userRef);
       if (!uSnap.exists) throw new HttpsError("not-found", "Documento de usuário não existe.");
@@ -992,7 +1299,7 @@ exports.girarRoleta = onCall(
     }
     const item = itemSnap.data();
 
-    const userRef = await resolveUserRef(uid, email);
+    const userRef = resolveUserRef(uid);
     let novosGiros = 0;
 
     await db.runTransaction(async (tx) => {
@@ -1061,7 +1368,7 @@ exports.gastarRerolagem = onCall(
     const email = request.auth.token.email || "";
     const { mesaId, motivo } = request.data || {};
 
-    const userRef = await resolveUserRef(uid, email);
+    const userRef = resolveUserRef(uid);
     let restantes = 0;
 
     await db.runTransaction(async (tx) => {
@@ -1124,6 +1431,13 @@ exports.criarCheckoutMercadoPago = onCall(
     const uid = request.auth.uid;
     const email = request.auth.token.email || "";
     const { itens, meio, recaptchaToken } = request.data || {};
+
+    /* Freio ANTES do reCAPTCHA: o reCAPTCHA custa uma chamada HTTP ao Google
+       por tentativa, então quem está martelando não deve nem chegar lá.
+       10 por hora é folgado para quem compra de verdade — o carrinho aceita 20
+       linhas de uma vez — e apertado para laço. */
+    await limitarChamadas(uid, "checkout", 10, 60 * 60 * 1000);
+    await exigirEmailVerificado(request);
 
     // Verificação anti-bot ANTES de qualquer operação de pagamento
     await verificarRecaptcha(recaptchaToken, "comprar_loja");
@@ -1247,7 +1561,7 @@ exports.criarCheckoutMercadoPago = onCall(
 // aplicada de novo. Toda entrega gera um log imutável em `real_logs`.
 // =============================================
 exports.mercadoPagoWebhook = onRequest(
-  { secrets: [MP_ACCESS_TOKEN], region: "southamerica-east1" },
+  { secrets: [MP_ACCESS_TOKEN, MP_WEBHOOK_SECRET], region: "southamerica-east1" },
   async (req, res) => {
     if (req.method !== "POST" && req.method !== "GET") {
       res.status(405).send("Method not allowed");
@@ -1266,6 +1580,40 @@ exports.mercadoPagoWebhook = onRequest(
       if (!tipo.includes("payment") || !paymentId) {
         res.status(200).send("ignored");
         return;
+      }
+
+      /* ASSINATURA. Este endereço é público e sem autenticação: sem conferir a
+         assinatura, qualquer um dispara milhares de POSTs e cada um vira uma
+         consulta à API do MP — custo, limite da conta e log poluído. Também dá
+         para sondar quais IDs de pagamento existem, pela diferença entre o 404
+         e o 200.
+         Enquanto o secret não estiver configurado, o webhook segue funcionando
+         e avisa no log a cada chamada: a integridade não depende dele (o valor
+         e o status vêm da reconsulta com o token), mas o abuso, sim. Configure:
+           firebase functions:secrets:set MP_WEBHOOK_SECRET
+         com a chave de "Assinatura secreta" do painel do Mercado Pago. */
+      /* O secret precisa EXISTIR para a function subir (defineSecret), mas o
+         valor é credencial do painel do MP — quem digita é o dono da conta.
+         Até lá ele guarda este marcador, que aqui vale como ausente. */
+      const bruto = MP_WEBHOOK_SECRET.value();
+      const segredoWebhook = bruto && bruto !== "NAO-CONFIGURADO" ? bruto : "";
+      if (segredoWebhook) {
+        const ass = conferirAssinatura({
+          xSignature: req.get("x-signature"),
+          xRequestId: req.get("x-request-id"),
+          dataId: paymentId,
+          secret: segredoWebhook,
+        });
+        if (!ass.ok) {
+          console.warn("Webhook MP com assinatura recusada:", ass.motivo);
+          res.status(401).send("assinatura inválida");
+          return;
+        }
+      } else {
+        console.warn(
+          "MP_WEBHOOK_SECRET não configurado — assinatura do webhook NÃO conferida. " +
+          "Configure com: firebase functions:secrets:set MP_WEBHOOK_SECRET"
+        );
       }
 
       // Confirmação server-to-server — nunca confiar apenas no payload
@@ -1296,15 +1644,91 @@ exports.mercadoPagoWebhook = onRequest(
         return;
       }
       const pending = pendingSnap.data();
+      const situacao = classificarPagamento(pay);
+
+      /* ESTORNO E CHARGEBACK. Antes só existia "approved" ou "ainda não pago":
+         o dinheiro voltava e o benefício ficava no Repertório — e, se já tinha
+         virado EXP numa ficha, ficava lá também.
+         A reversão NÃO é automática de propósito: desfazer EXP já gasto é
+         decisão de mesa, não de código. O que o servidor faz é marcar a compra,
+         deixar a trilha em `real_logs` e chamar o mestre. */
+      if (situacao === "estornado") {
+        const jaEntregue = pending.status === "CONCLUIDA";
+        await pendingRef.update({
+          status: "ESTORNADA",
+          estornadaEm: FieldValue.serverTimestamp(),
+          estornoStatusMP: String(pay.status || ""),
+          estornoValorCentavos: Math.round(Number(pay.transaction_amount_refunded || pay.transaction_amount || 0) * 100),
+        });
+        await db.collection("real_logs").add({
+          uid: pending.uid,
+          jogador: pending.email || "",
+          itemId: "",
+          itemNome: "(estorno)",
+          valorCentavos: -Math.round(Number(pay.transaction_amount_refunded || pay.transaction_amount || 0) * 100),
+          moeda: "BRL",
+          compraId: referenceId,
+          checkoutId: pending.checkoutId || "",
+          orderId: String(paymentId),
+          origem: `Estorno no Mercado Pago (${pay.status})`,
+          detalhe: jaEntregue
+            ? "A compra JÁ tinha sido entregue — os benefícios continuam com o jogador."
+            : "A compra ainda não tinha sido entregue; nada a desfazer.",
+          criadoEm: FieldValue.serverTimestamp(),
+        });
+        if (jaEntregue) {
+          await avisarMestre(null, {
+            tipo: "estorno",
+            titulo: `Estorno de ${reais(pending.cobradoCentavos || pending.totalCentavos)} — a compra já tinha sido entregue`,
+            mensagem:
+              `O pagamento de ${pending.email || pending.uid} voltou (${pay.status}), mas os benefícios ` +
+              `já estavam no Repertório dele. O sistema não desfaz sozinho: EXP já aplicado numa ficha ` +
+              `não tem como voltar sem decisão sua. Confira em real_logs pela compra ${referenceId}.`,
+            jogadorUid: pending.uid,
+            jogador: pending.email || "",
+            referencia: { colecao: "compras_pendentes", id: referenceId, nome: "Compra estornada" },
+            acao: "Decidir o que fazer com os benefícios já entregues",
+          });
+        }
+        res.status(200).send("ok: estorno registrado");
+        return;
+      }
 
       if (pending.status === "CONCLUIDA") {
         res.status(200).send("ok: já processada");
         return;
       }
 
-      if (pay.status !== "approved") {
+      if (situacao !== "aprovado") {
         await pendingRef.update({ ultimaNotificacao: FieldValue.serverTimestamp() });
         res.status(200).send("ok: ainda não pago");
+        return;
+      }
+
+      /* VALOR. "approved" não diz aprovado POR QUANTO. Sem esta conferência,
+         qualquer pagamento aprovado na conta com este `external_reference`
+         entregava a compra inteira, fosse qual fosse o valor pago. */
+      const conf = conferirValorPago(pending, pay);
+      if (!conf.ok) {
+        console.error("Webhook MP: valor divergente", { referenceId, ...conf });
+        await pendingRef.update({
+          status: "VALOR_DIVERGENTE",
+          conferenciaValor: conf,
+          ultimaNotificacao: FieldValue.serverTimestamp(),
+        });
+        await avisarMestre(null, {
+          tipo: "valor-divergente",
+          titulo: `Pagamento com valor diferente do cobrado (${reais(conf.pago)} de ${reais(conf.esperado)})`,
+          mensagem:
+            `Uma compra de ${pending.email || pending.uid} foi aprovada no Mercado Pago por um valor ` +
+            `que não bate com o que o sistema cobrou. NADA foi entregue. Confira o pagamento ` +
+            `${paymentId} no painel do MP antes de liberar à mão.`,
+          jogadorUid: pending.uid,
+          jogador: pending.email || "",
+          referencia: { colecao: "compras_pendentes", id: referenceId, nome: "Valor divergente" },
+          acao: "Conferir no painel do Mercado Pago",
+        });
+        res.status(200).send("ok: valor divergente, nada entregue");
         return;
       }
 
@@ -1313,6 +1737,7 @@ exports.mercadoPagoWebhook = onRequest(
         logExtra: {
           checkoutId: pending.checkoutId || "",
           orderId: String(paymentId),
+          pagoCentavos: conf.pago,
         },
       });
 

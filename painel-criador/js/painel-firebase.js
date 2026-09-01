@@ -23,7 +23,7 @@ import { versaoDoLivro } from '../../shared/livros-pub.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
-    getFirestore, collection, query, where, getDocs, getDoc, setDoc,
+    getFirestore, collection, query, getDocs, getDoc, setDoc,
     deleteDoc, updateDoc, doc, orderBy, limit, getCountFromServer, Timestamp, addDoc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -830,25 +830,15 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // ===== FIND USER DOC =====
+// `users/{uid}` e nada mais: a busca pelos campos `uid`/`email` lia campos
+// graváveis pelo dono do documento, e o que se lê aqui é o `role`.
 async function findUserDoc(user) {
     const u = user || currentUser;
     if (!u) return null;
-
-    let q = query(collection(db, 'users'), where('uid', '==', u.uid));
-    let snap = await getDocs(q);
-    if (!snap.empty) return snap.docs[0];
-
-    q = query(collection(db, 'users'), where('email', '==', u.email));
-    snap = await getDocs(q);
-    if (!snap.empty) return snap.docs[0];
-
     try {
-        const docRef = doc(db, 'users', u.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) return docSnap;
-    } catch (e) { /* ignore */ }
-
-    return null;
+        const snap = await getDoc(doc(db, 'users', u.uid));
+        return snap.exists() ? snap : null;
+    } catch (e) { return null; }
 }
 
 // ===== NAVIGATION =====

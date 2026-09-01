@@ -49,8 +49,8 @@ Este sistema online foi originalmente iniciado por **Lucas Gabriel** em uma vers
 
 ### 👥 Sistema de Autenticação
 - ✅ **Login seguro** com Firebase Authentication
-- ✅ **Cadastro diferenciado** para Jogadores e Mestres
-- ✅ **Código secreto** para validação de contas de Mestre
+- ✅ **Cadastro diferenciado** para Jogadores, Mestres e Criadores
+- ✅ **Pedido de cargo com aprovação**: conta nasce Jogador e só muda quando um Criador aprova
 - ✅ **Persistência de sessão** com localStorage
 - ✅ **Logout seguro** com limpeza de dados
 
@@ -149,9 +149,9 @@ Este sistema online foi originalmente iniciado por **Lucas Gabriel** em uma vers
 
 ### Para Mestres:
 
-1. Crie conta escolhendo **"Mestre"**
-2. Insira o **código secreto** (fornecido pelo administrador do sistema)
-3. Acesse o painel do mestre automaticamente
+1. Crie conta escolhendo **"Mestre"** — isso registra um **pedido**, não concede o cargo
+2. Um Criador aprova em **Painel do Criador → ⚙️ Configurações → 🔐 Permissões**
+3. Depois da aprovação, recarregue a página e o painel do mestre aparece
 4. Monitore todos os jogadores em tempo real
 5. Visualize fichas completas, inventários, aliados e propriedades
 6. Acompanhe estatísticas da mesa e histórico de mudanças
@@ -322,15 +322,16 @@ const firebaseConfig = {
 };
 ```
 
-### 8️⃣ Código Secreto do Mestre
+### 8️⃣ O primeiro Criador
 
-No arquivo `index.html`, procure pela linha (~320) e altere o código:
+Não existe mais código secreto no cadastro: ele ficava no bundle público e as
+rules nunca o conferiam, então qualquer visitante virava mestre. Hoje `role` é
+campo protegido nas rules e só a Cloud Function `definirCargo` o move — e ela
+só aceita ordem de quem já é Criador.
 
-```javascript
-const MASTER_SECRET_CODE = "SEUCÓDIGOAQUI";
-```
-
-⚠️ **Importante:** Mude este código antes de fazer deploy! Este código é necessário para que alguém possa criar uma conta de Mestre. Mantenha este código em segredo e compartilhe apenas com pessoas autorizadas.
+Por isso o **primeiro** Criador é criado à mão, uma vez, no Firebase Console:
+abra `users/<uid>` e grave `role: "criador"`. Daí em diante as promoções são
+feitas na tela, em **Painel do Criador → ⚙️ Configurações → 🔐 Permissões**.
 
 ### 9️⃣ Criar Documento de Mestre Manualmente
 

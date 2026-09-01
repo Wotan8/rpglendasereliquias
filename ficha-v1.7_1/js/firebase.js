@@ -50,25 +50,9 @@ window.isMestre = false;
 async function checkUserRole(user) {
     try {
         const PRIVILEGED_ROLES = ['criador', 'mestre'];
-        // Método 1: por UID field
-        let q = query(collection(db, 'users'), where('uid', '==', user.uid));
-        let snap = await getDocs(q);
-        if (!snap.empty) {
-            const role = snap.docs[0].data().role;
-            if (PRIVILEGED_ROLES.includes(role)) return role;
-        }
-
-        // Método 2: por email
-        q = query(collection(db, 'users'), where('email', '==', user.email));
-        snap = await getDocs(q);
-        if (!snap.empty) {
-            const role = snap.docs[0].data().role;
-            if (PRIVILEGED_ROLES.includes(role)) return role;
-        }
-
-        // Método 3: doc ID = UID
-        const docRef = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(docRef);
+        // `users/{uid}` e nada mais: a busca pelos campos `uid`/`email` lia
+        // campos graváveis pelo dono do documento para decidir privilégio.
+        const docSnap = await getDoc(doc(db, 'users', user.uid));
         if (docSnap.exists()) {
             const role = docSnap.data().role;
             if (PRIVILEGED_ROLES.includes(role)) return role;

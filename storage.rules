@@ -1,60 +1,109 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Hexmap terrain images - authenticated users can read/write
-    match /hexmap-terrain/{fileName} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+
+    /* Todo caminho útil era `allow write: if request.auth != null`, sem limite
+       de tamanho, sem limite de tipo e sem dono. Qualquer conta registrada
+       trocava o favicon e o hero do Portal (que são de LEITURA PÚBLICA, então
+       aparecem antes do login), trocava a imagem de qualquer item da Loja, e
+       subia arquivo de qualquer natureza e tamanho para um endereço com o nome
+       do projeto — que é um hospedeiro de phishing de graça.
+
+       Três recortes agora: o que pode ser gravado, por quem, e de que tamanho. */
+
+    /* O papel vem do Firestore, a mesma fonte das rules do banco.
+       `.data.get('role','')` e não `.data.role`: quem não tem o campo — todo
+       jogador — faria a regra ERRAR em vez de devolver falso. O resultado
+       final seria o mesmo (erro nega), mas erro dentro de um `||` derruba a
+       expressão inteira, e é assim que uma regra correta vira uma negação
+       silenciosa no dia em que alguém acrescentar outra condição ao lado. */
+    function papel() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid))
+        .data.get('role', '');
     }
-    
-    // Character images - authenticated users can read/write
-    match /char-images/{allPaths=**} {
-      allow read, write: if request.auth != null;
+    function ehCriador() {
+      return request.auth != null && papel() == 'criador';
+    }
+    function ehMestre() {
+      return request.auth != null && papel() in ['mestre', 'criador'];
     }
 
-    // Favicons - public read, authenticated users can write (UI blocks non-creators)
+    /* O cliente já recusa acima de 8 MB e usa accept="image/*"
+       (shared/campo-imagem.js). O teto aqui fica ACIMA do dele de propósito:
+       a regra existe para o que não passa pelo cliente, não para brigar com
+       upload legítimo.
+       `request.resource == null` é o delete — que não tem arquivo para medir. */
+    function imagemOk() {
+      return request.resource == null || (
+        request.resource.size < 10 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*')
+      );
+    }
+
+    // ===== CAMINHOS DE ADMINISTRAÇÃO =====
+    // Aparecem para todo mundo (ou valem dinheiro). Não são de jogador.
+
+    // Favicon do site — leitura pública, escrita só do Criador
     match /app-assets/favicons/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if ehCriador() && imagemOk();
     }
 
-    // Hero do Portal (sequencia de imagens do scroll) - leitura publica
-    // (aparece antes do login); escrita autenticada (UI restringe a criador)
+    // Hero do Portal (sequência do scroll) — leitura pública: aparece antes do
+    // login. Era por aqui que dava para desfigurar a primeira tela do site.
     match /app-assets/portal-hero/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if ehCriador() && imagemOk();
     }
 
-    // Loja items images - authenticated users can read/write
+    // Imagens dos itens da Loja — trocar a foto de um item que se vende por
+    // dinheiro real é do mestre, não do comprador.
     match /loja-itens/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if ehMestre() && imagemOk();
     }
 
-    // Tabuleiro (VTT) — mapas, tokens e imagens do canva
-    match /tabuleiro-images/{allPaths=**} {
+    // Glifos dos Elementos Rúnicos (Painel do Criador)
+    match /runic-elements/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if ehCriador() && imagemOk();
+    }
+
+    // Terreno do Hexmap — o Hexmap inteiro é só do mestre no Firestore
+    match /hexmap-terrain/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if ehMestre() && imagemOk();
     }
 
     // Imagens diagramadas nos textos do Escritório do Cronista
     match /worldbuilding-images/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if ehMestre() && imagemOk();
     }
 
-    // Runic element glyph images (Painel do Criador → Elementos Rúnicos)
-    match /runic-elements/{allPaths=**} {
+    // ===== CAMINHOS DE JOGADOR =====
+    // Continuam abertos a quem está logado — é o jogador que sobe a cara do
+    // personagem, do item e do token. O que muda é que agora só entra imagem,
+    // e só até 10 MB.
+
+    // Imagem de personagem
+    match /char-images/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null && imagemOk();
     }
 
-    // Campo padrão de imagem (shared/campo-imagem.js) — o que não tem pasta
-    // própria cai aqui: itens de inventário, NPCs, aliados, catálogo do
-    // criador e campos de imagem dos módulos de classe.
+    // Tabuleiro (VTT) — mapas, tokens e imagens do canvas
+    match /tabuleiro-images/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && imagemOk();
+    }
+
+    /* Campo padrão de imagem (shared/campo-imagem.js) — o que não tem pasta
+       própria cai aqui: itens de inventário, NPCs, aliados, catálogo do
+       criador e campos de imagem dos módulos de classe. */
     match /imagens/{allPaths=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null && imagemOk();
     }
 
     // Default: deny all other paths
@@ -63,4 +112,3 @@ service firebase.storage {
     }
   }
 }
-

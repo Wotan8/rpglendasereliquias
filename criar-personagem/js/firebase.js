@@ -85,15 +85,13 @@ onAuthStateChanged(auth, async (user) => {
                     // As fontes de EXP são registradas no initWizard (app.js), depois
                     // do restore do localStorage — registrar aqui seria sobrescrito.
 
-                    // A mesa só guarda o e-mail do mestre (createdBy); o nome de
-                    // exibição vive em users/. Sem achar, fica o e-mail mesmo.
-                    try {
-                        const uSnap = await getDocs(query(collection(db, 'users'), where('email', '==', mesaData.createdBy || '')));
-                        const u = uSnap.docs[0]?.data();
-                        if (u) window.wizardState.mesaVinculada.mestreNome = u.nome || u.displayName || u.email;
-                    } catch (err) {
-                        console.warn('⚠️ Erro ao buscar o nome do mestre:', err);
-                    }
+                    /* O nome de exibição do mestre saía de uma consulta em
+                       `users` pelo e-mail de `createdBy`. Duas razões para ela
+                       ter ido embora: `users` não é mais legível por jogador, e
+                       procurar pessoa por campo de e-mail foi a raiz do
+                       sequestro de identidade (item 2 da varredura).
+                       Fica o e-mail do `createdBy`, que é o que o fallback já
+                       mostrava e o que a própria mesa guarda. */
 
                     // Recuperar o nível da sessão atual da mesa (maior número de sessão)
                     try {

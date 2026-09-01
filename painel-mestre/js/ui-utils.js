@@ -17,11 +17,19 @@ export function showAlert(message, type = 'success') { return toast(message, typ
 window.showAlert = showAlert;
 
 // ===== ESCAPE HTML =====
+/* Escapa TAMBÉM as aspas. O caminho `textContent → innerHTML` que estava aqui
+   escapa `<`, `>` e `&`, mas deixa `"` passar — e o painel usa este helper
+   dentro de atributos o tempo todo (`value="${escapeHtml(a.nome)}"`,
+   `onchange="...('${escapeHtml(user.id)}')"`). Um valor com aspas sai do
+   atributo, e o texto vem de campo que o próprio jogador escreve. */
 export function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 // ===== TAB SWITCHING =====

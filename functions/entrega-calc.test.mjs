@@ -1,6 +1,6 @@
 // Rodar: node functions/entrega-calc.test.mjs
 import assert from 'node:assert/strict';
-import { aplicarCompra, rerolagensDoItem } from './entrega-calc.js';
+import { aplicarCompra, rerolagensDoItem, MAX_LOGS_COMPRA } from './entrega-calc.js';
 
 const item = { nome: 'Bênção do Cronista', descricao: 'x', isExp: true, expAmount: 50 };
 const pending = {
@@ -99,3 +99,22 @@ assert.equal(r4.notifications.length, 100);
 assert.match(r4.notifications[0].message, /Compra Aprovada/, 'a nova entra no topo');
 
 console.log('✅ entrega-calc: todos os casos passaram');
+
+// ===== TETO DE logsCompra (item 14) =====
+// Documento de usuario morre em 1 MB — e morrer ali significa nao conseguir
+// mais NEM COMPRAR. `logsCompra` e a unica lista do doc que so cresce.
+const cheio = { logsCompra: Array.from({ length: MAX_LOGS_COMPRA }, (_, i) => ({ nome: 'antiga ' + i })) };
+const r = aplicarCompra(cheio, { nome: 'Nova' }, { itemId: 'x', quantidade: 1, totalCentavos: 100 }, 'Mercado Pago');
+assert.equal(r.logsCompra.length, MAX_LOGS_COMPRA, 'nao passa do teto');
+assert.equal(r.logsCompra[r.logsCompra.length - 1].nome, 'Nova', 'a compra nova entra');
+assert.equal(r.logsCompra[0].nome, 'antiga 1', 'quem sai e a mais ANTIGA');
+
+// muito acima do teto (documento legado) volta para o teto de uma vez
+const estourado = { logsCompra: Array.from({ length: MAX_LOGS_COMPRA + 50 }, (_, i) => ({ nome: 'a' + i })) };
+assert.equal(aplicarCompra(estourado, { nome: 'N' }, { itemId: 'x', quantidade: 1, totalCentavos: 1 }, 'x').logsCompra.length, MAX_LOGS_COMPRA);
+
+// abaixo do teto nao perde nada
+const poucas = { logsCompra: [{ nome: 'so uma' }] };
+assert.equal(aplicarCompra(poucas, { nome: 'N' }, { itemId: 'x', quantidade: 1, totalCentavos: 1 }, 'x').logsCompra.length, 2);
+
+console.log('entrega-calc: teto de logsCompra OK');

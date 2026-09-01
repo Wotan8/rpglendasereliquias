@@ -26,12 +26,45 @@ service cloud.firestore {
           .data.role in ['mestre', 'criador'];
     }
 
-    // Campos que só o servidor (Cloud Functions) e mestres podem alterar.
-    // `giros` e `rerolagens` entram aqui pelo mesmo motivo de `fragmentos`: são
-    // saldo, e saldo que o navegador consegue escrever é saldo infinito.
+    /* Campos que só o servidor (Cloud Functions) e mestres podem alterar.
+       `giros` e `rerolagens` entram aqui pelo mesmo motivo de `fragmentos`: são
+       saldo, e saldo que o navegador consegue escrever é saldo infinito.
+
+       `role` entra pelo motivo mais direto de todos: era o que decidia quem
+       abre o Painel do Mestre e do Criador, quem escreve o catálogo inteiro em
+       `system/data/*` e quem o servidor aceita como mestre — e o dono do
+       documento podia escrevê-lo. Cargo agora só muda por `definirCargo`
+       (Cloud Function, Admin SDK). O jogador PEDE por `cargoSolicitado`, que
+       continua livre e não vale nada sozinho. */
+    function CAMPOS_PROTEGIDOS() {
+      return ['fragmentos', 'inventario', 'apoios', 'logsCompra', 'fragLastOp',
+              'giros', 'rerolagens', 'role'];
+    }
+
     function naoMexeuEmCamposProtegidos() {
       return !request.resource.data.diff(resource.data).affectedKeys()
-        .hasAny(['fragmentos', 'inventario', 'apoios', 'logsCompra', 'fragLastOp', 'giros', 'rerolagens']);
+        .hasAny(CAMPOS_PROTEGIDOS());
+    }
+
+    /* `uid` e `email` no documento são IDENTIDADE, não dado comum. Servidor e
+       cliente já acharam o jogador consultando esses campos (`where('uid','==')`,
+       depois `where('email','==')`), e os dois eram graváveis pelo dono: quem
+       escrevesse `uid: <uid de outra pessoa>` no próprio documento passava a
+       receber o que fosse resolvido para ela — inclusive a entrega de uma
+       compra em dinheiro real.
+
+       A busca por campo já saiu do código (hoje é sempre `users/{uid}`), e
+       estas duas funções fecham a porta pelo outro lado: no `create` os campos
+       só podem repetir a identidade do próprio token; no `update` não mudam
+       mais. */
+    function identidadeCorreta(userId) {
+      return (!('uid' in request.resource.data) || request.resource.data.uid == userId)
+        && (!('email' in request.resource.data) || request.resource.data.email == request.auth.token.email);
+    }
+
+    function naoMexeuNaIdentidade() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['uid', 'email']);
     }
 
     // ========== Coleções do Painel de Criador (system/data/*) ==========
@@ -58,30 +91,65 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Coleção de usuários (TRANCADA — Frag$/inventário só via Cloud Function ou mestre)
-    match /users/{userId} {
-      allow read: if isSignedIn();
+    /* Coleção de usuários (TRANCADA — Frag$/inventário só via Cloud Function
+       ou mestre).
 
-      // Criação do próprio doc: não pode nascer com saldo/inventário
+       A LEITURA era aberta a qualquer conta logada: uma consulta trazia o
+       e-mail, o saldo de Frag$, o Repertório inteiro, o histórico de compras em
+       reais e as notificações de todo mundo. Agora cada um lê o próprio
+       documento; mestre e criador leem todos, que é o que os painéis fazem.
+       O que jogador precisa saber dos outros mora em `users_public`. */
+    match /users/{userId} {
+      allow read: if isSignedIn() &&
+        (request.auth.uid == userId || isMaster() || temPapelMestre());
+
+      // Criação do próprio doc: não pode nascer com saldo/inventário — nem com
+      // cargo. Conta nova é jogador; `role` ausente já é isso em todo o site.
       allow create: if isSignedIn() && (
         isMaster() ||
         (request.auth.uid == userId &&
-         !request.resource.data.keys().hasAny(['fragmentos', 'inventario', 'apoios', 'logsCompra', 'fragLastOp', 'giros', 'rerolagens']))
+         !request.resource.data.keys().hasAny(CAMPOS_PROTEGIDOS()) &&
+         identidadeCorreta(userId))
       );
 
       // Mestre mantém escrita total (painel-mestre concede Frag$ e apoios pelo cliente)
       allow update: if isSignedIn() && (
         isMaster() ||
-        (request.auth.uid == userId && naoMexeuEmCamposProtegidos())
+        (request.auth.uid == userId &&
+         naoMexeuEmCamposProtegidos() &&
+         naoMexeuNaIdentidade())
       );
 
       allow delete: if isMaster();
+    }
+
+    /* Espelho público do jogador: nome de exibição e apoios sem valor em reais.
+       Escrito SÓ pelo gatilho `espelharUsuarioPublico`. É o que sustenta a soma
+       coletiva das Metas e os nomes na mesa do Tabuleiro sem abrir `users`. */
+    match /users_public/{uid} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    /* Contadores do freio por usuário (limitarChamadas). Só o servidor mexe —
+       e ninguém precisa ler: contador que o navegador enxerga é contador que
+       o navegador aprende a driblar. */
+    match /rate_limits/{id} {
+      allow read, write: if false;
     }
 
     // Auditoria de Fragmentos — escrita SOMENTE pelo servidor (Admin SDK ignora rules)
     match /frag_logs/{logId} {
       // Mestres veem tudo; jogador pode ver os logs da própria conta
       allow read: if isSignedIn() && (isMaster() || resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    /* Quem virou mestre ou criador, por decisão de quem e quando — escrita
+       SOMENTE pelo servidor (definirCargo). Cargo é a chave do cofre: mudança
+       de cargo sem trilha é mudança que ninguém consegue contestar depois. */
+    match /cargo_logs/{logId} {
+      allow read: if isCriador() || isMaster();
       allow create, update, delete: if false;
     }
 
@@ -156,13 +224,25 @@ service cloud.firestore {
       );
     }
 
+    /* O prefixo `__` é namespace do SERVIDOR: `__caixa_mestre__<mesaId>` é o
+       dono virtual da Caixa do Mestre, e não é personagem de ninguém.
+
+       Sem esta trava, o ID do documento era escolha livre de quem cria: o
+       jogador criava `char/__caixa_mestre__<mesaId>` com `ownerUid` dele e
+       virava, para as rules de `items`, o "dono do personagem" de TODA peça na
+       caixa daquela mesa — inclusive as dos outros. Daí editava a própria peça
+       e pedia a recusa. */
+    function idReservado(charId) {
+      return charId.matches('__.*');
+    }
+
     // ========== ADICIONADO: Coleção 'char' (ficha-v1.7_1) ==========
     match /char/{charId} {
       // Leitura: qualquer usuário autenticado (para listagens e rankings)
       allow read: if isSignedIn();
 
       // Criação: usuário define ele mesmo como dono OU mestre
-      allow create: if isSignedIn() && (
+      allow create: if isSignedIn() && !idReservado(charId) && (
         request.resource.data.ownerUid == request.auth.uid || isMaster()
       );
 
@@ -179,17 +259,55 @@ service cloud.firestore {
       );
     }
 
-    // Coleção de logs (sem alterações)
+    /* Trilha de auditoria. O create é aberto porque quem escreve é o JOGADOR:
+       a ficha registra cada mudança que ele faz (char-logger.js), e o painel do
+       mestre registra as dele. 5.525 documentos, de 6 pessoas diferentes.
+
+       O que faltava era qualquer conferência. Dava para gravar log em nome de
+       outra pessoa — numa coleção que só o mestre lê, e que existe justamente
+       para dizer quem fez o quê — e para despejar documento de tamanho
+       arbitrário.
+
+       `user` agora tem de ser o e-mail do próprio token: log de auditoria que
+       aceita autor forjado não é auditoria. */
+    function logBemFormado() {
+      return request.resource.data.user == request.auth.token.email
+        && request.resource.data.keys().size() <= 24
+        && request.resource.data.action is string
+        && request.resource.data.action.size() <= 1000
+        && request.resource.data.timestamp is string;
+    }
+
     match /logs/{logId} {
-      allow create: if isSignedIn();
-      allow read: if isMaster();
+      allow create: if isSignedIn() && logBemFormado();
+      // Os dois caminhos de ser mestre: sem o segundo, 2 dos 3 não leem a
+      // própria trilha.
+      allow read: if isMaster() || temPapelMestre();
       allow update, delete: if false;
     }
     
+    /* O que a MESA move num NPC durante o jogo, e mais nada: vida/energia/
+       sanidade atuais (tudo dentro de `valoresDer.atual`) e as condições.
+       É o que o Tabuleiro grava quando um jogador acerta um golpe — por isso
+       não pode exigir mestre.
+
+       Vinha `allow update: if isSignedIn()`, sem recorte: qualquer conta
+       logada reescrevia QUALQUER NPC do cenário inteiro — nome, atributos,
+       ataques, loot e a história dele. Não era preciso nem estar na mesa.
+
+       A conferência de campo vem PRIMEIRO no `||` de propósito: ela é de
+       graça, e é o caminho do jogador em combate. Só a edição completa, que é
+       do mestre, paga o exists()/get(). */
+    function soEstadoDeMesaNoNpc() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['valoresDer', 'conditions', 'lastUpdate', 'lastUpdateBy']);
+    }
+
     // ========== ADICIONADO: Coleção de NPCs ==========
     match /npcs/{npcId} {
       allow read: if isSignedIn();
-      allow update: if isSignedIn();
+      allow update: if isSignedIn() &&
+        (soEstadoDeMesaNoNpc() || isMaster() || temPapelMestre());
       allow create, delete: if isMaster();
     }
     
@@ -226,6 +344,26 @@ service cloud.firestore {
       );
     }
     
+    /* Peça que está na Caixa do Mestre. O jogador manda para lá pelo servidor
+       (enviarItemParaMesa) e ela só sai por decisão do mestre — recusando o
+       aviso ou transferindo para alguém. Enquanto está na caixa, o navegador
+       não escreve nela. */
+    /* Dono de NPC aliado. `donosUids` é espelho de `vinculos` — a lista
+       `{tipo:'personagem', id:<charId>}` resolvida para o uid do dono de cada
+       ficha, mantida pelo gatilho `espelharDonoDoNpc`. Rules não conseguem
+       varrer lista de objetos procurando um `tipo`; conseguem um `in`. */
+    function ehDonoDoNpcAliado() {
+      return exists(/databases/$(database)/documents/npcs/$(resource.data.characterId)) &&
+        request.auth.uid in
+          get(/databases/$(database)/documents/npcs/$(resource.data.characterId))
+            .data.get('donosUids', []);
+    }
+
+    function naCaixaDoMestre() {
+      return resource.data.characterId is string &&
+             resource.data.characterId.matches('__caixa_mestre__.*');
+    }
+
     // ========== CORRIGIDO: Coleção de Itens ==========
     match /items/{itemId} {
       // ✅ Permitir leitura/query para usuários autenticados
@@ -242,25 +380,32 @@ service cloud.firestore {
          request.resource.data.ownerId == resource.data.ownerId) ||
         (resource.data.ownerUid == request.auth.uid && 
          request.resource.data.ownerUid == resource.data.ownerUid) ||
-        // Dono do personagem vinculado pode atualizar (verificando via characterId)
-        (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
+        // Dono do personagem vinculado pode atualizar (verificando via characterId).
+        // `!naCaixaDoMestre()`: peça na caixa é do mestre até ele decidir onde
+        // ela entra no mundo — e era por aqui que o jogador voltava a mexer nela.
+        (!naCaixaDoMestre() &&
+         exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
          get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
-        // Item vinculado a um NPC (aliado): segue a permissão da coleção 'npcs'
-        // (qualquer usuário autenticado pode atualizar NPCs, então idem para seus itens)
-        exists(/databases/$(database)/documents/npcs/$(resource.data.characterId)) ||
-        // Mestre pode sempre atualizar
-        isMaster()
+        // Item de NPC ALIADO: só quem é dono da ficha vinculada ao NPC.
+        // Era `exists(npcs/<characterId>)` — a mera existência do NPC bastava,
+        // o que dava a qualquer conta logada poder sobre item de qualquer NPC
+        // do cenário. `donosUids` é o vínculo `{tipo:'personagem'}` achatado
+        // pelo gatilho `espelharDonoDoNpc`.
+        ehDonoDoNpcAliado() ||
+        // Mestre pode sempre atualizar (pelos dois caminhos de ser mestre)
+        isMaster() || temPapelMestre()
       );
       
       // ✅ Exclusão: dono do item, dono do personagem, OU mestre
       allow delete: if isSignedIn() && (
         resource.data.ownerId == request.auth.uid || 
         resource.data.ownerUid == request.auth.uid || 
-        (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
+        (!naCaixaDoMestre() &&
+         exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
          get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
-        // Item vinculado a um NPC (aliado): segue a permissão da coleção 'npcs'
-        exists(/databases/$(database)/documents/npcs/$(resource.data.characterId)) ||
-        isMaster()
+        // Item de NPC aliado: só o dono da ficha vinculada (ver acima)
+        ehDonoDoNpcAliado() ||
+        isMaster() || temPapelMestre()
       );
     }
 

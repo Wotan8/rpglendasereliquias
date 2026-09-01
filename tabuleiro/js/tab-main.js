@@ -159,16 +159,23 @@ async function carregarNpcs() {
         });
     });
 }
+/* Nome de quem está na mesa. Vem de `users_public` — o espelho que o servidor
+   mantém — e não mais de `users`, que só o dono e o mestre leem: para escrever
+   "Fulano" ao lado de um cursor não é preciso poder ler o Repertório e o
+   histórico de compras dele.
+   O e-mail saiu junto: era exibido como nome quando faltava displayName, e
+   vazar endereço de e-mail entre jogadores por causa de um fallback é caro
+   demais pelo que resolve. Sem nome, mostra o uid. */
 async function carregarUsers() {
     T.usersMap = {};
     try {
         const uids = T.mesa.jogadores || [];
         for (const u of uids) {
-            const s = await getDoc(doc(db, 'users', u));
-            if (s.exists()) { const d = s.data(); T.usersMap[u] = { email: d.email || u, nome: d.displayName || d.nome || d.email || u }; }
-            else T.usersMap[u] = { email: u, nome: u };
+            const s = await getDoc(doc(db, 'users_public', u));
+            const nome = s.exists() ? (s.data().displayName || '') : '';
+            T.usersMap[u] = { email: u, nome: nome || u };
         }
-    } catch (e) { console.warn('users', e); }
+    } catch (e) { console.warn('users_public', e); }
 }
 
 // ===== SYNC =====

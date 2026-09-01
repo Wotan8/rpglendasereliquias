@@ -76,6 +76,26 @@ function itemParaCaixa(item, ctx = {}) {
 }
 
 /**
+ * O que a recusa precisa saber para devolver: nome, quantas e a cara da peça.
+ *
+ * Existe separado do documento de `items` de propósito. A devolução lia o doc
+ * da Caixa do Mestre — e aquele doc é gravável pelo navegador: bastava criar
+ * `char/__caixa_mestre__<mesaId>` como dono para poder editá-lo, trocar
+ * `quantidade` para 999 e `origemItemNome` para o nome da linha mais cara do
+ * Repertório. A recusa do mestre devolvia o que o próprio jogador escreveu.
+ *
+ * Isto aqui é gravado em `avisos_mestre`, que só o servidor escreve.
+ */
+function pecaParaAviso(item, quantidade) {
+  return {
+    nome: item.nome || "Item sem nome",
+    quantidade: Math.max(1, parseInt(quantidade, 10) || 1),
+    descricao: item.descricao || "",
+    imagem: item.imagem || "",
+  };
+}
+
+/**
  * Tira N unidades da linha do Repertório. Devolve o inventário novo — o
  * original não é tocado. A linha some ao zerar.
  * @throws {Error} com `codigo`, para a callable traduzir
@@ -117,11 +137,14 @@ function retirarDoRepertorio(inventario, nomeItem, quantidade) {
  * Se a linha ainda existir (o jogador mandou só parte), soma nela; senão a
  * linha renasce com a descrição e a imagem que a peça levou. O array original
  * não é tocado.
+ *
+ * `peca` tem de vir do aviso (pecaParaAviso), NUNCA do documento de `items`:
+ * aquele o jogador consegue editar.
  */
-function devolverAoRepertorio(inventario, itemCaixa) {
+function devolverAoRepertorio(inventario, peca) {
   const lista = Array.isArray(inventario) ? [...inventario] : [];
-  const nome = itemCaixa.origemItemNome || itemCaixa.nome || "Item sem nome";
-  const qtd = Math.max(1, parseInt(itemCaixa.quantidade, 10) || 1);
+  const nome = peca.origemItemNome || peca.nome || "Item sem nome";
+  const qtd = Math.max(1, parseInt(peca.quantidade, 10) || 1);
 
   const idx = lista.findIndex((i) => i && i.nome === nome);
   if (idx !== -1) {
@@ -129,8 +152,8 @@ function devolverAoRepertorio(inventario, itemCaixa) {
   } else {
     lista.push({
       nome,
-      descricao: itemCaixa.descricao || "",
-      imagem: itemCaixa.imagem || "",
+      descricao: peca.descricao || "",
+      imagem: peca.imagem || "",
       quantidade: qtd,
       formaRecebimento: "Devolvido pelo mestre",
     });
@@ -138,4 +161,4 @@ function devolverAoRepertorio(inventario, itemCaixa) {
   return lista;
 }
 
-module.exports = { itemParaCaixa, retirarDoRepertorio, devolverAoRepertorio, idDaCaixa, PREFIXO_CAIXA };
+module.exports = { itemParaCaixa, pecaParaAviso, retirarDoRepertorio, devolverAoRepertorio, idDaCaixa, PREFIXO_CAIXA };
