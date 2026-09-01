@@ -134,6 +134,10 @@
     box-shadow: var(--lr-shadow-1);   /* sem JS: já se separa do texto ao grudar */
 }
 .wb-richbar .btn { min-width: 2rem; padding: var(--lr-space-1) var(--lr-space-2); }
+/* Grupo: os controles de UMA decisao andam juntos. Como cada grupo e um
+   inline-flex, a barra que nao cabe quebra ENTRE grupos e nunca no meio de
+   um - a fileira de baixo continua sendo uma ideia inteira. */
+.wb-rich-grupo { display: inline-flex; align-items: center; gap: var(--lr-space-1); }
 .wb-rich-sep { width: 1px; align-self: stretch; background: var(--lr-border); margin: 0 var(--lr-space-1); }
 .wb-rich-sel { background: var(--lr-surface); color: var(--lr-text-1); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: var(--lr-space-1) var(--lr-space-2); font-size: var(--lr-fs-xs); font-family: var(--lr-font-body); }
 .wb-rich-cor { display: inline-flex; align-items: center; gap: .2rem; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .15rem var(--lr-space-1); cursor: pointer; font-size: var(--lr-fs-sm); }
@@ -206,6 +210,7 @@
     padding: var(--lr-space-1);
     gap: 1px;
 }
+.wb-rich-menu--fim .wb-rich-menu__lista { left: auto; right: 0; }
 .wb-rich-menu__lista[hidden] { display: none; }
 .wb-rich-menu__lista button {
     display: flex; align-items: center; gap: var(--lr-space-2);

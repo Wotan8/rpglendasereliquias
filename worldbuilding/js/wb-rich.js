@@ -43,61 +43,87 @@ const ALINHAR = [
     ['justifyFull', '☰', 'Justificado'],
 ];
 
-/** A barra de ferramentas. O wb-editor injeta isto na toolbar do editor. */
+/** A barra de ferramentas. O wb-editor injeta isto na toolbar do editor.
+ *
+ * AGRUPADA POR DECISAO, nao por ordem de chegada: paragrafo, texto, lista,
+ * bloco de livro, insercao. Cada grupo e um `inline-flex`, entao quando a
+ * barra nao cabe ela quebra ENTRE grupos, nunca no meio de um - a fileira de
+ * baixo continua sendo uma ideia inteira.
+ *
+ * E o que se usa uma vez por capitulo (tabela, filete, capitular, limpar)
+ * saiu para o MAIS. Dezenove controles soltos em tres fileiras nao sao uma
+ * barra, sao uma gaveta: o que importa se perde no que quase nunca e usado.
+ */
 export const TOOLBAR_HTML = `
-<select class="wb-rich-sel" data-rich="bloco" title="Estilo do parágrafo">
-    ${BLOCOS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}
-</select>
-<span class="wb-rich-sep"></span>
-<button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="bold" title="Negrito (Ctrl+B)"><b>N</b></button>
-<button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="italic" title="Itálico (Ctrl+I)"><i>I</i></button>
-<button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="underline" title="Sublinhado (Ctrl+U)"><u>S</u></button>
-<button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="strikeThrough" title="Riscado"><s>R</s></button>
-<label class="wb-rich-cor" title="Cor do texto">🎨<input type="color" data-rich="cor" value="#D4AF37"></label>
-<button class="btn btn-secondary btn-sm" data-rich="marca" title="Marca-texto">🖍️</button>
-<span class="wb-rich-sep"></span>
-<span class="wb-rich-menu" data-alinhar>
-    <button type="button" class="btn btn-secondary btn-sm wb-rich-menu__abre" data-rich="alinhar"
-            title="Alinhamento do parágrafo"><span data-alinharGlifo>⬅</span> ▾</button>
-    <span class="wb-rich-menu__lista" hidden>
-        ${ALINHAR.map(([cmd, g, l]) =>
-            `<button type="button" data-alin="${cmd}"><span>${g}</span> ${l}</button>`).join('')}
+<span class="wb-rich-grupo">
+    <select class="wb-rich-sel" data-rich="bloco" title="Estilo do parágrafo">
+        ${BLOCOS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}
+    </select>
+    <span class="wb-rich-menu" data-alinhar>
+        <button type="button" class="btn btn-secondary btn-sm wb-rich-menu__abre" data-rich="alinhar"
+                title="Alinhamento do parágrafo"><span data-alinharGlifo>⬅</span> ▾</button>
+        <span class="wb-rich-menu__lista" hidden>
+            ${ALINHAR.map(([cmd, g, l]) =>
+                `<button type="button" data-alin="${cmd}"><span>${g}</span> ${l}</button>`).join('')}
+        </span>
     </span>
 </span>
 <span class="wb-rich-sep"></span>
-<button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="insertUnorderedList" title="Lista">•—</button>
-<button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="insertOrderedList" title="Lista numerada">1.</button>
-<button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="insertHorizontalRule" title="Filete separador">—</button>
+<span class="wb-rich-grupo">
+    <button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="bold" title="Negrito (Ctrl+B)"><b>N</b></button>
+    <button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="italic" title="Itálico (Ctrl+I)"><i>I</i></button>
+    <button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="underline" title="Sublinhado (Ctrl+U)"><u>S</u></button>
+    <button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="strikeThrough" title="Riscado"><s>R</s></button>
+    <label class="wb-rich-cor" title="Cor do texto">🎨<input type="color" data-rich="cor" value="#D4AF37"></label>
+    <button class="btn btn-secondary btn-sm" data-rich="marca" title="Marca-texto">🖍️</button>
+</span>
 <span class="wb-rich-sep"></span>
-<button class="btn btn-secondary btn-sm" data-rich="classe" data-classe="tm-capitular" title="Capitular — primeira letra grande">✒️</button>
-<select class="wb-rich-sel" data-rich="cols" title="Dividir em colunas — envolve os blocos selecionados">
-    <option value="">▥ Colunas…</option>
-    <option value="">Uma coluna (desfaz)</option>
-    <option value="tm-cols--2">Duas, texto corrido</option>
-    <option value="tm-cols--3">Três, texto corrido</option>
-    <option value="tm-cols--margem">Nota à esquerda + texto</option>
-    <option value="tm-cols--margem-dir">Texto + nota à direita</option>
-    <option value="tm-cols--desloc">Texto deslocado (arte à esquerda)</option>
-    <option value="tm-cols--grade3">Três células lado a lado</option>
-</select>
-<select class="wb-rich-sel" data-rich="bloco2" title="Blocos de livro de regras">
-    <option value="">▤ Bloco…</option>
-    <option value="tm-nota">Nota de margem</option>
-    <option value="tm-leitura">Ler em voz alta</option>
-    <option value="tm-aviso">⚠️ Aviso</option>
-    <option value="tm-aviso tm-aviso--nota">📖 Nota do mestre</option>
-    <option value="tm-aviso tm-aviso--segredo">🔒 Segredo</option>
-    <option value="ins:ponto">📍 Ponto de interesse</option>
-    <option value="wrap:tm-carta">✉️ Carta / handout</option>
-    <option value="wrap:tm-carta tm-carta--maquina">✉️ Carta datilografada</option>
-    <option value="wrap:tm-carta tm-carta--mao">✉️ Carta manuscrita</option>
-</select>
-<button class="btn btn-secondary btn-sm" data-rich="link" title="Inserir link">🔗</button>
-<button class="btn btn-secondary btn-sm" data-rich="imagem" title="Inserir imagem">🖼️</button>
-<button class="btn btn-secondary btn-sm" data-rich="tabela" title="Inserir tabela">▦</button>
-<button class="btn btn-secondary btn-sm" data-rich="campo" title="Campo vinculado — o valor vem do cadastro e se atualiza sozinho">🔗↻</button>
-<button class="btn btn-secondary btn-sm" data-rich="tirabloco" title="Tirar o bloco daqui — descasca uma camada por clique">⊘ bloco</button>
-<button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="removeFormat" title="Limpar formatação">🧹</button>
+<span class="wb-rich-grupo">
+    <button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="insertUnorderedList" title="Lista">•—</button>
+    <button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="insertOrderedList" title="Lista numerada">1.</button>
+</span>
+<span class="wb-rich-sep"></span>
+<span class="wb-rich-grupo">
+    <select class="wb-rich-sel" data-rich="bloco2" title="Blocos de livro de regras">
+        <option value="">▤ Bloco…</option>
+        <option value="tm-nota">Nota de margem</option>
+        <option value="tm-leitura">Ler em voz alta</option>
+        <option value="tm-aviso">⚠️ Aviso</option>
+        <option value="tm-aviso tm-aviso--nota">📖 Nota do mestre</option>
+        <option value="tm-aviso tm-aviso--segredo">🔒 Segredo</option>
+        <option value="ins:ponto">📍 Ponto de interesse</option>
+        <option value="wrap:tm-carta">✉️ Carta / handout</option>
+        <option value="wrap:tm-carta tm-carta--maquina">✉️ Carta datilografada</option>
+        <option value="wrap:tm-carta tm-carta--mao">✉️ Carta manuscrita</option>
+    </select>
+    <select class="wb-rich-sel" data-rich="cols" title="Dividir em colunas — envolve os blocos selecionados">
+        <option value="">▥ Colunas…</option>
+        <option value="">Uma coluna (desfaz)</option>
+        <option value="tm-cols--2">Duas, texto corrido</option>
+        <option value="tm-cols--3">Três, texto corrido</option>
+        <option value="tm-cols--margem">Nota à esquerda + texto</option>
+        <option value="tm-cols--margem-dir">Texto + nota à direita</option>
+        <option value="tm-cols--desloc">Texto deslocado (arte à esquerda)</option>
+        <option value="tm-cols--grade3">Três células lado a lado</option>
+    </select>
+    <button class="btn btn-secondary btn-sm" data-rich="tirabloco" title="Tirar o bloco daqui — descasca uma camada por clique">⊘ bloco</button>
+</span>
+<span class="wb-rich-sep"></span>
+<span class="wb-rich-grupo">
+    <button class="btn btn-secondary btn-sm" data-rich="campo" title="Campo vinculado — o valor vem do cadastro e se atualiza sozinho">🔗↻</button>
+    <button class="btn btn-secondary btn-sm" data-rich="imagem" title="Inserir imagem">🖼️</button>
+    <span class="wb-rich-menu wb-rich-menu--fim" data-mais>
+        <button type="button" class="btn btn-secondary btn-sm wb-rich-menu__abre" data-rich="mais"
+                title="Mais inserções">⋯</button>
+        <span class="wb-rich-menu__lista" hidden>
+            <button type="button" data-rich="link"><span>🔗</span> Link</button>
+            <button type="button" data-rich="tabela"><span>▦</span> Tabela</button>
+            <button type="button" data-rich="cmd" data-cmd="insertHorizontalRule"><span>—</span> Filete separador</button>
+            <button type="button" data-rich="classe" data-classe="tm-capitular"><span>✒️</span> Capitular</button>
+            <button type="button" data-rich="cmd" data-cmd="removeFormat"><span>🧹</span> Limpar formatação</button>
+        </span>
+    </span>
+</span>
 `;
 
 /* Barra flutuante que aparece ao clicar numa imagem. */
@@ -219,7 +245,7 @@ document.addEventListener('selectionchange', () => {
     if (_vivo.ed.contains(document.getSelection()?.anchorNode)) _vivo.pintarEstado();
 });
 document.addEventListener('click', (e) => {
-    if (_vivo && !_vivo.menuAlin.contains(e.target)) _vivo.listaAlin.hidden = true;
+    _vivo?.fecharMenus(e.target.closest?.('.wb-rich-menu'));
 });
 
 export function bindRich(ed, toolbar, onChange, opts = {}) {
@@ -557,7 +583,12 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
            para todo controle, inclusive os que ainda não existem. */
         if (!alvo || alvo.matches('select, input, textarea')) return;
         e.preventDefault();
+        /* Abrir um menu nao e editar: sem isto, espiar o MAIS ja marcava o
+           capitulo como sujo e disparava o salvamento automatico. O toggle
+           mora no listener proprio do botao, logo abaixo. */
+        if (alvo.classList.contains('wb-rich-menu__abre')) return;
         ed.focus();
+        fecharMenus(null);
 
         switch (alvo.dataset.rich) {
             case 'cmd':
@@ -598,10 +629,17 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
     const listaAlin = menuAlin.querySelector('.wb-rich-menu__lista');
     const glifoAlin = menuAlin.querySelector('[data-alinharGlifo]');
 
-    toolbar.querySelector('[data-rich="alinhar"]').addEventListener('click', (e) => {
-        e.stopPropagation();
-        listaAlin.hidden = !listaAlin.hidden;
+    /* Abrir e generico: vale para o alinhamento, para o MAIS, e para o
+       proximo menu que aparecer. Abrir um fecha os outros. */
+    const fecharMenus = (menos) => toolbar.querySelectorAll('.wb-rich-menu').forEach(m => {
+        if (m !== menos) m.querySelector('.wb-rich-menu__lista').hidden = true;
     });
+    toolbar.querySelectorAll('.wb-rich-menu__abre').forEach(b => b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const lista = b.parentElement.querySelector('.wb-rich-menu__lista');
+        fecharMenus(b.parentElement);
+        lista.hidden = !lista.hidden;
+    }));
     listaAlin.addEventListener('click', (e) => {
         const b = e.target.closest('[data-alin]'); if (!b) return;
         ed.focus();
@@ -610,7 +648,7 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
         pintarEstado();
         avisar();
     });
-    _vivo = { ed, menuAlin, listaAlin, pintarEstado: () => pintarEstado() };
+    _vivo = { ed, fecharMenus, pintarEstado: () => pintarEstado() };
 
     /* ── Estado visível ─────────────────────────────────────
        O menu tem de dizer o que ESTÁ aplicado. Sem isto, o autor escolhe
