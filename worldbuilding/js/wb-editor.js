@@ -19,13 +19,15 @@
      worldbuilding-settings/estantes → lista de estantes (um doc só)
    ═══════════════════════════════════════════════════════════ */
 
-import { db, collection, getDocs, doc, getDoc, setDoc, deleteDoc } from './firebase-config.js';
+import { db, collection, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc } from './firebase-config.js';
 import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND, poolOf } from './wb-utils.js';
 import { dossieHTML } from './wb-dossie.js';
 import { TOOLBAR_HTML, bindRich } from './wb-rich.js';
 import { PUBLICACOES, pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
 import { ESTILO_CAMPOS, FONTES, estiloDoLivro, estiloInline, estiloDoLivro_obj } from '../../shared/livro-estilo.js';
-import { confirmar } from '../../shared/dialogo.js?v=2';
+import { proximaVersao, mesmaVersao } from '../../shared/versao-canone.js';
+import { alvos, avisoDeVersao, enviarAviso } from '../../shared/avisar-livro.js';
+import { confirmar, toast } from '../../shared/dialogo.js?v=2';
 
 export const Editor = (() => {
     let books = [], artigos = [], estantes = [], lixeira = [], atual = null;
@@ -567,9 +569,17 @@ export const Editor = (() => {
                 <section data-bkpanel="geral">
                     <div class="wbt-row2">
                         <label>Título do livro <input id="bkTitle" class="form-input" value="${esc(b.title)}" placeholder="Ex: Crônicas de Eldoria — Vol. I"></label>
-                        <label>Versão <input id="bkVersao" class="form-input" value="${esc(b.versao || '')}" placeholder="Ex: 2.1"></label>
+                        <label>Versão
+                            <span class="wb-versao-campo">
+                                <input id="bkVersao" class="form-input" value="${esc(b.versao || '')}" placeholder="Ex: 1.02">
+                                <button type="button" class="btn btn-secondary btn-sm" id="bkVersaoSobe"
+                                        title="Escada do cânone: sobe um centésimo; a casa inteira só vira em .99">↑</button>
+                            </span>
+                            <span class="wbt-muted wb-bkhint" id="bkVersaoAviso"></span></label>
                     </div>
-                    <p class="wbt-muted wb-bkhint">A versão vira selo em toda tela que lista o livro, antes de abrir. Texto livre — vazio = sem selo.</p>
+                    <p class="wbt-muted wb-bkhint">A versão vira selo em toda tela que lista o livro, antes de abrir.
+                        Escada do cânone: <b>1.02 → 1.03 → … → 1.99 → 2.00</b>. Ao salvar com a versão mudada, dá para avisar quem tem acesso.
+                        Texto livre — dá para escrever “Ed. revista”, mas aí o ↑ não sabe qual é a próxima.</p>
                     <label>Sinopse / descrição <textarea id="bkDesc" class="form-textarea" rows="3" placeholder="Do que trata este livro?">${esc(b.description || '')}</textarea></label>
                     <label>Capa do livro ${CampoImagem.html({ id: 'bkCover', classe: 'form-input', valor: b.cover || '', pasta: 'worldbuilding-images/capas' })}</label>
                     <div class="wb-bkgroup">
@@ -648,6 +658,21 @@ export const Editor = (() => {
             $('#bkTabs').querySelectorAll('.wbt-chip').forEach(c => c.classList.toggle('is-active', c === t));
             document.querySelectorAll('.wb-bkform > section')
                 .forEach(s => s.hidden = s.dataset.bkpanel !== t.dataset.bktab);
+        };
+
+        /* ↑ Versão: preenche com a próxima da escada. Versão que não está na
+           escada ("Ed. revista") não tem próxima — o botão diz isso em vez
+           de inventar um número. */
+        $('#bkVersaoSobe').onclick = () => {
+            const campo = $('#bkVersao');
+            const prox = proximaVersao(campo.value);
+            if (!prox) {
+                $('#bkVersaoAviso').textContent = '“' + campo.value.trim() + '” não está na escada 1.02 → 1.03. Escreva a próxima à mão.';
+                campo.focus(); campo.select();
+                return;
+            }
+            campo.value = prox;
+            $('#bkVersaoAviso').textContent = '';
         };
 
         /* ── Aparência: o controle mexe em `est`, e `est` pinta a amostra ──
@@ -786,6 +811,7 @@ export const Editor = (() => {
             aviso();
         }
 
+        const versaoAntes = String(b.versao || '').trim();
         $('#bkSave').onclick = async () => {
             b.title = $('#bkTitle').value.trim() || 'Livro sem título';
             b.versao = $('#bkVersao').value.trim();
@@ -836,6 +862,8 @@ export const Editor = (() => {
                     { status: st, public: pb, bookId, order: ordem, updatedAt: a.updatedAt, updatedBy: a.updatedBy }, { merge: true });
             }
             ToolModal.close(); renderLibrary();
+            // Depois de gravar: o aviso é sobre o que JÁ está no ar.
+            if (book && !mesmaVersao(versaoAntes, b.versao)) await ofertarAviso(b, versaoAntes);
         };
         const del = $('#bkDel');
         if (del) del.onclick = async () => {
@@ -851,6 +879,38 @@ export const Editor = (() => {
             books = books.filter(x => x.id !== b.id);
             ToolModal.close(); renderLibrary();
         };
+    }
+
+    /* ── Aviso de versão ───────────────────────────────────────
+       Subir a versão e não avisar ninguém é o jogador citando a regra da
+       semana passada no meio da sessão. Pergunta sempre — mandar aviso é
+       mexer na caixa dos outros, e isso não se faz por conta própria. */
+    async function ofertarAviso(livro, versaoAntes) {
+        let usuarios = [];
+        try {
+            const snap = await getDocs(collection(db, 'users'));
+            usuarios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch (e) {
+            console.warn('[aviso-livro] não deu para ler os usuários', e);
+            toast('🔖 Versão salva. Não deu para montar a lista de quem avisar — veja o console.');
+            return;
+        }
+        const alvo = alvos(livro, usuarios);
+        if (!alvo.ids.length) {
+            toast(`🔖 Versão ${livro.versao}. Ninguém avisado — ${alvo.motivo}.`);
+            return;
+        }
+        const quantos = `${alvo.ids.length} pessoa${alvo.ids.length > 1 ? 's' : ''}`;
+        const ressalva = alvo.exato ? '' : `
+
+⚠️ ${alvo.motivo}.`;
+        if (!await confirmar(`Avisar ${quantos} de que “${livro.title}” está na versão ${livro.versao}?
+
+(${alvo.motivo})${ressalva}`)) return;
+        const { enviados, falhas } = await enviarAviso({ db, doc, getDoc, updateDoc }, alvo.ids, avisoDeVersao(livro, versaoAntes));
+        toast(falhas.length
+            ? `🔔 ${enviados} avisado(s), ${falhas.length} não deu — veja o console.`
+            : `🔔 ${enviados} avisado(s). O sino acende no Portal, inclusive no app instalado.`);
     }
 
     /* ══════════════ EDITOR (escrita) ══════════════ */

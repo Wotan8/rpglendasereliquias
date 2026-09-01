@@ -9,6 +9,15 @@ const DADOS = {
           pub: { geral: true, conhGeral: false, conhVinculo: true, mestre: false } },
         { id: 'b2', title: 'Livro sem capítulo', order: 1, pub: {} },
     ],
+    /* O aviso de versao escreve em `users.notifications` — o mesmo campo que
+       o sino do Portal escuta. Tres jogadores e dois mestres, para o recorte
+       por publicacao ter o que separar. */
+    'users': [
+        { id: 'u1', email: 'igor@x', role: 'criador', notifications: [] },
+        { id: 'u2', email: 'mestre@x', role: 'mestre', notifications: [{ id: 'velha', message: 'antiga', timestamp: 1, isNew: false }] },
+        { id: 'u3', email: 'jog1@x' },
+        { id: 'u4', email: 'jog2@x', role: 'jogador', notifications: [] },
+    ],
     'worldbuilding-articles': [
         { id: 'a1', bookId: 'b1', order: 0, title: 'A Noite da Bigorna Fria', synopsis: 'Brida descobre quem comprou a dívida.', status: 'rascunho', public: false, contentHTML: '<p>um dois tres</p>' },
         { id: 'a2', bookId: 'b1', order: 1, title: 'O Recibo Falso', status: 'publicado', public: true, words: 900, contentHTML: '<p>quatro cinco</p>' },
@@ -29,7 +38,14 @@ export const collection = (_db, nome) => ({ nome });
 export const doc = (_db, nome, id) => ({ nome, id });
 export const getDocs = async (c) => ({ docs: (DADOS[c.nome] || []).map(d => ({ id: d.id, data: () => ({ ...d }) })) });
 export const getDoc = async (d) => {
-    const v = DOCS[`${d.nome}/${d.id}`] || null;
+    /* Cai na COLECAO quando nao ha doc avulso: no Firestore de verdade
+       `getDoc(users/u1)` acha o mesmo doc que `getDocs(users)` lista. O
+       duble so olhava os avulsos, e por isso todo `users/{uid}` voltava
+       "nao existe" — o aviso de versao saia com zero enviados e o teste
+       acusava um bug que era do duble. */
+    const avulso = DOCS[`${d.nome}/${d.id}`];
+    const naColecao = (DADOS[d.nome] || []).find(x => x.id === d.id);
+    const v = avulso || (naColecao ? { ...naColecao } : null);
     return { exists: () => !!v, data: () => v };
 };
 export const setDoc = async (d, data, opts) => {
