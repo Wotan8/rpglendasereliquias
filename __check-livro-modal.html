@@ -13,24 +13,32 @@
 <link rel="stylesheet" href="shared/sanfona.css">
 <link rel="stylesheet" href="shared/acervo.css">
 <link rel="stylesheet" href="shared/dialogo.css">
-<link rel="stylesheet" href="shared/texto-mundo.css?v=4">
+<link rel="stylesheet" href="shared/texto-mundo.css?v=5">
 <link rel="stylesheet" href="worldbuilding/css/worldbuilding.css?v=2">
-<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=20">
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=21">
 <script src="shared/theme.js"></script>
 <script src="shared/campo-imagem.js?v=2"></script>
 
 <!-- Troca o Firestore real por um duble em memoria, para o harness rodar
      o wb-editor.js DE VERDADE (nao uma copia do markup).
 
-     O ?v= nas tres linhas abaixo e o MESMO numero de proposito, e sobe junto
-     a cada mexida: modulo com query e outro modulo para o navegador, e sem
-     isso o harness testa o wb-editor.js que ficou no cache — que foi
-     exatamente o que aconteceu na primeira rodada. O duble precisa ser a
-     MESMA instancia que o editor enxerga, senao GRAVADO fica vazio. -->
+     O ?v= de TODAS as linhas abaixo e o mesmo numero de proposito, e sobe
+     junto a cada mexida: modulo com query e outro modulo para o navegador, e
+     sem isso o harness testa o que ficou no cache. Ja aconteceu tres vezes
+     aqui — a ultima foi mexer no wb-rich.js com so o wb-editor.js versionado,
+     e passar meia hora achando que a conta da barra estava errada.
+
+     Os quatro modulos do editor entram, nao so o de entrada: o importmap
+     casa pela URL RESOLVIDA, entao o `./wb-rich.js` que o wb-editor.js pede
+     tambem cai aqui e pega a copia versionada. O duble precisa ser a MESMA
+     instancia que o editor enxerga, senao GRAVADO fica vazio. -->
 <script type="importmap">
 { "imports": {
-    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=8",
-    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=9"
+    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=9",
+    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=9",
+    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=9",
+    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=9",
+    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=9"
 } }
 </script>
 
@@ -67,7 +75,7 @@
 </div>
 
 <script type="module">
-import { GRAVADO } from './__check-stub-firestore.js?v=8';
+import { GRAVADO } from './__check-stub-firestore.js?v=9';
 import { Editor } from './worldbuilding/js/wb-editor.js';
 
 window.WB = { data: {}, user: { email: 'check@harness' } };
@@ -79,7 +87,7 @@ const espera = (ms = 80) => new Promise(r => setTimeout(r, ms));
 /* Modulo com query e outro modulo para o navegador. Sem isso o harness roda
    o que ficou no cache — ja aconteceu duas vezes aqui. UM token para todos
    os `import()` de shared/, subido a cada mexida. */
-const CB = '?h=2';
+const CB = '?h=3';
 // Salvamento deliberado (o mesmo caminho do botao 💾) e volta a Biblioteca.
 const save2 = async () => { $('#saveArticle').click(); await espera(200); };
 // Tolerante a ja estar na Biblioteca: os blocos de teste rodam em sequencia
@@ -576,6 +584,84 @@ $('#chkRun').onclick = async () => {
     t('oferece so escalar com conteudo',
         String(campos.map(c => c.campo).sort()) === 'expectativaVida,nivel,nome');
 
+    // ── Tabela: a GRADE, que e onde da para errar em silencio ──
+    const T = await import('/worldbuilding/js/wb-tabela.js' + CB);
+    const mesa = (html) => { const d = document.createElement('div'); d.innerHTML = html; document.body.appendChild(d); return d.querySelector('table'); };
+    const desenho = (tb) => [...tb.rows].map(tr => [...tr.cells].map(c => c.textContent.trim() || '.').join('')).join('|');
+    const gradeTxt = (tb) => T.gradeDaTabela(tb).map(l => l.map(c => c.textContent.trim() || '.').join('')).join('|');
+
+    // cellIndex conta CELULAS, a grade conta COLUNAS. Com colspan elas
+    // deixam de ser a mesma coisa — e e por isso que tudo passa pela grade.
+    let tb = mesa('<table><tr><td colspan="2">A</td><td>B</td></tr><tr><td>c</td><td>d</td><td>e</td></tr></table>');
+    t('a grade expande o colspan', gradeTxt(tb) === 'AAB|cde');
+    t('B esta na COLUNA 2, nao no cellIndex 1',
+        T.ondeEsta(tb, tb.rows[0].cells[1]).x === 2 && tb.rows[0].cells[1].cellIndex === 1);
+    t('a tabela tem 3 colunas', T.numColunas(tb) === 3);
+
+    // Remover a coluna de B nao pode levar 'd' junto.
+    T.removerColuna(tb.rows[0].cells[1]);
+    t('remover coluna pela grade tira o certo', gradeTxt(tb) === 'AA|cd');
+    tb.parentElement.remove();
+
+    // Remover a coluna que uma celula mesclada ATRAVESSA encolhe, nao apaga.
+    tb = mesa('<table><tr><td colspan="2">A</td><td>B</td></tr><tr><td>c</td><td>d</td><td>e</td></tr></table>');
+    T.removerColuna(tb.rows[1].cells[0]);
+    t('coluna sob mesclagem encolhe a celula em vez de apagar', gradeTxt(tb) === 'AB|de');
+    tb.parentElement.remove();
+
+    // Mesclar e dividir, ida e volta.
+    tb = mesa('<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>');
+    t('mescla para a direita',
+        T.mesclar(tb.rows[0].cells[0], 'dir')
+        && tb.rows[0].cells.length === 1 && tb.rows[0].cells[0].colSpan === 2);
+    t('a celula mesclada ocupa as duas colunas da grade',
+        T.gradeDaTabela(tb)[0].length === 2 && T.gradeDaTabela(tb)[0][0] === T.gradeDaTabela(tb)[0][1]);
+    t('junta o conteudo das duas', tb.rows[0].cells[0].textContent.trim() === 'a b');
+    t('dividir devolve a grade', T.dividir(tb.rows[0].cells[0]) && T.numColunas(tb) === 2 && tb.rows[0].cells.length === 2);
+    tb.parentElement.remove();
+
+    // Mesclagem que deixaria buraco na grade e RECUSADA.
+    tb = mesa('<table><tr><td rowspan="2">a</td><td>b</td></tr><tr><td>d</td></tr></table>');
+    t('nao mescla o que deixaria buraco na grade', T.mesclar(tb.rows[0].cells[1], 'dir') === false);
+    tb.parentElement.remove();
+
+    // Linha: inserir respeita a contagem de colunas; remover encolhe rowspan
+    // que atravessava, senao ele invade a linha de baixo.
+    tb = mesa('<table><tr><td rowspan="2">a</td><td>b</td></tr><tr><td>d</td></tr><tr><td>e</td><td>f</td></tr></table>');
+    T.inserirLinha(tb.rows[2].cells[0], 'abaixo');
+    t('linha nova nasce com a largura da tabela', tb.rows[3].cells.length === 2);
+    T.removerLinha(tb.rows[1].cells[0]);
+    t('remover linha encolhe o rowspan que a atravessava', tb.rows[0].cells[0].rowSpan === 1);
+    tb.parentElement.remove();
+
+    // Nao deixa a tabela virar um <table> vazio que ninguem consegue clicar.
+    tb = mesa('<table><tr><td>so</td></tr></table>');
+    t('nao remove a ultima linha', T.removerLinha(tb.rows[0].cells[0]) === false);
+    t('nao remove a ultima coluna', T.removerColuna(tb.rows[0].cells[0]) === false);
+    tb.parentElement.remove();
+
+    // Inserir coluna: celula que atravessa o ponto CRESCE, nao ganha vizinha.
+    tb = mesa('<table><tr><td colspan="2">A</td></tr><tr><td>c</td><td>d</td></tr></table>');
+    T.inserirColuna(tb.rows[1].cells[0], 'dir');
+    t('inserir coluna sob mesclagem cresce a celula', tb.rows[0].cells[0].colSpan === 3);
+    t('e alinha as linhas', T.gradeDaTabela(tb).every(l => l.length === 3));
+    tb.parentElement.remove();
+
+    // Pintar por escopo, e a largura em % pela coluna inteira.
+    tb = mesa('<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>');
+    T.pintar(tb.rows[0].cells[0], '#123456', 'coluna');
+    t('pintar coluna pega as duas linhas',
+        tb.rows[0].cells[0].style.backgroundColor && tb.rows[1].cells[0].style.backgroundColor
+        && !tb.rows[0].cells[1].style.backgroundColor);
+    T.pintar(tb.rows[0].cells[0], '', 'coluna');
+    t('e da para tirar a cor', !tb.rows[0].cells[0].style.backgroundColor);
+    T.larguraColuna(tb.rows[0].cells[0], 22);
+    t('largura vai na coluna inteira, em %',
+        T.larguraDe(tb.rows[1].cells[0]) === 22 && tb.rows[0].cells[0].style.getPropertyValue('--tm-col-larg') === '22%');
+    T.larguraColuna(tb.rows[0].cells[0], 500);
+    t('largura nao estoura', T.larguraDe(tb.rows[0].cells[0]) === 95);
+    tb.parentElement.remove();
+
     // ── Imagem: largura livre, camada e a conta do legado ──
     const R = await import('/worldbuilding/js/wb-rich.js' + CB);
     const figProva = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; };
@@ -705,6 +791,39 @@ $('#chkRun').onclick = async () => {
     await espera(60);
     t('voltar para junto devolve a imagem ao fluxo',
         !figE.classList.contains('tm-fig--fundo') && getComputedStyle(figE).position !== 'absolute');
+
+    // ── A barra da tabela, dirigida como o autor dirige ──
+    ed2.innerHTML = '<p>antes</p><div class="tm-tabela-rola"><table>'
+        + '<thead><tr><th>Item</th><th>Preco</th></tr></thead>'
+        + '<tbody><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></tbody></table></div><p>depois</p>';
+    await espera(80);
+    const celT = ed2.querySelector('tbody td');
+    const selT = window.getSelection(), rgT = document.createRange();
+    rgT.selectNodeContents(celT); selT.removeAllRanges(); selT.addRange(rgT);
+    ed2.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await espera(150);
+    const bt = document.querySelector('.wb-tabbar');
+    t('o cursor dentro da celula abre a barra da tabela', !bt.hidden);
+    // A barra envolve em 2-3 linhas conforme a tela; deslocamento fixo a
+    // fazia sentar em cima do cabecalho da tabela.
+    t('a barra nao tapa a tabela que ela edita',
+        bt.getBoundingClientRect().bottom <= ed2.querySelector('.tm-tabela-rola').getBoundingClientRect().top + 1);
+
+    const clicarTab = (sel) => bt.querySelector(sel).dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    clicarTab('[data-tab="col-dir"]');
+    await espera(60);
+    t('a barra insere coluna de verdade', ed2.querySelectorAll('tbody tr')[0].cells.length === 3);
+    clicarTab('[data-tab="linha-abaixo"]');
+    await espera(60);
+    t('e linha tambem', ed2.querySelectorAll('tbody tr').length === 3);
+    clicarTab('[data-estilo="tm-tab--zebra"]');
+    t('o estilo entra na tabela', ed2.querySelector('table').classList.contains('tm-tab--zebra'));
+    t('dividir nasce travado em celula que nao esta mesclada',
+        bt.querySelector('[data-tab="divide"]').disabled);
+    clicarTab('[data-tab="mescla-dir"]');
+    await espera(60);
+    t('mesclar pela barra funciona', ed2.querySelector('tbody td').colSpan === 2);
+    t('e ai dividir destrava', !bt.querySelector('[data-tab="divide"]').disabled);
 
     $('#chkOut').innerHTML = erro.length
         ? '<span style="color:var(--lr-blood)">✗ ' + erro.length + ' falha(s): ' + erro.join(' · ') + '</span>'

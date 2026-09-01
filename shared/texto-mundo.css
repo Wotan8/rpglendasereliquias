@@ -287,6 +287,37 @@
     padding-top: .4em;
 }
 
+/* ── Largura de coluna, em % ───────────────────────────────
+   Vai como custom property e nao como `width`: `width` esta fora do filtro
+   do sanitizador de proposito (e por onde HTML colado do Word entra com
+   layout em pixel), e reabri-lo para a tabela reabriria para tudo.
+   `table-layout: fixed` so entra quando ha alguma largura escolhida — sem
+   ele o navegador ignora a medida; com ele sempre, a tabela automatica
+   perderia o ajuste ao conteudo. */
+.texto-mundo table:has([style*="--tm-col-larg"]) { table-layout: fixed; }
+.texto-mundo th[style*="--tm-col-larg"],
+.texto-mundo td[style*="--tm-col-larg"] { width: var(--tm-col-larg); }
+
+/* ── Estilos de tabela ─────────────────────────────────────
+   Quatro, combinaveis. Sao os quatro formatos que uma pagina de regras
+   pede: lista longa (zebra), quadro leve (sem grade), tabela de referencia
+   densa (compacta) e tabela de duas colunas onde a primeira e o nome da
+   coisa (chave). */
+.texto-mundo .tm-tab--zebra tbody tr:nth-child(even) > * { background: var(--lr-bg-1); }
+.texto-mundo .tm-tab--sem-borda th,
+.texto-mundo .tm-tab--sem-borda td { border: none; border-bottom: 1px solid var(--lr-border-soft); }
+.texto-mundo .tm-tab--sem-borda { border-collapse: collapse; }
+.texto-mundo .tm-tab--compacta th,
+.texto-mundo .tm-tab--compacta td { padding: .2em .4em; font-size: .92em; }
+.texto-mundo .tm-tab--chave tbody tr > *:first-child {
+    font-family: var(--lr-font-title);
+    color: var(--tm-cor-titulo, var(--lr-gold-2));
+    white-space: nowrap;
+}
+/* A cor escolhida na celula vence a zebra: quem pintou a mao quis aquilo. */
+.texto-mundo table th[style*="background"],
+.texto-mundo table td[style*="background"] { background-image: none; }
+
 /* Tabela larga rola sozinha em vez de estourar a página. */
 .texto-mundo .tm-tabela-rola { overflow-x: auto; margin: 1.2em 0; }
 .texto-mundo .tm-tabela-rola table { margin: 0; }

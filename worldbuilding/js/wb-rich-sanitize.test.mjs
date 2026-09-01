@@ -95,4 +95,12 @@ assert.equal(filtrarEstilo('--tm-fig-larg: url(javascript:1)'), '', 'url() barra
 assert.equal(filtrarClasses('tm-fig tm-fig--frente'), 'tm-fig tm-fig--frente');
 assert.equal(filtrarClasses('tm-fig tm-fig--fundo'), 'tm-fig tm-fig--fundo');
 
+// --- tabela ---
+assert.equal(filtrarEstilo('--tm-col-larg: 22%'), '--tm-col-larg: 22%');
+assert.equal(filtrarEstilo('width: 340px'), '', 'largura em pixel colada continua caindo fora');
+assert.equal(filtrarEstilo('background-color: #8a6a2f'), 'background-color: #8a6a2f',
+    'a cor de fundo da celula sobrevive');
+assert.ok(atributoOk('TD', 'colspan') && atributoOk('TH', 'rowspan'), 'mesclagem sobrevive');
+assert.equal(filtrarClasses('tm-tab--zebra tm-tab--chave'), 'tm-tab--zebra tm-tab--chave');
+
 console.log('✅ wb-rich-sanitize: todos os testes passaram.');

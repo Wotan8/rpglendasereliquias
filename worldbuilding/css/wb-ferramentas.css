@@ -884,3 +884,12 @@ body.wbml-aberto .wb-nav-backdrop { display: none; }
    selecao de texto no meio do caminho. */
 [contenteditable="true"] .tm-fig--frente,
 [contenteditable="true"] .tm-fig--fundo { cursor: move; touch-action: none; }
+
+/* ── Barra da tabela ───────────────────────────────────────
+   Mesma gramatica da barra de imagem; ela so e mais larga, entao envolve em
+   telas estreitas em vez de sair da pagina. */
+.wb-tabbar { flex-wrap: wrap; max-width: min(100%, 46rem); }
+.wb-tabbar input[type=color] { width: 1.8rem; height: 1.5rem; padding: 0; border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); background: none; cursor: pointer; }
+.wb-tabbar input[type=range] { width: 4.5rem; accent-color: var(--lr-gold); }
+.wb-tabbar output { font-size: var(--lr-fs-xs); color: var(--lr-gold); min-width: 2.4rem; text-align: right; }
+.wb-tabbar button[disabled] { opacity: .3; cursor: default; }

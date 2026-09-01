@@ -37,6 +37,9 @@ export const CSS_OK = new Set([
        layout pronto. E por serem `--tm-*`, nao ha como um HTML colado de
        fora injetar `position: fixed` por aqui. */
     '--tm-fig-larg', '--tm-fig-x', '--tm-fig-y', '--tm-fig-op',
+    /* Tabela: largura de coluna em %. Mesmo motivo — `width` continua fora
+       da lista, que e por onde o HTML colado do Word entra com pixel. */
+    '--tm-col-larg',
 ]);
 
 /**

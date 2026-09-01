@@ -17,6 +17,7 @@
    ═══════════════════════════════════════════════════════════ */
 
 import { limparHTML } from './wb-rich-sanitize.js';
+import * as Tab from './wb-tabela.js';
 import { perguntar } from '../../shared/dialogo.js?v=2';
 
 /* Blocos que o autor escolhe no seletor de estilo. */
@@ -95,6 +96,46 @@ const BARRA_IMG_HTML = `
 /* Legado: os livros de hoje tem a largura numa CLASSE no <img>. Continuam
    valendo (texto-mundo.css desenha as quatro), e a primeira mexida no
    tamanho troca por `--tm-fig-larg`, que aceita qualquer valor. */
+/* Barra flutuante da tabela — aparece com o cursor dentro de uma célula. */
+const BARRA_TAB_HTML = `
+<div class="wb-imgbar__grupo">
+    <span>Linha</span>
+    <button data-tab="linha-acima" title="Linha acima">⤒</button>
+    <button data-tab="linha-abaixo" title="Linha abaixo">⤓</button>
+    <button data-tab="linha-fora" title="Remover a linha" class="is-danger">⊖</button>
+</div>
+<div class="wb-imgbar__grupo">
+    <span>Coluna</span>
+    <button data-tab="col-esq" title="Coluna à esquerda">⇤</button>
+    <button data-tab="col-dir" title="Coluna à direita">⇥</button>
+    <button data-tab="col-fora" title="Remover a coluna" class="is-danger">⊖</button>
+    <input type="range" data-collarg min="0" max="80" step="1" title="Largura da coluna, em % da tabela (0 = automática)">
+    <output data-colout>auto</output>
+</div>
+<div class="wb-imgbar__grupo">
+    <span>Mesclar</span>
+    <button data-tab="mescla-dir" title="Juntar com a célula à direita">⇥|</button>
+    <button data-tab="mescla-baixo" title="Juntar com a célula abaixo">⤓|</button>
+    <button data-tab="divide" title="Separar de volta">⊞</button>
+</div>
+<div class="wb-imgbar__grupo">
+    <span>Fundo</span>
+    <input type="color" data-tabcor value="#8a6a2f" title="Cor de fundo">
+    <button data-escopo="cel" class="is-on" title="Pintar só a célula">▫</button>
+    <button data-escopo="linha" title="Pintar a linha">▤</button>
+    <button data-escopo="coluna" title="Pintar a coluna">▥</button>
+    <button data-tab="sem-cor" title="Tirar a cor">⌫</button>
+</div>
+<div class="wb-imgbar__grupo">
+    <span>Estilo</span>
+    <button data-estilo="tm-tab--zebra" title="Linhas alternadas">≣</button>
+    <button data-estilo="tm-tab--sem-borda" title="Sem grade">⬚</button>
+    <button data-estilo="tm-tab--compacta" title="Compacta">⇕</button>
+    <button data-estilo="tm-tab--chave" title="Primeira coluna em destaque">◫</button>
+</div>
+`;
+const ESTILOS_TAB = ['tm-tab--zebra', 'tm-tab--sem-borda', 'tm-tab--compacta', 'tm-tab--chave'];
+
 const TAMANHOS = ['tm-img--p', 'tm-img--m', 'tm-img--g', 'tm-img--full'];
 const LARG_DA_CLASSE = { 'tm-img--p': 30, 'tm-img--m': 55, 'tm-img--g': 80, 'tm-img--full': 100 };
 const POSICOES = ['tm-fig--esq', 'tm-fig--dir', 'tm-fig--flut-esq', 'tm-fig--flut-dir'];
@@ -321,6 +362,104 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
             inserirFigura(url, '');
         }
     }
+
+    /* ── Barra flutuante da tabela ───────────────────────
+       Mesma gramática da barra de imagem: aparece colada no que está sendo
+       editado, e some quando o cursor sai. */
+    const barraTab = document.createElement('div');
+    barraTab.className = 'wb-imgbar wb-tabbar';
+    barraTab.hidden = true;
+    barraTab.innerHTML = BARRA_TAB_HTML;
+    (ed.offsetParent || ed.parentElement).appendChild(barraTab);
+    let celAtual = null;
+    let escopoCor = 'cel';
+
+    function mostrarBarraTab(cel) {
+        celAtual = cel;
+        const tabela = Tab.tabelaDe(cel);
+        const host = barraTab.offsetParent || ed.parentElement;
+        const r = (tabela.closest('.tm-tabela-rola') || tabela).getBoundingClientRect();
+        const h = host.getBoundingClientRect();
+        barraTab.style.left = `${Math.max(0, r.left - h.left)}px`;
+        barraTab.hidden = false;
+        /* A altura é medida DEPOIS de aparecer: esta barra envolve em duas
+           ou três linhas conforme a largura da tela, e um deslocamento fixo
+           de 44px a fazia sentar em cima do cabeçalho da tabela. Não cabe
+           acima? Vai para baixo, que é melhor do que tapar o que se edita. */
+        const alt = barraTab.offsetHeight + 6;
+        const acima = r.top - h.top - alt;
+        barraTab.style.top = `${acima >= 0 ? acima : r.bottom - h.top + 6}px`;
+        const larg = Tab.larguraDe(cel);
+        barraTab.querySelector('[data-collarg]').value = larg;
+        barraTab.querySelector('[data-colout]').textContent = larg ? larg + '%' : 'auto';
+        barraTab.querySelectorAll('[data-estilo]').forEach(b =>
+            b.classList.toggle('is-on', tabela.classList.contains(b.dataset.estilo)));
+        barraTab.querySelectorAll('[data-escopo]').forEach(b =>
+            b.classList.toggle('is-on', b.dataset.escopo === escopoCor));
+        // Dividir só faz sentido em célula mesclada.
+        barraTab.querySelector('[data-tab="divide"]').disabled =
+            (cel.colSpan || 1) === 1 && (cel.rowSpan || 1) === 1;
+    }
+    const esconderBarraTab = () => { barraTab.hidden = true; celAtual = null; };
+
+    barraTab.addEventListener('mousedown', (e) => {
+        const b = e.target.closest('button');
+        if (!b || !celAtual || b.disabled) return;
+        e.preventDefault();
+        const cel = celAtual;
+        const acoes = {
+            'linha-acima': () => Tab.inserirLinha(cel, 'acima'),
+            'linha-abaixo': () => Tab.inserirLinha(cel, 'abaixo'),
+            'col-esq': () => Tab.inserirColuna(cel, 'esq'),
+            'col-dir': () => Tab.inserirColuna(cel, 'dir'),
+            'mescla-dir': () => Tab.mesclar(cel, 'dir'),
+            'mescla-baixo': () => Tab.mesclar(cel, 'baixo'),
+            'divide': () => Tab.dividir(cel),
+            'sem-cor': () => Tab.pintar(cel, '', escopoCor),
+        };
+        if (b.dataset.escopo) {
+            escopoCor = b.dataset.escopo;
+        } else if (b.dataset.estilo) {
+            Tab.tabelaDe(cel).classList.toggle(b.dataset.estilo);
+        } else if (b.dataset.tab === 'linha-fora' || b.dataset.tab === 'col-fora') {
+            const tabela = Tab.tabelaDe(cel);
+            const foi = b.dataset.tab === 'linha-fora' ? Tab.removerLinha(cel) : Tab.removerColuna(cel);
+            // A célula que a barra editava pode ter sido a removida.
+            if (foi) { esconderBarraTab(); avisar(); }
+            else mostrarBarraTab(tabela.querySelector('td, th') || cel);
+            return;
+        } else if (acoes[b.dataset.tab]) {
+            acoes[b.dataset.tab]();
+        }
+        mostrarBarraTab(cel.isConnected ? cel : Tab.tabelaDe(cel)?.querySelector('td, th'));
+        avisar();
+    });
+
+    barraTab.querySelector('[data-tabcor]').addEventListener('input', (e) => {
+        if (!celAtual) return;
+        Tab.pintar(celAtual, e.target.value, escopoCor);
+        avisar();
+    });
+    barraTab.querySelector('[data-collarg]').addEventListener('input', (e) => {
+        if (!celAtual) return;
+        const v = Number(e.target.value);
+        Tab.larguraColuna(celAtual, v);
+        barraTab.querySelector('[data-colout]').textContent = v ? v + '%' : 'auto';
+        avisar();
+    });
+
+    /* O cursor entrou numa célula? A barra segue o cursor, não o clique —
+       navegar com Tab entre células também precisa trazer a barra junto. */
+    const seguirCursor = () => {
+        const sel = window.getSelection();
+        let no = sel.rangeCount ? sel.anchorNode : null;
+        if (no && no.nodeType === Node.TEXT_NODE) no = no.parentElement;
+        const cel = no?.closest?.('td, th');
+        if (cel && ed.contains(cel)) mostrarBarraTab(cel);
+        else if (!barraTab.contains(document.activeElement)) esconderBarraTab();
+    };
+    ed.addEventListener('keyup', seguirCursor);
+    ed.addEventListener('click', seguirCursor);
 
     /* ── Campo vinculado ─────────────────────────────────
        Insere o <span> e um espaco depois: sem o espaco, o cursor fica preso
