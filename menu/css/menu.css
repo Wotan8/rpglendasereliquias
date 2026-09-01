@@ -2627,6 +2627,27 @@ html:not(.dark) .meta-card {
 
 .role-option .role-desc { color: var(--lr-text-2); font-size: var(--lr-fs-xs); }
 
+/* Janela "Minha conta" — linhas de leitura e rótulos dos contatos. */
+.conta-linha {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--lr-space-3);
+    font-size: var(--lr-fs-sm);
+    padding: var(--lr-space-2) 0;
+    border-bottom: 1px solid var(--lr-border);
+}
+
+.conta-linha span { color: var(--lr-text-2); }
+
+.conta-rotulo {
+    display: block;
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    color: var(--lr-text-2);
+    margin-top: var(--lr-space-3);
+    margin-bottom: 4px;
+}
+
 /* Faixa de "confirme seu e-mail", no topo de tudo para quem ainda não
    confirmou. Some sozinha quando o Firebase marca a conta como verificada. */
 .aviso-email {

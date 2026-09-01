@@ -4,7 +4,7 @@
 // =============================================
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
     getFirestore,
     collection,
@@ -1907,6 +1907,125 @@ window.confirmPurchaseFrag = async function () {
         btn.innerHTML = '✔️ Confirmar Compra';
         currentCheckoutItem = null;
     }
+};
+
+/* ===== RECUPERAÇÃO DE CONTA =====
+   Não existia caminho nenhum: quem esquecia a senha perdia o Repertório
+   comprado com dinheiro real. Agora são três, do mais barato ao mais caro:
+
+   1. "Esqueci minha senha" na tela de entrada — o próprio Firebase manda o
+      link. Resolve o caso comum sem ninguém precisar ser acionado.
+   2. Contatos de recuperação (WhatsApp e e-mail alternativo), guardados no
+      documento do jogador, que só ele e o mestre leem.
+   3. Quando a pessoa perdeu o acesso ao PRÓPRIO e-mail, o Criador gera um
+      link de redefinição no Painel e manda pelo WhatsApp cadastrado.
+
+   O telefone NÃO é fator automático de recuperação, e isso é escolha: número
+   sem verificação por SMS é só um campo de texto, e recuperação automática
+   por WhatsApp seria o caminho mais fácil de sequestrar uma conta. Ele serve
+   para o mestre reconhecer a pessoa — que, no tamanho desta mesa, vale mais
+   que um código. */
+window.portalEsqueciSenha = async function () {
+    const email = (document.getElementById('loginEmail')?.value || '').trim();
+    if (!email) {
+        authAlert('✉️ Escreva seu e-mail no campo acima e clique de novo.', 'warning');
+        document.getElementById('loginEmail')?.focus();
+        return;
+    }
+    try {
+        await sendPasswordResetEmail(auth, email);
+    } catch (e) {
+        /* `auth/user-not-found` NÃO é dito ao visitante de propósito: a
+           mensagem viraria um verificador de quem tem conta aqui. A resposta é
+           a mesma para e-mail existente e inexistente. */
+        if (e?.code === 'auth/too-many-requests') {
+            authAlert('⏳ Já pedimos há pouco. Espere alguns minutos.', 'warning');
+            return;
+        }
+        if (e?.code === 'auth/invalid-email') {
+            authAlert('❌ Esse e-mail não parece válido.', 'danger');
+            return;
+        }
+        console.warn('reset de senha:', e);
+    }
+    authAlert('✅ Se existir conta com esse e-mail, o link de nova senha já foi enviado. ' +
+        'Procure também no spam.', 'success');
+};
+
+/* Janela "Minha conta": onde a pessoa vê o estado do próprio e-mail, guarda
+   os contatos de recuperação e pede uma nova senha sem precisar deslogar. */
+window.abrirMinhaConta = async function () {
+    if (!currentUser) return;
+
+    let dados = {};
+    try { dados = (await findUserDoc())?.data() || {}; } catch (e) { /* segue com vazio */ }
+
+    const janela = document.createElement('dialog');
+    janela.className = 'lr-dialogo';
+    janela.innerHTML = `
+        <form class="lr-dialogo-form" method="dialog">
+            <div class="lr-dialogo-titulo">👤 Minha conta</div>
+
+            <div class="conta-linha">
+                <span>E-mail de entrada</span>
+                <strong>${escapeHtml(currentUser.email || '')}</strong>
+            </div>
+            <div class="conta-linha">
+                <span>Confirmado</span>
+                <strong>${currentUser.emailVerified ? '✅ sim' : '⚠️ ainda não'}</strong>
+            </div>
+
+            <p class="lr-dialogo-msg">
+                Estes contatos servem para o mestre te reconhecer se você perder o acesso
+                ao e-mail acima. Só você e o mestre enxergam.
+            </p>
+
+            <label for="contaWhats" class="conta-rotulo">WhatsApp (com DDD)</label>
+            <input id="contaWhats" class="lr-dialogo-input" inputmode="tel" maxlength="24"
+                placeholder="(00) 00000-0000" value="${escapeHtml(dados.whatsapp || '')}">
+
+            <label for="contaEmailAlt" class="conta-rotulo">E-mail alternativo</label>
+            <input id="contaEmailAlt" class="lr-dialogo-input" type="email" maxlength="120"
+                placeholder="outro@email.com" value="${escapeHtml(dados.emailRecuperacao || '')}">
+
+            <div class="lr-dialogo-botoes">
+                <button type="button" class="lr-dialogo-btn" id="contaTrocarSenha">🔑 Trocar minha senha</button>
+                <button value="cancel" class="lr-dialogo-btn">Fechar</button>
+                <button type="button" value="ok" class="lr-dialogo-btn lr-dialogo-btn--ok" id="contaSalvar">Salvar</button>
+            </div>
+        </form>`;
+    document.body.appendChild(janela);
+    janela.addEventListener('close', () => janela.remove());
+    janela.showModal();
+
+    janela.querySelector('#contaTrocarSenha').addEventListener('click', async (ev) => {
+        const b = ev.currentTarget;
+        b.disabled = true;
+        try {
+            await sendPasswordResetEmail(auth, currentUser.email);
+            showAlert('✅ Link de nova senha enviado para ' + currentUser.email, 'success');
+        } catch (e) {
+            showAlert(e?.code === 'auth/too-many-requests'
+                ? '⏳ Já enviamos há pouco. Espere alguns minutos.'
+                : '❌ Não foi possível enviar agora.', 'danger');
+            b.disabled = false;
+        }
+    });
+
+    janela.querySelector('#contaSalvar').addEventListener('click', async () => {
+        const whatsapp = janela.querySelector('#contaWhats').value.trim().slice(0, 24);
+        const emailRecuperacao = janela.querySelector('#contaEmailAlt').value.trim().slice(0, 120);
+        try {
+            // O documento é `users/{uid}` e estes dois campos não estão na lista
+            // de protegidos — são contato, não identidade nem saldo.
+            await updateDoc(doc(db, 'users', currentUser.uid), { whatsapp, emailRecuperacao });
+            showAlert('✅ Contatos salvos.', 'success');
+            janela.close();
+        } catch (e) {
+            console.error('salvar contatos:', e);
+            showAlert('❌ Não foi possível salvar.', 'danger');
+        }
+    });
 };
 
 /* Faixa de "confirme seu e-mail". Em 31/08/2026 nenhuma das 19 contas tinha

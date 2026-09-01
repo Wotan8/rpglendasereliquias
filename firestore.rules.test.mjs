@@ -133,6 +133,23 @@ await teste('não edita peça na Caixa do Mestre nem sendo "dono" do char da cai
 await teste('não apaga peça na Caixa do Mestre',
   () => assertFails(deleteDoc(doc(db, 'items', 'item-na-caixa'))));
 
+// ===== RECUPERACAO DE CONTA =====
+// Os contatos sao CONTATO, nao identidade nem saldo: o dono edita. Mas moram
+// no doc fechado (item 6), entao ninguem mais le o telefone de ninguem.
+await teste('salva os próprios contatos de recuperação',
+  () => assertSucceeds(updateDoc(eu, { whatsapp: '(11) 90000-0000', emailRecuperacao: 'outro@teste.com' })));
+await teste('não escreve contato de recuperação de outra pessoa',
+  () => assertFails(updateDoc(doc(db, 'users', VIT), { whatsapp: '(11) 91111-1111' })));
+await teste('não lê o contato de recuperação de outra pessoa',
+  () => assertFails(getDoc(doc(db, 'users', VIT))));
+await teste('contato de recuperação NÃO vaza no espelho público', async () => {
+  const s = await getDoc(doc(db, 'users_public', VIT));
+  if (s.exists() && ('whatsapp' in s.data() || 'emailRecuperacao' in s.data()))
+    throw new Error('o espelho está carregando contato de recuperação');
+});
+await teste('jogador não lê a trilha de recuperações',
+  () => assertFails(getDocs(collection(db, 'recuperacao_logs'))));
+
 // ===== LOGS: trilha de auditoria (item 13) =====
 // O create e aberto porque quem escreve e o JOGADOR (a ficha registra cada
 // mudanca dele). O que faltava era conferencia: dava para assinar log com o

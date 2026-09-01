@@ -760,38 +760,55 @@ passar de ~300 KB, aí sim vale mover `inventario` para subcoleção.
 
 ## Pendências desta sessão
 
-### Recuperação de conta (fazer depois das correções 1–8)
+### Recuperação de conta ✅ feita em 01/09/2026
 
-Hoje não existe **nada**: nenhum `sendPasswordResetEmail`, nenhuma tela de
-"esqueci minha senha", nenhum contato de recuperação. Quem esquece a senha
-perde o Repertório comprado com dinheiro real.
+Não existia **nada**: quem esquecia a senha perdia o Repertório comprado com
+dinheiro real. Agora são três caminhos, do mais barato ao mais caro:
 
-O que a frente precisa entregar:
+**1. "Esqueci minha senha", na tela de entrada.** `sendPasswordResetEmail` do
+próprio Firebase. Resolve o caso comum sem acionar ninguém. A resposta é a
+mesma para e-mail existente e inexistente — dizer "conta não encontrada"
+transformaria a tela num verificador de quem tem conta aqui.
 
-1. **Reset por e-mail** — `sendPasswordResetEmail` do próprio Firebase Auth, com
-   link na tela de login. É o caminho que já existe de graça e cobre o caso
-   comum; nada precisa ser inventado.
-2. **Verificação de e-mail no cadastro** (item 10) — sem ela, o reset por e-mail
-   é reset para um endereço que ninguém provou ser da pessoa.
-3. **Cadastro de telefone/WhatsApp e e-mail alternativo** no perfil, para o caso
-   de perda do e-mail principal.
+**2. Contatos de recuperação**, na janela 👤 **Minha conta** do Portal:
+WhatsApp e e-mail alternativo, mais o estado da confirmação do e-mail e um
+botão de trocar a senha sem deslogar. Os campos moram em `users/{uid}`, que o
+item 6 fechou — só o dono e o mestre leem. **Não entram no espelho público**, e
+há teste garantindo isso.
 
-Três coisas para decidir **antes** de escrever a primeira linha:
+**3. Link de redefinição gerado pelo Criador**, no Painel → Permissões, para
+quem perdeu o acesso ao próprio e-mail. `gerarLinkDeRecuperacao` devolve um
+link do Firebase que o Criador manda pelo WhatsApp cadastrado.
 
-- **Onde o telefone mora.** Se for em `users`, a leitura da coleção precisa estar
-  fechada primeiro (item **6**) — hoje qualquer jogador logado leria o telefone
-  de todo mundo. O ideal é uma subcoleção `users/{uid}/contatos`, legível só
-  pelo dono, gravável só pelo servidor.
-- **Verificação do telefone.** Telefone não verificado não recupera nada: quem
-  digita o número escolhe para onde o código vai. Ou usa o SMS/OTP do Firebase
-  Auth (`PhoneAuthProvider`, custo por mensagem), ou o número é só um canal de
-  contato para o mestre resolver à mão — e nesse caso **não** pode ser um fator
-  automático de recuperação.
-- **Recuperação por WhatsApp é um caminho de tomada de conta.** Se um dia virar
-  automática, ela precisa da mesma proteção do login: código de uso único, com
-  validade curta, limite de tentativas e envio pelo servidor. Recuperação manual
-  pelo mestre é aceitável no tamanho da mesa, desde que fique registrada em
-  coleção de log — é a operação mais sensível do sistema inteiro.
+O desenho do caminho 3 tem uma propriedade que vale enunciar: **ninguém vê nem
+digita senha alheia**. O link leva a pessoa à tela do Firebase, onde ela
+escolhe a própria. O Criador nunca fica com acesso à conta. E: só Criador
+gera, nunca em outro Criador (seria o caminho curto para um assumir a conta do
+outro), e cada geração deixa trilha imutável em `recuperacao_logs` — com quais
+contatos estavam cadastrados na hora, que é o que permite contestar depois.
+
+### As três decisões, e o que foi decidido
+
+- **Onde o telefone mora:** em `users/{uid}`, junto do resto, porque aquele
+  documento já está fechado. Subcoleção seria mais apertado e não paga o custo.
+- **Verificação do número:** **não tem.** Verificar exige SMS (Firebase Phone
+  Auth, custo por mensagem), e número não verificado é só um campo de texto.
+  Por isso ele **não é fator automático de recuperação** — é canal de contato
+  para o mestre reconhecer a pessoa.
+- **WhatsApp automático:** **não.** É o caminho mais fácil de sequestrar uma
+  conta. A recuperação por esse canal é manual, feita por um Criador que
+  reconhece quem está pedindo, e registrada. No tamanho desta mesa, o
+  reconhecimento vale mais que um código.
+
+**O que NÃO foi verificado ao vivo:** a janela "Minha conta" e o botão de
+recuperação no Painel exigem sessão logada, e eu não tenho credencial. O que dá
+para checar de fora foi checado — as funções existem no bundle servido, o
+"Esqueci minha senha" responde certo com campo vazio, a callable recusa quem
+não está logado, e as 63 asserções de rules cobrem a privacidade dos contatos.
+Falta você abrir as duas telas uma vez.
+
+**Se um dia virar automático:** código de uso único, validade curta, limite de
+tentativas e envio pelo servidor. Nunca um número não verificado bastando.
 
 ### Achado de dados: três contas com o mesmo e-mail
 

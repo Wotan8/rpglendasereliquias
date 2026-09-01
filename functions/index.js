@@ -488,6 +488,78 @@ exports.definirCargo = onCall(
 );
 
 // =============================================
+// LINK DE REDEFINIÇÃO DE SENHA (callable)
+//
+// O último caminho de recuperação, para quem perdeu o acesso ao próprio
+// e-mail — aí o "esqueci minha senha" do Portal não alcança.
+//
+// O Criador gera o link aqui e manda pelo WhatsApp que a pessoa cadastrou. O
+// desenho tem uma propriedade que importa: **ninguém vê nem digita senha
+// alheia**. O link leva a pessoa à tela do Firebase, onde ela escolhe a
+// própria. O Criador nunca fica com acesso à conta.
+//
+// É a operação mais sensível do sistema — quem recupera uma conta, entra
+// nela. Por isso: só Criador, nunca em outro Criador, e sempre com trilha
+// imutável em `recuperacao_logs`.
+// =============================================
+exports.gerarLinkDeRecuperacao = onCall(
+  { region: "southamerica-east1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Você precisa estar logado.");
+    }
+    const autorUid = request.auth.uid;
+    const autorEmail = request.auth.token.email || "";
+
+    const autor = await db.collection("users").doc(autorUid).get();
+    if (!autor.exists || autor.data().role !== "criador") {
+      throw new HttpsError("permission-denied", "Só um Criador pode gerar link de recuperação.");
+    }
+
+    const { uid } = request.data || {};
+    if (!uid || typeof uid !== "string") {
+      throw new HttpsError("invalid-argument", "Diga de qual conta é a recuperação.");
+    }
+
+    const alvoDoc = await db.collection("users").doc(uid).get();
+    if (!alvoDoc.exists) throw new HttpsError("not-found", "Conta não encontrada.");
+    // Criador não recupera Criador: seria o caminho curto para um assumir a
+    // conta do outro sem deixar de ser "uma operação legítima".
+    if (uid !== autorUid && alvoDoc.data().role === "criador") {
+      throw new HttpsError("permission-denied",
+        "Não dá para gerar link de outro Criador. Ele usa o 'Esqueci minha senha' do Portal.");
+    }
+
+    const conta = await getAuth().getUser(uid);
+    if (!conta.email) {
+      throw new HttpsError("failed-precondition", "Esta conta não tem e-mail para redefinir.");
+    }
+
+    const link = await getAuth().generatePasswordResetLink(conta.email);
+
+    await db.collection("recuperacao_logs").add({
+      uid,
+      jogador: alvoDoc.data().displayName || conta.email,
+      emailDaConta: conta.email,
+      whatsappCadastrado: alvoDoc.data().whatsapp || "",
+      emailRecuperacaoCadastrado: alvoDoc.data().emailRecuperacao || "",
+      autorUid,
+      autor: autorEmail,
+      criadoEm: FieldValue.serverTimestamp(),
+    });
+
+    return {
+      ok: true,
+      link,
+      jogador: alvoDoc.data().displayName || conta.email,
+      email: conta.email,
+      whatsapp: alvoDoc.data().whatsapp || "",
+      emailRecuperacao: alvoDoc.data().emailRecuperacao || "",
+    };
+  }
+);
+
+// =============================================
 // AUDITORIA AUTOMÁTICA DE FRAGMENTOS (gatilho)
 // Dispara em QUALQUER escrita em users/{userId}.
 // Se o campo `fragmentos` mudou, grava um log imutável

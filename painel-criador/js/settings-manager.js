@@ -21,6 +21,11 @@ const functions = getFunctions(app, 'southamerica-east1');
    abaixo, o botão só pede — quem decide de verdade é o servidor. */
 const definirCargo = httpsCallable(functions, 'definirCargo');
 
+/* Recuperação de conta para quem perdeu o acesso ao próprio e-mail. O servidor
+   devolve um LINK — ninguém aqui vê ou digita senha alheia; a pessoa escolhe a
+   dela na tela do Firebase. Manda pelo WhatsApp que ela cadastrou. */
+const gerarLinkDeRecuperacao = httpsCallable(functions, 'gerarLinkDeRecuperacao');
+
 const CARGO_ROTULO = { jogador: 'Jogador', mestre: 'Mestre', criador: 'Criador' };
 
 /* Nome e e-mail são texto que o próprio usuário escolhe, e vão para innerHTML:
@@ -142,6 +147,7 @@ async function loadUsers() {
                         <option value="mestre" ${role === 'mestre' ? 'selected' : ''}>Mestre</option>
                         <option value="criador" ${role === 'criador' ? 'selected' : ''}>Criador</option>
                     </select>
+                    ${user.role === 'criador' ? '' : `<button class="btn-recuperar" title="Gerar link de nova senha (para quem perdeu o acesso ao e-mail)" onclick="window.recuperarConta('${esc(user.id)}')">🔑</button>`}
                 </td>
             `;
             tbody.appendChild(tr);
@@ -346,3 +352,51 @@ async function loadFavicons() {
         container.innerHTML = '<div style="color:var(--danger)">Erro ao carregar configurações de favicons.</div>';
     }
 }
+
+
+// ===== RECUPERAÇÃO DE CONTA =====
+// Só entra aqui quem perdeu o acesso ao PRÓPRIO e-mail — quem ainda tem usa o
+// "Esqueci minha senha" do Portal, sem passar por ninguém.
+window.recuperarConta = async function (userId) {
+    if (!await confirmar(
+        'Gerar um link de nova senha para esta conta? ' +
+        'Confirme antes que é a pessoa mesma — por voz, ou por um canal que você reconheça. ' +
+        'Quem recebe este link entra na conta.')) return;
+
+    let r;
+    try {
+        r = (await gerarLinkDeRecuperacao({ uid: userId })).data;
+    } catch (e) {
+        console.error('recuperacao:', e);
+        toast(e.message || 'Não foi possível gerar o link.', 'erro');
+        return;
+    }
+
+    const janela = document.createElement('dialog');
+    janela.className = 'lr-dialogo';
+    janela.innerHTML = `
+        <form class="lr-dialogo-form" method="dialog">
+            <div class="lr-dialogo-titulo">🔑 Link de nova senha</div>
+            <p class="lr-dialogo-msg">
+                Para <strong>${esc(r.jogador)}</strong> (${esc(r.email)}).
+                Mande por um canal que você reconheça — o link vale por uma vez e expira.
+            </p>
+            <div class="rec-contatos">
+                <div>WhatsApp cadastrado: <strong>${esc(r.whatsapp) || '<em>nenhum</em>'}</strong></div>
+                <div>E-mail alternativo: <strong>${esc(r.emailRecuperacao) || '<em>nenhum</em>'}</strong></div>
+            </div>
+            <textarea class="lr-dialogo-input" id="recLink" readonly rows="4">${esc(r.link)}</textarea>
+            <div class="lr-dialogo-botoes">
+                <button value="cancel" class="lr-dialogo-btn">Fechar</button>
+                <button type="button" class="lr-dialogo-btn lr-dialogo-btn--ok" id="recCopiar">Copiar link</button>
+            </div>
+        </form>`;
+    document.body.appendChild(janela);
+    janela.addEventListener('close', () => janela.remove());
+    janela.showModal();
+
+    janela.querySelector('#recCopiar').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(r.link); toast('Link copiado.', 'sucesso'); }
+        catch (e) { janela.querySelector('#recLink').select(); toast('Selecione e copie à mão.', 'aviso'); }
+    });
+};

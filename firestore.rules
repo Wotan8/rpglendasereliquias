@@ -131,6 +131,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    /* Cada link de redefinição de senha gerado por um Criador: para quem, por
+       quem, e quais contatos estavam cadastrados na hora. Escrita SÓ pelo
+       servidor. É a operação mais sensível do sistema — quem recupera uma
+       conta, entra nela —, então não existe versão dela sem trilha.
+       Leitura só do Criador: a lista revela quem já precisou de recuperação. */
+    match /recuperacao_logs/{logId} {
+      allow read: if isCriador();
+      allow create, update, delete: if false;
+    }
+
     /* Contadores do freio por usuário (limitarChamadas). Só o servidor mexe —
        e ninguém precisa ler: contador que o navegador enxerga é contador que
        o navegador aprende a driblar. */

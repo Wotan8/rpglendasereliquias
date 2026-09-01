@@ -2698,6 +2698,26 @@ html.dark #mech_duracao_exp_wrap {
     font-weight: 600;
 }
 
+/* Botão de gerar link de nova senha, ao lado do seletor de cargo. */
+.btn-recuperar {
+    margin-left: 6px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.rec-contatos {
+    background: var(--chip, rgba(0,0,0,.06));
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
 /* ===== FILA DE PEDIDOS DE CARGO ===== */
 .cargo-pedidos {
     background: var(--lr-gold-soft, var(--chip));
