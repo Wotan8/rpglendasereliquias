@@ -34,11 +34,11 @@
      instancia que o editor enxerga, senao GRAVADO fica vazio. -->
 <script type="importmap">
 { "imports": {
-    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=19",
-    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=19",
-    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=19",
-    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=19",
-    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=19"
+    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=20",
+    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=20",
+    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=20",
+    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=20",
+    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=20"
 } }
 </script>
 
@@ -75,7 +75,7 @@
 </div>
 
 <script type="module">
-import { GRAVADO } from './__check-stub-firestore.js?v=19';
+import { GRAVADO } from './__check-stub-firestore.js?v=20';
 import { Editor } from './worldbuilding/js/wb-editor.js';
 
 window.WB = { data: {}, user: { email: 'check@harness' } };
@@ -87,7 +87,7 @@ const espera = (ms = 80) => new Promise(r => setTimeout(r, ms));
 /* Modulo com query e outro modulo para o navegador. Sem isso o harness roda
    o que ficou no cache — ja aconteceu duas vezes aqui. UM token para todos
    os `import()` de shared/, subido a cada mexida. */
-const CB = '?h=13';
+const CB = '?h=14';
 // Salvamento deliberado (o mesmo caminho do botao 💾) e volta a Biblioteca.
 const save2 = async () => { $('#saveArticle').click(); await espera(200); };
 // Tolerante a ja estar na Biblioteca: os blocos de teste rodam em sequencia
@@ -424,6 +424,39 @@ $('#chkRun').onclick = async () => {
     t('livro inteiro vence recorte quando outra fonte libera tudo',
         AL.alcanceDoPersonagem({ raca: 'A', classe: 'B' }, sd2).get('b9') === null);
     // Livro amarrado DIRETO no personagem passa por cima da publicacao.
+    // ── Peculiaridade entrega livro (era promessa sem entrega) ──
+    // A conta listava peculiaridade como fonte, mas lia `state.peculiarities`
+    // — campo que a ficha NUNCA grava. O array vinha vazio e nada chegava.
+    const sdPec = {
+        races: [{ id: 'rP', nome: 'Anao', peculiaridadeIds: ['pRacial'] }],
+        classes: [], tribes: [],
+        peculiarities: [
+            { id: 'pAvulsa', nome: 'Couro Endurecido', livrosVinculados: [{ bookId: 'bPec' }] },
+            { id: 'pRacial', nome: 'Memoria de Pedra', livrosVinculados: [{ bookId: 'bRacial' }] },
+            { id: 'pSemLivro', nome: 'Teimosia' },
+        ],
+    };
+    // Caminho 1: avulsa escolhida na criacao. O formato gravado e {id,nivel}.
+    t('peculiaridade AVULSA entrega o livro dela',
+        AL.alcanceDoPersonagem({ peculiaridades: [{ id: 'pAvulsa', nivelInicial: 2 }] }, sdPec).has('bPec'));
+    t('e o id cru tambem funciona',
+        AL.alcanceDoPersonagem({ peculiaridades: ['pAvulsa'] }, sdPec).has('bPec'));
+    // Caminho 2: concedida pela raca. Cobrir so um dos dois seria repetir o
+    // meio-caminho que existia aqui.
+    t('peculiaridade CONCEDIDA pela raca tambem entrega',
+        AL.alcanceDoPersonagem({ raca: 'Anao' }, sdPec).has('bRacial'));
+    t('peculiaridade sem livro nao inventa nada',
+        AL.idsDoAlcance(AL.alcanceDoPersonagem({ peculiaridades: ['pSemLivro'] }, sdPec)).length === 0);
+    // O doc do personagem le o campo CERTO.
+    t('o espelho le peculiaridadesIndividuais, nao o campo morto',
+        AL.personagemDoDoc({ peculiaridadesIndividuais: [{ id: 'pAvulsa' }] }).peculiaridades.length === 1);
+    t('e o campo morto nao entra mais por engano',
+        AL.personagemDoDoc({ peculiarities: [{ id: 'pAvulsa' }] }).peculiaridades.length === 0);
+    t('doc completo: raca + avulsa somam os dois livros',
+        AL.idsDoAlcance(AL.alcanceDoPersonagem(
+            AL.personagemDoDoc({ fields: { raca: 'Anao' }, peculiaridadesIndividuais: ['pAvulsa'] }),
+            sdPec)).join(',') === 'bPec,bRacial');
+
     t('vinculo direto fica marcado a parte',
         AL.alcanceDoPersonagem({ livrosVinculados: [{ bookId: 'bx' }] }, sd).diretos.has('bx'));
     t('personagem sem nada alcanca nada', AL.idsDoAlcance(AL.alcanceDoPersonagem({}, sd)).length === 0);

@@ -136,7 +136,9 @@ function _livrosDoPersonagem() {
         raca: val('raca'),
         classe: val('classe'),
         tribo: val('tribo'),
-        peculiaridades: (window.state && window.state.peculiarities) || [],
+        // `peculiaridadesIndividuais` é o campo que a ficha grava; o antigo
+        // `peculiarities` nunca foi escrito, então a fonte vinha sempre vazia.
+        peculiaridades: (window.state && window.state.peculiaridadesIndividuais) || [],
         livrosVinculados: window.state?.livrosVinculados,
         livroVinculado: window.state?.livroVinculado,
     }, window._systemData || {});

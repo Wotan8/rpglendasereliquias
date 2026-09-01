@@ -203,6 +203,10 @@ const MODULE_DEFS = {
             { key: 'auraGrauConcedido', label: 'Grau Concedido da Aura', type: 'number', placeholder: '1', showWhenBoolean: 'concedeAura' },
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
             { key: 'derivedValueIds', label: '📊 Valores Derivados Vinculados', type: 'mechanic_selector', selectorTarget: 'derivedValues' },
+            /* Raça, classe e tribo já liberavam livro; peculiaridade não tinha
+               o campo, e mesmo assim o cálculo de alcance a listava como fonte
+               — prometia e não entregava. Agora entrega. */
+            { key: 'livrosVinculados', label: '📖 Livros Vinculados (Worldbuilding)', type: 'book_link' },
             { key: 'tags', label: 'Tags', type: 'tags', placeholder: 'Ex: bônus, racial' },
         ]
     },

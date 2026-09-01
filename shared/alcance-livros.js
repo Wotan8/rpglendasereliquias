@@ -57,15 +57,26 @@ export function alcanceDoPersonagem(p, sd) {
     const dados = sd || {};
     const acha = (lista, nome) => nome && (lista || []).find(d => d.nome === nome || d.id === nome);
 
-    const fontes = [
-        p || null,                                  // o próprio personagem
-        acha(dados.races, p?.raca),
-        acha(dados.classes, p?.classe),
-        acha(dados.tribes, p?.tribo),
-    ];
-    for (const pec of (p?.peculiaridades || [])) {
-        fontes.push(acha(dados.peculiarities, pec && (pec.nome || pec.key || pec)));
+    const raca = acha(dados.races, p?.raca);
+    const classe = acha(dados.classes, p?.classe);
+    const tribo = acha(dados.tribes, p?.tribo);
+    const fontes = [p || null, raca, classe, tribo];   // o próprio personagem entra: é onde o mestre amarra livro a dedo
+
+    /* Peculiaridade também carrega livro — e chega por DOIS caminhos.
+       Cobrir só um seria repetir o meio-caminho que existia aqui: a conta
+       listava peculiaridade como fonte, mas lia um campo que a ficha nunca
+       grava, então livro amarrado a peculiaridade não chegava em ninguém. */
+    const idsPec = new Set();
+    // 1. avulsa, escolhida na criação — `{id, nivelInicial}` ou o id cru.
+    for (const it of (p?.peculiaridades || [])) {
+        const id = (it && typeof it === 'object') ? (it.id || it.nome || it.key) : it;
+        if (id) idsPec.add(id);
     }
+    // 2. concedida por raça, classe ou tribo.
+    for (const fonte of [raca, classe, tribo]) {
+        for (const id of (fonte?.peculiaridadeIds || [])) if (id) idsPec.add(id);
+    }
+    for (const id of idsPec) fontes.push(acha(dados.peculiarities, id));
 
     const mapa = new Map();
     mapa.diretos = new Set(normalizarVinculos(p).map(v => v.bookId));
@@ -93,7 +104,11 @@ export function personagemDoDoc(doc) {
         raca: f.raca || '',
         classe: f.classe || '',
         tribo: f.tribo || '',
-        peculiaridades: doc?.peculiarities || [],
+        /* `peculiaridadesIndividuais` é o campo que a ficha REALMENTE grava
+           (ficha-v1.7_1/js/storage.js, gatherData). A conta lia
+           `peculiarities`, que nunca foi escrito em lugar nenhum — o array
+           vinha sempre vazio e a fonte era código morto. */
+        peculiaridades: doc?.peculiaridadesIndividuais || [],
         livrosVinculados: doc?.livrosVinculados,
         livroVinculado: doc?.livroVinculado,
     };
