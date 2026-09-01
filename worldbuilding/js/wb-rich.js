@@ -65,12 +65,20 @@ export const TOOLBAR_HTML = `
 const BARRA_IMG_HTML = `
 <div class="wb-imgbar__grupo">
     <span>Tamanho</span>
-    <button data-tam="tm-img--p">P</button>
-    <button data-tam="tm-img--m">M</button>
-    <button data-tam="tm-img--g">G</button>
-    <button data-tam="tm-img--full">Cheia</button>
+    <button data-larg="30">P</button>
+    <button data-larg="55">M</button>
+    <button data-larg="80">G</button>
+    <button data-larg="100">Cheia</button>
+    <input type="range" data-largslider min="10" max="100" step="1" title="Largura livre, em % da mancha">
+    <output data-largout>—</output>
 </div>
 <div class="wb-imgbar__grupo">
+    <span>Camada</span>
+    <button data-camada="" title="Junto do texto — a imagem ocupa lugar na página">≡</button>
+    <button data-camada="tm-fig--frente" title="À frente do texto — solta, por cima; arraste para posicionar">▲</button>
+    <button data-camada="tm-fig--fundo" title="Ao fundo — solta, por trás do texto; arraste para posicionar">▽</button>
+</div>
+<div class="wb-imgbar__grupo" data-grupo="pos">
     <span>Posição</span>
     <button data-pos="" title="Centralizada">▣</button>
     <button data-pos="tm-fig--esq" title="À esquerda">◧</button>
@@ -84,8 +92,31 @@ const BARRA_IMG_HTML = `
 </div>
 `;
 
+/* Legado: os livros de hoje tem a largura numa CLASSE no <img>. Continuam
+   valendo (texto-mundo.css desenha as quatro), e a primeira mexida no
+   tamanho troca por `--tm-fig-larg`, que aceita qualquer valor. */
 const TAMANHOS = ['tm-img--p', 'tm-img--m', 'tm-img--g', 'tm-img--full'];
+const LARG_DA_CLASSE = { 'tm-img--p': 30, 'tm-img--m': 55, 'tm-img--g': 80, 'tm-img--full': 100 };
 const POSICOES = ['tm-fig--esq', 'tm-fig--dir', 'tm-fig--flut-esq', 'tm-fig--flut-dir'];
+const CAMADAS = ['tm-fig--frente', 'tm-fig--fundo'];
+
+/** A largura da figura em %, venha ela do estilo novo ou da classe velha. */
+export function largDaFigura(fig) {
+    const v = parseFloat(String(fig?.style?.getPropertyValue('--tm-fig-larg') || '').replace('%', ''));
+    if (Number.isFinite(v)) return v;
+    const img = fig?.querySelector?.('img');
+    for (const c of TAMANHOS) if (img?.classList.contains(c)) return LARG_DA_CLASSE[c];
+    return fig?.classList.contains('tm-fig--flut-esq') || fig?.classList.contains('tm-fig--flut-dir') ? 42 : 55;
+}
+
+/** Grava a largura e aposenta a classe legada — duas fontes para a mesma
+ *  medida e como um bug espera para acontecer. */
+export function definirLarg(fig, pct) {
+    const v = Math.min(100, Math.max(5, Math.round(pct)));
+    fig.style.setProperty('--tm-fig-larg', v + '%');
+    fig.querySelector('img')?.classList.remove(...TAMANHOS);
+    return v;
+}
 
 /**
  * Liga a barra a um contenteditable.
@@ -122,14 +153,93 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
         barra.style.left = `${Math.max(0, r.left - h.left)}px`;
         barra.style.top = `${r.top - h.top - 44}px`;
         barra.hidden = false;
-        barra.querySelectorAll('[data-tam]').forEach(b =>
-            b.classList.toggle('is-on', !!img && img.classList.contains(b.dataset.tam)));
+        const larg = largDaFigura(fig);
+        barra.querySelectorAll('[data-larg]').forEach(b =>
+            b.classList.toggle('is-on', Number(b.dataset.larg) === larg));
+        barra.querySelector('[data-largslider]').value = larg;
+        barra.querySelector('[data-largout]').textContent = larg + '%';
         barra.querySelectorAll('[data-pos]').forEach(b =>
             b.classList.toggle('is-on', b.dataset.pos
                 ? fig.classList.contains(b.dataset.pos)
                 : !POSICOES.some(p => fig.classList.contains(p))));
+        barra.querySelectorAll('[data-camada]').forEach(b =>
+            b.classList.toggle('is-on', b.dataset.camada
+                ? fig.classList.contains(b.dataset.camada)
+                : !CAMADAS.some(c => fig.classList.contains(c))));
+        // "Onde na linha" não faz sentido para figura solta: ela não está
+        // numa linha. Some em vez de virar botão que não faz nada.
+        barra.querySelector('[data-grupo="pos"]').hidden = CAMADAS.some(c => fig.classList.contains(c));
+        posicionarAlca(fig);
     }
-    const esconderBarra = () => { barra.hidden = true; figuraAtual = null; };
+    const esconderBarra = () => { barra.hidden = true; alca.hidden = true; figuraAtual = null; };
+
+    /* ── Alça de redimensionar ──────────────────────────────
+       Um quadradinho no canto da figura. A conta é em % da MANCHA (a largura
+       do texto), não em pixels: é assim que a mesma imagem tem o mesmo peso
+       no monitor e no celular. */
+    const alca = document.createElement('div');
+    alca.className = 'wb-imgalca';
+    alca.hidden = true;
+    alca.title = 'Arraste para redimensionar';
+    (ed.offsetParent || ed.parentElement).appendChild(alca);
+
+    function posicionarAlca(fig) {
+        const host = alca.offsetParent || ed.parentElement;
+        const r = fig.getBoundingClientRect(), h = host.getBoundingClientRect();
+        alca.style.left = `${r.right - h.left - 7}px`;
+        alca.style.top = `${r.bottom - h.top - 7}px`;
+        alca.hidden = false;
+    }
+
+    alca.addEventListener('pointerdown', (e) => {
+        if (!figuraAtual) return;
+        e.preventDefault();
+        alca.setPointerCapture(e.pointerId);
+        const fig = figuraAtual;
+        const mancha = ed.clientWidth || 1;
+        const x0 = e.clientX, larg0 = largDaFigura(fig);
+        const mover = (ev) => {
+            const pct = definirLarg(fig, larg0 + ((ev.clientX - x0) / mancha) * 100);
+            barra.querySelector('[data-largslider]').value = pct;
+            barra.querySelector('[data-largout]').textContent = pct + '%';
+            posicionarAlca(fig); mostrarBarra(fig);
+        };
+        const soltar = () => {
+            alca.removeEventListener('pointermove', mover);
+            alca.removeEventListener('pointerup', soltar);
+            avisar();
+        };
+        alca.addEventListener('pointermove', mover);
+        alca.addEventListener('pointerup', soltar);
+    });
+
+    /* ── Arrastar a figura solta ────────────────────────────
+       Só vale para frente/fundo: no fluxo, a posição é do texto, não do
+       mouse. A coordenada é gravada em %, pelo mesmo motivo da largura. */
+    ed.addEventListener('pointerdown', (e) => {
+        const fig = e.target.closest('.tm-fig--frente, .tm-fig--fundo');
+        if (!fig || !ed.contains(fig)) return;
+        e.preventDefault();
+        mostrarBarra(fig);
+        const caixa = ed.getBoundingClientRect();
+        const r = fig.getBoundingClientRect();
+        const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - r.top;
+        ed.setPointerCapture(e.pointerId);
+        const mover = (ev) => {
+            const x = ((ev.clientX - dx - caixa.left) / caixa.width) * 100;
+            const y = ((ev.clientY - dy - caixa.top) / caixa.height) * 100;
+            fig.style.setProperty('--tm-fig-x', Math.min(100, Math.max(0, x)).toFixed(1) + '%');
+            fig.style.setProperty('--tm-fig-y', Math.max(0, y).toFixed(1) + '%');
+            posicionarAlca(fig);
+        };
+        const soltar = () => {
+            ed.removeEventListener('pointermove', mover);
+            ed.removeEventListener('pointerup', soltar);
+            mostrarBarra(fig); avisar();
+        };
+        ed.addEventListener('pointermove', mover);
+        ed.addEventListener('pointerup', soltar);
+    });
 
     barra.addEventListener('mousedown', (e) => {
         const b = e.target.closest('button');
@@ -137,9 +247,21 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
         e.preventDefault();
         const fig = figuraAtual;
 
-        if (b.dataset.tam) {
-            const img = fig.querySelector('img');
-            if (img) { img.classList.remove(...TAMANHOS); img.classList.add(b.dataset.tam); }
+        if (b.dataset.larg) {
+            definirLarg(fig, Number(b.dataset.larg));
+        } else if (b.dataset.camada !== undefined) {
+            fig.classList.remove(...CAMADAS);
+            if (b.dataset.camada) {
+                fig.classList.remove(...POSICOES);   // solta não tem "onde na linha"
+                fig.classList.add(b.dataset.camada);
+                // Nasce onde já está, não no canto: a imagem que some da tela
+                // ao virar "à frente" parece que o botão a apagou.
+                if (!fig.style.getPropertyValue('--tm-fig-x')) {
+                    const r = fig.getBoundingClientRect(), c = ed.getBoundingClientRect();
+                    fig.style.setProperty('--tm-fig-x', Math.min(100, Math.max(0, ((r.left + r.width / 2 - c.left) / c.width) * 100)).toFixed(1) + '%');
+                    fig.style.setProperty('--tm-fig-y', Math.max(0, ((r.top - c.top) / c.height) * 100).toFixed(1) + '%');
+                }
+            }
         } else if (b.dataset.pos !== undefined) {
             fig.classList.remove(...POSICOES);
             if (b.dataset.pos) fig.classList.add(b.dataset.pos);
@@ -255,6 +377,14 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
             case 'tabela': await inserirTabela(); break;
             case 'campo': await inserirCampo(); break;
         }
+        avisar();
+    });
+
+    barra.querySelector('[data-largslider]').addEventListener('input', (e) => {
+        if (!figuraAtual) return;
+        const pct = definirLarg(figuraAtual, Number(e.target.value));
+        barra.querySelector('[data-largout]').textContent = pct + '%';
+        posicionarAlca(figuraAtual);
         avisar();
     });
 

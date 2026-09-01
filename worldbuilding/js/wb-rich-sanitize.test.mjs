@@ -84,4 +84,15 @@ assert.equal(atributoOk('SPAN', 'data-sumiu'), false,
     'o aviso de objeto sumido nao pode ser gravado no texto');
 assert.equal(filtrarClasses('tm-campo'), 'tm-campo');
 
+// --- imagem: largura livre e figura solta ---
+// A intencao (40% de largura, 20% da esquerda) sobrevive a gravacao; layout
+// pronto continua caindo fora.
+assert.equal(filtrarEstilo('--tm-fig-larg: 40%'), '--tm-fig-larg: 40%');
+assert.equal(filtrarEstilo('--tm-fig-x: 20.5%; --tm-fig-y: 3%'), '--tm-fig-x: 20.5%; --tm-fig-y: 3%');
+assert.equal(filtrarEstilo('position: fixed; --tm-fig-larg: 40%'), '--tm-fig-larg: 40%',
+    'position colado de fora nao entra junto com a largura');
+assert.equal(filtrarEstilo('--tm-fig-larg: url(javascript:1)'), '', 'url() barrado tambem em custom property');
+assert.equal(filtrarClasses('tm-fig tm-fig--frente'), 'tm-fig tm-fig--frente');
+assert.equal(filtrarClasses('tm-fig tm-fig--fundo'), 'tm-fig tm-fig--fundo');
+
 console.log('✅ wb-rich-sanitize: todos os testes passaram.');

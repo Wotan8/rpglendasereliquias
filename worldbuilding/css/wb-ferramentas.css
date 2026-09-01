@@ -866,3 +866,21 @@ body.wbml-aberto .wb-nav-backdrop { display: none; }
 .wb-versao-campo .btn { flex: 0 0 auto; }
 #bkVersaoAviso:empty { display: none; }
 #bkVersaoAviso { color: var(--lr-blood); }
+
+/* ── Imagem: largura livre e alça de arrasto ───────────────
+   A barra flutuante ganhou um controle continuo alem dos quatro atalhos;
+   a alca e o mesmo gesto, direto na imagem, para quem prefere a mao. */
+.wb-imgbar__grupo[hidden] { display: none; }
+.wb-imgbar input[type=range] { width: 5.5rem; accent-color: var(--lr-gold); }
+.wb-imgbar output { font-size: var(--lr-fs-xs); color: var(--lr-gold); min-width: 2.6rem; text-align: right; }
+.wb-imgalca {
+    position: absolute; z-index: var(--lr-z-dropdown);
+    width: 14px; height: 14px; border-radius: 3px;
+    background: var(--lr-gold); border: 2px solid var(--lr-bg-0);
+    cursor: nwse-resize; touch-action: none;
+}
+.wb-imgalca[hidden] { display: none; }
+/* Figura solta: o cursor conta que ela se move, e o arrasto nao pode virar
+   selecao de texto no meio do caminho. */
+[contenteditable="true"] .tm-fig--frente,
+[contenteditable="true"] .tm-fig--fundo { cursor: move; touch-action: none; }

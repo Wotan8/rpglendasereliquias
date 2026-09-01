@@ -31,6 +31,12 @@ export const TAGS_FORA = new Set([
 export const CSS_OK = new Set([
     'color', 'background-color', 'text-align', 'font-weight',
     'font-style', 'text-decoration', 'font-variant',
+    /* Imagem: largura livre e posicao da figura solta, em %. Sao custom
+       properties de proposito — o texto-mundo.css e quem decide o que fazer
+       com elas, entao o documento carrega a INTENCAO (40% de largura), nao
+       layout pronto. E por serem `--tm-*`, nao ha como um HTML colado de
+       fora injetar `position: fixed` por aqui. */
+    '--tm-fig-larg', '--tm-fig-x', '--tm-fig-y', '--tm-fig-op',
 ]);
 
 /**

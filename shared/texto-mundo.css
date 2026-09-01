@@ -184,16 +184,71 @@
 /* Flutuar — o texto contorna a imagem (diagramação de livro) */
 .texto-mundo .tm-fig--flut-esq {
     float: left;
-    width: 42%;
+    width: var(--tm-fig-larg, 42%);
     margin: .4em 1.4em .8em 0;
 }
 .texto-mundo .tm-fig--flut-dir {
     float: right;
-    width: 42%;
+    width: var(--tm-fig-larg, 42%);
     margin: .4em 0 .8em 1.4em;
 }
 .texto-mundo .tm-fig--flut-esq img,
 .texto-mundo .tm-fig--flut-dir img { width: 100%; }
+
+/* ── Tamanho livre ─────────────────────────────────────────
+   As classes tm-img--p/m/g/full continuam valendo (e o que os livros de
+   hoje tem gravado). `--tm-fig-larg` e a largura escolhida a mao, em %, e
+   vence a classe quando existe — largura em % nao estoura em tela pequena
+   sozinha, que e por que nunca guardamos pixel aqui. */
+.texto-mundo .tm-fig[style*="--tm-fig-larg"] { width: var(--tm-fig-larg); }
+.texto-mundo .tm-fig[style*="--tm-fig-larg"] img { width: 100%; }
+
+/* ── Frente do texto e fundo ───────────────────────────────
+   O terceiro eixo, alem de "onde na linha": a imagem sai do fluxo e o texto
+   passa por baixo (frente) ou por cima (fundo). A ancora e o proprio corpo
+   do capitulo, e a posicao e guardada em % — em pixel, a mesma imagem
+   estaria em outro lugar no celular e no monitor.
+
+   O preco disso, dito na cara: a posicao e relativa a ALTURA do capitulo.
+   Escreveu mais texto depois, a imagem escorrega. E o custo de poder soltar
+   a imagem em qualquer lugar sem ancorar num paragrafo. */
+.texto-mundo { position: relative; }
+.texto-mundo .tm-fig--frente,
+.texto-mundo .tm-fig--fundo {
+    position: absolute;
+    left: var(--tm-fig-x, 50%);
+    top: var(--tm-fig-y, 0%);
+    width: var(--tm-fig-larg, 40%);
+    transform: translateX(-50%);
+    margin: 0;
+    /* o texto flui por baixo/por cima, sem desviar */
+    pointer-events: none;
+}
+.texto-mundo .tm-fig--frente { z-index: 2; }
+.texto-mundo .tm-fig--fundo  { z-index: 0; opacity: var(--tm-fig-op, .35); }
+.texto-mundo .tm-fig--frente img,
+.texto-mundo .tm-fig--fundo img { width: 100%; }
+/* O texto precisa ficar ACIMA do que esta no fundo — sem isto o paragrafo
+   fica no mesmo plano e a imagem tapa o comeco dele. */
+.texto-mundo > *:not(.tm-fig--fundo):not(.tm-fig--frente) { position: relative; z-index: 1; }
+
+/* No editor a figura solta precisa ser clicavel e arrastavel — no leitor
+   nao, porque la ela e so ilustracao. */
+[contenteditable="true"].texto-mundo .tm-fig--frente,
+[contenteditable="true"].texto-mundo .tm-fig--fundo { pointer-events: auto; }
+
+/* Tela estreita: imagem solta vira imagem normal. Uma ilustracao ancorada em
+   40% da largura de um celular tapa o texto em vez de acompanhar. */
+@media (max-width: 640px) {
+    .texto-mundo .tm-fig--frente,
+    .texto-mundo .tm-fig--fundo {
+        position: static;
+        width: 100%;
+        transform: none;
+        opacity: 1;
+        margin: 1.2em 0;
+    }
+}
 
 /* Limpa o float para o próximo bloco não subir junto */
 .texto-mundo .tm-limpa { clear: both; }
