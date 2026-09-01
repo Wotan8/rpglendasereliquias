@@ -115,13 +115,9 @@ export function minZ() {
     let m = Infinity; for (const o of T.objects.values()) m = Math.min(m, o.z || 0); return m === Infinity ? 0 : m;
 }
 
-// ===== UPLOAD =====
-export async function uploadArquivo(file) {
-    const path = `tabuleiro-images/${T.mesaId}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, '_')}`;
-    const r = ref(storage, path);
-    await uploadBytes(r, file);
-    return await getDownloadURL(r);
-}
+/* `uploadArquivo` morava aqui e so servia a playlist de musica, que agora
+   sobe pela pasta compartilhada `audio/` (shared/audio-arquivo.js). Imagem
+   do canvas ja subia pelo CampoImagem. Sem chamador, saiu — o git lembra. */
 
 function lerDimensoes(url) {
     return new Promise(res => { const i = new Image(); i.onload = () => res({ w: i.width, h: i.height }); i.onerror = () => res({ w: 400, h: 400 }); i.src = url; });

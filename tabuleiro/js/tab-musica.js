@@ -18,7 +18,8 @@
 import { onSnapshot, setDoc } from '../../painel-mestre/js/firebase-config.js';
 import { T, esc, uid, toast } from './tab-state.js';
 import { refMusica, abrirModal } from './tab-main.js';
-import { uploadArquivo } from './tab-objects.js';
+import { storage, ref, uploadBytes, getDownloadURL } from '../../painel-mestre/js/firebase-config.js';
+import { subirAudio } from '../../shared/audio-arquivo.js';
 import { planoDeReproducao, posicaoInicial, idDoYoutube } from './tab-musica-calc.js';
 
 import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
@@ -426,10 +427,12 @@ window.tbMusAddFaixa = async function() {
     if (!url && !file) { toast('⚠️ Informe uma URL ou envie um arquivo', 'warning'); return; }
     if (file) {
         toast('⏳ Enviando áudio...', 'warning');
-        // ponytail: reusa o bucket `tabuleiro-images/` (já liberado nas storage.rules);
-        // se um dia quiser um prefixo próprio, é criar a regra `tabuleiro-audio/` e trocar aqui.
-        try { url = await uploadArquivo(file); }
-        catch (e) { console.error(e); toast('❌ Falha no upload', 'danger'); return; }
+        /* Vai para `audio/`, a MESMA pasta da trilha de capítulo do Cronista
+           — som de mesa é som de mesa, venha de onde vier. Antes ia para
+           `tabuleiro-images/`, cuja regra passou a exigir contentType de
+           imagem: subir mp3 aqui tinha parado de funcionar em silêncio. */
+        try { url = await subirAudio({ storage, ref, uploadBytes, getDownloadURL }, file); }
+        catch (e) { console.error(e); toast('❌ ' + (e.message || 'Falha no upload'), 'danger'); return; }
         if (!nome) nome = file.name.replace(/\.[^.]+$/, '');
     }
     if (!nome) { const v = idDoYoutube(url); nome = v ? '▶ ' + v : 'Faixa'; }

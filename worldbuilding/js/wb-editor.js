@@ -19,7 +19,7 @@
      worldbuilding-settings/estantes → lista de estantes (um doc só)
    ═══════════════════════════════════════════════════════════ */
 
-import { db, collection, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc } from './firebase-config.js';
+import { db, collection, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, storage, ref, uploadBytes, getDownloadURL } from './firebase-config.js';
 import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND, poolOf } from './wb-utils.js';
 import { dossieHTML } from './wb-dossie.js';
 import { TOOLBAR_HTML, bindRich } from './wb-rich.js';
@@ -29,6 +29,7 @@ import { proximaVersao, mesmaVersao } from '../../shared/versao-canone.js';
 import { alvos, avisoDeVersao, enviarAviso } from '../../shared/avisar-livro.js';
 import { camposDe, resolverCampos, carregadorPadrao, FONTES_CAMPO } from '../../shared/campo-vinculado.js';
 import { montarMusica, pararMusica, musicaDoCapitulo } from '../../shared/musica-capitulo.js';
+import { subirAudio, EXT_AUDIO } from '../../shared/audio-arquivo.js';
 import { confirmar, toast } from '../../shared/dialogo.js?v=2';
 
 export const Editor = (() => {
@@ -1256,13 +1257,18 @@ export const Editor = (() => {
         ToolModal.open(`
             <h2>🎵 Trilha de “${esc(atual.title || 'Sem título')}”</h2>
             <div class="wbt-form">
-                <label>Endereço do áudio
-                    <input id="muUrl" class="form-input" value="${esc(m.url || '')}" placeholder="https://… .mp3">
-                    <span class="wbt-muted wb-bkhint">Um endereço direto para o arquivo (mp3, ogg, m4a). Envio pelo site ainda não: a pasta de áudio precisa ser liberada no storage.rules.</span></label>
+                <label>Som da trilha
+                    <span class="wb-versao-campo">
+                        <input id="muUrl" class="form-input" value="${esc(m.url || '')}" placeholder="Endereço do arquivo, ou link do YouTube">
+                        <button type="button" class="btn btn-secondary btn-sm" id="muArq" title="Enviar um arquivo de som">📁 Arquivo</button>
+                    </span>
+                    <input type="file" id="muFile" accept="audio/*" hidden>
+                    <span class="wbt-muted wb-bkhint" id="muDica">Arquivo de som (mp3, ogg, m4a, wav…) ou link do YouTube — o mesmo que a playlist do Tabuleiro aceita, e na mesma pasta.</span></label>
                 <label>Nome que o leitor vê
                     <input id="muNome" class="form-input" value="${esc(m.nome || '')}" placeholder="Ex: O Porão"></label>
                 <label class="wbt-check"><input type="checkbox" id="muLoop" ${m.loop !== false ? 'checked' : ''}> Repetir sem parar</label>
-                <p class="wbt-muted wb-bkhint">O navegador <b>bloqueia som que começa sozinho</b> — é política dele, não dá para contornar. No primeiro capítulo da sessão o leitor vê um ▶ e toca uma vez; a partir daí, trocar de capítulo já emenda a próxima trilha sozinho.</p>
+                <p class="wbt-muted wb-bkhint">O navegador <b>bloqueia som que começa sozinho</b> — é política dele, não dá para contornar. No primeiro capítulo da sessão o leitor vê um ▶ e toca uma vez; a partir daí, trocar de capítulo já emenda a próxima trilha sozinho.<br>
+                    Link do YouTube vira um player em miniatura: não dá para extrair o áudio de lá, e os termos deles não permitem player escondido.</p>
                 <div id="muPrevia"></div>
                 <div class="wbt-actions">
                     <button class="btn btn-danger" id="muTirar">🗑️ Tirar a trilha</button>
@@ -1275,6 +1281,22 @@ export const Editor = (() => {
            trás do editor, sem controle na tela, é o tipo de coisa que faz
            procurar qual aba está fazendo barulho. */
         document.querySelector('#wbToolModal [data-close]').addEventListener('click', pararMusica);
+        /* Upload para a MESMA pasta `audio/` da playlist do Tabuleiro. Som de
+           mesa é som de mesa, venha do Escritório ou da mesa. */
+        $('#muArq').onclick = () => $('#muFile').click();
+        $('#muFile').onchange = async (e) => {
+            const file = e.target.files?.[0]; if (!file) return;
+            const dica = $('#muDica');
+            dica.textContent = '⏳ Enviando…';
+            try {
+                $('#muUrl').value = await subirAudio({ storage, ref, uploadBytes, getDownloadURL }, file);
+                if (!$('#muNome').value.trim()) $('#muNome').value = file.name.replace(/\.[^.]+$/, '');
+                dica.textContent = '✓ Enviado.';
+            } catch (err) {
+                console.warn('[trilha]', err);
+                dica.textContent = '❌ ' + (err.message || 'Não deu para enviar.');
+            }
+        };
         $('#muOuvir').onclick = () => {
             const url = $('#muUrl').value.trim();
             if (url) montarMusica($('#muPrevia'), { musica: { url, nome: $('#muNome').value.trim(), loop: false } });

@@ -572,6 +572,13 @@
 @media (prefers-reduced-motion: reduce) {
     .tm-musica.is-tocando .tm-musica__btn { animation: none; }
 }
+/* YouTube: nao da para extrair o audio e os termos deles nao permitem player
+   escondido, entao a trilha vira uma miniatura. 16:9 num tamanho de tira, o
+   suficiente para o leitor achar o pause sem virar video no meio do texto. */
+.tm-musica--yt { align-items: center; }
+.tm-musica__yt { flex: 0 0 auto; width: 160px; aspect-ratio: 16 / 9; border: 0; border-radius: var(--lr-radius-sm); }
+@media (max-width: 480px) { .tm-musica__yt { width: 120px; } }
+
 /* Papel impresso nao toca musica. */
 @media print { .tm-musica { display: none; } }
 

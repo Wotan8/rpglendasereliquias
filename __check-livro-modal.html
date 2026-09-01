@@ -97,7 +97,11 @@ $('#chkAbrir').onclick = abrirCog;
 
 $('#chkRun').onclick = async () => {
     const ok = [], erro = [];
-    const t = (nome, cond) => (cond ? ok : erro).push(nome);
+    /* `window.__ultimo` guarda o ultimo assert que rodou. A suite leva ~40s e
+       tem esperas de autosave; quando ela trava, e a unica forma de saber
+       ONDE sem adivinhar. */
+    const t = (nome, cond) => { window.__ultimo = nome; (cond ? ok : erro).push(nome); };
+    window.__ok = ok; window.__erro = erro;
     // Usado por mais de um bloco, entao carrega uma vez aqui em cima.
     const SAN = await import('/worldbuilding/js/wb-rich-sanitize.js' + CB);
     GRAVADO.length = 0;
@@ -711,6 +715,7 @@ $('#chkRun').onclick = async () => {
 
     // ── 🎵 Trilha do capitulo ──
     const MU = await import('/shared/musica-capitulo.js' + CB);
+    const AU = await import('/shared/audio-arquivo.js' + CB);
     t('capitulo sem trilha nao devolve nada', MU.musicaDoCapitulo({}) === null);
     t('trilha sem endereco de verdade e ignorada',
         MU.musicaDoCapitulo({ musica: { url: 'javascript:1' } }) === null
@@ -720,9 +725,33 @@ $('#chkRun').onclick = async () => {
     t('e da para desligar', MU.musicaDoCapitulo({ musica: { url: 'https://x/p.mp3', loop: false } }).loop === false);
     t('musica corrompida no banco nao derruba nada', MU.musicaDoCapitulo({ musica: 'porao' }) === null);
 
+    // YouTube: mesma leitura de link da playlist do Tabuleiro, sem copia.
+    const yt = MU.musicaDoCapitulo({ musica: { url: 'https://youtu.be/dQw4w9WgXcQ' } });
+    t('link do YouTube e reconhecido', yt.tipo === 'youtube' && yt.yt === 'dQw4w9WgXcQ');
+    t('arquivo continua sendo arquivo',
+        MU.musicaDoCapitulo({ musica: { url: 'https://x/p.mp3' } }).tipo === 'arquivo');
+    t('outras formas de link do YouTube tambem',
+        MU.musicaDoCapitulo({ musica: { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' } }).yt === 'dQw4w9WgXcQ');
+
+    // ── A pasta de audio, uma so para os dois lugares que tocam som ──
+    t('a pasta e "audio"', AU.PASTA_AUDIO === 'audio');
+    // Acento e espaco viram `_` (nao ha transliteracao): o nome no Storage e
+    // cosmetico, quem garante unicidade e o carimbo de tempo na frente.
+    t('o caminho carimba a hora e higieniza o nome',
+        /^audio\/\d+_o_por_o\.mp3$/.test(AU.caminhoAudio('o porão.mp3')));
+    const arq = (nome, tipo, tam = 10) => new File([new Uint8Array(tam)], nome, { type: tipo });
+    t('mp3 sem type passa', AU.validarAudio(arq('porao.mp3', '')) === null);
+    t('e o tipo e carimbado pela extensao', AU.tipoDeAudio(arq('porao.mp3', '')) === 'audio/mpeg');
+    t('o que nao e som e recusado', AU.validarAudio(arq('planilha.xlsx', '')) !== null);
+    // 25 MB e nao 10: faixa de 5 min a 256 kbps passa de 9 MB.
+    t('teto e de 25 MB', AU.MAX_AUDIO === 25 * 1024 * 1024);
+    t('som acima do teto e recusado',
+        (AU.validarAudio(arq('longa.mp3', 'audio/mpeg', 26 * 1024 * 1024)) || '').includes('25 MB'));
+
     const palco2 = document.createElement('div');
     document.body.appendChild(palco2);
     MU.montarMusica(palco2, { musica: { url: 'https://x/p.mp3', nome: 'O Porão' } });
+    const controleArquivo = palco2.querySelector('.tm-musica');
     t('o controle entra no TOPO do capitulo', palco2.firstElementChild?.classList.contains('tm-musica'));
     t('e mostra o nome que o autor deu', palco2.textContent.includes('O Porão'));
     // Pausar e volume: so. Nao ha como trocar a faixa nem buscar no tempo.
@@ -730,6 +759,14 @@ $('#chkRun').onclick = async () => {
         !!palco2.querySelector('[data-play]') && !!palco2.querySelector('.tm-musica__vol'));
     t('e NAO ha barra de tempo para ele pular',
         !palco2.querySelector('audio') && palco2.querySelectorAll('input').length === 1);
+
+    // YouTube vira miniatura embutida, nao <audio>.
+    MU.montarMusica(palco2, { musica: { url: 'https://youtu.be/dQw4w9WgXcQ', nome: 'Tema' } });
+    const ytIfr = palco2.querySelector('.tm-musica__yt');
+    t('YouTube vira player embutido', !!ytIfr && ytIfr.tagName === 'IFRAME');
+    t('e usa o dominio sem cookie', ytIfr.src.includes('youtube-nocookie.com'));
+    t('nao ha botao de play proprio no YouTube — quem pausa e o player dele',
+        !palco2.querySelector('.tm-musica--yt [data-play]'));
 
     // Capitulo sem trilha limpa o controle do anterior.
     MU.montarMusica(palco2, { musica: null });

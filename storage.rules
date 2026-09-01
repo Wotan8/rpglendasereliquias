@@ -81,6 +81,29 @@ service firebase.storage {
       allow write: if ehMestre() && imagemOk();
     }
 
+    /* Som de mesa — UMA pasta para os dois lugares que tocam audio: a
+       playlist do Tabuleiro e a trilha do capitulo do Cronista. Sao a mesma
+       coisa (um som que o mestre escolhe e a mesa ouve), entao sao a mesma
+       regra: duas pastas com o mesmo proposito viram duas regras que
+       divergem, e um dia o audio funciona num lugar e nao no outro.
+
+       Ate aqui a playlist subia em `tabuleiro-images/`, que passou a exigir
+       contentType de imagem — ou seja, subir mp3 na mesa parou de funcionar
+       em silencio. Leitura de quem esta logado (o jogador precisa OUVIR),
+       escrita do mestre (a trilha e escolha dele). */
+    function audioOk() {
+      return request.resource == null || (
+        // 25 MB e nao 10: uma faixa de 5 minutos a 256 kbps passa de 9 MB, e
+        // o teto da imagem deixaria de fora a musica que alguem de fato usa.
+        request.resource.size < 25 * 1024 * 1024 &&
+        request.resource.contentType.matches('audio/.*')
+      );
+    }
+    match /audio/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if ehMestre() && audioOk();
+    }
+
     // ===== CAMINHOS DE JOGADOR =====
     // Continuam abertos a quem está logado — é o jogador que sobe a cara do
     // personagem, do item e do token. O que muda é que agora só entra imagem,
