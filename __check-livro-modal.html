@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="shared/sanfona.css">
 <link rel="stylesheet" href="shared/acervo.css">
 <link rel="stylesheet" href="shared/dialogo.css">
-<link rel="stylesheet" href="shared/texto-mundo.css?v=7">
+<link rel="stylesheet" href="shared/texto-mundo.css?v=9">
 <link rel="stylesheet" href="worldbuilding/css/worldbuilding.css?v=2">
 <link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=23">
 <script src="shared/theme.js"></script>
@@ -34,11 +34,11 @@
      instancia que o editor enxerga, senao GRAVADO fica vazio. -->
 <script type="importmap">
 { "imports": {
-    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=11",
-    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=11",
-    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=11",
-    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=11",
-    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=11"
+    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=12",
+    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=12",
+    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=12",
+    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=12",
+    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=12"
 } }
 </script>
 
@@ -75,7 +75,7 @@
 </div>
 
 <script type="module">
-import { GRAVADO } from './__check-stub-firestore.js?v=11';
+import { GRAVADO } from './__check-stub-firestore.js?v=12';
 import { Editor } from './worldbuilding/js/wb-editor.js';
 
 window.WB = { data: {}, user: { email: 'check@harness' } };
@@ -87,7 +87,7 @@ const espera = (ms = 80) => new Promise(r => setTimeout(r, ms));
 /* Modulo com query e outro modulo para o navegador. Sem isso o harness roda
    o que ficou no cache — ja aconteceu duas vezes aqui. UM token para todos
    os `import()` de shared/, subido a cada mexida. */
-const CB = '?h=5';
+const CB = '?h=6';
 // Salvamento deliberado (o mesmo caminho do botao 💾) e volta a Biblioteca.
 const save2 = async () => { $('#saveArticle').click(); await espera(200); };
 // Tolerante a ja estar na Biblioteca: os blocos de teste rodam em sequencia
@@ -98,6 +98,8 @@ $('#chkAbrir').onclick = abrirCog;
 $('#chkRun').onclick = async () => {
     const ok = [], erro = [];
     const t = (nome, cond) => (cond ? ok : erro).push(nome);
+    // Usado por mais de um bloco, entao carrega uma vez aqui em cima.
+    const SAN = await import('/worldbuilding/js/wb-rich-sanitize.js' + CB);
     GRAVADO.length = 0;
     abrirCog();
 
@@ -572,7 +574,6 @@ $('#chkRun').onclick = async () => {
     caixa.remove();
 
     // O sanitizador deixa passar os tres data-*, e NAO o aviso.
-    const SAN = await import('/worldbuilding/js/wb-rich-sanitize.js' + CB);
     t('grava data-cat, data-entity e data-campo',
         ['data-cat', 'data-entity', 'data-campo'].every(a2 => SAN.atributoOk('SPAN', a2)));
     t('NAO grava o data-sumiu — o aviso e sempre recalculado',
@@ -583,6 +584,47 @@ $('#chkRun').onclick = async () => {
         nivel: 3, vazio: '', lista: [1, 2], obj: {}, _interno: 'nao', ownerUid: 'abc' });
     t('oferece so escalar com conteudo',
         String(campos.map(c => c.campo).sort()) === 'expectativaVida,nivel,nome');
+
+    // ── 📍 Ponto de interesse e ✉️ carta ──
+    const pal3 = document.createElement('div');
+    pal3.className = 'texto-mundo';
+    pal3.style.width = '600px';
+    pal3.innerHTML =
+        '<div class="tm-ponto"><span class="tm-ponto__n">06</span><h3>Altar de madeira</h3>'
+        + '<p>Parece um altar de sacrificio, mas e uma comoda. Ha sangue por todo lado, '
+        + 'e as correntes estao enroladas e presas aos pes.</p></div>'
+        + '<div class="tm-carta"><p>bilhete</p></div>';
+    document.body.appendChild(pal3);
+    const pt = pal3.querySelector('.tm-ponto'), num = pal3.querySelector('.tm-ponto__n');
+    const tit = pal3.querySelector('.tm-ponto h3'), desc = pal3.querySelector('.tm-ponto p');
+    t('o ponto de interesse e uma grade', getComputedStyle(pt).display === 'grid');
+    t('o numero fica a DIREITA do titulo',
+        num.getBoundingClientRect().left > tit.getBoundingClientRect().left);
+    // O numero acompanha a altura do bloco: flutuando no meio de um bloco
+    // alto ele perde a leitura de etiqueta.
+    t('o numero vai do alto ao pe do bloco',
+        Math.abs(num.getBoundingClientRect().height - pt.getBoundingClientRect().height) < 3);
+    t('titulo e descricao ficam na mesma coluna',
+        Math.round(tit.getBoundingClientRect().left) === Math.round(desc.getBoundingClientRect().left));
+    t('a descricao sai em italico', getComputedStyle(desc).fontStyle === 'italic');
+
+    const carta = pal3.querySelector('.tm-carta');
+    t('a carta tem moldura', getComputedStyle(carta).borderTopWidth !== '0px');
+    t('e os cantos sao ::before/::after — nao entram no HTML gravado',
+        carta.children.length === 1
+        && getComputedStyle(carta, '::before').content !== 'none'
+        && getComputedStyle(carta, '::after').content !== 'none');
+
+    // As classes novas passam pelo sanitizador (sao tm-*), e o HTML todo
+    // sobrevive a uma gravacao — senao o bloco se desmancha ao salvar.
+    t('as classes novas sobrevivem a gravacao',
+        SAN.filtrarClasses('tm-ponto') === 'tm-ponto'
+        && SAN.filtrarClasses('tm-ponto__n') === 'tm-ponto__n'
+        && SAN.filtrarClasses('tm-carta tm-carta--mao') === 'tm-carta tm-carta--mao');
+    const limpo = SAN.limparHTML(pal3.innerHTML);
+    t('o ponto de interesse inteiro sobrevive',
+        limpo.includes('tm-ponto__n') && limpo.includes('06') && limpo.includes('Altar de madeira'));
+    pal3.remove();
 
     // ── 🎵 Trilha do capitulo ──
     const MU = await import('/shared/musica-capitulo.js' + CB);

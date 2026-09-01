@@ -574,3 +574,90 @@
 }
 /* Papel impresso nao toca musica. */
 @media print { .tm-musica { display: none; } }
+
+/* ── 📍 Ponto de interesse ─────────────────────────────────
+   O cabecalho de cena de aventura pronta: numero grande no canto, titulo em
+   caixa alta e a descricao em italico logo abaixo. E o bloco que o mestre
+   procura correndo o olho pela pagina no meio da sessao — por isso o numero
+   e grande e fica sempre do mesmo lado. */
+.texto-mundo .tm-ponto {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: 0;
+    margin: 1.6em 0 0;
+    border: 1px solid var(--tm-cor-destaque, var(--lr-bronze));
+    background: var(--lr-bg-1);
+    overflow: hidden;
+}
+.texto-mundo .tm-ponto > * { grid-column: 1; margin: 0; padding: 0 .9em; }
+.texto-mundo .tm-ponto > *:first-child ~ *:last-child { padding-bottom: .7em; }
+.texto-mundo .tm-ponto h2,
+.texto-mundo .tm-ponto h3,
+.texto-mundo .tm-ponto h4 {
+    font-size: 1em;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--tm-cor-titulo, var(--lr-gold-2));
+    margin: 0;
+    padding-top: .7em;
+}
+.texto-mundo .tm-ponto p { font-style: italic; font-size: .9em; color: var(--lr-text-2); line-height: 1.4; }
+/* O numero: coluna propria, do alto ao pe, com fundo proprio. Numero
+   flutuando no meio de um bloco alto perde a leitura de "etiqueta".
+
+   `span 99` e nao `1 / -1`: a linha `-1` so existe na grade EXPLICITA, e
+   aqui as linhas sao implicitas (o titulo e a descricao entram por
+   auto-placement). Com `1 / -1` o numero ocupava uma linha so e ficava
+   colado no alto — que foi exatamente o que o teste pegou. 99 e um teto,
+   nao uma contagem: nenhum ponto de interesse tem 99 paragrafos. */
+.texto-mundo .tm-ponto__n {
+    grid-column: 2; grid-row: 1 / span 99;
+    display: flex; align-items: center; justify-content: center;
+    min-width: 2.6em; padding: .3em .5em;
+    background: var(--tm-cor-destaque, var(--lr-bronze));
+    color: var(--lr-bg-0);
+    font-family: var(--lr-font-title);
+    font-size: 1.5em; font-weight: 700; line-height: 1;
+}
+/* Tabela logo abaixo de um ponto de interesse cola nele: as duas coisas sao
+   o mesmo bloco de cena, e um vao entre elas quebraria a leitura. */
+.texto-mundo .tm-ponto + .tm-tabela-rola,
+.texto-mundo .tm-ponto + table { margin-top: 0; }
+
+/* ── ✉️ Carta / handout ────────────────────────────────────
+   O que o jogador recebe na mao: bilhete, recorte, pagina de diario. Moldura
+   dupla com cantos marcados — a mesma gramatica de "isto e um objeto, nao e
+   a voz do livro". */
+.texto-mundo .tm-carta {
+    position: relative;
+    margin: 1.8em 0;
+    padding: 1.6em 1.8em;
+    border: 1px solid var(--tm-cor-destaque, var(--lr-bronze));
+    background: var(--lr-surface);
+    box-shadow: inset 0 0 0 1px var(--lr-bg-1), 0 2px 10px rgba(0, 0, 0, .25);
+}
+/* Os cantos: dois pseudo-elementos com duas bordas cada, um no alto-esquerdo
+   e outro no baixo-direito. Dois elementos dao os quatro cantos porque cada
+   um desenha um "L". */
+.texto-mundo .tm-carta::before,
+.texto-mundo .tm-carta::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    border: 2px solid var(--tm-cor-destaque, var(--lr-bronze));
+}
+.texto-mundo .tm-carta::before { top: 6px; left: 6px; border-right: none; border-bottom: none; }
+.texto-mundo .tm-carta::after { bottom: 6px; right: 6px; border-left: none; border-top: none; }
+.texto-mundo .tm-carta > *:first-child { margin-top: 0; }
+.texto-mundo .tm-carta > *:last-child { margin-bottom: 0; }
+/* Datilografada: bilhete, relatorio, transcricao. */
+.texto-mundo .tm-carta--maquina { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85em; }
+/* Manuscrita: a letra de quem escreveu a mao. */
+.texto-mundo .tm-carta--mao { font-family: var(--lr-font-subtitle); font-style: italic; font-size: 1.05em; }
+
+@media (max-width: 640px) {
+    .texto-mundo .tm-ponto { grid-template-columns: 1fr; }
+    .texto-mundo .tm-ponto__n { grid-column: 1; grid-row: 1; justify-content: flex-start; font-size: 1.2em; }
+    .texto-mundo .tm-carta { padding: 1.2em 1.1em; }
+}

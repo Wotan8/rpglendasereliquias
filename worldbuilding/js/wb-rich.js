@@ -71,6 +71,10 @@ export const TOOLBAR_HTML = `
     <option value="tm-aviso">⚠️ Aviso</option>
     <option value="tm-aviso tm-aviso--nota">📖 Nota do mestre</option>
     <option value="tm-aviso tm-aviso--segredo">🔒 Segredo</option>
+    <option value="ins:ponto">📍 Ponto de interesse</option>
+    <option value="wrap:tm-carta">✉️ Carta / handout</option>
+    <option value="wrap:tm-carta tm-carta--maquina">✉️ Carta datilografada</option>
+    <option value="wrap:tm-carta tm-carta--mao">✉️ Carta manuscrita</option>
 </select>
 <button class="btn btn-secondary btn-sm" data-rich="link" title="Inserir link">🔗</button>
 <button class="btn btn-secondary btn-sm" data-rich="imagem" title="Inserir imagem">🖼️</button>
@@ -565,12 +569,28 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
         avisar();
     });
 
-    /* Blocos: classe no bloco onde o cursor está, ligando/desligando. */
+    /* Blocos. Três gestos diferentes por trás do mesmo seletor, e o valor
+       diz qual: `ins:` insere estrutura, `wrap:` envolve o que está
+       selecionado, e o resto é classe no bloco onde o cursor está. Um
+       seletor só porque, para quem escreve, os três são "pôr um bloco". */
     toolbar.querySelector('[data-rich="bloco2"]').addEventListener('change', (e) => {
-        const classes = e.target.value.split(' ').filter(Boolean);
+        const valor = e.target.value;
         e.target.selectedIndex = 0;
-        if (!classes.length) return;
+        if (!valor) return;
         ed.focus();
+
+        if (valor.startsWith('ins:')) { inserirPonto(); avisar(); return; }
+        if (valor.startsWith('wrap:')) {
+            const blocos = blocosDaSelecao();
+            if (!blocos.length) return;
+            const dentro = blocos[0].closest('.tm-carta');
+            if (dentro) desembrulhar(dentro);           // reaplicar desfaz
+            else envolver(blocos, valor.slice(5));
+            avisar();
+            return;
+        }
+
+        const classes = valor.split(' ').filter(Boolean);
         const bloco = blocosDaSelecao()[0];
         if (!bloco) return;
         const jaTem = classes.every(c => bloco.classList.contains(c));
@@ -597,6 +617,27 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
         const todos = [...ed.children];
         const a2 = todos.indexOf(ini), b2 = fim ? todos.indexOf(fim) : a2;
         return todos.slice(Math.min(a2, b2), Math.max(a2, b2) + 1);
+    }
+
+    /* O ponto de interesse é ESTRUTURA, não classe: número, título e
+       descrição em papéis fixos. Nasce com texto de exemplo em vez de vazio
+       — três caixas em branco não dizem o que vai em cada uma. */
+    function inserirPonto() {
+        const bloco = blocosDaSelecao()[0];
+        const cx = document.createElement('div');
+        cx.className = 'tm-ponto';
+        cx.innerHTML = '<span class="tm-ponto__n">01</span>'
+            + '<h3>Nome do ponto</h3>'
+            + '<p>O que os personagens veem ao olhar para isto.</p>';
+        if (bloco) bloco.after(cx); else ed.appendChild(cx);
+        // Parágrafo depois, senão o cursor fica preso no fim do bloco.
+        const p = document.createElement('p');
+        p.innerHTML = '<br>';
+        cx.after(p);
+        const r = document.createRange();
+        r.setStart(cx.querySelector('h3'), 0); r.collapse(true);
+        const sel = window.getSelection();
+        sel.removeAllRanges(); sel.addRange(r);
     }
 
     function envolver(blocos, classe) {
