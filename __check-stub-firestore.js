@@ -17,6 +17,16 @@ const DADOS = {
         { id: 'u2', email: 'mestre@x', role: 'mestre', notifications: [{ id: 'velha', message: 'antiga', timestamp: 1, isNew: false }] },
         { id: 'u3', email: 'jog1@x' },
         { id: 'u4', email: 'jog2@x', role: 'jogador', notifications: [] },
+        // Dono de ficha que nao e salva desde que o espelho passou a existir.
+        { id: 'u9', email: 'sumido@x', role: 'jogador', notifications: [] },
+    ],
+    /* Fichas, para o aviso de livro de VINCULO saber quem alcanca o que.
+       `livrosAlcance` e o espelho gravado pela ficha; a ultima NAO tem o
+       campo de proposito — e o estado "nao da para saber". */
+    'char': [
+        { id: 'p1', ownerUid: 'u3', fields: { raca: 'Elorin' }, livrosAlcance: ['b1'] },
+        { id: 'p2', ownerUid: 'u4', fields: { raca: 'Humano' }, livrosAlcance: [] },
+        { id: 'p3', ownerUid: 'u9', fields: { raca: 'Elorin' } },
     ],
     'worldbuilding-articles': [
         { id: 'a1', bookId: 'b1', order: 0, title: 'A Noite da Bigorna Fria', synopsis: 'Brida descobre quem comprou a dívida.', status: 'rascunho', public: false, contentHTML: '<p>um dois tres</p>' },

@@ -34,11 +34,11 @@
      instancia que o editor enxerga, senao GRAVADO fica vazio. -->
 <script type="importmap">
 { "imports": {
-    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=12",
-    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=12",
-    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=12",
-    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=12",
-    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=12"
+    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=15",
+    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=14",
+    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=13",
+    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=13",
+    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=13"
 } }
 </script>
 
@@ -75,7 +75,7 @@
 </div>
 
 <script type="module">
-import { GRAVADO } from './__check-stub-firestore.js?v=12';
+import { GRAVADO } from './__check-stub-firestore.js?v=15';
 import { Editor } from './worldbuilding/js/wb-editor.js';
 
 window.WB = { data: {}, user: { email: 'check@harness' } };
@@ -87,7 +87,7 @@ const espera = (ms = 80) => new Promise(r => setTimeout(r, ms));
 /* Modulo com query e outro modulo para o navegador. Sem isso o harness roda
    o que ficou no cache — ja aconteceu duas vezes aqui. UM token para todos
    os `import()` de shared/, subido a cada mexida. */
-const CB = '?h=6';
+const CB = '?h=8';
 // Salvamento deliberado (o mesmo caminho do botao 💾) e volta a Biblioteca.
 const save2 = async () => { $('#saveArticle').click(); await espera(200); };
 // Tolerante a ja estar na Biblioteca: os blocos de teste rodam em sequencia
@@ -397,9 +397,57 @@ $('#chkRun').onclick = async () => {
         A.alvos({ pub: { geral: true } }, gente).ids.length === 4);
     t('livro so do mestre avisa so os dois mestres',
         String(A.alvos({ pub: { mestre: true } }, gente).ids) === 'u1,u2');
-    const vinc = A.alvos({ pub: { conhVinculo: true } }, gente);
-    t('livro de vinculo avisa os mestres', String(vinc.ids) === 'u1,u2');
-    t('e ADMITE que nao sabe alcancar os jogadores', vinc.exato === false && vinc.motivo.includes('vínculo'));
+    const vinc = A.alvos({ id: 'b1', pub: { conhVinculo: true } }, gente);
+    t('sem a lista de personagens, volta ao antigo: so mestres', String(vinc.ids) === 'u1,u2');
+    t('e ADMITE que nao sabe alcancar os jogadores', vinc.exato === false && !!vinc.ressalva);
+
+    // ── O espelho de alcance: os TRES estados ──
+    const AL = await import('/shared/alcance-livros.js' + CB);
+    const sd = {
+        races: [{ id: 'r1', nome: 'Elorin', livrosVinculados: [{ bookId: 'b1' }] }],
+        classes: [{ id: 'c1', nome: 'Xamã', livrosVinculados: [{ bookId: 'b2', capituloIds: ['x1'] }] }],
+        tribes: [], peculiarities: [],
+    };
+    let mapa = AL.alcanceDoPersonagem({ raca: 'Elorin', classe: 'Xamã' }, sd);
+    t('a raca traz o livro dela', mapa.has('b1') && mapa.get('b1') === null);
+    t('a classe traz so os capitulos que ela libera', mapa.get('b2') instanceof Set);
+    t('a lista achatada sai ordenada', String(AL.idsDoAlcance(mapa)) === 'b1,b2');
+    // Vinculo por ID tambem: a ficha grava o NOME, o cadastro conhece o id.
+    t('acha por id tambem', AL.alcanceDoPersonagem({ raca: 'r1' }, sd).has('b1'));
+    // Duas fontes no mesmo livro: livro inteiro vence recorte de capitulos.
+    const sd2 = { races: [{ nome: 'A', livrosVinculados: [{ bookId: 'b9', capituloIds: ['c1'] }] }],
+                  classes: [{ nome: 'B', livrosVinculados: [{ bookId: 'b9' }] }], tribes: [], peculiarities: [] };
+    t('livro inteiro vence recorte quando outra fonte libera tudo',
+        AL.alcanceDoPersonagem({ raca: 'A', classe: 'B' }, sd2).get('b9') === null);
+    // Livro amarrado DIRETO no personagem passa por cima da publicacao.
+    t('vinculo direto fica marcado a parte',
+        AL.alcanceDoPersonagem({ livrosVinculados: [{ bookId: 'bx' }] }, sd).diretos.has('bx'));
+    t('personagem sem nada alcanca nada', AL.idsDoAlcance(AL.alcanceDoPersonagem({}, sd)).length === 0);
+    t('doc de personagem vira o formato da conta',
+        AL.personagemDoDoc({ fields: { raca: 'Elorin' } }).raca === 'Elorin');
+    // AUSENTE nao e zero: e o estado que torna a resposta inexata.
+    t('ficha sem espelho devolve null, nao lista vazia', AL.alcanceGravado({}) === null);
+    t('ficha com espelho vazio devolve lista vazia', String(AL.alcanceGravado({ livrosAlcance: [] })) === '');
+
+    const fichas = [
+        { ownerUid: 'u3', livrosAlcance: ['b1'] },   // alcanca
+        { ownerUid: 'u4', livrosAlcance: ['b7'] },   // NAO alcanca
+    ];
+    const exato = A.alvos({ id: 'b1', pub: { conhVinculo: true } }, gente, fichas);
+    t('com o espelho, o jogador vinculado ENTRA', exato.ids.includes('u3'));
+    t('e o nao vinculado fica de fora', !exato.ids.includes('u4'));
+    t('os mestres entram de qualquer jeito', exato.ids.includes('u1') && exato.ids.includes('u2'));
+    t('e agora a resposta e EXATA', exato.exato === true);
+
+    const comDuvida = A.alvos({ id: 'b1', pub: { conhVinculo: true } }, gente,
+        [...fichas, { ownerUid: 'u9' }]);   // ficha nunca salva desde a mudanca
+    t('ficha sem espelho entra por precaucao', comDuvida.ids.includes('u9'));
+    t('e ela e o que torna a resposta inexata', comDuvida.exato === false);
+    t('a ressalva conta as duvidas, separada de quem recebe',
+        comDuvida.ressalva.includes('1 pessoa') && !comDuvida.motivo.includes('precaução'));
+    t('resposta exata nao tem ressalva', exato.ressalva === '');
+    t('personagem sem dono e ignorado',
+        !A.alvos({ id: 'b1', pub: { conhVinculo: true } }, gente, [{ livrosAlcance: ['b1'] }]).ids.includes(undefined));
     t('livro nao publicado nao avisa ninguem',
         A.alvos({ pub: {} }, gente).ids.length === 0);
     const av = A.avisoDeVersao({ id: 'b1', title: 'Crônicas', versao: '1.03' }, '1.02');
@@ -429,12 +477,12 @@ $('#chkRun').onclick = async () => {
     const perg = document.querySelector('.lr-dialogo .lr-dialogo-ok');
     t('salvar com a versao mudada PERGUNTA antes de avisar', !!perg);
     t('a pergunta diz quantos e por que',
-        document.querySelector('.lr-dialogo').textContent.includes('4 pessoas'));
+        document.querySelector('.lr-dialogo').textContent.includes('5 pessoas'));
     perg.click();
     await salvando;
     await espera(300);
     const avisados = GRAVADO.filter(g => g.col === 'users');
-    t('avisou os 4', avisados.length === 4);
+    t('avisou os 5', avisados.length === 5);
     t('o aviso entrou no campo que o sino escuta', !!avisados[0]?.data?.notifications);
     t('o novo vem primeiro', avisados[0]?.data?.notifications?.[0]?.isNew === true);
     t('e nao apagou o que ja estava la',
@@ -464,8 +512,43 @@ $('#chkRun').onclick = async () => {
     t('mas a versao nova foi gravada do mesmo jeito',
         GRAVADO.find(g => g.col === 'worldbuilding-books')?.data?.versao === '3.01');
 
-    // ── Aparencia do livro ──
+    // ── O aviso de livro de VINCULO, de ponta a ponta ──
+    // b1 vira so-de-vinculo: o Escritorio tem de ir ler as fichas para
+    // saber quem alcanca, em vez de avisar so os mestres.
     abrirCog();
+    $('[data-bktab="pub"]').click();
+    document.querySelectorAll('[data-bkpub]').forEach(c => { c.checked = c.dataset.bkpub === 'conhVinculo'; });
+    $('[data-bktab="geral"]').click();
+    $('#bkVersao').value = '4.00';
+    GRAVADO.length = 0;
+    const salvV = $('#bkSave').onclick();
+    await espera(300);
+    const dlgV = document.querySelector('.lr-dialogo');
+    t('livro de vinculo diz que foi ler as fichas',
+        !!dlgV && dlgV.textContent.includes('personagem vinculado'));
+    // u3 alcanca b1, u4 nao, u9 nao tem espelho (entra por precaucao),
+    // u1 e u2 sao mestres. Logo: 4, e nao os 2 mestres de antes.
+    t('a conta agora sai por ficha, nao "so os mestres"', dlgV.textContent.includes('4 pessoas'));
+    t('e avisa que ha ficha desatualizada na conta', dlgV.textContent.includes('precaução'));
+    // Sem repetir: o motivo diz QUEM, a ressalva diz por que nao fecha.
+    t('a janela nao repete o mesmo texto duas vezes',
+        (dlgV.textContent.match(/precaução/g) || []).length === 1);
+    dlgV.querySelector('.lr-dialogo-ok').click();
+    await salvV;
+    await espera(400);
+    const quem = GRAVADO.filter(g => g.col === 'users').map(g => g.id).sort();
+    t('avisou o jogador vinculado', quem.includes('u3'));
+    t('NAO avisou o jogador sem vinculo', !quem.includes('u4'));
+    t('avisou a ficha sem espelho por precaucao', quem.includes('u9'));
+    t('e os dois mestres', quem.includes('u1') && quem.includes('u2'));
+
+    // Repoe a publicacao para o resto do teste.
+    abrirCog();
+    $('[data-bktab="pub"]').click();
+    $('[data-bkpub="geral"]').checked = true;
+    $('[data-bkpub="conhVinculo"]').checked = true;
+
+    // ── Aparencia do livro ──
     $('[data-bktab="estilo"]').click();
     const amostra = $('#bkAmostra');
     t('a aba Aparencia tem a amostra', !!amostra);

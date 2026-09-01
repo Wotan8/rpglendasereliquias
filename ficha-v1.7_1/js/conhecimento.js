@@ -20,6 +20,7 @@ import { pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
 import { estiloDoLivro, formatoAttr } from '../../shared/livro-estilo.js';
 import { resolverCampos, carregadorPadrao } from '../../shared/campo-vinculado.js';
 import { montarMusica, pararMusica } from '../../shared/musica-capitulo.js';
+import { alcanceDoPersonagem } from '../../shared/alcance-livros.js';
 
 /* Um carregador por sessao: o cache dele evita reler a colecao a cada
    capitulo aberto. `window.db` porque a ficha inicializa o Firebase antes
@@ -125,36 +126,20 @@ async function carregarConhecimento() {
  * Retorna Map bookId -> Set(capituloIds) ou null quando o livro inteiro vale.
  */
 function _livrosDoPersonagem() {
-    const sd = window._systemData || {};
+    /* A conta em si mora em shared/alcance-livros.js — ela precisava sair
+       daqui para o Cronista poder responder "quem enxerga este livro?" sem
+       uma ficha aberta. O que fica AQUI e a leitura do DOM: raca, classe e
+       tribo vem do campo vivo, nao do doc, porque a ficha mostra o que a
+       pessoa acabou de escolher, mesmo antes de salvar. */
     const val = k => (document.querySelector('[data-key="' + k + '"]') || {}).value || '';
-    const acha = (lista, nome) => nome && (lista || []).find(d => d.nome === nome || d.id === nome);
-
-    const fontes = [
-        // o proprio personagem e uma fonte: e onde o mestre amarra um livro
-        // direto nele pelo Tabuleiro (mesmo formato `livrosVinculados`)
-        window.state || null,
-        acha(sd.races, val('raca')),
-        acha(sd.classes, val('classe')),
-        acha(sd.tribes, val('tribo')),
-    ];
-    // Peculiaridades do personagem tambem podem carregar livro.
-    const pecs = (window.state && window.state.peculiarities) || [];
-    for (const p of pecs) fontes.push(acha(sd.peculiarities, p && (p.nome || p.key || p)));
-
-    const mapa = new Map();
-    // Livro amarrado DIRETO no personagem pelo mestre passa por cima da regra de
-    // publicacao: ele escolheu a dedo quem le. Vai colado no Map (a chamada e uma
-    // so) para nao ter de mudar a assinatura em toda a cadeia.
-    mapa.diretos = new Set(window.lvNormalizar(window.state || null).map(v => v.bookId));
-    for (const f of fontes) {
-        for (const lv of window.lvNormalizar(f)) {
-            const caps = Array.isArray(lv.capituloIds) ? lv.capituloIds.filter(Boolean) : [];
-            if (!mapa.has(lv.bookId)) mapa.set(lv.bookId, caps.length ? new Set(caps) : null);
-            else if (mapa.get(lv.bookId) && caps.length) caps.forEach(c => mapa.get(lv.bookId).add(c));
-            else mapa.set(lv.bookId, null);   // outra fonte libera o livro inteiro
-        }
-    }
-    return mapa;
+    return alcanceDoPersonagem({
+        raca: val('raca'),
+        classe: val('classe'),
+        tribo: val('tribo'),
+        peculiaridades: (window.state && window.state.peculiarities) || [],
+        livrosVinculados: window.state?.livrosVinculados,
+        livroVinculado: window.state?.livroVinculado,
+    }, window._systemData || {});
 }
 
 function renderConhecimento() {

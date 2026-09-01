@@ -5,6 +5,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { alcanceDoPersonagem, idsDoAlcance, personagemDoDoc } from '../../shared/alcance-livros.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 import { toast, confirmar } from '../../shared/dialogo.js?v=2';
@@ -317,6 +318,23 @@ window.saveToFirebase = async function () {
             }
         } catch (rbwErr) {
             console.warn('⚠️ Read-before-write check falhou (continuando save):', rbwErr);
+        }
+
+        /* 📚 Espelho do alcance de livros. Quais livros este personagem
+           enxerga por vínculo é uma conta que só a ficha sabia fazer, e o
+           Cronista precisa dela para avisar os jogadores certos quando um
+           livro muda de versão (shared/avisar-livro.js).
+
+           Pega carona no save que já está saindo: zero write a mais, e
+           sempre fresco quando a ficha é salva. O ESPELHO NÃO É A VERDADE —
+           a verdade continua em `livrosVinculados` na raça/classe/tribo. */
+        try {
+            data.livrosAlcance = idsDoAlcance(
+                alcanceDoPersonagem(personagemDoDoc(data), window._systemData || {}));
+        } catch (e) {
+            // Espelho é conveniência: falhar aqui não pode derrubar o save
+            // da ficha inteira, que é o que a pessoa realmente pediu.
+            console.warn('⚠️ Não deu para calcular o alcance de livros:', e);
         }
 
         await setDoc(docRef, data, { merge: true });

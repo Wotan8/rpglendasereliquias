@@ -895,7 +895,7 @@ export const Editor = (() => {
        semana passada no meio da sessão. Pergunta sempre — mandar aviso é
        mexer na caixa dos outros, e isso não se faz por conta própria. */
     async function ofertarAviso(livro, versaoAntes) {
-        let usuarios = [];
+        let usuarios = [], personagens = null;
         try {
             const snap = await getDocs(collection(db, 'users'));
             usuarios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -904,15 +904,26 @@ export const Editor = (() => {
             toast('🔖 Versão salva. Não deu para montar a lista de quem avisar — veja o console.');
             return;
         }
-        const alvo = alvos(livro, usuarios);
+        /* Livro de vínculo precisa saber QUAIS personagens alcançam o livro,
+           e isso está no espelho `livrosAlcance` de cada ficha. Só lê quando
+           faz diferença: livro `geral` avisa todo mundo de qualquer forma, e
+           a coleção `char` é grande. Falhar aqui deixa `null`, que `alvos()`
+           entende como "não veio a lista" — não como "ninguém alcança". */
+        if (pubDoLivro(livro).conhVinculo) {
+            try {
+                const cSnap = await getDocs(collection(db, 'char'));
+                personagens = cSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            } catch (e) { console.warn('[aviso-livro] não deu para ler os personagens', e); }
+        }
+        const alvo = alvos(livro, usuarios, personagens);
         if (!alvo.ids.length) {
             toast(`🔖 Versão ${livro.versao}. Ninguém avisado — ${alvo.motivo}.`);
             return;
         }
         const quantos = `${alvo.ids.length} pessoa${alvo.ids.length > 1 ? 's' : ''}`;
-        const ressalva = alvo.exato ? '' : `
+        const ressalva = alvo.ressalva ? `
 
-⚠️ ${alvo.motivo}.`;
+⚠️ ${alvo.ressalva}.` : '';
         if (!await confirmar(`Avisar ${quantos} de que “${livro.title}” está na versão ${livro.versao}?
 
 (${alvo.motivo})${ressalva}`)) return;

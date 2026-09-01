@@ -4,68 +4,125 @@
         {
             "name": "portal-redesign",
             "runtimeExecutable": "npx",
-            "runtimeArgs": ["-y", "serve", "-l", "4173", "C:/Users/Soberano/Documents/rpglendasereliquias-redesign"],
+            "runtimeArgs": [
+                "-y",
+                "serve",
+                "-l",
+                "4173",
+                "C:/Users/Soberano/Documents/rpglendasereliquias-redesign"
+            ],
             "port": 4173
         },
         {
             "name": "site-5193",
             "runtimeExecutable": "python",
-            "runtimeArgs": ["-m", "http.server", "5193"],
+            "runtimeArgs": [
+                "-m",
+                "http.server",
+                "5193"
+            ],
             "port": 5193
         },
         {
             "name": "site-5194",
             "runtimeExecutable": "python",
-            "runtimeArgs": ["-m", "http.server", "5194"],
+            "runtimeArgs": [
+                "-m",
+                "http.server",
+                "5194"
+            ],
             "port": 5194
         },
         {
             "name": "site-5197",
             "runtimeExecutable": "python",
-            "runtimeArgs": ["-m", "http.server", "5197"],
+            "runtimeArgs": [
+                "-m",
+                "http.server",
+                "5197"
+            ],
             "port": 5197
         },
         {
             "name": "site-5199",
             "runtimeExecutable": "python",
-            "runtimeArgs": ["-m", "http.server", "5199"],
+            "runtimeArgs": [
+                "-m",
+                "http.server",
+                "5199"
+            ],
             "port": 5199
         },
         {
             "name": "site-5198",
             "runtimeExecutable": "python",
-            "runtimeArgs": ["-m", "http.server", "5198"],
+            "runtimeArgs": [
+                "-m",
+                "http.server",
+                "5198"
+            ],
             "port": 5198
         },
         {
             "name": "site-5201",
             "runtimeExecutable": "python",
-            "runtimeArgs": ["-m", "http.server", "5201"],
+            "runtimeArgs": [
+                "-m",
+                "http.server",
+                "5201"
+            ],
             "port": 5201
         },
         {
             "name": "site-5202",
             "runtimeExecutable": "python",
-            "runtimeArgs": ["-m", "http.server", "5202"],
+            "runtimeArgs": [
+                "-m",
+                "http.server",
+                "5202"
+            ],
             "port": 5202
         },
         {
             "name": "site-5310",
             "runtimeExecutable": "python",
-            "runtimeArgs": ["-m", "http.server", "5310"],
+            "runtimeArgs": [
+                "-m",
+                "http.server",
+                "5310"
+            ],
             "port": 5310
         },
         {
             "name": "site-5411",
             "runtimeExecutable": "python",
-            "runtimeArgs": ["-m", "http.server", "5411"],
+            "runtimeArgs": [
+                "-m",
+                "http.server",
+                "5411"
+            ],
             "port": 5411
         },
         {
             "name": "site-node-5420",
             "runtimeExecutable": "npx",
-            "runtimeArgs": ["-y", "serve", "-l", "5420", "."],
+            "runtimeArgs": [
+                "-y",
+                "serve",
+                "-l",
+                "5420",
+                "."
+            ],
             "port": 5420
+        },
+        {
+            "name": "harness-sem-cache",
+            "runtimeExecutable": "python",
+            "runtimeArgs": [
+                "__check-server.py",
+                "5412"
+            ],
+            "port": 5412
         }
     ]
 }
