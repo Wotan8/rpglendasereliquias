@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="shared/dialogo.css">
 <link rel="stylesheet" href="shared/texto-mundo.css?v=9">
 <link rel="stylesheet" href="worldbuilding/css/worldbuilding.css?v=2">
-<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=23">
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=24">
 <script src="shared/theme.js"></script>
 <script src="shared/campo-imagem.js?v=2"></script>
 
@@ -34,11 +34,11 @@
      instancia que o editor enxerga, senao GRAVADO fica vazio. -->
 <script type="importmap">
 { "imports": {
-    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=15",
-    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=15",
-    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=15",
-    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=15",
-    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=15"
+    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=16",
+    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=16",
+    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=16",
+    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=16",
+    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=16"
 } }
 </script>
 
@@ -75,7 +75,7 @@
 </div>
 
 <script type="module">
-import { GRAVADO } from './__check-stub-firestore.js?v=15';
+import { GRAVADO } from './__check-stub-firestore.js?v=16';
 import { Editor } from './worldbuilding/js/wb-editor.js';
 
 window.WB = { data: {}, user: { email: 'check@harness' } };
@@ -87,7 +87,7 @@ const espera = (ms = 80) => new Promise(r => setTimeout(r, ms));
 /* Modulo com query e outro modulo para o navegador. Sem isso o harness roda
    o que ficou no cache — ja aconteceu duas vezes aqui. UM token para todos
    os `import()` de shared/, subido a cada mexida. */
-const CB = '?h=9';
+const CB = '?h=10';
 // Salvamento deliberado (o mesmo caminho do botao 💾) e volta a Biblioteca.
 const save2 = async () => { $('#saveArticle').click(); await espera(200); };
 // Tolerante a ja estar na Biblioteca: os blocos de teste rodam em sequencia
@@ -1114,6 +1114,57 @@ $('#chkRun').onclick = async () => {
     porCursor(ed2.querySelector('p'));
     let caiu = false; try { tirar(); } catch { caiu = true; }
     t('sem bloco, nao faz nada e nao estoura', !caiu && ed2.textContent.includes('solto'));
+
+    // ── Alinhamento: um controle no lugar de quatro botoes ──
+    t('nao ha mais quatro botoes de alinhamento',
+        barraFmt.querySelectorAll('[data-cmd^="justify"]').length === 0);
+    const menuAlin = barraFmt.querySelector('[data-alinhar]');
+    const listaAlin = menuAlin.querySelector('.wb-rich-menu__lista');
+    t('ha um controle so, com as quatro opcoes',
+        !!menuAlin && menuAlin.querySelectorAll('[data-alin]').length === 4);
+    t('o menu nasce fechado', listaAlin.hidden);
+    barraFmt.querySelector('[data-rich="alinhar"]').click();
+    t('clicar abre', !listaAlin.hidden);
+    ed2.innerHTML = '<p>um texto para alinhar</p>';
+    porCursor(ed2.querySelector('p'));
+    menuAlin.querySelector('[data-alin="justifyCenter"]').click();
+    await espera(60);
+    t('escolher aplica o alinhamento',
+        (ed2.querySelector('p').style.textAlign || '') === 'center');
+    t('e fecha o menu', listaAlin.hidden);
+    // O glifo do botao vira o do estado — e o que quatro botoes soltos nao dao.
+    t('o botao passa a mostrar QUAL alinhamento esta valendo',
+        menuAlin.querySelector('[data-alinharGlifo]').textContent === '↔');
+
+    // ── Estado visivel: o menu diz o que esta aplicado ──
+    ed2.innerHTML = '<div class="tm-carta tm-carta--maquina"><p>bilhete</p></div>';
+    porCursor(ed2.querySelector('p'));
+    ed2.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await espera(80);
+    const selBloco2 = barraFmt.querySelector('[data-rich="bloco2"]');
+    t('o menu de bloco MOSTRA a carta aplicada',
+        selBloco2.value === 'wrap:tm-carta tm-carta--maquina');
+    t('e acende para dizer que ha algo ali', selBloco2.classList.contains('is-on'));
+    t('o ⊘ acende quando ha bloco para tirar',
+        barraFmt.querySelector('[data-rich="tirabloco"]').classList.contains('is-on'));
+
+    ed2.innerHTML = '<div class="tm-cols--2"><p>a</p></div>';
+    porCursor(ed2.querySelector('p'));
+    ed2.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await espera(80);
+    t('o menu de colunas tambem mostra o que esta aplicado',
+        barraFmt.querySelector('[data-rich="cols"]').value === 'tm-cols--2');
+
+    ed2.innerHTML = '<p>texto solto sem bloco nenhum</p>';
+    porCursor(ed2.querySelector('p'));
+    ed2.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await espera(80);
+    t('sem bloco, os menus voltam ao rotulo',
+        selBloco2.value === '' && !selBloco2.classList.contains('is-on'));
+    t('e o ⊘ apaga', !barraFmt.querySelector('[data-rich="tirabloco"]').classList.contains('is-on'));
+    // O botao aceso e o botao que faz: uma definicao so para os dois.
+    t('⊘ apagado nao tem o que tirar',
+        !!barraFmt.querySelector('[data-rich="tirabloco"]'));
 
     $('#chkOut').innerHTML = erro.length
         ? '<span style="color:var(--lr-blood)">✗ ' + erro.length + ' falha(s): ' + erro.join(' · ') + '</span>'

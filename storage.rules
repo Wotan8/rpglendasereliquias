@@ -21,11 +21,24 @@ service firebase.storage {
       return firestore.get(/databases/(default)/documents/users/$(request.auth.uid))
         .data.get('role', '');
     }
+    /* HA DOIS JEITOS DE SER MESTRE neste projeto, e eles nao coincidem: o
+       firestore.rules aceita `isMaster()` (doc na colecao `masters`) OU
+       `temPapelMestre()` (users.role). Sao tres mestres e nem todos tem doc
+       em `masters`.
+
+       Aqui so existia o caminho do `role`. Quem entrava pelo OUTRO caminho
+       era aceito pelo banco e NEGADO pelo Storage — a mesma pessoa podia
+       gravar o livro e nao podia subir a imagem dele, sem nada na tela
+       explicando. Regra de mestre tem de aceitar os dois, sempre. */
+    function estaEmMasters() {
+      return request.auth != null &&
+        firestore.exists(/databases/(default)/documents/masters/$(request.auth.uid));
+    }
     function ehCriador() {
-      return request.auth != null && papel() == 'criador';
+      return request.auth != null && (papel() == 'criador' || estaEmMasters());
     }
     function ehMestre() {
-      return request.auth != null && papel() in ['mestre', 'criador'];
+      return request.auth != null && (papel() in ['mestre', 'criador'] || estaEmMasters());
     }
 
     /* O cliente já recusa acima de 8 MB e usa accept="image/*"

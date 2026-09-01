@@ -23,7 +23,12 @@ import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebas
 import { ref, uploadBytes, getBytes } from 'firebase/storage';
 import fs from 'node:fs';
 
-const JOG = 'uid-jogador', MESTRE = 'uid-mestre', CRIADOR = 'uid-criador';
+/* MASTERS_ONLY entra pelo OUTRO caminho: tem doc na coleção `masters` e NÃO
+   tem `users.role`. Há três mestres no projeto e nem todos têm os dois — quem
+   entra só por `masters` era aceito pelo banco e negado pelo Storage, e a
+   mesma pessoa podia gravar o livro mas não subir a imagem dele. */
+const JOG = 'uid-jogador', MESTRE = 'uid-mestre', CRIADOR = 'uid-criador',
+      MASTERS_ONLY = 'uid-so-masters';
 const env = await initializeTestEnvironment({
   projectId: 'demo-rules',
   firestore: { rules: fs.readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: 8532 },
@@ -37,6 +42,8 @@ await env.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(db, 'users', JOG), { displayName: 'Jogador' });          // SEM role
   await setDoc(doc(db, 'users', MESTRE), { displayName: 'M', role: 'mestre' });
   await setDoc(doc(db, 'users', CRIADOR), { displayName: 'C', role: 'criador' });
+  await setDoc(doc(db, 'users', MASTERS_ONLY), { displayName: 'SM' });        // SEM role
+  await setDoc(doc(db, 'masters', MASTERS_ONLY), { desde: 2026 });            // mas está em masters
 });
 
 const png = new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
@@ -92,6 +99,29 @@ await teste('CRIADOR sobe glifo rúnico',
   () => assertSucceeds(sobe(CRIADOR, 'runic-elements/fogo.png')));
 await teste('hero do Portal é lido SEM login (aparece antes de entrar)',
   () => assertSucceeds(getBytes(ref(env.unauthenticatedContext().storage(), 'app-assets/portal-hero/1.png'))));
+
+// ===== OS DOIS JEITOS DE SER MESTRE =====
+// Regra de mestre que aceita só um dos caminhos deixa parte dos mestres de
+// fora em silêncio — foi o que aconteceu aqui até 01/09/2026.
+await teste('mestre-só-por-masters sobe imagem do Cronista',
+  () => assertSucceeds(sobe(MASTERS_ONLY, 'worldbuilding-images/altar.png')));
+await teste('mestre-só-por-masters sobe terreno do Hexmap',
+  () => assertSucceeds(sobe(MASTERS_ONLY, 'hexmap-terrain/mata.png')));
+await teste('mas jogador continua barrado no Cronista',
+  () => assertFails(sobe(JOG, 'worldbuilding-images/altar.png')));
+
+// ===== SOM DE MESA — a pasta que serve Cronista E Tabuleiro =====
+const mp3 = new Uint8Array([0x49, 0x44, 0x33, 0x04, 0x00, 0x00, 0x00, 0x00]);
+await teste('MESTRE sobe som da trilha',
+  () => assertSucceeds(sobe(MESTRE, 'audio/porao.mp3', mp3, 'audio/mpeg')));
+await teste('jogador NÃO sobe som',
+  () => assertFails(sobe(JOG, 'audio/porao.mp3', mp3, 'audio/mpeg')));
+await teste('jogador OUVE o som (a trilha toca para a mesa)',
+  () => assertSucceeds(getBytes(ref(st(JOG), 'audio/porao.mp3'))));
+await teste('imagem disfarçada de som é barrada',
+  () => assertFails(sobe(MESTRE, 'audio/truque.mp3', png, 'image/png')));
+await teste('som acima de 25 MB é barrado',
+  () => assertFails(sobe(MESTRE, 'audio/longa.mp3', new Uint8Array(26 * 1024 * 1024), 'audio/mpeg')));
 
 console.log('\n══════ STORAGE ══════');
 for (const t of ok) console.log('  OK   ' + t);

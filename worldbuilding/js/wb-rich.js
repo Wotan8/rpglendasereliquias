@@ -31,6 +31,18 @@ const BLOCOS = [
     ['pre', '⌨ Bloco fixo'],
 ];
 
+/* Alinhamento: UM controle, não quatro botões.
+   São quatro estados excludentes de UMA decisão — quatro botões gastam quatro
+   lugares na barra para dizer o que um controle diz melhor, porque um
+   controle ainda mostra QUAL está valendo, coisa que quatro botões soltos não
+   fazem. O glifo do botão vira o do alinhamento atual. */
+const ALINHAR = [
+    ['justifyLeft', '⬅', 'À esquerda'],
+    ['justifyCenter', '↔', 'Centralizado'],
+    ['justifyRight', '➡', 'À direita'],
+    ['justifyFull', '☰', 'Justificado'],
+];
+
 /** A barra de ferramentas. O wb-editor injeta isto na toolbar do editor. */
 export const TOOLBAR_HTML = `
 <select class="wb-rich-sel" data-rich="bloco" title="Estilo do parágrafo">
@@ -44,10 +56,14 @@ export const TOOLBAR_HTML = `
 <label class="wb-rich-cor" title="Cor do texto">🎨<input type="color" data-rich="cor" value="#D4AF37"></label>
 <button class="btn btn-secondary btn-sm" data-rich="marca" title="Marca-texto">🖍️</button>
 <span class="wb-rich-sep"></span>
-<button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="justifyLeft" title="Alinhar à esquerda">⬅</button>
-<button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="justifyCenter" title="Centralizar">↔</button>
-<button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="justifyRight" title="Alinhar à direita">➡</button>
-<button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="justifyFull" title="Justificar">☰</button>
+<span class="wb-rich-menu" data-alinhar>
+    <button type="button" class="btn btn-secondary btn-sm wb-rich-menu__abre" data-rich="alinhar"
+            title="Alinhamento do parágrafo"><span data-alinharGlifo>⬅</span> ▾</button>
+    <span class="wb-rich-menu__lista" hidden>
+        ${ALINHAR.map(([cmd, g, l]) =>
+            `<button type="button" data-alin="${cmd}"><span>${g}</span> ${l}</button>`).join('')}
+    </span>
+</span>
 <span class="wb-rich-sep"></span>
 <button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="insertUnorderedList" title="Lista">•—</button>
 <button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="insertOrderedList" title="Lista numerada">1.</button>
@@ -560,6 +576,99 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
         avisar();
     });
 
+    /* ── Alinhamento: um controle, quatro estados ───────────
+       O menu abre no clique e fecha ao escolher ou ao clicar fora. Não é
+       <select> porque o glifo do botão precisa MOSTRAR o alinhamento atual,
+       e <select> nativo não deixa desenhar o rótulo fechado. */
+    const menuAlin = toolbar.querySelector('[data-alinhar]');
+    const listaAlin = menuAlin.querySelector('.wb-rich-menu__lista');
+    const glifoAlin = menuAlin.querySelector('[data-alinharGlifo]');
+
+    toolbar.querySelector('[data-rich="alinhar"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        listaAlin.hidden = !listaAlin.hidden;
+    });
+    listaAlin.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-alin]'); if (!b) return;
+        ed.focus();
+        document.execCommand(b.dataset.alin, false, null);
+        listaAlin.hidden = true;
+        pintarEstado();
+        avisar();
+    });
+    document.addEventListener('click', (e) => {
+        if (!menuAlin.contains(e.target)) listaAlin.hidden = true;
+    });
+
+    /* ── Estado visível ─────────────────────────────────────
+       O menu tem de dizer o que ESTÁ aplicado. Sem isto, o autor escolhe
+       "Carta", o <select> volta para "Bloco…" e nada na tela conta que aquele
+       parágrafo virou uma Carta — e aí ele não sabe nem que há o que desfazer.
+       Metade do ⊘ bloco é este espelho. */
+    function pintarEstado() {
+        const sel = window.getSelection();
+        let no = sel.rangeCount ? sel.anchorNode : null;
+        if (no && no.nodeType === Node.TEXT_NODE) no = no.parentElement;
+        if (!no || !ed.contains(no)) return;
+
+        // Alinhamento: o glifo do botão vira o do estado atual.
+        const alinAtual = ALINHAR.find(([cmd]) => {
+            try { return document.queryCommandState(cmd); } catch { return false; }
+        }) || ALINHAR[0];
+        glifoAlin.textContent = alinAtual[1];
+        menuAlin.querySelectorAll('[data-alin]').forEach(b =>
+            b.classList.toggle('is-on', b.dataset.alin === alinAtual[0]));
+
+        // Bloco de parágrafo.
+        const selBloco = toolbar.querySelector('[data-rich="bloco"]');
+        for (let n = no; n && n !== ed; n = n.parentElement) {
+            const tag = n.tagName.toLowerCase();
+            if (BLOCOS.some(([v]) => v === tag)) { selBloco.value = tag; break; }
+        }
+
+        /* Caixa e coluna: o <select> passa a MOSTRAR o que envolve o cursor,
+           em vez de voltar sempre ao rótulo. Reescolher a mesma opção desfaz,
+           e agora dá para ver qual é "a mesma". */
+        const marcarSel = (seletor, achar) => {
+            const s2 = toolbar.querySelector(seletor);
+            const v = achar();
+            s2.value = [...s2.options].some(o => o.value === v) ? v : '';
+            s2.classList.toggle('is-on', !!v);
+        };
+        marcarSel('[data-rich="bloco2"]', () => {
+            for (let n = no; n && n !== ed; n = n.parentElement) {
+                if (n.classList.contains('tm-ponto')) return 'ins:ponto';
+                if (n.classList.contains('tm-carta')) {
+                    if (n.classList.contains('tm-carta--maquina')) return 'wrap:tm-carta tm-carta--maquina';
+                    if (n.classList.contains('tm-carta--mao')) return 'wrap:tm-carta tm-carta--mao';
+                    return 'wrap:tm-carta';
+                }
+                if (n.classList.contains('tm-aviso--nota')) return 'tm-aviso tm-aviso--nota';
+                if (n.classList.contains('tm-aviso--segredo')) return 'tm-aviso tm-aviso--segredo';
+                if (n.classList.contains('tm-aviso')) return 'tm-aviso';
+                if (n.classList.contains('tm-leitura')) return 'tm-leitura';
+                if (n.classList.contains('tm-nota')) return 'tm-nota';
+            }
+            return '';
+        });
+        marcarSel('[data-rich="cols"]', () => {
+            const cx = no.closest?.('[class*="tm-cols--"]');
+            if (!cx || !ed.contains(cx)) return '';
+            return [...cx.classList].find(c => c.startsWith('tm-cols--')) || '';
+        });
+
+        // O ⊘ só acende quando há bloco para tirar.
+        toolbar.querySelector('[data-rich="tirabloco"]')
+            .classList.toggle('is-on', !!temBlocoAqui(no));
+    }
+    /* Espelha o cursor: teclado e clique. `selectionchange` no documento
+       porque a seta que anda entre parágrafos não dispara nem um nem outro. */
+    ed.addEventListener('keyup', pintarEstado);
+    ed.addEventListener('click', pintarEstado);
+    document.addEventListener('selectionchange', () => {
+        if (ed.contains(document.getSelection()?.anchorNode)) pintarEstado();
+    });
+
     toolbar.querySelector('[data-rich="cor"]').addEventListener('input', (e) => {
         ed.focus();
         document.execCommand('foreColor', false, e.target.value);
@@ -625,6 +734,30 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
      * aconteceu. Tirar tudo de uma vez apagaria diagramação que o autor quis
      * manter, e ele não teria como saber o que perdeu.
      */
+    /**
+     * A camada de bloco mais interna a partir de `no`, ou null.
+     *
+     * Sobe do CURSOR, não do bloco de topo. Uma nota de margem dentro de duas
+     * colunas tem a nota por dentro e as colunas por fora; partindo do topo, o
+     * primeiro clique arrancaria as colunas e deixaria a nota — o contrário do
+     * que quem clicou está vendo.
+     *
+     * Devolve `{ no, tipo }` para o ⊘ saber o que fazer e o estado saber se
+     * há algo a fazer. Uma definição só: se as duas divergirem, o botão acende
+     * quando não faz nada, ou faz sem estar aceso.
+     */
+    function temBlocoAqui(no) {
+        for (let n = no; n && n !== ed; n = n.parentElement) {
+            if (!n.classList) continue;
+            const classes = CLASSES_BLOCO.filter(c => n.classList.contains(c));
+            if (classes.length) return { no: n, tipo: 'classe', classes };
+            if (n.classList.contains('tm-ponto')) return { no: n, tipo: 'ponto' };
+            if (n.classList.contains('tm-carta')) return { no: n, tipo: 'envoltorio' };
+            if (/(^| )tm-cols--/.test(n.className)) return { no: n, tipo: 'envoltorio' };
+        }
+        return null;
+    }
+
     function removerBloco() {
         const sel = window.getSelection();
         if (!sel.rangeCount) return;
@@ -632,26 +765,18 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
         if (no && no.nodeType === Node.TEXT_NODE) no = no.parentElement;
         if (!no || !ed.contains(no)) return;
 
-        /* Sobe do CURSOR, não do bloco de topo. Uma nota de margem dentro de
-           duas colunas tem a nota por dentro e as colunas por fora; partindo
-           do topo, o primeiro clique arrancaria as colunas e deixaria a nota
-           — o contrário do que quem clicou está vendo. */
-        for (let n = no; n && n !== ed; n = n.parentElement) {
-            const tinha = CLASSES_BLOCO.filter(c => n.classList.contains(c));
-            if (tinha.length) { n.classList.remove(...tinha); return; }
-
+        const alvo = temBlocoAqui(no);
+        if (!alvo) return;
+        if (alvo.tipo === 'classe') { alvo.no.classList.remove(...alvo.classes); }
+        else if (alvo.tipo === 'ponto') {
             /* O ponto de interesse não se desembrulha cru: o número é etiqueta
                do bloco, e sozinho no meio do texto vira lixo. */
-            if (n.classList.contains('tm-ponto')) {
-                n.querySelector('.tm-ponto__n')?.remove();
-                desembrulhar(n);
-                return;
-            }
-            if (n.classList.contains('tm-carta') || /(^| )tm-cols--/.test(n.className)) {
-                desembrulhar(n);
-                return;
-            }
+            alvo.no.querySelector('.tm-ponto__n')?.remove();
+            desembrulhar(alvo.no);
+        } else {
+            desembrulhar(alvo.no);
         }
+        pintarEstado();
     }
 
     /** Os blocos de topo tocados pela seleção — é neles que coluna e caixa

@@ -139,6 +139,45 @@
 .wb-rich-cor { display: inline-flex; align-items: center; gap: .2rem; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .15rem var(--lr-space-1); cursor: pointer; font-size: var(--lr-fs-sm); }
 .wb-rich-cor input { width: 22px; height: 22px; border: none; background: none; padding: 0; cursor: pointer; }
 
+/* ── Estado aceso na barra ─────────────────────────────────
+   O controle diz o que ESTÁ aplicado. Sem isto o autor escolhe "Carta", o
+   <select> volta ao rótulo e nada na tela conta que o parágrafo mudou — e aí
+   ele não sabe nem que existe o que desfazer. */
+.wb-richbar .btn.is-on,
+.wb-rich-sel.is-on {
+    border-color: var(--lr-gold);
+    color: var(--lr-gold);
+    background: var(--lr-gold-soft);
+}
+
+/* ── Menu de alinhamento ───────────────────────────────────
+   Quatro estados excludentes de UMA decisão, em um controle. Não é <select>
+   porque o botão fechado precisa mostrar o GLIFO do alinhamento atual, e o
+   <select> nativo não deixa desenhar o rótulo fechado. */
+.wb-rich-menu { position: relative; display: inline-flex; }
+.wb-rich-menu__abre { white-space: nowrap; }
+.wb-rich-menu__lista {
+    position: absolute; top: calc(100% + 4px); left: 0; z-index: var(--lr-z-dropdown);
+    display: flex; flex-direction: column; min-width: 11rem;
+    background: var(--lr-surface);
+    border: var(--lr-border-w) solid var(--lr-gold);
+    border-radius: var(--lr-radius-sm);
+    box-shadow: var(--lr-shadow-2);
+    padding: var(--lr-space-1);
+    gap: 1px;
+}
+.wb-rich-menu__lista[hidden] { display: none; }
+.wb-rich-menu__lista button {
+    display: flex; align-items: center; gap: var(--lr-space-2);
+    background: none; border: none; border-radius: var(--lr-radius-sm);
+    color: var(--lr-text-1); font: inherit; font-size: var(--lr-fs-xs);
+    text-align: left; padding: var(--lr-space-1) var(--lr-space-2); cursor: pointer;
+}
+.wb-rich-menu__lista button:hover { background: var(--lr-surface-2); }
+.wb-rich-menu__lista button.is-on { color: var(--lr-gold); background: var(--lr-gold-soft); }
+/* Coluna fixa para o glifo: sem ela os rótulos dançam de linha em linha. */
+.wb-rich-menu__lista button > span { flex: 0 0 1.2rem; text-align: center; }
+
 /* ── Barra flutuante da imagem ─────────────────────────── */
 .wb-imgbar { position: absolute; z-index: var(--lr-z-dropdown); display: flex; gap: var(--lr-space-2); align-items: center; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-gold); border-radius: var(--lr-radius-sm); box-shadow: var(--lr-shadow-2); padding: var(--lr-space-1) var(--lr-space-2); }
 .wb-imgbar[hidden] { display: none; }
