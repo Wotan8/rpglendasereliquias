@@ -65,6 +65,16 @@
     /* Campo vinculado, pelo mesmo caminho. Falhar aqui deixa a RESERVA na
        tela sem aviso nenhum — que e exatamente o estado "nao deu para ver",
        e nao "foi apagado". */
+    /* Trilha do capitulo, pelo mesmo caminho dos outros compartilhados. */
+    let _mus = null;
+    const _musica = () => (_mus || (_mus = import('/shared/musica-capitulo.js')
+        .catch(e => { console.warn('📖 musica-capitulo:', e); return null; })));
+    async function tocarTrilha(raiz, cap) {
+        const m = await _musica();
+        m?.montarMusica?.(raiz, cap);
+    }
+    async function cortarTrilha() { (await _musica())?.pararMusica?.(); }
+
     let _cvCarregar = null;
     async function resolverCamposDoTexto(raiz) {
         try {
@@ -244,6 +254,7 @@
     /* Fechar limpa a trilha de volta: senão o "← Biblioteca" de uma leitura
        futura apontaria para a estante da vez anterior. */
     function fechar() {
+        cortarTrilha();   // fechar o leitor tambem
         const ov = document.getElementById('lvLeitor');
         if (ov) { _guardarGeo(ov); ov.remove(); }
         _bib = null; _sum = null; _repintar = null;
@@ -517,12 +528,14 @@
             // Depois de pintar: a reserva já está na tela, o valor fresco
             // entra por cima quando chegar. Ler não espera rede.
             resolverCamposDoTexto(_caixa());
+            tocarTrilha(_caixa(), cap);
         }).catch(e => console.error('📖 Leitura do capítulo:', e));
     }
 
     /** Volta um passo. O destino vem do botão: do capítulo para o sumário, do
      *  sumário para a estante — quem decide é quem desenhou a seta. */
     function voltar(destino) {
+        cortarTrilha();   // sair do capitulo corta a trilha dele
         if (destino === 'sum' && _sum) { const v = _sum; _sum = null; return abrirSumario(v); }
         if (_bib) return biblioteca(_bib);
         fechar();

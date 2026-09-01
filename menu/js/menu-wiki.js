@@ -14,6 +14,7 @@
 import { pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
 import { estiloInline, formatoDoLivro } from '../../shared/livro-estilo.js';
 import { resolverCampos, carregadorPadrao } from '../../shared/campo-vinculado.js';
+import { montarMusica, pararMusica } from '../../shared/musica-capitulo.js';
 
 let livros = [];        // [{id, title, description, cover, capitulos:[...]}]
 let estantes = [];      // as mesmas do Escritório do Cronista (worldbuilding-settings/estantes)
@@ -130,6 +131,7 @@ window.wikiAbrirLivro = function (i, capI, marcar) {
 
 function fecharLivro() {
     livroAberto = null;
+    pararMusica();   // voltar para a estante corta a trilha do que se lia
     const leitor = $('wikiLeitor');
     if (leitor) { leitor.hidden = true; $('wikiEstante').hidden = false; }
 }
@@ -146,6 +148,7 @@ window.wikiAbrirCap = function (i, marcar) {
     if (fmt) corpo.dataset.pag = fmt; else delete corpo.dataset.pag;
     corpo.innerHTML = l.capitulos[capAberto].contentHTML || '';
     resolverCampos(corpo, _carregarCampos);
+    montarMusica(corpo, l.capitulos[capAberto]);
     if (marcar) destacar(corpo, marcar);
 
     document.querySelectorAll('#leitorToc button').forEach(b =>

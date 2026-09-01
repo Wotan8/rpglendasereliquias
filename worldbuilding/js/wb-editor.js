@@ -28,6 +28,7 @@ import { ESTILO_CAMPOS, FONTES, FORMATOS, estiloDoLivro, estiloInline, estiloDoL
 import { proximaVersao, mesmaVersao } from '../../shared/versao-canone.js';
 import { alvos, avisoDeVersao, enviarAviso } from '../../shared/avisar-livro.js';
 import { camposDe, resolverCampos, carregadorPadrao, FONTES_CAMPO } from '../../shared/campo-vinculado.js';
+import { montarMusica, pararMusica, musicaDoCapitulo } from '../../shared/musica-capitulo.js';
 import { confirmar, toast } from '../../shared/dialogo.js?v=2';
 
 export const Editor = (() => {
@@ -979,6 +980,8 @@ export const Editor = (() => {
                         <option value="publicado" ${a.status === 'publicado' ? 'selected' : ''}>✅ Publicado</option>
                     </select></label>
                     <label class="wbt-check" title="Libera o capítulo na ficha e no Tabuleiro"><input type="checkbox" id="artPublic" ${a.public ? 'checked' : ''}> 🌐</label>
+                    <button type="button" class="wbt-microbtn" id="artMusica"
+                            title="Trilha que começa quando o leitor abre este capítulo">🎵 ${musicaDoCapitulo(a) ? esc(a.musica.nome || 'trilha') : 'trilha'}</button>
                 </div>
 
                 <div class="wbt-toolbar wbt-etoolbar">
@@ -1232,6 +1235,48 @@ export const Editor = (() => {
         });
     }
 
+    /* ── 🎵 Trilha do capítulo ──────────────────────────────
+       O endereço é COLADO, não enviado. A pasta de áudio ainda não está
+       liberada no storage.rules — e esse arquivo está com outra frente
+       trabalhando em cima, então abrir uma pasta lá é decisão de quem o
+       está editando, não minha de passagem. */
+    function abrirMusica() {
+        const m = atual.musica && typeof atual.musica === 'object' ? atual.musica : {};
+        ToolModal.open(`
+            <h2>🎵 Trilha de “${esc(atual.title || 'Sem título')}”</h2>
+            <div class="wbt-form">
+                <label>Endereço do áudio
+                    <input id="muUrl" class="form-input" value="${esc(m.url || '')}" placeholder="https://… .mp3">
+                    <span class="wbt-muted wb-bkhint">Um endereço direto para o arquivo (mp3, ogg, m4a). Envio pelo site ainda não: a pasta de áudio precisa ser liberada no storage.rules.</span></label>
+                <label>Nome que o leitor vê
+                    <input id="muNome" class="form-input" value="${esc(m.nome || '')}" placeholder="Ex: O Porão"></label>
+                <label class="wbt-check"><input type="checkbox" id="muLoop" ${m.loop !== false ? 'checked' : ''}> Repetir sem parar</label>
+                <p class="wbt-muted wb-bkhint">O navegador <b>bloqueia som que começa sozinho</b> — é política dele, não dá para contornar. No primeiro capítulo da sessão o leitor vê um ▶ e toca uma vez; a partir daí, trocar de capítulo já emenda a próxima trilha sozinho.</p>
+                <div id="muPrevia"></div>
+                <div class="wbt-actions">
+                    <button class="btn btn-danger" id="muTirar">🗑️ Tirar a trilha</button>
+                    <button class="btn btn-secondary" id="muOuvir">▶ Ouvir</button>
+                    <button class="btn btn-secondary" data-close>Cancelar</button>
+                    <button class="btn btn-success" id="muOk">💾 Guardar</button>
+                </div>
+            </div>`);
+        /* Sair da janela corta o som. Uma trilha continuando a tocar por
+           trás do editor, sem controle na tela, é o tipo de coisa que faz
+           procurar qual aba está fazendo barulho. */
+        document.querySelector('#wbToolModal [data-close]').addEventListener('click', pararMusica);
+        $('#muOuvir').onclick = () => {
+            const url = $('#muUrl').value.trim();
+            if (url) montarMusica($('#muPrevia'), { musica: { url, nome: $('#muNome').value.trim(), loop: false } });
+        };
+        const fechar = () => { pararMusica(); ToolModal.close(); autosaveHint(); renderEditor(); };
+        $('#muOk').onclick = () => {
+            const url = $('#muUrl').value.trim();
+            atual.musica = url ? { url, nome: $('#muNome').value.trim(), loop: $('#muLoop').checked } : null;
+            fechar();
+        };
+        $('#muTirar').onclick = () => { atual.musica = null; fechar(); };
+    }
+
     /* ── Salvar ─────────────────────────────────────────── */
     async function save(manual = false) {
         const ed = $('#richEditor');
@@ -1283,11 +1328,14 @@ export const Editor = (() => {
     });
 
     function bindEditor() {
-        $('#backLib').onclick = async () => { clearTimeout(saveTimer); await save(); renderLibrary(); };
+        // O editor NÃO toca a trilha sozinho: som começando enquanto se
+        // escreve atrapalha em vez de ambientar. Ouvir é pelo 🎵.
+        $('#backLib').onclick = async () => { clearTimeout(saveTimer); await save(); pararMusica(); renderLibrary(); };
         rich = bindRich($('#richEditor'), $('#richToolbar'), autosaveHint, { pedirCampo: pedirCampoVinculado });
         resolverCampos($('#richEditor'), carregarDoPool);
         $('#saveArticle').onclick = () => { clearTimeout(saveTimer); save(true); };
         $('#verVersoes').onclick = abrirVersoes;
+        $('#artMusica').onclick = abrirMusica;
         $('#autoSave').onchange = (e) => {
             autoSalva = e.target.checked;
             guardar(CHAVE_AUTO, autoSalva);

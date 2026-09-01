@@ -19,6 +19,7 @@ import { statusDoCapitulo } from './conhecimento-calc.js';
 import { pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
 import { estiloDoLivro, formatoAttr } from '../../shared/livro-estilo.js';
 import { resolverCampos, carregadorPadrao } from '../../shared/campo-vinculado.js';
+import { montarMusica, pararMusica } from '../../shared/musica-capitulo.js';
 
 /* Um carregador por sessao: o cache dele evita reler a colecao a cada
    capitulo aberto. `window.db` porque a ficha inicializa o Firebase antes
@@ -256,6 +257,17 @@ function linhaCapitulo(cap, num, st) {
     </div>`;
 }
 
+/* Quem fecha o modal de detalhes é o detail-modal.js, e ele não sabe que
+   existe trilha. Em vez de ir mexer lá — e acoplar dois módulos por causa
+   de um `pause()` — a leitura observa a própria classe do modal: voltou o
+   `hidden`, a música para. Registrado uma vez só. */
+let _obsModal = null;
+function _cortarMusicaAoFechar(modal) {
+    if (_obsModal) return;
+    _obsModal = new MutationObserver(() => { if (modal.classList.contains('hidden')) pararMusica(); });
+    _obsModal.observe(modal, { attributes: true, attributeFilter: ['class'] });
+}
+
 /* Leitura — reaproveita o modal de detalhes que já existe na ficha. */
 window.lerCapitulo = function (capId) {
     const cap = _capitulos.find(c => c.id === capId);
@@ -277,4 +289,6 @@ window.lerCapitulo = function (capId) {
        vinculado, e o valor fresco entra por cima quando chegar. Ninguem
        espera rede para comecar a ler. */
     resolverCampos(body, _carregarCampos);
+    montarMusica(body.querySelector('.cnh-leitura'), cap);
+    _cortarMusicaAoFechar(modal);
 };

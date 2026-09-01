@@ -530,3 +530,47 @@
 @media print {
     .texto-mundo .tm-campo[data-sumiu]::after { display: none; }
 }
+
+/* ── 🎵 Trilha do capitulo ─────────────────────────────────
+   Fica no topo do capitulo, discreta: e um controle, nao um player. O
+   leitor pausa e ajusta o volume; nao troca a faixa nem busca no tempo,
+   porque a trilha e do autor, e parte da diagramacao. */
+.tm-musica {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-2);
+    margin: 0 0 1.4em;
+    padding: .4em .7em;
+    border: 1px solid var(--tm-cor-destaque, var(--lr-bronze));
+    border-radius: var(--lr-radius);
+    background: var(--lr-bg-1);
+    font-family: var(--lr-font-body);
+    font-size: .78rem;
+    color: var(--lr-text-2);
+}
+.tm-musica__btn {
+    flex: 0 0 auto;
+    width: 1.9rem; height: 1.9rem;
+    border-radius: 50%;
+    border: 1px solid var(--tm-cor-destaque, var(--lr-bronze));
+    background: none;
+    color: var(--tm-cor-destaque, var(--lr-bronze));
+    cursor: pointer;
+    font-size: .8rem;
+    line-height: 1;
+}
+.tm-musica__btn:hover { background: var(--lr-gold-soft); }
+.tm-musica__nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-musica__vol { flex: 0 0 5rem; accent-color: var(--tm-cor-destaque, var(--lr-bronze)); }
+/* Tocando: um pulso lento no aro do botao. Diz "esta rodando" sem ocupar
+   espaco com texto, e para inteiro para quem pediu menos movimento. */
+.tm-musica.is-tocando .tm-musica__btn { animation: tm-pulso 2.4s ease-in-out infinite; }
+@keyframes tm-pulso {
+    0%, 100% { box-shadow: 0 0 0 0 var(--lr-gold-soft); }
+    50%      { box-shadow: 0 0 0 5px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .tm-musica.is-tocando .tm-musica__btn { animation: none; }
+}
+/* Papel impresso nao toca musica. */
+@media print { .tm-musica { display: none; } }
