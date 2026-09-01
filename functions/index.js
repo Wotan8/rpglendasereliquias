@@ -20,6 +20,7 @@ const { decidirCargo } = require("./cargo");
 const { conferirAssinatura, classificarPagamento, conferirValorPago, reais } = require("./mp-webhook");
 const { decidirLimite, esperaEmTexto } = require("./rate-limit");
 const { charIdsVinculados, normalizarDonos, mudou } = require("./npc-donos");
+const { empilhar } = require("./repertorio");
 
 initializeApp();
 const db = getFirestore();
@@ -320,17 +321,12 @@ exports.comprarComFragmentos = onCall(
       }
       novoSaldo = saldoAtual - totalFrag;
 
-      const inventario = data.inventario || [];
-      const existingItemIndex = inventario.findIndex(i => i.nome === item.nome);
-      if (existingItemIndex !== -1) {
-        inventario[existingItemIndex].quantidade = (inventario[existingItemIndex].quantidade || 1) + quantidade;
-      } else {
-        inventario.push({
-          ...item,
-          quantidade: quantidade,
-          formaRecebimento: "Comprado na Loja (Frag$)",
-        });
-      }
+      // Mesma regra do caminho em dinheiro (ver `repertorio.js`).
+      const inventario = empilhar(data.inventario, item, {
+        quantidade,
+        itemId,
+        formaRecebimento: "Comprado na Loja (Frag$)",
+      });
 
       const logsCompra = data.logsCompra || [];
       logsCompra.push({
@@ -1384,7 +1380,7 @@ exports.girarRoleta = onCall(
         throw new HttpsError("failed-precondition", "Você não tem giros. Compre na Loja para girar.");
       }
 
-      const { inventario, notifications, girosGanhos } = aplicarPremio(data, item);
+      const { inventario, notifications, girosGanhos } = aplicarPremio(data, item, String(premio.itemId || ""));
       // Débito e entrega na MESMA transação: não existe estado em que o giro
       // saiu e o prêmio não entrou. `girosGanhos` é o que faz a Re-roleta
       // devolver o giro sem nenhum caso especial no código.

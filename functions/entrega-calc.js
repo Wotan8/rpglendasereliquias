@@ -11,6 +11,7 @@
  * @param {string} origem  rótulo do meio de pagamento ("Mercado Pago" | "Dinheiro")
  */
 const { girosDoItem } = require("./roleta-sorteio");
+const { empilhar } = require("./repertorio");
 
 /** Quantas compras ficam guardadas no documento do jogador. Ver o comentário
  *  no `aplicarCompra`. Hoje o maior histórico tem 16 linhas. */
@@ -42,18 +43,14 @@ function aplicarCompra(data, item, pending, origem) {
   const totalCentavos = pending.totalCentavos || pending.valorCentavos;
   const valorReais = (totalCentavos / 100).toFixed(2).replace(".", ",");
 
-  const inventario = data.inventario || [];
-  const existingItemIndex = inventario.findIndex((i) => i.nome === item.nome);
-  if (existingItemIndex !== -1) {
-    inventario[existingItemIndex].quantidade =
-      (inventario[existingItemIndex].quantidade || 1) + quantidade;
-  } else {
-    inventario.push({
-      ...item,
-      quantidade,
-      formaRecebimento: `Comprado na Loja (${origem})`,
-    });
-  }
+  /* Empilha só no que é a MESMA coisa — ver `repertorio.js`. Antes juntava por
+     nome, e a linha que sobrevivia era a antiga, com os campos dela: duas peças
+     de mesmo nome no catálogo faziam a barata herdar o EXP da cara. */
+  const inventario = empilhar(data.inventario, item, {
+    quantidade,
+    itemId: pending.itemId,
+    formaRecebimento: `Comprado na Loja (${origem})`,
+  });
 
   const logsCompra = data.logsCompra || [];
   logsCompra.push({

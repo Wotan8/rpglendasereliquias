@@ -6,6 +6,7 @@
 // =============================================
 
 const crypto = require("crypto");
+const { empilhar } = require("./repertorio");
 
 /**
  * Normaliza os prêmios em pesos utilizáveis.
@@ -76,14 +77,13 @@ function girosDoItem(item, quantidade = 1) {
  * e é isso que faz o giro de graça funcionar sem código especial.
  * @returns {{inventario: Array, notifications: Array, girosGanhos: number}}
  */
-function aplicarPremio(data, item) {
-  const inventario = data.inventario || [];
-  const existente = inventario.findIndex((i) => i.nome === item.nome);
-  if (existente !== -1) {
-    inventario[existente].quantidade = (inventario[existente].quantidade || 1) + 1;
-  } else {
-    inventario.push({ ...item, quantidade: 1, formaRecebimento: "Prêmio da Roleta" });
-  }
+function aplicarPremio(data, item, itemId = "") {
+  // Mesma regra da compra: só empilha no que é a mesma coisa (repertorio.js).
+  const inventario = empilhar(data.inventario, item, {
+    quantidade: 1,
+    itemId,
+    formaRecebimento: "Prêmio da Roleta",
+  });
 
   const notifications = data.notifications || [];
   notifications.unshift({

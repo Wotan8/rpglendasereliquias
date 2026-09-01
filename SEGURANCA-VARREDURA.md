@@ -28,7 +28,7 @@ Legenda de esforço: **P** = pequeno (uma linha / uma regra), **M** = médio
 | 8 | Storage: qualquer autenticado sobrescreve hero, favicon e imagem de item | 🟡 Médio | P ✅ |
 | 9 | `escapeHtml()` não escapa aspas → XSS em atributo | 🟡 Médio | P ✅ |
 | 10 | Sem verificação de e-mail no cadastro | 🟡 Médio | P ✅ |
-| 11 | Empilhamento do Repertório por `nome` | 🟡 Médio | M |
+| 11 | Empilhamento do Repertório por `nome` | 🟡 Médio | M ✅ |
 | 12 | Documentos internos servidos em produção | 🟡 Médio | P ✅ |
 | 13 | `logs` com create aberto | 🟢 Baixo | P ✅ |
 | 14 | `inventario`/`apoios` sem teto de tamanho | 🟢 Baixo | M ✅ |
@@ -652,7 +652,7 @@ a regra.
 
 ---
 
-## 🟡 11. Empilhamento do Repertório por `nome`
+## 🟡 11. Empilhamento do Repertório por `nome` ✅ corrigido
 
 **Onde:** [entrega-calc.js:41](functions/entrega-calc.js:41),
 [exp-item.js:68](functions/exp-item.js:68), [roleta-sorteio.js:80](functions/roleta-sorteio.js:80)
@@ -663,8 +663,36 @@ campos dela — só a quantidade cresce. Se dois itens da Loja tiverem o mesmo
 unidades na linha cara. Não é atacável de fora hoje, mas é um erro de cadastro
 que vira EXP grátis, e é o que torna o item 3 lucrativo.
 
-**Correção (M):** empilhar por `itemId`, com o nome só na exibição. Exige
-migração dos inventários existentes — por isso é M e não P.
+**Feito em 01/09/2026 — e não por `itemId`, como estava proposto.** A medição
+matou aquele plano: das 43 linhas de inventário, **nenhuma** tem id, e **13**
+têm nome que não existe mais no catálogo (prêmio de roleta, devolução do
+mestre, EXP devolvido no encerramento de personagem). Não há de onde tirar id
+para 30% delas — a migração não tinha como ser completada.
+
+O que importava não era o empilhamento e sim o que ele **herda**: ao fundir,
+a linha que sobrevive é a antiga, com os campos dela. A correção é essa:
+**só empilha o que é a mesma coisa** — mesmo nome não basta, o que o item FAZ
+tem de bater ([repertorio.js](functions/repertorio.js), aplicado nos três
+caminhos que premiam: compra em dinheiro, compra em Frag$ e prêmio da roleta).
+Itens homônimos com efeitos diferentes viram duas linhas, que é o que eles são.
+
+`itemId` passou a ser gravado nas linhas novas e, quando os dois lados o têm,
+manda — o nome pode até ser corrigido no catálogo sem partir a linha de
+ninguém. A tela agrupa pela mesma regra, senão dois itens diferentes virariam
+um card só com a etiqueta de um e a quantidade dos dois.
+
+**Uma armadilha que só o banco real mostrou:** o catálogo grava `expAmount: 0`
+e `roletaGiros: 0` em item que não concede nada, enquanto a linha antiga do
+jogador simplesmente não tem o campo. Tratar zero e ausente como coisas
+diferentes partiria **19 das 30** linhas em duas na próxima recompra. Zero e
+ausente agora são a mesma coisa, e o caso está no teste.
+
+**Fica um resíduo de 3 linhas**, e é decisão sua: "Re-rolagem", "Desejo
+Narrativo" e "EXP" são linhas gravadas ANTES de o catálogo ganhar as flags de
+efeito. Elas não concedem nada hoje (o servidor recusa aplicar EXP de uma linha
+sem `isExp`), e ao recomprar vão abrir uma linha nova, que funciona. Não
+estampei as flags nelas de propósito: seria conceder benefício que hoje não
+existe, e isso é decisão de mesa. Se quiser, eu corrijo as três.
 
 ---
 

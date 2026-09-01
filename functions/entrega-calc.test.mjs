@@ -27,8 +27,11 @@ assert.equal(r1.logsCompra[0].moeda, 'BRL');
 assert.match(r1.notifications[0].message, /2x Bênção do Cronista por R\$ 30,00/);
 
 // --- item repetido: soma a quantidade em vez de duplicar a linha ---
+// A linha existente precisa ser a MESMA COISA: mesmo nome nao basta, o que o
+// item faz tem de bater. Ver functions/repertorio.js — juntar por nome fazia a
+// peca barata herdar o EXP da cara quando as duas tinham o mesmo nome.
 const r2 = aplicarCompra(
-    { inventario: [{ nome: item.nome, quantidade: 3 }] },
+    { inventario: [{ nome: item.nome, isExp: true, expAmount: 50, quantidade: 3 }] },
     item, pending, 'Mercado Pago'
 );
 assert.equal(r2.inventario.length, 1, 'não duplica a linha do inventário');
@@ -118,3 +121,16 @@ const poucas = { logsCompra: [{ nome: 'so uma' }] };
 assert.equal(aplicarCompra(poucas, { nome: 'N' }, { itemId: 'x', quantidade: 1, totalCentavos: 1 }, 'x').logsCompra.length, 2);
 
 console.log('entrega-calc: teto de logsCompra OK');
+
+// ===== nao herda efeito de item homonimo (item 11 da varredura) =====
+// Mestre cadastra uma bugiganga com o mesmo nome de um pacote de EXP.
+// Comprar a bugiganga NAO pode somar unidade na linha do pacote.
+const bugiganga = { nome: 'Bênção do Cronista' };   // mesmo nome, sem efeito
+const invComPacote = [{ nome: 'Bênção do Cronista', isExp: true, expAmount: 500, quantidade: 1 }];
+const r9 = aplicarCompra({ inventario: invComPacote }, bugiganga,
+    { itemId: 'outro', quantidade: 1, totalCentavos: 500 }, 'Mercado Pago');
+assert.equal(r9.inventario.length, 2, 'a bugiganga abre linha propria');
+assert.equal(r9.inventario[0].quantidade, 1, 'a linha do pacote de 500 EXP nao encostou');
+assert.equal(r9.inventario[1].expAmount, undefined, 'e a linha nova nao nasce com EXP');
+
+console.log('entrega-calc: nao herda efeito de homonimo OK');
