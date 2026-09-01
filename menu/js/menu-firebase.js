@@ -23,6 +23,7 @@ import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/
 import { somarApoiosDoJogador, somarMetaTotais, progressoDasEtapas, proximaEtapa, valorApoio, parseMetaIds, resolveMetaId } from '../../shared/apoios-calc.js';
 import { ehMesmaLinha } from '../../shared/repertorio-linha.js';
 import { confirmar, toast } from '../../shared/dialogo.js?v=2';
+import { estadoPush, ativarPush, desativarPush } from '../../shared/push.js?v=1';
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -931,7 +932,43 @@ function updateNotificationBadge() {
     }
 }
 
+/* ── 🔔 Push: o aviso com o site fechado ────────────────────
+   O botao so aparece quando ha o que fazer com ele. Botao que promete
+   push num navegador que nao entrega push e pior do que botao nenhum:
+   a pessoa clica, nada acontece, e ela conclui que o site e quebrado. */
+async function pintarBotaoPush() {
+    const b = document.getElementById('btnPush');
+    const dica = document.getElementById('pushDica');
+    if (!b || !currentUser) return;
+
+    const estado = await estadoPush();
+    const textos = {
+        'ligado': ['🔔 Avisos ligados neste aparelho', 'Clique para desligar só aqui.'],
+        'desligado': ['🔕 Receber avisos neste aparelho', 'Chega no celular mesmo com o site fechado.'],
+        'negado': [null, 'Você bloqueou as notificações deste site no navegador — dá para liberar nas configurações dele.'],
+    };
+    const [rotulo, ajuda] = textos[estado] || [null, ''];
+
+    b.hidden = !rotulo;
+    if (rotulo) b.textContent = rotulo;
+    dica.hidden = !ajuda;
+    dica.textContent = ajuda;
+}
+
+window.portalAlternarPush = async function () {
+    if (!currentUser) return;
+    const b = document.getElementById('btnPush');
+    b.disabled = true;
+    const r = (await estadoPush()) === 'ligado'
+        ? await desativarPush(db, currentUser.uid)
+        : await ativarPush(app, db, currentUser.uid);
+    b.disabled = false;
+    showAlert(r.motivo, r.ok ? 'success' : 'danger');
+    await pintarBotaoPush();
+};
+
 function renderNotifications() {
+    pintarBotaoPush();
     const container = document.getElementById('notificationsList');
     const emptyState = document.getElementById('emptyNotifications');
     const paginationContainer = document.getElementById('paginationContainer');

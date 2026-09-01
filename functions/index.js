@@ -10,6 +10,7 @@ const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getAuth } = require("firebase-admin/auth");
+const { getMessaging } = require("firebase-admin/messaging");
 const { aplicarCompra, pesoProducao, rerolagensDoItem, MAX_LOGS_COMPRA } = require("./entrega-calc");
 const { TAXAS_PADRAO, calcularCobranca, EXCLUIR_POR_MEIO } = require("./taxa-gateway");
 const { sortear, aplicarPremio, girosDoItem } = require("./roleta-sorteio");
@@ -21,6 +22,7 @@ const { conferirAssinatura, classificarPagamento, conferirValorPago, reais } = r
 const { decidirLimite, esperaEmTexto } = require("./rate-limit");
 const { charIdsVinculados, normalizarDonos, mudou } = require("./npc-donos");
 const { empilhar } = require("./repertorio");
+const { avisoNovo, tokensMortos } = require("./push-aviso");
 
 initializeApp();
 const db = getFirestore();
@@ -690,6 +692,55 @@ exports.espelharUsuarioPublico = onDocumentWritten(
     }
 
     await ref.set({ ...depois, atualizadoEm: FieldValue.serverTimestamp() });
+  }
+);
+
+// =============================================
+// PUSH — o aviso que alcanca o celular no bolso
+// ---------------------------------------------
+// UM gatilho, e nao uma chamada de envio em cada lugar que escreve
+// `notifications`. Sao oito hoje (compra, entrega, roleta, EXP, item para a
+// mesa, mensagem do mestre...) e serao mais amanha: espalhar o envio por
+// todos eles garante que o proximo nasca sem push, e ninguem percebe — o
+// aviso simplesmente nao chega, e nao ha erro nenhum para investigar.
+//
+// A regra e uma so: mudou a notificacao do TOPO, avisa. `notifications` e
+// uma pilha com `unshift`, entao "chegou coisa nova" e exatamente isso.
+// =============================================
+
+exports.avisarPush = onDocumentWritten(
+  { document: "users/{userId}", region: "southamerica-east1" },
+  async (event) => {
+    if (!event.data.after.exists) return;
+    const depois = event.data.after.data();
+
+    const tokens = (depois.fcmTokens || [])
+      .filter((t) => typeof t === "string" && t)
+      .slice(0, 500);   // teto da API; ninguem tem 500 aparelhos
+    if (!tokens.length) return;
+
+    const aviso = avisoNovo(event.data.before.exists ? event.data.before.data() : null, depois);
+    if (!aviso) return;
+
+    let resposta;
+    try {
+      resposta = await getMessaging().sendEachForMulticast({
+        tokens,
+        notification: { title: "Lendas e Relíquias", body: aviso.texto },
+        data: { url: "/index.html", tag: aviso.tag },
+        webpush: { fcmOptions: { link: "/index.html" } },
+      });
+    } catch (e) {
+      // Push e conveniencia. Se o envio falha, o aviso continua no doc e
+      // aparece na proxima vez que a pessoa abrir o site.
+      console.warn("push nao saiu:", e && e.message);
+      return;
+    }
+
+    const mortos = tokensMortos(tokens, resposta.responses);
+    if (mortos.length) {
+      await event.data.after.ref.update({ fcmTokens: FieldValue.arrayRemove(...mortos) });
+    }
   }
 );
 

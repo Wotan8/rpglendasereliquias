@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v379';
+const VERSION = 'v380';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -192,6 +192,7 @@ const PRECACHE_URLS = [
   '/shared/moral.js',
   '/shared/runa-em-jogo.js',
   '/shared/dialogo.js',
+  '/shared/push.js',
   '/shared/dialogo.css',
   '/shared/sanfona.js',
   '/shared/sanfona.css',
@@ -387,4 +388,57 @@ self.addEventListener('message', event => {
     if (event.ports && event.ports[0]) event.ports[0].postMessage(resposta);
     else if (event.source) event.source.postMessage(resposta);
   }
+});
+
+// =============================================
+// PUSH — o aviso que chega com o site FECHADO
+// ---------------------------------------------
+// As notificacoes ja apareciam na pagina em tempo real (onSnapshot no doc do
+// usuario). Isso so vale com a aba aberta. Aqui e o outro caso: o jogador
+// esta com o celular no bolso.
+//
+// NAO importamos o SDK do Firebase Messaging neste worker de proposito. O
+// FCM entrega uma mensagem Web Push comum, e ler o JSON dela e desenhar a
+// notificacao e tudo que o SDK faria aqui — ao custo de puxar ~100 kB de
+// `importScripts` para dentro de um arquivo que ja versiona o cache do site
+// inteiro. O envelope do FCM e `{ notification: {...}, data: {...} }`.
+// =============================================
+
+self.addEventListener('push', event => {
+  let carga = {};
+  try { carga = event.data ? event.data.json() : {}; } catch { carga = {}; }
+
+  const n = carga.notification || {};
+  const d = carga.data || {};
+  const titulo = n.title || d.title || 'Lendas e Relíquias';
+  const corpo = n.body || d.body || '';
+
+  event.waitUntil(self.registration.showNotification(titulo, {
+    body: corpo,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    // Mesma `tag` = a nova SUBSTITUI a anterior em vez de empilhar. Sem isso,
+    // quem passa o dia fora volta a uma pilha de avisos repetidos.
+    tag: d.tag || 'lr-aviso',
+    data: { url: d.url || '/index.html' },
+  }));
+});
+
+/* Clicar no aviso leva ao Portal — e reaproveita a aba que ja estiver aberta.
+   Abrir uma segunda aba do mesmo site e o jeito mais rapido de fazer o
+   jogador perder o que estava fazendo. */
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const destino = (event.notification.data && event.notification.data.url) || '/index.html';
+  event.waitUntil((async () => {
+    const abas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const aba of abas) {
+      if (new URL(aba.url).origin === self.location.origin) {
+        await aba.focus();
+        if ('navigate' in aba) await aba.navigate(destino).catch(() => {});
+        return;
+      }
+    }
+    await self.clients.openWindow(destino);
+  })());
 });

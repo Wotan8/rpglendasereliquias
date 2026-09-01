@@ -421,6 +421,12 @@
             <div class="tab-content" id="tab-notificacoes">
                 <div class="rep-topo">
                     <p class="rep-explica">As 100 mais recentes. As antigas saem sozinhas.</p>
+                    <!-- Push: por APARELHO, nao por conta. O texto diz isso porque
+                         "ativado" numa maquina e "desativado" na outra e a duvida
+                         que a pessoa leva para o suporte. -->
+                    <button class="btn btn-secondary btn-sm" id="btnPush" hidden
+                            onclick="portalAlternarPush()"></button>
+                    <span class="rep-explica" id="pushDica" hidden></span>
                 </div>
 
                 <div id="notificationsList"></div>
@@ -687,7 +693,7 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="/menu/js/menu-firebase.js?v=36"></script>
+    <script type="module" src="/menu/js/menu-firebase.js?v=37"></script>
     <!-- A janela da Roleta. Depois do menu-firebase.js: ela usa window.db e
          window.lrFunctions, que nascem lá. -->
     <script type="module" src="/menu/js/menu-roleta.js?v=12"></script>
