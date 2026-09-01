@@ -263,3 +263,47 @@
     .texto-mundo h1, .texto-mundo h2, .texto-mundo h3 { color: #000; }
     .texto-mundo .tm-fig { break-inside: avoid; }
 }
+
+/* ── 🔗 Campo vinculado ────────────────────────────────────
+   O valor vem do cadastro (shared/campo-vinculado.js). No texto ele e
+   discreto de proposito: um pontilhado por baixo diz "isto e vivo" sem
+   competir com a leitura. */
+.texto-mundo .tm-campo {
+    border-bottom: 1px dotted var(--tm-cor-destaque, var(--lr-bronze));
+    cursor: help;
+}
+
+/* Sumiu. O aviso e ::after e nao um elemento: assim ele NAO entra no HTML
+   gravado, e o livro nao carrega para sempre a lapide de uma entidade que
+   voltou a existir. `data-sumiu` tambem nao sobrevive a gravacao — o
+   sanitizador do editor so deixa passar cat, entity, campo e
+   contenteditable. */
+.texto-mundo .tm-campo[data-sumiu] {
+    border-bottom-color: var(--lr-blood);
+    background: var(--lr-blood-soft);
+    border-radius: 2px;
+    padding: 0 .15em;
+}
+.texto-mundo .tm-campo[data-sumiu]::after {
+    content: "objeto não encontrado";
+    font-family: var(--lr-font-body);
+    font-size: .62em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--lr-blood);
+    background: var(--lr-blood-soft);
+    border: 1px solid var(--lr-blood);
+    border-radius: var(--lr-radius-sm);
+    padding: 0 .35em;
+    margin-left: .3em;
+    /* Sobe para o canto: e uma nota de margem sobre o texto, nao uma
+       palavra dentro da frase. Sem quebrar linha sozinho. */
+    vertical-align: super;
+    white-space: nowrap;
+}
+.texto-mundo .tm-campo[data-sumiu="campo"]::after { content: "campo não encontrado"; }
+
+@media print {
+    .texto-mundo .tm-campo[data-sumiu]::after { display: none; }
+}

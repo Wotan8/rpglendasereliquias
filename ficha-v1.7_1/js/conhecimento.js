@@ -18,6 +18,14 @@ import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/f
 import { statusDoCapitulo } from './conhecimento-calc.js';
 import { pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
 import { estiloDoLivro } from '../../shared/livro-estilo.js';
+import { resolverCampos, carregadorPadrao } from '../../shared/campo-vinculado.js';
+
+/* Um carregador por sessao: o cache dele evita reler a colecao a cada
+   capitulo aberto. `window.db` porque a ficha inicializa o Firebase antes
+   deste modulo rodar. */
+let _cc = null;
+const _carregarCampos = (cat) =>
+    (_cc || (_cc = carregadorPadrao({ db: window.db, collection, getDocs })))(cat);
 
 let _carregado = false;
 let _livros = [], _capitulos = [], _regras = {};
@@ -265,4 +273,8 @@ window.lerCapitulo = function (capId) {
         </div>`;
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    /* Depois de pintar: o texto ja esta na tela com a RESERVA de cada campo
+       vinculado, e o valor fresco entra por cima quando chegar. Ninguem
+       espera rede para comecar a ler. */
+    resolverCampos(body, _carregarCampos);
 };

@@ -27,6 +27,7 @@ import { PUBLICACOES, pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.
 import { ESTILO_CAMPOS, FONTES, estiloDoLivro, estiloInline, estiloDoLivro_obj } from '../../shared/livro-estilo.js';
 import { proximaVersao, mesmaVersao } from '../../shared/versao-canone.js';
 import { alvos, avisoDeVersao, enviarAviso } from '../../shared/avisar-livro.js';
+import { camposDe, resolverCampos, carregadorPadrao, FONTES_CAMPO } from '../../shared/campo-vinculado.js';
 import { confirmar, toast } from '../../shared/dialogo.js?v=2';
 
 export const Editor = (() => {
@@ -1016,6 +1017,61 @@ export const Editor = (() => {
         renderRefs(); bindEditor();
     }
 
+    /* ── 🔗 Campo vinculado: escolher entidade e campo ─────
+       Duas etapas na MESMA janela: a lista de entidades vira a lista de
+       campos daquela entidade. Duas janelas em sequência fariam o autor
+       perder o cursor no texto — e é onde ele quer voltar. */
+    function pedirCampoVinculado() {
+        return new Promise((resolve) => {
+            const itens = searchables();
+            let escolhido = null;
+            const pintar = (q = '') => {
+                const lista = itens.filter(x => !q || x.nome.toLowerCase().includes(q)).slice(0, 60);
+                $('#cvLista').innerHTML = lista.length
+                    ? lista.map(x => `<button type="button" class="wbt-pick" data-cvent="${esc(x.id)}" data-cvcat="${esc(x.cat)}">
+                           ${KIND[x.cat]?.icon || '📄'} ${esc(x.nome)} <span class="wbt-tag">${esc(KIND[x.cat]?.label || x.cat)}</span></button>`).join('')
+                    : '<p class="wbt-muted">Nada encontrado.</p>';
+            };
+            ToolModal.open(`
+                <h2>🔗 Campo vinculado</h2>
+                <p class="wbt-muted wb-bkhint">O valor sai do cadastro e se atualiza sozinho no livro. Mudou lá, mudou aqui — sem reescrever capítulo.</p>
+                <input id="cvBusca" class="form-input" placeholder="Buscar entidade cadastrada…" autocomplete="off">
+                <div class="wbt-picklist" id="cvLista"></div>
+                <div class="wbt-actions"><button class="btn btn-secondary" data-close>Cancelar</button></div>`);
+            pintar();
+            $('#cvBusca').oninput = (e) => pintar(e.target.value.trim().toLowerCase());
+            $('#cvLista').onclick = (e) => {
+                const b = e.target.closest('[data-cvent]'); if (!b) return;
+                if (!escolhido) {
+                    const ent = poolOf(b.dataset.cvcat).find(x => x.id === b.dataset.cvent);
+                    escolhido = { cat: b.dataset.cvcat, id: b.dataset.cvent, ent };
+                    const campos = camposDe(ent);
+                    $('#cvBusca').hidden = true;
+                    $('#cvLista').innerHTML = campos.length
+                        ? campos.map(c => `<button type="button" class="wbt-pick" data-cvcampo="${esc(c.campo)}">
+                               <b>${esc(c.campo)}</b><br><span class="wbt-muted">${esc(c.valor.slice(0, 120))}</span></button>`).join('')
+                        : '<p class="wbt-muted">Esta entidade não tem campo de texto para vincular.</p>';
+                }
+            };
+            $('#cvLista').addEventListener('click', (e) => {
+                const b = e.target.closest('[data-cvcampo]'); if (!b || !escolhido) return;
+                const campo = b.dataset.cvcampo;
+                ToolModal.close();
+                resolve({ cat: escolhido.cat, id: escolhido.id, campo, valor: String(escolhido.ent?.[campo] ?? '') });
+            });
+            // Fechar sem escolher devolve null — quem chama já trata.
+            const raiz = document.getElementById('wbToolModal');
+            const aoFechar = () => { if (!raiz.classList.contains('active')) { obs.disconnect(); resolve(null); } };
+            const obs = new MutationObserver(aoFechar);
+            obs.observe(raiz, { attributes: true, attributeFilter: ['class'] });
+        });
+    }
+
+    /* Resolve os campos vinculados do texto aberto. No editor o pool JÁ está
+       em memória (o painel de consulta usa o mesmo), então não custa leitura
+       nenhuma — e o autor vê o mesmo que o jogador vai ver. */
+    const carregarDoPool = async (cat) => new Map(poolOf(cat).map(e => [e.id, e]));
+
     /* ── Painel de consulta lateral ─────────────────────── */
     function renderRefs() {
         const q = ($('#refsSearch')?.value || '').trim().toLowerCase();
@@ -1221,7 +1277,8 @@ export const Editor = (() => {
 
     function bindEditor() {
         $('#backLib').onclick = async () => { clearTimeout(saveTimer); await save(); renderLibrary(); };
-        rich = bindRich($('#richEditor'), $('#richToolbar'), autosaveHint);
+        rich = bindRich($('#richEditor'), $('#richToolbar'), autosaveHint, { pedirCampo: pedirCampoVinculado });
+        resolverCampos($('#richEditor'), carregarDoPool);
         $('#saveArticle').onclick = () => { clearTimeout(saveTimer); save(true); };
         $('#verVersoes').onclick = abrirVersoes;
         $('#autoSave').onchange = (e) => {

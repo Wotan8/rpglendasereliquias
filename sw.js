@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v366';
+const VERSION = 'v367';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -226,6 +226,7 @@ const PRECACHE_URLS = [
   '/shared/livro-estilo.js',
   '/shared/versao-canone.js',
   '/shared/avisar-livro.js',
+  '/shared/campo-vinculado.js',
   '/shared/local-tatico.js',
   '/shared/lr-icones.js',
   '/shared/npc-mesas.js',

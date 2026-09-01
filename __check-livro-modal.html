@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="shared/sanfona.css">
 <link rel="stylesheet" href="shared/acervo.css">
 <link rel="stylesheet" href="shared/dialogo.css">
-<link rel="stylesheet" href="shared/texto-mundo.css?v=2">
+<link rel="stylesheet" href="shared/texto-mundo.css?v=3">
 <link rel="stylesheet" href="worldbuilding/css/worldbuilding.css?v=2">
 <link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=19">
 <script src="shared/theme.js"></script>
@@ -30,7 +30,7 @@
 <script type="importmap">
 { "imports": {
     "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=8",
-    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=7"
+    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=8"
 } }
 </script>
 
@@ -76,6 +76,10 @@ await Editor.render();
 const $ = (s) => document.querySelector(s);
 const abrirCog = () => $('[data-editbook="b1"]').click();
 const espera = (ms = 80) => new Promise(r => setTimeout(r, ms));
+/* Modulo com query e outro modulo para o navegador. Sem isso o harness roda
+   o que ficou no cache — ja aconteceu duas vezes aqui. UM token para todos
+   os `import()` de shared/, subido a cada mexida. */
+const CB = '?h=1';
 // Salvamento deliberado (o mesmo caminho do botao 💾) e volta a Biblioteca.
 const save2 = async () => { $('#saveArticle').click(); await espera(200); };
 // Tolerante a ja estar na Biblioteca: os blocos de teste rodam em sequencia
@@ -361,7 +365,7 @@ $('#chkRun').onclick = async () => {
     // ── Escada de versao do canone ──
     // A aritmetica esta em shared/versao-canone.js; a regra por extenso, no
     // CLAUDE.md. O que se afirma aqui e que a tela usa a MESMA escada.
-    const V = await import('/shared/versao-canone.js');
+    const V = await import('/shared/versao-canone.js' + CB);
     t('vazio nasce em 1.00', V.proximaVersao('') === '1.00');
     t('sobe um centesimo', V.proximaVersao('1.02') === '1.03');
     t('a decimal estoura e SO ai a casa vira', V.proximaVersao('1.99') === '2.00');
@@ -374,7 +378,7 @@ $('#chkRun').onclick = async () => {
     t('texto livre se compara por texto', V.mesmaVersao('Ed. revista', 'Ed. revista'));
 
     // ── Quem recebe o aviso ──
-    const A = await import('/shared/avisar-livro.js');
+    const A = await import('/shared/avisar-livro.js' + CB);
     const gente = [
         { id: 'u1', role: 'criador' }, { id: 'u2', role: 'mestre' },
         { id: 'u3' }, { id: 'u4', role: 'jogador' },
@@ -504,6 +508,73 @@ $('#chkRun').onclick = async () => {
     await $('#bkSave').onclick();
     t('zerado, o livro grava estilo vazio',
         Object.keys(GRAVADO.find(g => g.col === 'worldbuilding-books').data.estilo).length === 0);
+
+    // ── 🔗 Campo vinculado: os TRES estados ──
+    const CV = await import('/shared/campo-vinculado.js' + CB);
+    const caixa = document.createElement('div');
+    caixa.className = 'texto-mundo';
+    caixa.innerHTML =
+        CV.tokenHTML({ cat: 'races', id: 'r1', campo: 'expectativaVida', valor: '180 anos' })
+        + CV.tokenHTML({ cat: 'races', id: 'apagada', campo: 'expectativaVida', valor: '90 anos' })
+        + CV.tokenHTML({ cat: 'races', id: 'r1', campo: 'campoQueSumiu', valor: 'valor antigo' });
+    document.body.appendChild(caixa);
+    const tk = (i) => caixa.querySelectorAll('.tm-campo')[i];
+
+    // Estado 1 e 2: leu o cadastro. r1 existe, 'apagada' nao.
+    const pool = new Map([['r1', { id: 'r1', nome: 'Elorin', expectativaVida: '210 anos' }]]);
+    let conta = await CV.resolverCampos(caixa, async () => pool, { online: true });
+    t('achou: escreve o valor FRESCO por cima da reserva', tk(0).textContent === '210 anos');
+    t('achou: nao marca aviso nenhum', !tk(0).dataset.sumiu);
+    t('sumiu a entidade: a reserva FICA na tela', tk(1).textContent === '90 anos');
+    t('sumiu a entidade: marca o aviso', tk(1).dataset.sumiu === 'entidade');
+    t('sumiu so o campo: a reserva fica e o aviso e outro',
+        tk(2).textContent === 'valor antigo' && tk(2).dataset.sumiu === 'campo');
+    t('a conta bate', conta.frescos === 1 && conta.sumidos === 2);
+
+    // O aviso e ::after — NAO existe como elemento, entao nao entra no HTML
+    // gravado nem vira lapide permanente.
+    t('o aviso nao acrescenta elemento nenhum ao texto',
+        caixa.querySelectorAll('.tm-campo *').length === 0);
+    t('o aviso vem do CSS, pelo data-sumiu',
+        getComputedStyle(tk(1), '::after').content.includes('encontrado'));
+
+    // Estado 3: OFFLINE. A reserva fica, e o aviso NAO aparece — offline
+    // "nao achei" nao significa "foi apagado".
+    tk(1).textContent = '90 anos';
+    conta = await CV.resolverCampos(caixa, async () => pool, { online: false });
+    t('offline: nao marca aviso em ninguem',
+        [...caixa.querySelectorAll('.tm-campo')].every(n => !n.dataset.sumiu));
+    t('offline: a reserva continua na tela', tk(1).textContent === '90 anos');
+    t('offline: nem tenta ler', conta.semRede === 3 && conta.frescos === 0);
+
+    // Estado 3 tambem quando a leitura FALHA online (rede caiu no meio).
+    tk(1).dataset.sumiu = 'entidade';
+    conta = await CV.resolverCampos(caixa, async () => { throw new Error('rede'); }, { online: true });
+    t('falha de leitura NAO acusa objeto apagado',
+        [...caixa.querySelectorAll('.tm-campo')].every(n => !n.dataset.sumiu));
+    t('falha de leitura conta como sem rede', conta.semRede === 3 && conta.sumidos === 0);
+
+    // Uma entidade que VOLTOU a existir perde o aviso.
+    conta = await CV.resolverCampos(caixa, async () => new Map([
+        ['r1', { id: 'r1', expectativaVida: '210 anos', campoQueSumiu: 'voltou' }],
+        ['apagada', { id: 'apagada', expectativaVida: '90 anos' }],
+    ]), { online: true });
+    t('entidade que voltou perde o aviso e volta a atualizar',
+        !tk(1).dataset.sumiu && tk(2).textContent === 'voltou' && conta.sumidos === 0);
+    caixa.remove();
+
+    // O sanitizador deixa passar os tres data-*, e NAO o aviso.
+    const SAN = await import('/worldbuilding/js/wb-rich-sanitize.js' + CB);
+    t('grava data-cat, data-entity e data-campo',
+        ['data-cat', 'data-entity', 'data-campo'].every(a2 => SAN.atributoOk('SPAN', a2)));
+    t('NAO grava o data-sumiu — o aviso e sempre recalculado',
+        !SAN.atributoOk('SPAN', 'data-sumiu'));
+
+    // Campos oferecidos: escalar com conteudo, sem tralha interna.
+    const campos = CV.camposDe({ id: 'x', nome: 'Elorin', expectativaVida: '210 anos',
+        nivel: 3, vazio: '', lista: [1, 2], obj: {}, _interno: 'nao', ownerUid: 'abc' });
+    t('oferece so escalar com conteudo',
+        String(campos.map(c => c.campo).sort()) === 'expectativaVida,nivel,nome');
 
     // ── Janela de imagem: centrada, e o tipo carimbado pela extensao ──
     CampoImagem.escolher({ titulo: 'Inserir imagem', pasta: 'worldbuilding-images' });

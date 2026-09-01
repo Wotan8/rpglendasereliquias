@@ -60,6 +60,21 @@
     const _est = import('/shared/livro-estilo.js')
         .then(m => { estiloDoLivro = m.estiloDoLivro; return m; })
         .catch(e => { console.warn('📖 livro-estilo:', e); return null; });
+
+    /* Campo vinculado, pelo mesmo caminho. Falhar aqui deixa a RESERVA na
+       tela sem aviso nenhum — que e exatamente o estado "nao deu para ver",
+       e nao "foi apagado". */
+    let _cvCarregar = null;
+    async function resolverCamposDoTexto(raiz) {
+        try {
+            const m = await import('/shared/campo-vinculado.js');
+            if (!_cvCarregar) {
+                const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+                _cvCarregar = m.carregadorPadrao({ db: window.db, collection, getDocs });
+            }
+            await m.resolverCampos(raiz, _cvCarregar);
+        } catch (e) { console.warn('📖 campo-vinculado:', e); }
+    }
     const seloVersao = (l, estilo) => {
         const v = versaoDoLivro(l);
         return v ? `<span style="${estilo}">🔖 ${esc(v)}</span>` : '';
@@ -498,6 +513,9 @@
                 ${volta}`);
             // (o _pintar já devolve a rolagem ao topo, então trocar de
             //  capítulo começa do começo sem código a mais aqui)
+            // Depois de pintar: a reserva já está na tela, o valor fresco
+            // entra por cima quando chegar. Ler não espera rede.
+            resolverCamposDoTexto(_caixa());
         }).catch(e => console.error('📖 Leitura do capítulo:', e));
     }
 

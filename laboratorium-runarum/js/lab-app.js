@@ -320,6 +320,13 @@
         host.innerHTML = secs.map(s => `
             <details class="lab-comp-sec lr-sanfona"><summary>${esc(s.title)}</summary>
             <div class="lab-comp-body texto-mundo">${s.contentHTML}</div></details>`).join('');
+        /* Campos vinculados do Compendio. Import dinamico e sem await: o
+           verbete ja esta legivel com a reserva, e o valor fresco entra
+           depois. Falhar aqui deixa a reserva, sem aviso — offline nao e
+           "foi apagado". */
+        import('../../shared/campo-vinculado.js')
+            .then(m => m.resolverCampos(host, m.carregadorPadrao(window.LabFB.fsDeps())))
+            .catch(e => console.warn('Compêndio: campo vinculado', e));
     }
 
     // ================= MODAL DE ELEMENTO =================

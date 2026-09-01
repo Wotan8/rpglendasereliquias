@@ -101,6 +101,11 @@ const LabFB = {
      * [{title, contentHTML}]. O RUNO_COMPENDIO em compendium-data.js vira
      * apenas fallback quando a leitura falha/está vazia.
      */
+    /* O `db` daqui e de modulo, nao de window — quem precisa ler colecao
+       crua (o campo vinculado do Compendio) pega as pecas por aqui em vez
+       de o Laboratorium abrir um segundo Firestore so para isso. */
+    fsDeps() { return { db, collection, getDocs }; },
+
     async loadCompendio() {
         const bsnap = await getDocs(collection(db, 'worldbuilding-books'));
         let bookId = null;

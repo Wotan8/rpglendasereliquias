@@ -13,6 +13,7 @@
    ===================================================================== */
 import { pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
 import { estiloInline } from '../../shared/livro-estilo.js';
+import { resolverCampos, carregadorPadrao } from '../../shared/campo-vinculado.js';
 
 let livros = [];        // [{id, title, description, cover, capitulos:[...]}]
 let estantes = [];      // as mesmas do Escritório do Cronista (worldbuilding-settings/estantes)
@@ -22,6 +23,18 @@ let capAberto = 0;
 let carregado = false;
 
 const $ = (id) => document.getElementById(id);
+
+/* Campo vinculado: um carregador por sessao (o cache mora nele). O SDK vem
+   por import dinamico, como o resto deste arquivo — e ate ele chegar, o
+   leitor ja esta vendo a reserva. */
+let _cc = null;
+const _carregarCampos = async (cat) => {
+    if (!_cc) {
+        const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+        _cc = carregadorPadrao({ db: window.db, collection, getDocs });
+    }
+    return _cc(cat);
+};
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -130,6 +143,7 @@ window.wikiAbrirCap = function (i, marcar) {
     // por setAttribute — e para isso o helper tem a forma sem o `style="`.
     corpo.setAttribute('style', estiloInline(l));
     corpo.innerHTML = l.capitulos[capAberto].contentHTML || '';
+    resolverCampos(corpo, _carregarCampos);
     if (marcar) destacar(corpo, marcar);
 
     document.querySelectorAll('#leitorToc button').forEach(b =>

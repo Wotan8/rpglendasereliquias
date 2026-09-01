@@ -57,6 +57,7 @@ export const TOOLBAR_HTML = `
 <button class="btn btn-secondary btn-sm" data-rich="link" title="Inserir link">🔗</button>
 <button class="btn btn-secondary btn-sm" data-rich="imagem" title="Inserir imagem">🖼️</button>
 <button class="btn btn-secondary btn-sm" data-rich="tabela" title="Inserir tabela">▦</button>
+<button class="btn btn-secondary btn-sm" data-rich="campo" title="Campo vinculado — o valor vem do cadastro e se atualiza sozinho">🔗↻</button>
 <button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="removeFormat" title="Limpar formatação">🧹</button>
 `;
 
@@ -93,7 +94,11 @@ const POSICOES = ['tm-fig--esq', 'tm-fig--dir', 'tm-fig--flut-esq', 'tm-fig--flu
  * @param onChange  chamado a cada alteração (o wb-editor usa para o autosave)
  * @returns { limpar } → HTML pronto para gravar
  */
-export function bindRich(ed, toolbar, onChange) {
+/* `pedirCampo` chega de fora: quem sabe listar as entidades cadastradas e o
+   Escritorio (wb-utils/ecossistema), e a mesa de diagramacao nao precisa
+   conhecer o ecossistema para saber inserir um <span>. Sem ela, o botao do
+   campo vinculado simplesmente nao faz nada. */
+export function bindRich(ed, toolbar, onChange, opts = {}) {
     // Sem isto o Chrome ainda escreve <font color> em vez de style="color:…",
     // e a faxina (que só aceita style) jogaria a cor do autor fora.
     try { document.execCommand('styleWithCSS', false, true); } catch { /* Safari antigo */ }
@@ -195,6 +200,35 @@ export function bindRich(ed, toolbar, onChange) {
         }
     }
 
+    /* ── Campo vinculado ─────────────────────────────────
+       Insere o <span> e um espaco depois: sem o espaco, o cursor fica preso
+       dentro de um no contenteditable=false e nao da para continuar a frase. */
+    async function inserirCampo() {
+        if (typeof opts.pedirCampo !== 'function') return;
+        const escolha = await opts.pedirCampo();
+        if (!escolha) return;
+        const span = document.createElement('span');
+        span.className = 'tm-campo';
+        span.dataset.cat = escolha.cat;
+        span.dataset.entity = escolha.id;
+        span.dataset.campo = escolha.campo;
+        span.contentEditable = 'false';
+        span.textContent = escolha.valor || '—';
+        const sel = window.getSelection();
+        if (sel.rangeCount && ed.contains(sel.anchorNode)) {
+            const r = sel.getRangeAt(0);
+            r.deleteContents(); r.insertNode(span);
+        } else {
+            ed.appendChild(span);
+        }
+        const espaco = document.createTextNode(' ');
+        span.after(espaco);
+        const r2 = document.createRange();
+        r2.setStartAfter(espaco); r2.collapse(true);
+        sel.removeAllRanges(); sel.addRange(r2);
+        avisar();
+    }
+
     /* ── Botões da barra ─────────────────────────────────── */
     toolbar.addEventListener('click', async (e) => {
         const alvo = e.target.closest('[data-rich]');
@@ -219,6 +253,7 @@ export function bindRich(ed, toolbar, onChange) {
             }
             case 'imagem': pedirImagem(false); break;
             case 'tabela': await inserirTabela(); break;
+            case 'campo': await inserirCampo(); break;
         }
         avisar();
     });

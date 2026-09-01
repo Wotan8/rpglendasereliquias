@@ -57,7 +57,12 @@ export function atributoOk(tagName, attr) {
     if (a === 'class' || a === 'style') return true;   // filtrados adiante
     // Antes dos casos por tag: a menção @entidade é um <a> e precisa levar
     // a entidade junto, senão o link morre a cada gravação.
-    if (a === 'data-entity' || a === 'data-cat' || a === 'contenteditable') return true;
+    /* `data-campo` entra na mesma lista: o campo vinculado (span.tm-campo)
+       precisa dos tres para saber o que reler no cadastro. `data-sumiu`
+       fica de FORA de proposito — ele e o aviso de "objeto nao encontrado",
+       recalculado a cada leitura. Gravado, viraria lapide permanente de uma
+       entidade que pode ter voltado a existir. */
+    if (a === 'data-entity' || a === 'data-cat' || a === 'data-campo' || a === 'contenteditable') return true;
     if (t === 'A') return a === 'href' || a === 'target' || a === 'rel';
     if (t === 'IMG') return ['src', 'alt', 'title', 'loading'].includes(a);
     if (t === 'TD' || t === 'TH') return a === 'colspan' || a === 'rowspan';

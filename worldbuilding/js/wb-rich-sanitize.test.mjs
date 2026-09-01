@@ -72,4 +72,16 @@ assert.equal(filtrarEstilo('width: expression(alert(1))'), '');
 assert.equal(filtrarEstilo(''), '');
 assert.equal(filtrarEstilo('COLOR: red'), 'COLOR: red', 'propriedade em maiúscula é reconhecida');
 
+// --- campo vinculado (shared/campo-vinculado.js) ---
+// Os tres data-* sao o endereco do campo no cadastro: sem eles o vinculo
+// morre a cada gravacao e o texto vira literal.
+assert.ok(atributoOk('SPAN', 'data-cat'));
+assert.ok(atributoOk('SPAN', 'data-entity'));
+assert.ok(atributoOk('SPAN', 'data-campo'));
+// `data-sumiu` NAO: e o aviso de "objeto nao encontrado", recalculado a cada
+// leitura. Gravado, viraria lapide permanente de algo que pode ter voltado.
+assert.equal(atributoOk('SPAN', 'data-sumiu'), false,
+    'o aviso de objeto sumido nao pode ser gravado no texto');
+assert.equal(filtrarClasses('tm-campo'), 'tm-campo');
+
 console.log('✅ wb-rich-sanitize: todos os testes passaram.');
