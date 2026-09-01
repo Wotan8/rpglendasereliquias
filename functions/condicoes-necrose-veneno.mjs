@@ -107,15 +107,22 @@ Não empilha: reaplicar usa o maior N.`,
  *
  *   modo 'manter'    — o texto JÁ diz o nome certo; não se mexe em uma letra.
  *                      O que muda é que agora existe regra atrás do nome.
- *   modo 'restaurar' — o rider SUMIU. A passada v3 (bestiario-v3-lote*.mjs)
- *                      reescreveu `ataques` a partir de um parser que só
- *                      guardava "Alvo N, XdY" e descartava o que vinha depois.
- *                      A Serpente perdeu o "Toxis 1" ali. Não é invenção
- *                      repor: a tabela de carimbo da própria skill /bestiario
- *                      declara o alvo dela como 0,35× com a nota "a diferença
- *                      é o Toxis 1 da mordida, que a conta de DPR puro não vê".
- *                      O projeto sempre contou com o efeito; o texto é que o
- *                      perdeu.
+ *   modo 'restaurar' — o rider não estava no texto de ataque, e o projeto
+ *                      contava com ele: a tabela de carimbo da skill
+ *                      /bestiario declara o alvo da Serpente como 0,35× com
+ *                      a nota "a diferença é o Toxis 1 da mordida, que a
+ *                      conta de DPR puro não vê". Repor é alinhar o texto ao
+ *                      que a régua já assumia.
+ *
+ *                      ⚠️ CORREÇÃO (01/09/2026): eu tinha escrito aqui que
+ *                      "a passada v3 apagou o Toxis com um parser". É FALSO
+ *                      e eu não tinha evidência. Os scripts bestiario-v3-
+ *                      lote*.mjs escrevem o texto de ataque À MÃO e
+ *                      preservam rider — Papa-Noite ficou com "e Envenenar
+ *                      1", Ratazana com "e Infecção", Fantoche com "e
+ *                      Necrose 1". O único script com parser destrutivo é o
+ *                      sereni-npcs-03-ataques.mjs, que não toca a Serpente.
+ *                      Por que o texto dela nunca teve o rider, eu não sei.
  */
 const REFS = [
     { nome: 'Fantoche', modo: 'manter', de: 'Necrose 1', nivel: 1, cond: 'Necrose', alvoDeDesign: 0.15 },
