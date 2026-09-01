@@ -7,6 +7,8 @@
 // Sem Firestore: dá para testar com `node functions/exp-item.test.mjs`.
 // =============================================
 
+const { assinaturaDeEfeito } = require("./repertorio");
+
 /** Campo de EXP da ficha vem como texto ("140"), às vezes vazio. */
 function numero(v) {
   const n = parseInt(v, 10);
@@ -24,18 +26,54 @@ function expDoItem(item) {
 }
 
 /**
+ * As linhas que representam o MESMO item. Existe porque o inventário pode ter
+ * várias: o painel do mestre acrescenta item sem empilhar, e em 01/09/2026 uma
+ * conta tinha três linhas "EXP" (2, 1 e 1 unidades).
+ *
+ * A primeira linha com o nome define o que se está consumindo; as demais só
+ * entram se fizerem a mesma coisa (mesma assinatura de efeito). Sem isso, um
+ * homônimo com outro efeito seria consumido junto.
+ */
+function linhasDoItem(inventario, nome) {
+  const lista = Array.isArray(inventario) ? inventario : [];
+  const primeira = lista.findIndex((l) => l && l.nome === nome);
+  if (primeira === -1) return [];
+  const assinatura = assinaturaDeEfeito(lista[primeira]);
+  const idxs = [];
+  for (let i = 0; i < lista.length; i++) {
+    const l = lista[i];
+    if (l && l.nome === nome && assinaturaDeEfeito(l) === assinatura) idxs.push(i);
+  }
+  return idxs;
+}
+
+/**
  * Consome N unidades do item chamado `nome` e devolve o inventário novo.
  * A linha some quando zera — item com quantidade 0 no Repertório é entulho que
  * o jogador não consegue distinguir de item que ele ainda tem.
  * O array original NÃO é alterado.
+ *
+ * As linhas iguais são UM POÇO SÓ: consome da primeira, o que faltar vem da
+ * seguinte. A versão anterior subtraía a quantidade pedida de CADA linha com
+ * aquele nome — com três linhas de "EXP" (2,1,1), gastar 1 unidade apagava as
+ * outras duas. EXP é comprado com dinheiro; sumir com ele em silêncio é a pior
+ * coisa que este arquivo poderia fazer.
  */
 function consumirUnidades(inventario, nome, quantidade) {
+  const lista = Array.isArray(inventario) ? inventario : [];
+  const alvos = new Set(linhasDoItem(lista, nome));
+  let falta = Math.max(0, parseInt(quantidade, 10) || 0);
+
   const saida = [];
-  for (const linha of inventario) {
-    if (linha.nome !== nome) { saida.push(linha); continue; }
-    const restante = (Number(linha.quantidade) || 0) - quantidade;
+  for (let i = 0; i < lista.length; i++) {
+    const linha = lista[i];
+    if (!alvos.has(i)) { saida.push(linha); continue; }
+    const tem = Number(linha.quantidade) || 0;
+    const tirar = Math.min(tem, falta);
+    falta -= tirar;
+    const restante = tem - tirar;
     if (restante > 0) saida.push({ ...linha, quantidade: restante });
-    // restante <= 0 → a linha inteira sai
+    // zerou → a linha inteira sai
   }
   return saida;
 }
@@ -64,17 +102,20 @@ function aplicarExpDeItem(usuario, fichaFields, nomeItem, quantidade) {
   }
 
   const inventario = (usuario && usuario.inventario) || [];
-  const item = inventario.find((i) => i && i.nome === nomeItem);
-  if (!item) {
+  const idxs = linhasDoItem(inventario, nomeItem);
+  if (idxs.length === 0) {
     throw erro("not-found", `"${nomeItem}" não está no seu Repertório.`);
   }
+  const item = inventario[idxs[0]];
 
   const porUnidade = expDoItem(item);
   if (porUnidade <= 0) {
     throw erro("failed-precondition", `"${nomeItem}" não concede EXP.`);
   }
 
-  const disponivel = Number(item.quantidade) || 0;
+  /* Soma de TODAS as linhas iguais, não só a primeira. Quem tinha "EXP" em três
+     linhas (2,1,1) só conseguia aplicar 2 das 4 unidades que possuía. */
+  const disponivel = idxs.reduce((s, i) => s + (Number(inventario[i].quantidade) || 0), 0);
   if (qtd > disponivel) {
     throw erro("failed-precondition",
       `Você tem ${disponivel} de "${nomeItem}" e tentou usar ${qtd}.`);
@@ -97,4 +138,4 @@ function aplicarExpDeItem(usuario, fichaFields, nomeItem, quantidade) {
   };
 }
 
-module.exports = { aplicarExpDeItem, consumirUnidades, expDoItem, numero };
+module.exports = { aplicarExpDeItem, consumirUnidades, linhasDoItem, expDoItem, numero };

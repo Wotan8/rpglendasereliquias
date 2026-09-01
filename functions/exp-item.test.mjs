@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { aplicarExpDeItem, consumirUnidades, expDoItem, numero } = require('./exp-item.js');
+const { aplicarExpDeItem, consumirUnidades, linhasDoItem, expDoItem, numero } = require('./exp-item.js');
 
 // ===== numero: o campo da ficha e texto, as vezes vazio =====
 assert.equal(numero('140'), 140);
@@ -85,3 +85,55 @@ recusa(() => aplicarExpDeItem(null, {}, 'EXP+', 1), 'not-found');
 recusa(() => aplicarExpDeItem({ inventario: [null, undefined, { nome: 'x' }] }, {}, 'EXP+', 1), 'not-found');
 
 console.log('✅ exp-item: todos os casos passaram');
+
+// ===== LINHAS REPETIDAS SAO UM POCO SO =====
+// O painel do mestre acrescenta item sem empilhar: em 01/09/2026 uma conta
+// tinha TRES linhas "EXP" (2, 1 e 1). A versao anterior lia a quantidade so da
+// primeira (2 de 4 disponiveis) e subtraia o pedido de CADA uma — gastar 1
+// unidade apagava as outras duas. EXP e comprado com dinheiro.
+const tres = () => ([
+    { nome: 'EXP', quantidade: 2, isExp: true, expAmount: 2 },
+    { nome: 'Amuleto', quantidade: 1 },
+    { nome: 'EXP', quantidade: 1, isExp: true, expAmount: 2 },
+    { nome: 'EXP', quantidade: 1, isExp: true, expAmount: 2 },
+]);
+
+assert.deepEqual(linhasDoItem(tres(), 'EXP'), [0, 2, 3]);
+assert.deepEqual(linhasDoItem(tres(), 'Amuleto'), [1]);
+assert.deepEqual(linhasDoItem(tres(), 'Nao existe'), []);
+
+// gastar 1: sai da primeira linha, e SO dela
+const g1 = consumirUnidades(tres(), 'EXP', 1);
+assert.equal(g1.filter(l => l.nome === 'EXP').reduce((s, l) => s + l.quantidade, 0), 3,
+    'sobram 3 das 4 unidades');
+assert.equal(g1.filter(l => l.nome === 'EXP').length, 3, 'nenhuma linha foi apagada a toa');
+assert.equal(g1.find(l => l.nome === 'Amuleto').quantidade, 1, 'o resto do inventario nao encosta');
+
+// gastar 3: esvazia a primeira e a segunda
+const g3 = consumirUnidades(tres(), 'EXP', 3);
+assert.equal(g3.filter(l => l.nome === 'EXP').reduce((s, l) => s + l.quantidade, 0), 1);
+assert.equal(g3.filter(l => l.nome === 'EXP').length, 1, 'as linhas zeradas saem');
+
+// gastar tudo
+assert.equal(consumirUnidades(tres(), 'EXP', 4).some(l => l.nome === 'EXP'), false);
+
+// aplicarExpDeItem enxerga as 4 unidades, nao 2
+const rPoco = aplicarExpDeItem({ inventario: tres() }, { exp: '10', exp_total: '10' }, 'EXP', 4);
+assert.equal(rPoco.ganho, 8, '4 unidades x 2 EXP');
+assert.equal(rPoco.exp, 18);
+assert.equal(rPoco.restante, 0);
+assert.equal(rPoco.inventario.some(l => l.nome === 'EXP'), false);
+
+// pedir mais do que o total continua sendo recusado
+assert.throws(() => aplicarExpDeItem({ inventario: tres() }, {}, 'EXP', 5), /tentou usar 5/);
+
+// homonimo com OUTRO efeito nao entra no poco
+const homonimo = [
+    { nome: 'EXP', quantidade: 1, isExp: true, expAmount: 2 },
+    { nome: 'EXP', quantidade: 9, isExp: true, expAmount: 500 },
+];
+assert.deepEqual(linhasDoItem(homonimo, 'EXP'), [0], 'so a linha de mesmo efeito');
+assert.equal(consumirUnidades(homonimo, 'EXP', 1).find(l => l.expAmount === 500).quantidade, 9,
+    'a linha de 500 EXP nao foi tocada');
+
+console.log('exp-item: linhas repetidas OK');

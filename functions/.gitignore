@@ -4,3 +4,4 @@ backup-*.json
 
 # Backup da faxina de itens orfaos (11 MB) — regeneravel a partir do proprio banco
 _backup-items-*.json
+_backup-inv-*.json

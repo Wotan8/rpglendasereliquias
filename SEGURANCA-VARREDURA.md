@@ -687,12 +687,29 @@ jogador simplesmente não tem o campo. Tratar zero e ausente como coisas
 diferentes partiria **19 das 30** linhas em duas na próxima recompra. Zero e
 ausente agora são a mesma coisa, e o caso está no teste.
 
-**Fica um resíduo de 3 linhas**, e é decisão sua: "Re-rolagem", "Desejo
-Narrativo" e "EXP" são linhas gravadas ANTES de o catálogo ganhar as flags de
-efeito. Elas não concedem nada hoje (o servidor recusa aplicar EXP de uma linha
-sem `isExp`), e ao recomprar vão abrir uma linha nova, que funciona. Não
-estampei as flags nelas de propósito: seria conceder benefício que hoje não
-existe, e isso é decisão de mesa. Se quiser, eu corrijo as três.
+**As 3 linhas legadas foram corrigidas em 01/09/2026**, com backup antes:
+"Re-rolagem" e "Desejo Narrativo" (só etiqueta — o saldo de re-rolagem e os
+giros são creditados na compra, não na linha) e "EXP" ×2 do criador, que passou
+a valer 4 EXP aplicáveis. As 30 linhas que casam com o catálogo agora carregam
+`itemId`; as 13 que não casam continuam como estão, e é o certo — são prêmio,
+devolução do mestre e EXP de encerramento, que não têm item de catálogo.
+
+### O bug que apareceu na conferência
+
+Ao verificar o resultado, o inventário do criador mostrou **três linhas "EXP"
+separadas** (2, 1 e 1) — o painel do mestre acrescenta item ao Repertório sem
+empilhar. Isso expôs um defeito antigo em
+[exp-item.js](functions/exp-item.js), independente do item 11:
+
+- `disponivel` era lido da **primeira** linha encontrada. Quem tinha 4 unidades
+  em três linhas só conseguia aplicar 2.
+- `consumirUnidades` subtraía a quantidade pedida de **cada** linha com aquele
+  nome. Gastar **1** unidade das 4 deixava **1**: duas unidades de EXP pago
+  evaporavam em silêncio.
+
+Agora linhas iguais são um poço só: soma para saber quanto há, consome em
+ordem, e homônimo com outro efeito não entra no poço. Medido antes e depois —
+com 3 linhas (2,1,1), gastar 1 deixava 1 unidade; agora deixa 3.
 
 ---
 
