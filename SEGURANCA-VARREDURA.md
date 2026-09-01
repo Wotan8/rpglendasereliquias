@@ -392,11 +392,13 @@ campo `nome`, e aqueles documentos usam o esquema antigo em inglês (`name`,
 da era antiga, todos do criador e nenhum preso a ficha. Foram apagados com a
 descrição certa na mesa, não com a errada.
 
-Estado final de `items`: 305 documentos — 62 de personagem, 228 de NPC, 14 na
-Caixa do Mestre e **1 órfão**, o container "Saco de Luns Simples", preservado
-na primeira faxina por ter item vivo dentro. Esse item era justamente um dos 14,
-então hoje o saco está vazio e não há mais razão para mantê-lo. Nenhum item
-aponta para container inexistente.
+O último órfão saiu em seguida: o container "Saco de Luns Simples", preservado
+na primeira faxina por ter item vivo dentro — e esse item era justamente um dos
+14, então o saco ficou vazio e a razão de mantê-lo acabou.
+
+**Estado final de `items`: 304 documentos** — 62 de personagem, 228 de NPC, 14
+na Caixa do Mestre, **zero órfãos**, zero sem `characterId`, zero apontando
+para container inexistente. A coleção saiu de 436 e ficou inteira.
 
 ---
 
