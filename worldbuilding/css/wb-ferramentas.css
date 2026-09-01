@@ -256,7 +256,12 @@ body.wbt-focus .wbt-etoolbar { justify-content: flex-end; }
 .wbt-modal.active { display: grid; }
 .wbt-modal__content { position: relative; width: min(560px, 92vw); max-height: 84vh; overflow-y: auto; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-gold); border-radius: var(--lr-radius); padding: var(--lr-space-5) var(--lr-space-5); }
 .wbt-modal__close { position: absolute; top: .7rem; right: .8rem; }
-.wbt-modal h2 { margin: .2rem 0 var(--lr-space-2); font-family: var(--lr-font-title); color: var(--lr-gold); }
+/* `>` de proposito: como `.wbt-modal h2`, esta regra pegava TODO h2 dentro
+   do modal — inclusive o do texto que o modal esta mostrando. A amostra da
+   aba Aparencia so mentia por isso: o titulo dela vinha dourado por cima da
+   cor que o autor tinha acabado de escolher. E o titulo DO MODAL, nao
+   qualquer titulo que passe por dentro dele. */
+.wbt-modal #wbToolModalBody > h2 { margin: .2rem 0 var(--lr-space-2); font-family: var(--lr-font-title); color: var(--lr-gold); }
 .wbt-kind { text-transform: uppercase; letter-spacing: .1em; font-size: var(--lr-fs-xs); color: var(--lr-arcane); }
 .wbt-desc { color: var(--lr-text-1); line-height: var(--lr-lh-body); }
 .wbt-entity-head { display: flex; gap: var(--lr-space-4); align-items: center; }
@@ -824,4 +829,33 @@ body.wbml-aberto .wb-nav-backdrop { display: none; }
     border-top: var(--lr-border-w) solid var(--lr-border);
     padding: var(--lr-space-3); max-height: 34vh; overflow-y: auto;
     font-size: .88rem; background: var(--lr-surface);
+}
+
+/* ── Aba 🎨 Aparência do livro ─────────────────────────────
+   Controles à esquerda, amostra à direita e grudada: mexer na fonte e ter
+   de rolar para ver o efeito é o que faz ninguém mexer. */
+.wb-estilo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--lr-space-4); align-items: start; }
+.wb-estilo__campos { display: flex; flex-direction: column; gap: var(--lr-space-3); }
+.wb-estilo__campos label { font-size: var(--lr-fs-xs); }
+.wb-estilo__campos output { color: var(--lr-gold); font-weight: 600; margin-left: var(--lr-space-1); }
+.wb-estilo__campos input[type=range] { width: 100%; accent-color: var(--lr-gold); }
+/* Campo nunca tocado: <input type=color> nao tem estado vazio, entao a
+   marca `data-vazio` e o unico jeito de o formulario mostrar "e o padrao
+   do site, nao esta cor". Sem isso, abrir a aba ja carimbaria uma cor. */
+.wb-estilo__campos [data-vazio] { opacity: .4; }
+.wb-estilo__cor { display: flex; align-items: center; gap: var(--lr-space-2); }
+.wb-estilo__cor input[type=color] { width: 2.6rem; height: 1.8rem; padding: 0; border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); background: none; cursor: pointer; }
+
+.wb-estilo__amostra { position: sticky; top: 0; display: flex; flex-direction: column; gap: var(--lr-space-2); }
+.wb-estilo__amostra .texto-mundo {
+    border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius);
+    padding: var(--lr-space-3); max-height: 46vh; overflow: auto; font-size: .8rem;
+}
+/* A amostra herda `padding` do papel escolhido; aqui ela e uma miniatura
+   dentro de um modal, entao o proprio quadro ja da a margem. */
+.wb-estilo__amostra .texto-mundo:where([style*="--tm-fundo"]) { padding: var(--lr-space-4); }
+
+@media (max-width: 640px) {
+    .wb-estilo { grid-template-columns: 1fr; }
+    .wb-estilo__amostra { position: static; }
 }

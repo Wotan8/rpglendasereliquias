@@ -16,13 +16,38 @@
    e é aqui que elas ganham aparência. Mexeu aqui, mudou em todo lugar.
    ===================================================================== */
 
+/* ── A aparencia que o livro escolheu ─────────────────────
+   Cada valor abaixo passa por uma `--tm-*` com o valor de sempre como
+   PADRAO. Livro sem aparencia escolhida nao emite variavel nenhuma e cai
+   exatamente no que este arquivo desenhava antes — nenhum dos livros que
+   ja existem precisa migrar. Quem preenche as variaveis e o container,
+   por `estiloDoLivro()` em shared/livro-estilo.js. */
 .texto-mundo {
-    font-family: var(--lr-font-subtitle);
-    font-size: var(--lr-fs-lg);
-    line-height: var(--lr-lh-body);
-    color: var(--lr-text-1);
+    font-family: var(--tm-fonte, var(--lr-font-subtitle));
+    font-size: var(--tm-tamanho, var(--lr-fs-lg));
+    line-height: var(--tm-entrelinha, var(--lr-lh-body));
+    color: var(--tm-cor, var(--lr-text-1));
     overflow-wrap: break-word;
 }
+
+/* O papel. Sem cor e sem imagem escolhidas, `transparent` e `none` deixam
+   o container como ele sempre foi — de fundo herdado da tela. A imagem
+   repete em ladrilho: textura de papel e trama, nao ilustracao. */
+.texto-mundo {
+    background-color: var(--tm-fundo, transparent);
+    background-image: var(--tm-fundo-img, none);
+    background-repeat: repeat;
+}
+/* So quem tem papel proprio ganha margem — senao o texto encostaria na
+   borda da cor. Sem papel, zero, e nada muda para os livros de hoje. */
+.texto-mundo:where([style*="--tm-fundo"]) {
+    padding: clamp(1rem, 4vw, 2.5rem);
+    border-radius: var(--lr-radius);
+}
+
+/* Largura da mancha. `none` por padrao: quem limita hoje e a tela que
+   hospeda (o editor tem 72ch proprio), e tirar isso mudaria as cinco. */
+.texto-mundo { max-width: var(--tm-largura, none); }
 
 /* ── Blocos ──────────────────────────────────────────────── */
 .texto-mundo p { margin: 0 0 .9em; }
@@ -32,20 +57,23 @@
 .texto-mundo h2,
 .texto-mundo h3,
 .texto-mundo h4 {
-    font-family: var(--lr-font-title);
+    font-family: var(--tm-fonte-titulo, var(--lr-font-title));
     letter-spacing: var(--lr-track-title);
     line-height: var(--lr-lh-tight);
-    color: var(--lr-gold);
+    color: var(--tm-cor-titulo, var(--lr-gold));
     margin: 1.4em 0 .5em;
 }
 
-.texto-mundo h1 { font-size: 1.7em; color: var(--lr-gold-2); }
+/* Os tres tons de ouro dos titulos viram UM so quando o autor escolhe cor:
+   manter h1 dourado-2 e h4 bronze por baixo de uma cor escolhida daria
+   tres cores onde ele pediu uma. */
+.texto-mundo h1 { font-size: 1.7em; color: var(--tm-cor-titulo, var(--lr-gold-2)); }
 .texto-mundo h2 { font-size: 1.35em; }
-.texto-mundo h3 { font-size: 1.12em; color: var(--lr-gold-2); }
-.texto-mundo h4 { font-size: 1em; color: var(--lr-bronze); text-transform: uppercase; }
+.texto-mundo h3 { font-size: 1.12em; color: var(--tm-cor-titulo, var(--lr-gold-2)); }
+.texto-mundo h4 { font-size: 1em; color: var(--tm-cor-titulo, var(--lr-bronze)); text-transform: uppercase; }
 
 .texto-mundo blockquote {
-    border-left: 3px solid var(--lr-bronze);
+    border-left: 3px solid var(--tm-cor-destaque, var(--lr-bronze));
     margin: 1.2em 0;
     padding: .3em 1.1em;
     color: var(--lr-text-2);
@@ -61,7 +89,7 @@
     height: 1px;
     margin: 1.8em auto;
     width: 60%;
-    background: linear-gradient(90deg, transparent, var(--lr-bronze), transparent);
+    background: linear-gradient(90deg, transparent, var(--tm-cor-destaque, var(--lr-bronze)), transparent);
 }
 
 .texto-mundo pre {
@@ -101,11 +129,11 @@
 /* Capitular — primeira letra grande, para abrir um capítulo */
 .texto-mundo .tm-capitular::first-letter {
     float: left;
-    font-family: var(--lr-font-title);
+    font-family: var(--tm-fonte-titulo, var(--lr-font-title));
     font-size: 3.2em;
     line-height: .82;
     padding: .05em .12em 0 0;
-    color: var(--lr-gold);
+    color: var(--tm-cor-titulo, var(--lr-gold));
 }
 
 /* Alinhamento sai como `style="text-align:…"` inline (execCommand) — é

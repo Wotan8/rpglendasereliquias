@@ -24,6 +24,7 @@ import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND, pool
 import { dossieHTML } from './wb-dossie.js';
 import { TOOLBAR_HTML, bindRich } from './wb-rich.js';
 import { PUBLICACOES, pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
+import { ESTILO_CAMPOS, FONTES, estiloDoLivro, estiloInline, estiloDoLivro_obj } from '../../shared/livro-estilo.js';
 import { confirmar } from '../../shared/dialogo.js?v=2';
 
 export const Editor = (() => {
@@ -520,8 +521,37 @@ export const Editor = (() => {
         </div>`;
     }
 
+    /* Um controle por campo de aparência. `est` é preenchido pelo
+       openBookModal antes de montar o HTML — a lista de campos mora em
+       shared/livro-estilo.js, junto de quem sabe virar CSS. */
+    let est = {};
+    function campoEstiloHTML(c) {
+        const v = String(est[c.k] ?? '');
+        const dica = c.dica ? `<span class="wbt-muted wb-bkhint">${esc(c.dica)}</span>` : '';
+        if (c.tipo === 'fonte') return `
+            <label>${c.label}
+                <select class="form-select" data-est="${c.k}">
+                    ${FONTES.map(([val, nome]) => `<option value="${esc(val)}" ${val === v ? 'selected' : ''} style="font-family:${esc(val) || 'inherit'}">${esc(nome)}</option>`).join('')}
+                </select>${dica}</label>`;
+        if (c.tipo === 'medida') return `
+            <label>${c.label} <output data-estout="${c.k}">${v ? esc(v) + (c.sufixo || '') : 'padrão'}</output>
+                <input type="range" data-est="${c.k}" min="${c.min}" max="${c.max}" step="${c.passo}" value="${v || (c.min + c.max) / 2}" ${v ? '' : 'data-vazio="1"'}>
+                ${dica}</label>`;
+        if (c.tipo === 'cor') return `
+            <label>${c.label}
+                <span class="wb-estilo__cor">
+                    <input type="color" data-est="${c.k}" value="${/^#[0-9a-f]{6}$/i.test(v) ? v : '#d4af37'}" ${v ? '' : 'data-vazio="1"'}>
+                    <button type="button" class="wbt-microbtn" data-estlimpa="${c.k}" title="Voltar ao padrão do site">padrão</button>
+                </span>${dica}</label>`;
+        return `
+            <label>${c.label}
+                ${CampoImagem.html({ id: 'bkEst_' + c.k, classe: 'form-input', valor: v, pasta: 'worldbuilding-images/papel' })}
+                ${dica}</label>`;
+    }
+
     function openBookModal(book = null) {
         const b = book || { id: uid('book'), title: '', description: '', cover: '', public: false, order: books.length };
+        est = { ...estiloDoLivro_obj(b) };
         const pub = pubDoLivro(book);   // livro novo nasce sem publicação nenhuma
         if (!book) Object.keys(pub).forEach(k => pub[k] = false);
         const caps = book ? chaptersOf(b.id) : [];
@@ -530,6 +560,7 @@ export const Editor = (() => {
             <div class="wbt-chips wb-bktabs" id="bkTabs">
                 <button type="button" class="wbt-chip is-active" data-bktab="geral">📖 Livro</button>
                 <button type="button" class="wbt-chip" data-bktab="pub">🌐 Publicação</button>
+                <button type="button" class="wbt-chip" data-bktab="estilo">🎨 Aparência</button>
                 ${caps.length ? `<button type="button" class="wbt-chip" data-bktab="caps">📑 Capítulos <b>${caps.length}</b></button>` : ''}
             </div>
             <div class="wbt-form wb-bkform">
@@ -559,6 +590,24 @@ export const Editor = (() => {
                                 <span><b>${label}</b><small>${esc(dica)}</small></span></label>`).join('')}
                     </div>
                     <p class="wbt-muted wb-bkhint">Isto vale para o LIVRO inteiro. Capítulo a capítulo, quem libera é a aba 📑 Capítulos — e quem tranca por requisito é a aba Conhecimento do Painel do Criador.</p>
+                </section>
+
+                <section data-bkpanel="estilo" hidden>
+                    <div class="wb-estilo">
+                        <div class="wb-estilo__campos">${ESTILO_CAMPOS.map(campoEstiloHTML).join('')}</div>
+                        <div class="wb-estilo__amostra">
+                            <span class="wb-bkgroup__tit">Amostra ao vivo</span>
+                            <div class="texto-mundo" id="bkAmostra">
+                                <h2>O Vale de Korr</h2>
+                                <p class="tm-capitular">A fornalha ainda guardava brasa quando Brida empurrou a porta. O frio de fora entrou junto com ela e assentou no chão de terra batida, como um cão que conhece o lugar.</p>
+                                <blockquote>Ferro não mente. Gente mente.</blockquote>
+                                <hr>
+                                <p>Três gerações trocaram a lança pelo malho, e ninguém de fora entrou sem convite — até o Consórcio comprar a mina.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="wbt-muted wb-bkhint">Vale para o livro inteiro e aparece IGUAL em toda tela que lê capítulo: ficha do jogador, Tabuleiro, Cronista público e aqui. Campo vazio = o padrão do site.
+                        <button type="button" class="btn btn-secondary btn-sm" id="bkEstiloZerar">↩ Voltar ao padrão</button></p>
                 </section>
 
                 ${caps.length ? `
@@ -600,6 +649,41 @@ export const Editor = (() => {
             document.querySelectorAll('.wb-bkform > section')
                 .forEach(s => s.hidden = s.dataset.bkpanel !== t.dataset.bktab);
         };
+
+        /* ── Aparência: o controle mexe em `est`, e `est` pinta a amostra ──
+           A amostra é um `.texto-mundo` de verdade com o mesmo atributo que
+           vai para a tela do jogador — então o que o autor vê aqui é o que
+           o jogador vê lá, e não uma imitação que envelhece à parte. */
+        const pintarAmostra = () => {
+            const alvo = $('#bkAmostra'); if (!alvo) return;
+            alvo.setAttribute('style', estiloInline({ estilo: est }));
+        };
+        document.querySelector('[data-bkpanel="estilo"]').addEventListener('input', (e) => {
+            const el = e.target.closest('[data-est]'); if (!el) return;
+            el.removeAttribute('data-vazio');
+            est[el.dataset.est] = el.value;
+            const campo = ESTILO_CAMPOS.find(c => c.k === el.dataset.est);
+            const out = document.querySelector(`[data-estout="${el.dataset.est}"]`);
+            if (out) out.textContent = el.value + (campo?.sufixo || '');
+            pintarAmostra();
+        });
+        document.querySelectorAll('[data-estlimpa]').forEach(btn => btn.onclick = () => {
+            const k = btn.dataset.estlimpa;
+            delete est[k];
+            document.querySelector(`[data-est="${k}"]`)?.setAttribute('data-vazio', '1');
+            pintarAmostra();
+        });
+        $('#bkEstiloZerar').onclick = () => {
+            est = {};
+            document.querySelectorAll('[data-est]').forEach(el => {
+                el.setAttribute('data-vazio', '1');
+                if (el.tagName === 'SELECT') el.value = '';
+                if (el.type === 'text' || el.type === 'url') el.value = '';
+            });
+            document.querySelectorAll('[data-estout]').forEach(o => o.textContent = 'padrão');
+            pintarAmostra();
+        };
+        pintarAmostra();
 
         /* Ações em massa dos capítulos — valem só para o que está marcado. */
         if (caps.length) {
@@ -710,6 +794,17 @@ export const Editor = (() => {
             b.description = $('#bkDesc').value.trim();
             b.cover = $('#bkCover').value.trim();
             b.pub = Object.fromEntries(PUBLICACOES.map(([k]) => [k, document.querySelector(`[data-bkpub="${k}"]`).checked]));
+            /* Campo com `data-vazio` nunca foi tocado: um <input type=color>
+               não tem estado "vazio", ele sempre devolve uma cor. Sem essa
+               marca, abrir a aba e sair já carimbaria preto em tudo. */
+            b.estilo = {};
+            for (const c of ESTILO_CAMPOS) {
+                const el = c.tipo === 'imagem'
+                    ? document.getElementById('bkEst_' + c.k)
+                    : document.querySelector(`[data-est="${c.k}"]`);
+                const v = String(el?.value ?? '').trim();
+                if (v && !el.hasAttribute('data-vazio')) b.estilo[c.k] = v;
+            }
             // `public` continua gravado só para o legado: uma vez que `pub` existe no
             // doc, é ele que manda em toda leitura (shared/livros-pub.js).
             b.public = !!(b.pub.geral || b.pub.conhGeral || b.pub.conhVinculo);
@@ -838,7 +933,7 @@ export const Editor = (() => {
                 <!-- Colada no texto e grudada no topo quando a página rola. -->
                 <div class="wbt-toolbar wb-richbar" id="richToolbar">${TOOLBAR_HTML}</div>
 
-                <div id="richEditor" class="wbt-rich texto-mundo" contenteditable="${lendo ? 'false' : 'true'}"
+                <div id="richEditor" class="wbt-rich texto-mundo"${estiloDoLivro(books.find(x => x.id === a.bookId))} contenteditable="${lendo ? 'false' : 'true'}"
                      data-placeholder="Escreva aqui. Digite @ para vincular NPCs, Tribos, Locais ou eventos…">${a.contentHTML || ''}</div>
                 <p class="wbt-muted" id="editorStatus"></p>
                 ${navCapsHTML()}

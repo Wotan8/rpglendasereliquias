@@ -52,6 +52,14 @@
     const _pub = import('/shared/livros-pub.js')
         .then(pub => { versaoDoLivro = pub.versaoDoLivro; return pub; })
         .catch(e => { console.warn('📖 livros-pub:', e); return null; });
+
+    /* A aparência do livro chega pelo mesmo caminho, e pelo mesmo motivo.
+       Enquanto não chega, devolve '' — que é exatamente o livro sem
+       aparência escolhida, então uma falha aqui não desfigura nada. */
+    let estiloDoLivro = () => '';
+    const _est = import('/shared/livro-estilo.js')
+        .then(m => { estiloDoLivro = m.estiloDoLivro; return m; })
+        .catch(e => { console.warn('📖 livro-estilo:', e); return null; });
     const seloVersao = (l, estilo) => {
         const v = versaoDoLivro(l);
         return v ? `<span style="${estilo}">🔖 ${esc(v)}</span>` : '';
@@ -62,6 +70,7 @@
             const [{ collection, getDocs }] = await Promise.all([
                 import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js'),
                 _pub,     // o selo já está sendo carregado desde o topo do arquivo
+                _est,     // e a aparência do livro, junto
             ]);
             const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
             const [bSnap, aSnap, eSnap] = await Promise.all([

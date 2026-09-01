@@ -12,6 +12,7 @@
      portal:deslogado → mostra o convite de login
    ===================================================================== */
 import { pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
+import { estiloInline } from '../../shared/livro-estilo.js';
 
 let livros = [];        // [{id, title, description, cover, capitulos:[...]}]
 let estantes = [];      // as mesmas do Escritório do Cronista (worldbuilding-settings/estantes)
@@ -125,6 +126,9 @@ window.wikiAbrirCap = function (i, marcar) {
     const l = livros[livroAberto];
     capAberto = Math.max(0, Math.min(i, l.capitulos.length - 1));
     const corpo = $('leitorCorpo');
+    // O container e um <article> fixo no index.html, entao a aparencia entra
+    // por setAttribute — e para isso o helper tem a forma sem o `style="`.
+    corpo.setAttribute('style', estiloInline(l));
     corpo.innerHTML = l.capitulos[capAberto].contentHTML || '';
     if (marcar) destacar(corpo, marcar);
 

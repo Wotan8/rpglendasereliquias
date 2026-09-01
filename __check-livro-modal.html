@@ -13,9 +13,9 @@
 <link rel="stylesheet" href="shared/sanfona.css">
 <link rel="stylesheet" href="shared/acervo.css">
 <link rel="stylesheet" href="shared/dialogo.css">
-<link rel="stylesheet" href="shared/texto-mundo.css">
+<link rel="stylesheet" href="shared/texto-mundo.css?v=2">
 <link rel="stylesheet" href="worldbuilding/css/worldbuilding.css?v=2">
-<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=16">
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=18">
 <script src="shared/theme.js"></script>
 <script src="shared/campo-imagem.js?v=2"></script>
 
@@ -30,7 +30,7 @@
 <script type="importmap">
 { "imports": {
     "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=5",
-    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=5"
+    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=6"
 } }
 </script>
 
@@ -78,7 +78,9 @@ const abrirCog = () => $('[data-editbook="b1"]').click();
 const espera = (ms = 80) => new Promise(r => setTimeout(r, ms));
 // Salvamento deliberado (o mesmo caminho do botao 💾) e volta a Biblioteca.
 const save2 = async () => { $('#saveArticle').click(); await espera(200); };
-const voltarBiblioteca = async () => { $('#backLib').click(); await espera(250); };
+// Tolerante a ja estar na Biblioteca: os blocos de teste rodam em sequencia
+// e nem todos terminam dentro do editor.
+const voltarBiblioteca = async () => { $('#backLib')?.click(); await espera(250); };
 $('#chkAbrir').onclick = abrirCog;
 
 $('#chkRun').onclick = async () => {
@@ -353,16 +355,81 @@ $('#chkRun').onclick = async () => {
     await espera(4300);
     t('religado, volta a gravar sozinho', GRAVADO.some(g => g.col === 'worldbuilding-articles'));
 
+    // ── Aparencia do livro ──
+    // A essa altura o teste esta DENTRO do editor: volta e reabre o ⚙️.
+    await voltarBiblioteca();
+    abrirCog();
+    $('[data-bktab="estilo"]').click();
+    const amostra = $('#bkAmostra');
+    t('a aba Aparencia tem a amostra', !!amostra);
+    t('livro sem aparencia nao emite variavel', (amostra.getAttribute('style') || '') === '');
+
+    const corpo = document.querySelector('[data-est="fonteTexto"]');
+    corpo.value = "'Inter', system-ui, sans-serif";
+    corpo.dispatchEvent(new Event('input', { bubbles: true }));
+    t('escolher fonte pinta a amostra na hora', amostra.getAttribute('style').includes('--tm-fonte:'));
+
+    const larg = document.querySelector('[data-est="largura"]');
+    larg.value = '68'; larg.dispatchEvent(new Event('input', { bubbles: true }));
+    t('a medida entra com o sufixo', amostra.getAttribute('style').includes('--tm-largura:68ch'));
+    t('o numero aparece ao lado do controle', document.querySelector('[data-estout="largura"]').textContent === '68ch');
+
+    const cor = document.querySelector('[data-est="corTitulo"]');
+    t('cor nunca tocada nasce marcada como vazia', cor.hasAttribute('data-vazio'));
+    cor.value = '#88ccff'; cor.dispatchEvent(new Event('input', { bubbles: true }));
+    t('tocar na cor tira a marca de vazia', !cor.hasAttribute('data-vazio'));
+
+    // A aspa simples segura o nome de familia com espaco — cortar ela
+    // quebraria toda pilha de fonte serifada.
+    const fTit = document.querySelector('[data-est="fonteTitulo"]');
+    fTit.value = "'Cormorant Garamond', Georgia, serif";
+    fTit.dispatchEvent(new Event('input', { bubbles: true }));
+    // A amostra so vale como amostra se NADA da tela vencer o que o autor
+    // escolheu — `.wbt-modal h2` vencia, e ela mentia a cor do titulo.
+    const corH2 = document.querySelector('[data-est="corTitulo"]');
+    corH2.value = '#8b1e1e'; corH2.dispatchEvent(new Event('input', { bubbles: true }));
+    t('nada da tela vence a cor de titulo da amostra',
+        getComputedStyle(amostra.querySelector('h2')).color === 'rgb(139, 30, 30)');
+    t('a pilha de fonte sobrevive inteira',
+        amostra.getAttribute('style').includes("--tm-fonte-titulo:'Cormorant Garamond', Georgia, serif"));
+
+    GRAVADO.length = 0;
+    await $('#bkSave').onclick();
+    const est = GRAVADO.find(g => g.col === 'worldbuilding-books').data.estilo;
+    t('grava so o que foi tocado',
+        !!est.fonteTexto && !!est.largura && !!est.corTitulo && est.corTexto === undefined);
+    t('a medida vai ao banco SEM o sufixo', est.largura === '68');
+
+    // Reabrir tem de trazer de volta o que foi escolhido.
+    abrirCog();
+    $('[data-bktab="estilo"]').click();
+    t('reabrir traz a aparencia de volta',
+        $('#bkAmostra').getAttribute('style').includes('--tm-largura:68ch'));
+    $('#bkEstiloZerar').click();
+    t('Voltar ao padrao limpa tudo', ($('#bkAmostra').getAttribute('style') || '') === '');
+    GRAVADO.length = 0;
+    await $('#bkSave').onclick();
+    t('zerado, o livro grava estilo vazio',
+        Object.keys(GRAVADO.find(g => g.col === 'worldbuilding-books').data.estilo).length === 0);
+
     // ── Janela de imagem: centrada, e o tipo carimbado pela extensao ──
     CampoImagem.escolher({ titulo: 'Inserir imagem', pasta: 'worldbuilding-images' });
     await espera(120);
     const dlg = document.querySelector('dialog.ci-dlg');
+    /* `* { margin: 0 }` do worldbuilding.css apaga o `margin: auto` do
+       navegador e joga o <dialog> modal no canto. O componente repoe o auto
+       na propria regra dele — e e a REGRA que se afirma aqui, nao a
+       geometria: medir o centro exige viewport, e o painel do navegador as
+       vezes roda com 0x0, o que faria a conta mentir os dois jeitos. */
+    const regraDlg = [...document.styleSheets]
+        .flatMap(f => { try { return [...f.cssRules]; } catch { return []; } })
+        .find(r => r.selectorText === 'dialog.ci-dlg');
+    t('a janela de imagem repoe o margin:auto que o reset apagou',
+        !!regraDlg && regraDlg.style.margin === 'auto');
     const cx = dlg.getBoundingClientRect();
-    // `* { margin: 0 }` do worldbuilding.css apaga o margin:auto do navegador
-    // e joga o <dialog> modal no canto. O componente repoe o auto.
-    t('a janela de imagem abre centrada',
-        Math.abs((cx.left + cx.right) / 2 - innerWidth / 2) < 4
-        && Math.abs((cx.top + cx.bottom) / 2 - innerHeight / 2) < 4);
+    t('e com viewport de verdade, ela abre no centro',
+        innerWidth < 10 || (Math.abs((cx.left + cx.right) / 2 - innerWidth / 2) < 4
+            && Math.abs((cx.top + cx.bottom) / 2 - innerHeight / 2) < 4));
     dlg.querySelector('[data-ci-cancel]').click();
     // .jfif e a extensao que o Chrome da a um JPEG salvo no Windows, e o
     // seletor as vezes nao devolve type nenhum — ai a regra do Storage nega

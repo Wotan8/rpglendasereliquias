@@ -17,6 +17,7 @@
 import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { statusDoCapitulo } from './conhecimento-calc.js';
 import { pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
+import { estiloDoLivro } from '../../shared/livro-estilo.js';
 
 let _carregado = false;
 let _livros = [], _capitulos = [], _regras = {};
