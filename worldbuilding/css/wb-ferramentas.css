@@ -139,6 +139,46 @@
 .wb-rich-cor { display: inline-flex; align-items: center; gap: .2rem; background: var(--lr-surface); border: var(--lr-border-w) solid var(--lr-border); border-radius: var(--lr-radius-sm); padding: .15rem var(--lr-space-1); cursor: pointer; font-size: var(--lr-fs-sm); }
 .wb-rich-cor input { width: 22px; height: 22px; border: none; background: none; padding: 0; cursor: pointer; }
 
+/* ── 🔗 Janela do campo vinculado ──────────────────────────
+   Duas colunas: acha a entidade à esquerda, escolhe o campo à direita. Lado
+   a lado e nao em duas etapas — escolher o campo certo depende de VER o
+   valor que ele tem hoje, e uma lista que vira outra lista esconde isso. */
+.wbt-modal__content:has(.wb-cv) { width: min(880px, 96vw); }
+.wb-cv { display: flex; flex-direction: column; gap: var(--lr-space-2); }
+.wb-cv__topo { display: flex; align-items: center; gap: var(--lr-space-3); }
+.wb-cv__topo .form-input { flex: 1; min-width: 0; }
+.wb-cv__topo .wbt-muted { flex: 0 0 auto; font-size: var(--lr-fs-xs); white-space: nowrap; }
+.wb-cv__tipos { gap: var(--lr-space-1); }
+
+.wb-cv__colunas {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--lr-space-3); align-items: start;
+}
+.wb-cv__lista, .wb-cv__campos {
+    display: flex; flex-direction: column; gap: var(--lr-space-1);
+    height: 46vh; overflow-y: auto;
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius); padding: var(--lr-space-2);
+    background: var(--lr-bg-1);
+}
+.wb-cv .wbt-pick { display: flex; align-items: baseline; gap: var(--lr-space-2); }
+.wb-cv .wbt-pick.is-on { border-color: var(--lr-gold); background: var(--lr-gold-soft); }
+.wb-cv__ico { flex: 0 0 auto; }
+.wb-cv__nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-cv__campos .wbt-pick { flex-direction: column; align-items: stretch; gap: 2px; }
+.wb-cv__campos .wbt-muted { font-size: var(--lr-fs-xs); overflow-wrap: anywhere; }
+.wb-cv__cab {
+    display: flex; align-items: center; gap: var(--lr-space-2); flex-wrap: wrap;
+    padding-bottom: var(--lr-space-2); margin-bottom: var(--lr-space-1);
+    border-bottom: var(--lr-border-w) solid var(--lr-border);
+    position: sticky; top: 0; background: var(--lr-bg-1);
+}
+@media (max-width: 720px) {
+    /* Empilhado, cada coluna precisa caber junto com a outra na tela. */
+    .wb-cv__colunas { grid-template-columns: 1fr; }
+    .wb-cv__lista, .wb-cv__campos { height: 32vh; }
+}
+
 /* ── Estado aceso na barra ─────────────────────────────────
    O controle diz o que ESTÁ aplicado. Sem isto o autor escolhe "Carta", o
    <select> volta ao rótulo e nada na tela conta que o parágrafo mudou — e aí

@@ -208,6 +208,20 @@ export function definirLarg(fig, pct) {
    Escritorio (wb-utils/ecossistema), e a mesa de diagramacao nao precisa
    conhecer o ecossistema para saber inserir um <span>. Sem ela, o botao do
    campo vinculado simplesmente nao faz nada. */
+/* A mesa que está ligada AGORA. Ouvinte no `document` tem de ser registrado
+   uma vez por MÓDULO, não uma vez por bindRich: o editor rebinda a cada
+   capítulo aberto, e um ouvinte por abertura vira uma pilha que só cresce.
+   Com `selectionchange` — que dispara a cada movimento do cursor — a pilha
+   deixou a suíte de teste rastejando antes de eu perceber o que era. */
+let _vivo = null;
+document.addEventListener('selectionchange', () => {
+    if (!_vivo) return;
+    if (_vivo.ed.contains(document.getSelection()?.anchorNode)) _vivo.pintarEstado();
+});
+document.addEventListener('click', (e) => {
+    if (_vivo && !_vivo.menuAlin.contains(e.target)) _vivo.listaAlin.hidden = true;
+});
+
 export function bindRich(ed, toolbar, onChange, opts = {}) {
     // Sem isto o Chrome ainda escreve <font color> em vez de style="color:…",
     // e a faxina (que só aceita style) jogaria a cor do autor fora.
@@ -596,9 +610,7 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
         pintarEstado();
         avisar();
     });
-    document.addEventListener('click', (e) => {
-        if (!menuAlin.contains(e.target)) listaAlin.hidden = true;
-    });
+    _vivo = { ed, menuAlin, listaAlin, pintarEstado: () => pintarEstado() };
 
     /* ── Estado visível ─────────────────────────────────────
        O menu tem de dizer o que ESTÁ aplicado. Sem isto, o autor escolhe
@@ -661,13 +673,11 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
         toolbar.querySelector('[data-rich="tirabloco"]')
             .classList.toggle('is-on', !!temBlocoAqui(no));
     }
-    /* Espelha o cursor: teclado e clique. `selectionchange` no documento
-       porque a seta que anda entre parágrafos não dispara nem um nem outro. */
+    /* Espelha o cursor: teclado e clique. O `selectionchange` mora no
+       DOCUMENTO, e por isso é registrado uma vez só (ver `_vivo` no topo) —
+       a seta que anda entre parágrafos não dispara keyup nem click. */
     ed.addEventListener('keyup', pintarEstado);
     ed.addEventListener('click', pintarEstado);
-    document.addEventListener('selectionchange', () => {
-        if (ed.contains(document.getSelection()?.anchorNode)) pintarEstado();
-    });
 
     toolbar.querySelector('[data-rich="cor"]').addEventListener('input', (e) => {
         ed.focus();

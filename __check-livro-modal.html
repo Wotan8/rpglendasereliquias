@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="shared/dialogo.css">
 <link rel="stylesheet" href="shared/texto-mundo.css?v=9">
 <link rel="stylesheet" href="worldbuilding/css/worldbuilding.css?v=2">
-<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=24">
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=25">
 <script src="shared/theme.js"></script>
 <script src="shared/campo-imagem.js?v=2"></script>
 
@@ -34,11 +34,11 @@
      instancia que o editor enxerga, senao GRAVADO fica vazio. -->
 <script type="importmap">
 { "imports": {
-    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=16",
-    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=16",
-    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=16",
-    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=16",
-    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=16"
+    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=19",
+    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=19",
+    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=19",
+    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=19",
+    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=19"
 } }
 </script>
 
@@ -75,7 +75,7 @@
 </div>
 
 <script type="module">
-import { GRAVADO } from './__check-stub-firestore.js?v=16';
+import { GRAVADO } from './__check-stub-firestore.js?v=19';
 import { Editor } from './worldbuilding/js/wb-editor.js';
 
 window.WB = { data: {}, user: { email: 'check@harness' } };
@@ -87,7 +87,7 @@ const espera = (ms = 80) => new Promise(r => setTimeout(r, ms));
 /* Modulo com query e outro modulo para o navegador. Sem isso o harness roda
    o que ficou no cache — ja aconteceu duas vezes aqui. UM token para todos
    os `import()` de shared/, subido a cada mexida. */
-const CB = '?h=10';
+const CB = '?h=13';
 // Salvamento deliberado (o mesmo caminho do botao 💾) e volta a Biblioteca.
 const save2 = async () => { $('#saveArticle').click(); await espera(200); };
 // Tolerante a ja estar na Biblioteca: os blocos de teste rodam em sequencia
@@ -1165,6 +1165,72 @@ $('#chkRun').onclick = async () => {
     // O botao aceso e o botao que faz: uma definicao so para os dois.
     t('⊘ apagado nao tem o que tirar',
         !!barraFmt.querySelector('[data-rich="tirabloco"]'));
+
+    // ── 🔗 A janela do campo vinculado, sobre TODO o banco ──
+    // Antes ela alcançava 11 categorias de lore e mecânica. O pedido era
+    // "QUALQUER COISA cadastrada no banco".
+    const FC = CV.FONTES_CAMPO;
+    t('o registro passou de 11 para mais de 20 cadastros', Object.keys(FC).length >= 20);
+    for (const k of ['peculiarities', 'bodyParts', 'derivedValues', 'mechanics', 'skills',
+                     'equipment', 'spells', 'conditions', 'classModules', 'runicElements',
+                     'vitalStats', 'maneuvers', 'auras', 'itemRules', 'castingForms',
+                     'lineages', 'books', 'articles', 'tribesMec']) {
+        t(`o banco alcança ${k}`, !!FC[k] && !!FC[k].col);
+    }
+    // Tribo mecânica ganhou categoria PRÓPRIA: fundida em factions, o
+    // resolvedor procurava o id do Criador em worldbuilding-factions, não
+    // achava, e o token acendia "objeto não encontrado" numa tribo que existe.
+    t('tribo mecânica não é mais confundida com a de lore',
+        FC.tribesMec.col === 'system/data/tribes' && FC.factions.col === 'worldbuilding-factions');
+    // Três jeitos de guardar o nome no banco. Sem isto a lista sairia com uma
+    // coluna de "(sem nome)" justamente nos cadastros novos.
+    t('nome sai de `nome`', CV.nomeDe('races', { nome: 'Elorin' }) === 'Elorin');
+    t('nome sai de `titulo` (módulo de classe)', CV.nomeDe('classModules', { titulo: 'Senda' }) === 'Senda');
+    t('nome sai de `title` (livro e capítulo)', CV.nomeDe('books', { title: 'Crônicas' }) === 'Crônicas');
+    t('entidade sem nome nenhum não vira string vazia', CV.nomeDe('races', {}) === '(sem nome)');
+    t('toda categoria tem grupo, para os chips',
+        Object.values(FC).every(f => !!f.grupo));
+
+    await voltarBiblioteca();
+    document.querySelector('[data-estante="__todas"] details').open = true;
+    $('[data-openart="a1"]').click();
+    await espera(300);
+    barraFmt.querySelector('[data-rich="campo"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await espera(600);   // as categorias chegam em ondas
+    t('a janela abre com busca, tipos e DUAS colunas',
+        !!$('#cvBusca') && !!$('#cvTipos') && !!$('#cvLista') && !!$('#cvCampos'));
+    t('os chips são por grupo, não 26 chips',
+        $('#cvTipos').querySelectorAll('[data-cvg]').length <= 5);
+    t('e a janela conta o que achou', /\d+ encontrados/.test($('#cvConta').textContent));
+
+    $('#cvBusca').value = 'Couro'; $('#cvBusca').dispatchEvent(new Event('input'));
+    await espera(120);
+    const achouPec = [...$('#cvLista').querySelectorAll('.wbt-pick')]
+        .some(b => b.textContent.includes('Couro Endurecido'));
+    t('acha uma PECULIARIDADE — que antes não existia na busca', achouPec);
+
+    $('#cvBusca').value = 'Senda'; $('#cvBusca').dispatchEvent(new Event('input'));
+    await espera(120);
+    t('acha um MÓDULO DE CLASSE pelo `titulo`',
+        $('#cvLista').textContent.includes('Senda do Ferreiro'));
+
+    $('#cvBusca').value = 'Iniciativa'; $('#cvBusca').dispatchEvent(new Event('input'));
+    await espera(120);
+    $('#cvLista').querySelector('.wbt-pick').click();
+    await espera(80);
+    t('escolher a entidade mostra os campos DELA ao lado, sem trocar de tela',
+        !!$('#cvLista').querySelector('.wbt-pick') && $('#cvCampos').textContent.includes('formula'));
+    t('e o campo mostra o valor de hoje', $('#cvCampos').textContent.includes('DES + PRE'));
+
+    // O filtro por grupo estreita sem apagar a busca.
+    $('#cvBusca').value = ''; $('#cvBusca').dispatchEvent(new Event('input'));
+    $('#cvTipos').querySelector('[data-cvg="Cânone"]').click();
+    await espera(120);
+    const soCanone = [...$('#cvLista').querySelectorAll('.wbt-pick')]
+        .every(b => /Livro|Capítulo/.test(b.textContent));
+    t('filtrar por grupo deixa só aquele grupo', soCanone);
+    document.querySelector('#wbToolModal [data-close]').click();
+    await espera(120);
 
     $('#chkOut').innerHTML = erro.length
         ? '<span style="color:var(--lr-blood)">✗ ' + erro.length + ' falha(s): ' + erro.join(' · ') + '</span>'

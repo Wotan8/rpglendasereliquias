@@ -27,7 +27,7 @@ import { PUBLICACOES, pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.
 import { ESTILO_CAMPOS, FONTES, FORMATOS, estiloDoLivro, estiloInline, estiloDoLivro_obj, formatoAttr, formatoDoLivro } from '../../shared/livro-estilo.js';
 import { proximaVersao, mesmaVersao } from '../../shared/versao-canone.js';
 import { alvos, avisoDeVersao, enviarAviso } from '../../shared/avisar-livro.js';
-import { camposDe, resolverCampos, carregadorPadrao, FONTES_CAMPO } from '../../shared/campo-vinculado.js';
+import { camposDe, resolverCampos, carregadorPadrao, FONTES_CAMPO, nomeDe } from '../../shared/campo-vinculado.js';
 import { montarMusica, pararMusica, musicaDoCapitulo } from '../../shared/musica-capitulo.js';
 import { subirAudio, EXT_AUDIO } from '../../shared/audio-arquivo.js';
 import { confirmar, toast } from '../../shared/dialogo.js?v=2';
@@ -1038,55 +1038,160 @@ export const Editor = (() => {
         </div>`;
         renderRefs(); bindEditor();
     }
+    /* ── 🔗 Campo vinculado: uma janela para TODO o banco ──
+       Vinte e seis cadastros, do NPC ao Valor Derivado. Duas colunas: a
+       esquerda acha a entidade, a direita mostra os campos DELA — lado a
+       lado, e não em duas etapas cegas, porque escolher o campo certo
+       depende de ver o valor que ele tem hoje.
 
-    /* ── 🔗 Campo vinculado: escolher entidade e campo ─────
-       Duas etapas na MESMA janela: a lista de entidades vira a lista de
-       campos daquela entidade. Duas janelas em sequência fariam o autor
-       perder o cursor no texto — e é onde ele quer voltar. */
+       As categorias chegam em ondas. As que o Escritório já tem em memória
+       aparecem na hora; as outras entram conforme o Firestore responde, e a
+       busca já funciona sobre o que chegou. Esperar as vinte e seis para
+       mostrar a primeira faria o autor olhar para uma janela vazia. */
     function pedirCampoVinculado() {
         return new Promise((resolve) => {
-            const itens = searchables();
-            let escolhido = null;
-            const pintar = (q = '') => {
-                const lista = itens.filter(x => !q || x.nome.toLowerCase().includes(q)).slice(0, 60);
-                $('#cvLista').innerHTML = lista.length
-                    ? lista.map(x => `<button type="button" class="wbt-pick" data-cvent="${esc(x.id)}" data-cvcat="${esc(x.cat)}">
-                           ${KIND[x.cat]?.icon || '📄'} ${esc(x.nome)} <span class="wbt-tag">${esc(KIND[x.cat]?.label || x.cat)}</span></button>`).join('')
-                    : '<p class="wbt-muted">Nada encontrado.</p>';
-            };
+            const pool = new Map();       // cat → [entidades]
+            const carregando = new Set(Object.keys(FONTES_CAMPO));
+            let filtro = '', busca = '', selecionada = null;
+
             ToolModal.open(`
                 <h2>🔗 Campo vinculado</h2>
                 <p class="wbt-muted wb-bkhint">O valor sai do cadastro e se atualiza sozinho no livro. Mudou lá, mudou aqui — sem reescrever capítulo.</p>
-                <input id="cvBusca" class="form-input" placeholder="Buscar entidade cadastrada…" autocomplete="off">
-                <div class="wbt-picklist" id="cvLista"></div>
+                <div class="wb-cv">
+                    <div class="wb-cv__topo">
+                        <input id="cvBusca" class="form-input" placeholder="Buscar em todo o banco…" autocomplete="off">
+                        <span class="wbt-muted" id="cvConta"></span>
+                    </div>
+                    <div class="wbt-chips wb-cv__tipos" id="cvTipos"></div>
+                    <div class="wb-cv__colunas">
+                        <div class="wb-cv__lista" id="cvLista"></div>
+                        <div class="wb-cv__campos" id="cvCampos"></div>
+                    </div>
+                </div>
                 <div class="wbt-actions"><button class="btn btn-secondary" data-close>Cancelar</button></div>`);
-            pintar();
-            $('#cvBusca').oninput = (e) => pintar(e.target.value.trim().toLowerCase());
-            $('#cvLista').onclick = (e) => {
-                const b = e.target.closest('[data-cvent]'); if (!b) return;
-                if (!escolhido) {
-                    const ent = poolOf(b.dataset.cvcat).find(x => x.id === b.dataset.cvent);
-                    escolhido = { cat: b.dataset.cvcat, id: b.dataset.cvent, ent };
-                    const campos = camposDe(ent);
-                    $('#cvBusca').hidden = true;
-                    $('#cvLista').innerHTML = campos.length
-                        ? campos.map(c => `<button type="button" class="wbt-pick" data-cvcampo="${esc(c.campo)}">
-                               <b>${esc(c.campo)}</b><br><span class="wbt-muted">${esc(c.valor.slice(0, 120))}</span></button>`).join('')
-                        : '<p class="wbt-muted">Esta entidade não tem campo de texto para vincular.</p>';
+
+            /* Chips por GRUPO, não um por categoria: vinte e seis chips seriam
+               outra parede para ler antes de poder buscar. */
+            const grupos = [...new Set(Object.values(FONTES_CAMPO).map(f => f.grupo))];
+            $('#cvTipos').innerHTML =
+                '<button type="button" class="wbt-chip is-active" data-cvg="">Tudo</button>'
+                + grupos.map(g => `<button type="button" class="wbt-chip" data-cvg="${esc(g)}">${esc(g)}</button>`).join('');
+
+            const cabe = (cat) => !filtro || FONTES_CAMPO[cat].grupo === filtro;
+
+            function achados() {
+                const q = busca.toLowerCase();
+                const out = [];
+                for (const [cat, lista] of pool) {
+                    if (!cabe(cat)) continue;
+                    for (const e of lista) {
+                        const nome = nomeDe(cat, e);
+                        if (q && !nome.toLowerCase().includes(q)) continue;
+                        out.push({ cat, ent: e, nome });
+                        // Teto de DESENHO, não de busca: refinar a palavra é o
+                        // caminho, e pintar mil botões trava a janela.
+                        if (out.length >= 300) return out;
+                    }
                 }
+                return out;
+            }
+
+            function pintarLista() {
+                const r = achados();
+                const faltam = [...carregando].filter(cabe).length;
+                $('#cvConta').textContent = faltam
+                    ? `${r.length} encontrados · carregando mais ${faltam}…`
+                    : `${r.length} encontrados`;
+                $('#cvLista').innerHTML = r.length
+                    ? r.map((x, i) => `<button type="button" class="wbt-pick" data-cvi="${i}">
+                           <span class="wb-cv__ico">${FONTES_CAMPO[x.cat].icone}</span>
+                           <span class="wb-cv__nome">${esc(x.nome)}</span>
+                           <span class="wbt-tag">${esc(FONTES_CAMPO[x.cat].rotulo)}</span></button>`).join('')
+                    : `<p class="wbt-muted">${faltam ? 'Carregando…' : 'Nada encontrado.'}</p>`;
+                $('#cvLista').__r = r;
+            }
+
+            function pintarCampos() {
+                const alvo = $('#cvCampos');
+                if (!selecionada) {
+                    alvo.innerHTML = '<p class="wbt-muted">Escolha uma entidade à esquerda para ver os campos dela.</p>';
+                    return;
+                }
+                const campos = camposDe(selecionada.ent);
+                alvo.innerHTML =
+                    `<div class="wb-cv__cab">${FONTES_CAMPO[selecionada.cat].icone} <b>${esc(selecionada.nome)}</b>
+                        <span class="wbt-tag">${esc(FONTES_CAMPO[selecionada.cat].rotulo)}</span></div>`
+                    + (campos.length
+                        ? campos.map(c => `<button type="button" class="wbt-pick" data-cvcampo="${esc(c.campo)}">
+                               <b>${esc(c.campo)}</b>
+                               <span class="wbt-muted">${esc(c.valor.slice(0, 160))}</span></button>`).join('')
+                        : '<p class="wbt-muted">Esta entidade não tem campo de texto ou número para vincular.</p>');
+            }
+
+            $('#cvBusca').oninput = (e) => { busca = e.target.value.trim(); pintarLista(); };
+            $('#cvTipos').onclick = (e) => {
+                const c = e.target.closest('[data-cvg]'); if (!c) return;
+                filtro = c.dataset.cvg;
+                $('#cvTipos').querySelectorAll('.wbt-chip').forEach(x => x.classList.toggle('is-active', x === c));
+                selecionada = null; pintarLista(); pintarCampos();
             };
-            $('#cvLista').addEventListener('click', (e) => {
-                const b = e.target.closest('[data-cvcampo]'); if (!b || !escolhido) return;
+            $('#cvLista').onclick = (e) => {
+                const b = e.target.closest('[data-cvi]'); if (!b) return;
+                selecionada = $('#cvLista').__r[+b.dataset.cvi];
+                $('#cvLista').querySelectorAll('.wbt-pick').forEach(x => x.classList.toggle('is-on', x === b));
+                pintarCampos();
+            };
+            $('#cvCampos').onclick = (e) => {
+                const b = e.target.closest('[data-cvcampo]'); if (!b || !selecionada) return;
                 const campo = b.dataset.cvcampo;
                 ToolModal.close();
-                resolve({ cat: escolhido.cat, id: escolhido.id, campo, valor: String(escolhido.ent?.[campo] ?? '') });
-            });
+                resolve({ cat: selecionada.cat, id: selecionada.ent.id, campo,
+                          valor: String(selecionada.ent?.[campo] ?? '') });
+            };
+
+            /* O que já está em memória entra sem custo nenhum; o resto vem do
+               Firestore em paralelo, e cada categoria repinta ao chegar. */
+            for (const cat of Object.keys(FONTES_CAMPO)) {
+                const jaTem = poolOf(cat);
+                if (jaTem && jaTem.length) { pool.set(cat, jaTem); carregando.delete(cat); }
+            }
+            pintarLista();
+            pintarCampos();
+            for (const cat of [...carregando]) {
+                carregarDoBanco(cat).then((lista) => {
+                    carregando.delete(cat);
+                    if (lista && lista.length) pool.set(cat, lista);
+                    pintarLista();
+                });
+            }
+
             // Fechar sem escolher devolve null — quem chama já trata.
             const raiz = document.getElementById('wbToolModal');
-            const aoFechar = () => { if (!raiz.classList.contains('active')) { obs.disconnect(); resolve(null); } };
-            const obs = new MutationObserver(aoFechar);
+            const obs = new MutationObserver(() => {
+                if (!raiz.classList.contains('active')) { obs.disconnect(); resolve(null); }
+            });
             obs.observe(raiz, { attributes: true, attributeFilter: ['class'] });
+            $('#cvBusca').focus();
         });
+    }
+
+    /* Uma leitura por categoria, guardada pela sessão. Falha devolve lista
+       vazia e NÃO derruba a janela: uma coleção fora do ar não pode impedir
+       de vincular campo das outras vinte e cinco. */
+    const _cacheCV = new Map();
+    async function carregarDoBanco(cat) {
+        if (_cacheCV.has(cat)) return _cacheCV.get(cat);
+        const fonte = FONTES_CAMPO[cat];
+        if (!fonte) return [];
+        try {
+            const snap = await getDocs(collection(db, fonte.col));
+            const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            _cacheCV.set(cat, lista);
+            return lista;
+        } catch (e) {
+            console.warn('[campo vinculado] não deu para ler', fonte.col, e);
+            return [];
+        }
     }
 
     /* Resolve os campos vinculados do texto aberto. No editor o pool JÁ está

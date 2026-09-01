@@ -37,18 +37,77 @@
  *  ecossistema — repetido aqui porque este arquivo é lido por telas que
  *  não carregam nenhum dos dois. */
 export const FONTES_CAMPO = {
-    npcs:       { col: 'npcs',                     icone: '👥', rotulo: 'NPC' },
-    factions:   { col: 'worldbuilding-factions',   icone: '⚔️', rotulo: 'Tribo' },
-    geography:  { col: 'worldbuilding-geography',  icone: '📍', rotulo: 'Local' },
-    history:    { col: 'worldbuilding-history',    icone: '📜', rotulo: 'História' },
-    cultures:   { col: 'worldbuilding-cultures',   icone: '🎭', rotulo: 'Cultura' },
-    religion:   { col: 'worldbuilding-religion',   icone: '🏛️', rotulo: 'Religião' },
-    magic:      { col: 'worldbuilding-magic',      icone: '✨', rotulo: 'Magia' },
-    properties: { col: 'worldbuilding-properties', icone: '🏠', rotulo: 'Propriedade' },
-    rumors:     { col: 'worldbuilding-rumors',     icone: '💬', rotulo: 'Rumor' },
-    races:      { col: 'system/data/races',        icone: '🧬', rotulo: 'Raça' },
-    classes:    { col: 'system/data/classes',      icone: '⚔️', rotulo: 'Classe' },
+    // ── Mundo (Escritório do Cronista / Worldbuilding) ──
+    npcs:       { col: 'npcs',                     icone: '👥', rotulo: 'NPC', grupo: 'Mundo' },
+    factions:   { col: 'worldbuilding-factions',   icone: '⚔️', rotulo: 'Tribo (lore)', grupo: 'Mundo' },
+    geography:  { col: 'worldbuilding-geography',  icone: '📍', rotulo: 'Local', grupo: 'Mundo' },
+    history:    { col: 'worldbuilding-history',    icone: '📜', rotulo: 'História', grupo: 'Mundo' },
+    cultures:   { col: 'worldbuilding-cultures',   icone: '🎭', rotulo: 'Cultura', grupo: 'Mundo' },
+    religion:   { col: 'worldbuilding-religion',   icone: '🏛️', rotulo: 'Religião', grupo: 'Mundo' },
+    magic:      { col: 'worldbuilding-magic',      icone: '✨', rotulo: 'Escola de Magia', grupo: 'Mundo' },
+    properties: { col: 'worldbuilding-properties', icone: '🏠', rotulo: 'Propriedade', grupo: 'Mundo' },
+    rumors:     { col: 'worldbuilding-rumors',     icone: '💬', rotulo: 'Rumor', grupo: 'Mundo' },
+    lineages:   { col: 'worldbuilding-lineages',   icone: '🌳', rotulo: 'Linhagem', grupo: 'Mundo' },
+    feiras:     { col: 'worldbuilding-submundo-feiras', icone: '🕯️', rotulo: 'Feira do Submundo', grupo: 'Mundo' },
+
+    // ── Sistema (Painel do Criador) ──
+    races:      { col: 'system/data/races',        icone: '🧬', rotulo: 'Raça', grupo: 'Sistema' },
+    classes:    { col: 'system/data/classes',      icone: '⚔️', rotulo: 'Classe', grupo: 'Sistema' },
+    /* Tribo MECÂNICA, separada da de lore. Sem categoria própria ela entrava
+       na busca pelo pool fundido de `allData.factions` e o resolvedor ia
+       procurá-la em `worldbuilding-factions` — não achava, e o token acendia
+       "objeto não encontrado" numa tribo que existe. */
+    tribesMec:  { col: 'system/data/tribes',       icone: '🏕️', rotulo: 'Tribo (mecânica)', grupo: 'Sistema' },
+    peculiarities: { col: 'system/data/peculiarities', icone: '🎲', rotulo: 'Peculiaridade', grupo: 'Sistema' },
+    skills:     { col: 'system/data/skills',       icone: '🎯', rotulo: 'Perícia', grupo: 'Sistema' },
+    derivedValues: { col: 'system/data/derivedValues', icone: '📐', rotulo: 'Valor Derivado', grupo: 'Sistema' },
+    vitalStats: { col: 'system/data/vitalStats',   icone: '❤️', rotulo: 'Status Vital', grupo: 'Sistema' },
+    mechanics:  { col: 'system/data/mechanics',    icone: '⚙️', rotulo: 'Mecânica', grupo: 'Sistema' },
+    bodyParts:  { col: 'system/data/bodyParts',    icone: '🦴', rotulo: 'Parte do Corpo', grupo: 'Sistema' },
+    conditions: { col: 'system/data/conditions',   icone: '🌀', rotulo: 'Condição', grupo: 'Sistema' },
+    equipment:  { col: 'system/data/equipment',    icone: '🗡️', rotulo: 'Equipamento', grupo: 'Sistema' },
+    itemRules:  { col: 'system/data/itemRules',    icone: '📏', rotulo: 'Regra de Item', grupo: 'Sistema' },
+    spells:     { col: 'system/data/spells',       icone: '🔮', rotulo: 'Magia', grupo: 'Sistema' },
+    /* Entra mesmo com a coleção vazia hoje: coleção vazia não é coleção
+       inexistente, e deixá-la de fora obrigaria a mexer aqui de novo no dia
+       em que a primeira manobra for cadastrada. Vazia, ela só não devolve
+       resultado — nada quebra. */
+    maneuvers:  { col: 'system/data/maneuvers',    icone: '🤺', rotulo: 'Manobra', grupo: 'Sistema' },
+    auras:      { col: 'system/data/auras',        icone: '🌟', rotulo: 'Aura', grupo: 'Sistema' },
+    castingForms: { col: 'system/data/castingForms', icone: '🗣️', rotulo: 'Forma de Conjuração', grupo: 'Sistema' },
+    runicElements: { col: 'system/data/runicElements', icone: '🔯', rotulo: 'Elemento Rúnico', grupo: 'Sistema' },
+    /* `titulo`, não `nome` — foi verificado no cadastro. Sem o campo certo o
+       seletor listaria uma coluna de "(sem nome)". */
+    classModules: { col: 'system/data/classModules', icone: '📦', rotulo: 'Módulo de Classe', grupo: 'Sistema', nomeCampo: 'titulo' },
+
+    // ── Cânone (o próprio Cronista, citando a si mesmo) ──
+    /* `title` em inglês, herança do editor. Um livro citar a versão de outro é
+       o caso que o versionamento de cânone existe para sustentar. */
+    books:      { col: 'worldbuilding-books',      icone: '📗', rotulo: 'Livro', grupo: 'Cânone', nomeCampo: 'title' },
+    articles:   { col: 'worldbuilding-articles',   icone: '📄', rotulo: 'Capítulo', grupo: 'Cânone', nomeCampo: 'title' },
 };
+
+/* Fora de propósito, com o motivo — para o próximo que for "completar a
+   lista" não reabrir a discussão:
+     worldbuilding-relations   → aresta de grafo, não tem nome para citar
+     submundo-reputacoes       → estado de jogo (o id É o charId)
+     containers / items        → instância de mochila, não catálogo
+     loja_itens / metas        → comércio do site, não cânone do mundo
+     mesas / campaigns         → organização de mesa
+     economy-*                 → coleções mortas (regra viva, nenhum leitor)
+     knowledge                 → trava de capítulo, não entidade de mundo
+     char                      → guarda tudo em `fields.*`; entra quando o
+                                 seletor souber achatar (ver ACHATA abaixo)
+*/
+
+/** O campo que guarda o nome de exibição desta categoria. */
+export const nomeCampoDe = (cat) => FONTES_CAMPO[cat]?.nomeCampo || 'nome';
+
+/** O nome de exibição de uma entidade, seja qual for a categoria. */
+export function nomeDe(cat, ent) {
+    return String(ent?.[nomeCampoDe(cat)] || ent?.nome || ent?.titulo || ent?.title || '').trim()
+        || '(sem nome)';
+}
 
 export const SELETOR_CAMPO = '.tm-campo[data-cat][data-entity][data-campo]';
 

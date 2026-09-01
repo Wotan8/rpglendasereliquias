@@ -28,6 +28,15 @@ const DADOS = {
         { id: 'p2', ownerUid: 'u4', fields: { raca: 'Humano' }, livrosAlcance: [] },
         { id: 'p3', ownerUid: 'u9', fields: { raca: 'Elorin' } },
     ],
+    /* Um punhado dos cadastros NOVOS que o campo vinculado passou a alcancar
+       — inclusive os tres jeitos de guardar o nome (nome/titulo/title). */
+    'system/data/races': [{ id: 'r1', nome: 'Elorin', expectativaVida: '210 anos', habitat: 'Florestas altas' }],
+    'system/data/peculiarities': [{ id: 'pec1', nome: 'Couro Endurecido', descricao: 'A pele engrossa onde ja apanhou.' }],
+    'system/data/bodyParts': [{ id: 'bp1', nome: 'Torso', formulaDano: '1d4' }],
+    'system/data/derivedValues': [{ id: 'vd1', nome: 'Iniciativa', formula: 'DES + PRE' }],
+    'system/data/classModules': [{ id: 'cm1', titulo: 'Senda do Ferreiro', descricao: 'Modulo de classe.' }],
+    'system/data/tribes': [{ id: 'tm1', nome: 'Pogtara', lema: 'O ferro lembra.' }],
+    'worldbuilding-lineages': [{ id: 'lin1', nome: 'Casa Vaugh' }],
     'worldbuilding-articles': [
         { id: 'a1', bookId: 'b1', order: 0, title: 'A Noite da Bigorna Fria', synopsis: 'Brida descobre quem comprou a dívida.', status: 'rascunho', public: false, contentHTML: '<p>um dois tres</p>' },
         { id: 'a2', bookId: 'b1', order: 1, title: 'O Recibo Falso', status: 'publicado', public: true, words: 900, contentHTML: '<p>quatro cinco</p>' },
