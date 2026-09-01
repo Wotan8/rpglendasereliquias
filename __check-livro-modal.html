@@ -35,10 +35,10 @@
 <script type="importmap">
 { "imports": {
     "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=15",
-    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=14",
-    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=13",
-    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=13",
-    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=13"
+    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=15",
+    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=15",
+    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=15",
+    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=15"
 } }
 </script>
 
@@ -87,7 +87,7 @@ const espera = (ms = 80) => new Promise(r => setTimeout(r, ms));
 /* Modulo com query e outro modulo para o navegador. Sem isso o harness roda
    o que ficou no cache — ja aconteceu duas vezes aqui. UM token para todos
    os `import()` de shared/, subido a cada mexida. */
-const CB = '?h=8';
+const CB = '?h=9';
 // Salvamento deliberado (o mesmo caminho do botao 💾) e volta a Biblioteca.
 const save2 = async () => { $('#saveArticle').click(); await espera(200); };
 // Tolerante a ja estar na Biblioteca: os blocos de teste rodam em sequencia
@@ -1055,6 +1055,65 @@ $('#chkRun').onclick = async () => {
     await espera(60);
     t('mesclar pela barra funciona', ed2.querySelector('tbody td').colSpan === 2);
     t('e ai dividir destrava', !bt.querySelector('[data-tab="divide"]').disabled);
+
+    // ── A barra, OPERADA como o autor opera ──
+    // Estes asserts existem porque os 284 anteriores testavam o que os
+    // controles FAZEM e nunca se dava para usa-los. O menu de Bloco abria e
+    // fechava e nenhum teste percebeu.
+    ed2.innerHTML = '<p>um paragrafo qualquer</p>';
+    await espera(60);
+    const barraFmt = document.querySelector('#richToolbar');
+    const porCursor = (el) => {
+        const r = document.createRange(); r.selectNodeContents(el);
+        const s2 = window.getSelection(); s2.removeAllRanges(); s2.addRange(r);
+    };
+
+    // O clique num <select> da barra NAO pode ser cancelado: cancelar rouba o
+    // foco e o dropdown fecha antes de o autor escolher.
+    for (const q of ['[data-rich="bloco"]', '[data-rich="cols"]', '[data-rich="bloco2"]']) {
+        const ev = new MouseEvent('click', { bubbles: true, cancelable: true });
+        barraFmt.querySelector(q).dispatchEvent(ev);
+        t(`clique em ${q} nao e cancelado (o menu abre)`, !ev.defaultPrevented);
+    }
+    // E o botao continua sendo cancelado — e ele que precisa disso.
+    const evBtn = new MouseEvent('click', { bubbles: true, cancelable: true });
+    barraFmt.querySelector('[data-rich="marca"]').dispatchEvent(evBtn);
+    t('clique em botao continua cancelado', evBtn.defaultPrevented);
+
+    // ── Desfazer bloco, uma camada por clique ──
+    const tirar = () => barraFmt.querySelector('[data-rich="tirabloco"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    ed2.innerHTML = '<p class="tm-nota">nota</p>';
+    porCursor(ed2.querySelector('p')); tirar();
+    t('tira a classe de bloco', !ed2.querySelector('p').classList.contains('tm-nota'));
+
+    ed2.innerHTML = '<div class="tm-carta tm-carta--maquina"><p>bilhete</p></div>';
+    porCursor(ed2.querySelector('p')); tirar();
+    t('desembrulha a carta e o texto FICA',
+        !ed2.querySelector('.tm-carta') && ed2.textContent.includes('bilhete'));
+
+    ed2.innerHTML = '<div class="tm-ponto"><span class="tm-ponto__n">06</span><h3>T</h3><p>d</p></div>';
+    porCursor(ed2.querySelector('h3')); tirar();
+    t('o ponto de interesse sai sem deixar o numero solto',
+        !ed2.querySelector('.tm-ponto') && !ed2.querySelector('.tm-ponto__n')
+        && ed2.textContent.includes('T') && !ed2.textContent.includes('06'));
+
+    // Camada por camada, DE DENTRO PARA FORA: nota dentro de colunas.
+    ed2.innerHTML = '<div class="tm-cols--margem"><p class="tm-nota">n</p><p>corpo</p></div>';
+    porCursor(ed2.querySelector('.tm-nota'));
+    tirar();
+    t('primeiro clique tira a nota, nao as colunas',
+        !!ed2.querySelector('.tm-cols--margem') && !ed2.querySelector('.tm-nota'));
+    tirar();
+    t('segundo clique tira as colunas', !ed2.querySelector('[class*="tm-cols--"]'));
+    t('e nada do texto se perdeu no caminho',
+        ed2.textContent.includes('n') && ed2.textContent.includes('corpo'));
+
+    // Sem bloco nenhum: nao pode estourar nem comer o paragrafo.
+    ed2.innerHTML = '<p>solto</p>';
+    porCursor(ed2.querySelector('p'));
+    let caiu = false; try { tirar(); } catch { caiu = true; }
+    t('sem bloco, nao faz nada e nao estoura', !caiu && ed2.textContent.includes('solto'));
 
     $('#chkOut').innerHTML = erro.length
         ? '<span style="color:var(--lr-blood)">✗ ' + erro.length + ' falha(s): ' + erro.join(' · ') + '</span>'

@@ -80,6 +80,7 @@ export const TOOLBAR_HTML = `
 <button class="btn btn-secondary btn-sm" data-rich="imagem" title="Inserir imagem">🖼️</button>
 <button class="btn btn-secondary btn-sm" data-rich="tabela" title="Inserir tabela">▦</button>
 <button class="btn btn-secondary btn-sm" data-rich="campo" title="Campo vinculado — o valor vem do cadastro e se atualiza sozinho">🔗↻</button>
+<button class="btn btn-secondary btn-sm" data-rich="tirabloco" title="Tirar o bloco daqui — descasca uma camada por clique">⊘ bloco</button>
 <button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="removeFormat" title="Limpar formatação">🧹</button>
 `;
 
@@ -514,7 +515,17 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
     /* ── Botões da barra ─────────────────────────────────── */
     toolbar.addEventListener('click', async (e) => {
         const alvo = e.target.closest('[data-rich]');
-        if (!alvo || alvo.dataset.rich === 'cor') return;
+        /* Controle de formulário se vira sozinho: <select> e <input> têm
+           `change`/`input` próprios. Cair aqui é um BUG, não um caso extra —
+           `preventDefault()` + `ed.focus()` roubam o foco no meio do clique, e
+           um dropdown que perde o foco fecha antes de o autor escolher. Era
+           por isso que o menu de Bloco e Colunas abria e fechava, e só dava
+           para usar clicando e segurando.
+
+           A guarda antiga era `dataset.rich === 'cor'` — o mesmo problema, já
+           encontrado uma vez no seletor de cor e remendado só ali. Agora vale
+           para todo controle, inclusive os que ainda não existem. */
+        if (!alvo || alvo.matches('select, input, textarea')) return;
         e.preventDefault();
         ed.focus();
 
@@ -536,6 +547,7 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
             case 'imagem': pedirImagem(false); break;
             case 'tabela': await inserirTabela(); break;
             case 'campo': await inserirCampo(); break;
+            case 'tirabloco': removerBloco(); break;
         }
         avisar();
     });
@@ -600,6 +612,47 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
         if (!jaTem) bloco.classList.add(...classes);
         avisar();
     });
+
+    /* Classes de bloco que o autor liga pelo menu. Ficam numa lista só para
+       tirar todas de uma vez — e para o dia em que entrar a sexta. */
+    const CLASSES_BLOCO = ['tm-nota', 'tm-leitura', 'tm-aviso', 'tm-aviso--nota',
+        'tm-aviso--segredo', 'tm-capitular'];
+
+    /**
+     * Tira o bloco de onde o cursor está. DESCASCA UMA CAMADA POR CLIQUE, da
+     * mais interna para a mais externa — parágrafo dentro de uma Carta dentro
+     * de duas colunas sai em três cliques, e a cada um dá para ver o que
+     * aconteceu. Tirar tudo de uma vez apagaria diagramação que o autor quis
+     * manter, e ele não teria como saber o que perdeu.
+     */
+    function removerBloco() {
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return;
+        let no = sel.anchorNode;
+        if (no && no.nodeType === Node.TEXT_NODE) no = no.parentElement;
+        if (!no || !ed.contains(no)) return;
+
+        /* Sobe do CURSOR, não do bloco de topo. Uma nota de margem dentro de
+           duas colunas tem a nota por dentro e as colunas por fora; partindo
+           do topo, o primeiro clique arrancaria as colunas e deixaria a nota
+           — o contrário do que quem clicou está vendo. */
+        for (let n = no; n && n !== ed; n = n.parentElement) {
+            const tinha = CLASSES_BLOCO.filter(c => n.classList.contains(c));
+            if (tinha.length) { n.classList.remove(...tinha); return; }
+
+            /* O ponto de interesse não se desembrulha cru: o número é etiqueta
+               do bloco, e sozinho no meio do texto vira lixo. */
+            if (n.classList.contains('tm-ponto')) {
+                n.querySelector('.tm-ponto__n')?.remove();
+                desembrulhar(n);
+                return;
+            }
+            if (n.classList.contains('tm-carta') || /(^| )tm-cols--/.test(n.className)) {
+                desembrulhar(n);
+                return;
+            }
+        }
+    }
 
     /** Os blocos de topo tocados pela seleção — é neles que coluna e caixa
      *  fazem sentido, não no <span> onde o cursor por acaso está. */
