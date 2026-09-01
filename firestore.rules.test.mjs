@@ -55,6 +55,10 @@ await env.withSecurityRulesDisabled(async (ctx) => {
     rolePlay: { segredos: 'trabalha para a Guilda' },
     valoresDer: { VIT: 20, atual: { VIT: 20 } }, conditions: [],
   });
+  // A mesa em que o jogador joga, e a ficha dele — o que a Fase 6 exige.
+  await setDoc(doc(db, 'mesas', MESA), { nome: 'Mesa de teste', jogadores: [JOG] });
+  await setDoc(doc(db, 'char', 'char-do-jogador'), { ownerUid: JOG, nome: 'Meu personagem' });
+  await setDoc(doc(db, 'char', 'char-alheio'), { ownerUid: VIT, nome: 'Personagem de outro' });
   // Um NPC ALIADO do jogador: `vinculos` tem {tipo:'personagem'} para a ficha
   // dele, e o gatilho achatou isso em `donosUids`.
   await setDoc(doc(db, 'npcs', 'npc-aliado'), {
@@ -214,6 +218,29 @@ await teste('não apaga NPC',
   () => assertFails(deleteDoc(npc)));
 await teste('não cria NPC',
   () => assertFails(setDoc(doc(db, 'npcs', 'npc-novo'), { nome: 'meu' })));
+// ===== OS LAÇOS: o jogador cria NPC, mas dentro da cerca =====
+const laco = (extra = {}) => ({
+    nome: 'Irmã de criação', tipo: 'npc', createdVia: 'wizard-v1',
+    mesaId: MESA, linkedCharId: 'char-do-jogador',
+    vinculos: [{ tipo: 'personagem', id: 'char-do-jogador' }], ...extra,
+});
+await teste('cria o NPC de laço da própria ficha, na mesa em que joga',
+  () => assertSucceeds(setDoc(doc(db, 'npcs', 'npc-laco-1'), laco())));
+await teste('não cria NPC de laço preso à ficha de outra pessoa',
+  () => assertFails(setDoc(doc(db, 'npcs', 'npc-laco-2'), laco({ linkedCharId: 'char-alheio' }))));
+await teste('não cria NPC de laço em mesa onde não joga',
+  () => assertFails(setDoc(doc(db, 'npcs', 'npc-laco-3'), laco({ mesaId: 'mesa-que-nao-e-minha' }))));
+// Personagem AVULSO nao cria NPC nenhum — os lacos dele ficam nas Notas.
+await teste('personagem avulso não cria NPC (sem mesa)',
+  () => assertFails(setDoc(doc(db, 'npcs', 'npc-laco-4'), laco({ mesaId: '' }))));
+await teste('não cria NPC solto no cenário fora do assistente',
+  () => assertFails(setDoc(doc(db, 'npcs', 'npc-laco-5'), laco({ createdVia: 'na-marra' }))));
+await teste('não cria NPC apontando para ficha inexistente',
+  () => assertFails(setDoc(doc(db, 'npcs', 'npc-laco-6'), laco({ linkedCharId: 'nao-existe' }))));
+// ...e o que ele criou continua sendo do MESTRE para editar (item 5)
+await teste('não reescreve a ficha do NPC que ele mesmo criou',
+  () => assertFails(updateDoc(doc(db, 'npcs', 'npc-laco-1'), { ataques: 'Espada +99' })));
+
 // ===== ITENS DE NPC (a outra metade do item 5) =====
 // Era `exists(npcs/<characterId>)`: a mera existência do NPC bastava, então
 // qualquer conta logada editava e apagava item de qualquer NPC do cenário.

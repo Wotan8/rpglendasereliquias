@@ -1,5 +1,26 @@
 /* ===== PHASE 6 — Os Laços (NPCs) ===== */
 
+/* Para onde vão os laços depois de concluída a criação — e a resposta muda
+   conforme o personagem tenha mesa ou não. Dizer isto AQUI, e não no fim,
+   porque é aqui que a pessoa decide quanto vai escrever. */
+function avisoDestinoDosLacos() {
+    const mesa = wizardState.mesaVinculada;
+    if (mesa) {
+        return `
+            <div class="lacos-destino lacos-destino--mesa">
+                📖 Ao concluir a ficha, estes NPCs vão para as <strong>Notas do personagem</strong>
+                e também para o painel do mestre de <strong>${escHtml(mesa.nome || 'sua mesa')}</strong>,
+                marcados como vindos da sua criação.
+            </div>`;
+    }
+    return `
+        <div class="lacos-destino">
+            📖 Seu personagem é <strong>avulso</strong> (não está numa mesa), então estes NPCs
+            serão salvos <strong>apenas nas Notas da ficha</strong>, e só depois de concluir a
+            criação. Eles não entram no cadastro de NPCs do mundo — isso é do mestre de uma mesa.
+        </div>`;
+}
+
 function initPhase6(container) {
     let html = createNarratorBox(NARRADOR_TEXTOS.lacos);
 
@@ -12,6 +33,7 @@ function initPhase6(container) {
                 <strong>Opcional.</strong> Cada NPC criado concede <strong>+${regras.exp_por_npc} EXP</strong> (máx ${regras.max_exp_npcs}).
                 Criar NPCs enriquece sua história e dá ferramentas ao Narrador.
             </p>
+            ${avisoDestinoDosLacos()}
             <div id="npcExpIndicator" style="font-size:.85rem;font-weight:700;color:var(--accent);margin-bottom:12px;">
                 EXP de NPCs: 0/${regras.max_exp_npcs}
             </div>

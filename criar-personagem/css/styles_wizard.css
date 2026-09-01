@@ -1635,3 +1635,21 @@ html.dark .dot.exp.filled {
     border-width: 1px;
     border-radius: var(--lr-radius);
 }
+
+/* Para onde vão os laços da Fase 6 — muda conforme o personagem tenha mesa.
+   Fica logo abaixo do texto da fase porque é ali que a pessoa decide quanto
+   vai escrever, e não no fim, quando já escreveu. */
+.lacos-destino {
+    background: var(--chip, rgba(127, 127, 127, .12));
+    border-left: 3px solid var(--muted, #888);
+    border-radius: var(--lr-radius, 8px);
+    padding: 10px 12px;
+    margin: 0 0 12px;
+    font-size: .82rem;
+    line-height: 1.55;
+}
+
+.lacos-destino--mesa {
+    border-left-color: var(--lr-gold, #c9a227);
+    background: var(--lr-gold-soft, rgba(201, 162, 39, .12));
+}

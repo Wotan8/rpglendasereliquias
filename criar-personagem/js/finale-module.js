@@ -913,7 +913,30 @@ async function saveEquipmentAsItemToFirebase(equipData, charId) {
 
 /* ===== SAVE NPCS TO MASTER PANEL ===== */
 
+/* Os "Personagens Importantes" da Fase 6 (Os Laços) viram DUAS coisas —
+   dependendo de o personagem ter mesa ou não:
+
+   - SEMPRE viram nota na ficha (isso é montado em outro lugar, junto das
+     demais notas da criação);
+   - E, SÓ quando o personagem pertence a uma mesa, viram NPC de verdade na
+     coleção `npcs`, para o mestre daquela mesa encontrá-los no painel.
+
+   Personagem avulso não grava NPC nenhum. Não é limitação técnica: é o que
+   impede qualquer conta de despejar personagem no cenário do mundo. Sem mesa
+   não há mestre responsável por aquilo, e o lugar certo daquele texto é a
+   ficha de quem o escreveu.
+
+   Até 01/09/2026 esta função tentava gravar em `npcs` em TODOS os casos, e a
+   rule (que só aceita mestre) negava — com o erro engolido pelo `catch`. Nunca
+   funcionou para ninguém: zero documentos com `createdVia: 'wizard-v1'` no
+   banco. O jogador preenchia os laços, via "✅ CRIADO" no card, e o mestre não
+   recebia nada. */
 async function saveNpcsToMasterPanel(npcsList, charName, charId, mesaVinculada) {
+    const mesaId = mesaVinculada?.id || '';
+    if (!mesaId) {
+        console.log('ℹ️ Personagem avulso: os laços ficam nas Notas da ficha, sem criar NPC.');
+        return;
+    }
     const confirmedNpcs = npcsList.filter(n => n.confirmado && n.nome);
     if (confirmedNpcs.length === 0) return;
 
@@ -975,7 +998,12 @@ async function saveNpcsToMasterPanel(npcsList, charName, charId, mesaVinculada) 
                 lastUpdate: new Date().toISOString(),
                 lastUpdateBy: window.currentUser?.email || '',
                 createdVia: 'wizard-v1',
-                linkedCharId: charId
+                linkedCharId: charId,
+                /* O vínculo que a ficha e as rules entendem. O gatilho
+                   `espelharDonoDoNpc` transforma isto em `donosUids`, e é o que
+                   dá ao jogador o inventário deste NPC sem lhe dar poder sobre
+                   os NPCs do resto do cenário. */
+                vinculos: [{ tipo: 'personagem', id: charId }]
             };
 
             const npcId = 'npc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);

@@ -319,12 +319,38 @@ service cloud.firestore {
         .hasOnly(['valoresDer', 'conditions', 'lastUpdate', 'lastUpdateBy']);
     }
 
+    /* Os "Personagens Importantes" da Fase 6 do Criar Personagem (Os Laços).
+       O jogador pode criá-los — mas só dentro de uma cerca fechada:
+
+       - a ficha vinculada tem de ser DELE;
+       - o NPC tem de nascer preso a uma MESA em que ele joga, porque é ali
+         que existe um mestre responsável pelo que entra no mundo;
+       - e marcado como vindo do assistente, para o painel saber a origem.
+
+       Personagem avulso não cria NPC nenhum (o assistente nem tenta): os laços
+       dele ficam nas Notas da ficha. É o que impede qualquer conta de despejar
+       personagem no cadastro do cenário.
+
+       Antes disto o `create` era só de mestre, e o assistente tentava assim
+       mesmo — falhando em silêncio desde sempre. */
+    function npcDeLacoDoJogador() {
+      return request.resource.data.createdVia == 'wizard-v1'
+        && request.resource.data.mesaId is string
+        && request.resource.data.mesaId != ''
+        && request.auth.uid in
+             get(/databases/$(database)/documents/mesas/$(request.resource.data.mesaId)).data.jogadores
+        && request.resource.data.linkedCharId is string
+        && get(/databases/$(database)/documents/char/$(request.resource.data.linkedCharId))
+             .data.ownerUid == request.auth.uid;
+    }
+
     // ========== ADICIONADO: Coleção de NPCs ==========
     match /npcs/{npcId} {
       allow read: if isSignedIn();
       allow update: if isSignedIn() &&
         (soEstadoDeMesaNoNpc() || isMaster() || temPapelMestre());
-      allow create, delete: if isMaster();
+      allow create: if isMaster() || (isSignedIn() && npcDeLacoDoJogador());
+      allow delete: if isMaster();
     }
     
     // ========== CORRIGIDO: Coleção de Containers ==========
