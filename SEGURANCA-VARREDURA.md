@@ -711,6 +711,22 @@ Agora linhas iguais são um poço só: soma para saber quanto há, consome em
 ordem, e homônimo com outro efeito não entra no poço. Medido antes e depois —
 com 3 linhas (2,1,1), gastar 1 deixava 1 unidade; agora deixa 3.
 
+**A raiz também foi tapada.** O painel do mestre dava `push` direto no
+inventário ao conceder um item, criando linha nova a cada vez — foi assim que
+nasceram as três "EXP". Agora ele empilha, pela mesma regra do servidor.
+
+Para não virar uma terceira cópia da regra, ela saiu para
+[shared/repertorio-linha.js](shared/repertorio-linha.js), usada pelo Portal e
+pelo painel do mestre. `functions/repertorio.js` continua existindo porque
+`functions/` sobe sem a pasta `shared/` e é CommonJS — não há import possível
+entre os dois. **O teste compara os dois gêmeos** em 256 pares de entradas: se
+divergirem, fica vermelho.
+
+**E o banco foi consolidado:** uma conta tinha 16 linhas, virou 14 (as três
+"EXP" viraram uma de 4 unidades). Backup antes, e a conferência que importa —
+o total de unidades não mudou: 22 antes, 22 depois. Nenhum par repetido
+sobrou em nenhuma conta.
+
 ---
 
 ## 🟡 12. Documentos internos servidos em produção ✅ corrigido

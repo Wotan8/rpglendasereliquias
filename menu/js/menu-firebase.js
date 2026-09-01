@@ -21,6 +21,7 @@ import {
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 import { somarApoiosDoJogador, somarMetaTotais, progressoDasEtapas, proximaEtapa, valorApoio, parseMetaIds, resolveMetaId } from '../../shared/apoios-calc.js';
+import { ehMesmaLinha } from '../../shared/repertorio-linha.js';
 import { confirmar, toast } from '../../shared/dialogo.js?v=2';
 
 // ===== CONFIG =====
@@ -504,29 +505,14 @@ async function loadInventory(dadosProntos) {
         const apoios = userData.apoios || [];
         const inventarioRaw = userData.inventario || [];
 
-        /* Agrupa na tela o que é IDÊNTICO — mesma regra do servidor
-           (functions/repertorio.js): mesmo nome não basta, o que o item faz
-           tem de bater. Se o catálogo tiver duas peças homônimas com efeitos
-           diferentes, elas são duas linhas no banco e têm de ser dois cards
-           aqui; juntá-las na tela mostraria a etiqueta de uma sobre a
-           quantidade das duas. */
-        const CAMPOS_DE_EFEITO = ['isExp', 'expAmount', 'isExpVip', 'isRoleta',
-            'roletaGiros', 'isRerolagem', 'rerolagensAmount', 'isNarrativo', 'isItemPersonagem'];
-        const efeitoDe = (x) => CAMPOS_DE_EFEITO.map(c => {
-            const v = x ? x[c] : undefined;
-            if (v === undefined || v === null || v === false || v === '') return '';
-            if (v === true) return '1';
-            const n = Number(v);
-            if (Number.isFinite(n)) return n === 0 ? '' : String(n);
-            return String(v);
-        }).join('|');
-
+        /* Agrupa na tela o que é IDÊNTICO, pela mesma regra do servidor
+           (shared/repertorio-linha.js): mesmo nome não basta, o que o item faz
+           tem de bater. Duas peças homônimas com efeitos diferentes são duas
+           linhas no banco e têm de ser dois cards aqui — juntá-las mostraria a
+           etiqueta de uma sobre a quantidade das duas. */
         const inventario = [];
         inventarioRaw.forEach(item => {
-            const existing = inventario.find(i =>
-                (i.itemId && item.itemId)
-                    ? i.itemId === item.itemId
-                    : i.nome === item.nome && efeitoDe(i) === efeitoDe(item));
+            const existing = inventario.find(i => ehMesmaLinha(i, item));
             if (existing) {
                 existing.quantidade = (existing.quantidade || 1) + (item.quantidade || 1);
                 if (!existing.imagem && item.imagem) {

@@ -5,6 +5,7 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { notifyUsers } from './notify.js';
 import { parseMetaIds, resolveMetaId as resolveMetaIdPuro, somarMetaTotais, chaveApoio, valorApoio, progressoDasEtapas } from '../../shared/apoios-calc.js';
+import { empilhar } from '../../shared/repertorio-linha.js';
 import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 
 let dynamicMetas = [];
@@ -824,9 +825,11 @@ window.saveItemRepertorio = async function () {
             return;
         }
 
-        const userData = userDoc.data();
-        let inventario = userData.inventario || [];
-        inventario.push(novoItem);
+        /* Empilha em vez de `push`. O push criava uma linha nova a cada
+           concessão: uma conta chegou a ter três linhas "EXP" separadas
+           (2, 1 e 1) do mesmo item. A regra do que conta como a mesma linha é
+           a de shared/repertorio-linha.js — gêmea da do servidor. */
+        const inventario = empilhar(userDoc.data().inventario, novoItem);
 
         await setDoc(doc(db, 'users', S.currentSelectedUserId), {
             inventario: inventario
