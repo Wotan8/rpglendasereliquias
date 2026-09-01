@@ -381,11 +381,22 @@ não retrato — remedir antes de decidir.
   uma referência quebrada (`avulso-1765749455992`), e ela **já estava quebrada
   antes** — confirmado contra o backup, o ID não está entre os apagados.
 
-**Sobrou uma sujeira parecida, e menor:** 14 documentos em `items` **sem
-`characterId` nenhum**, no esquema antigo (`name` em vez de `nome`, `quantity`
-em vez de `quantidade`), a maioria com `nome: undefined`. Não são alcançáveis
-pela cadeia de reivindicação (sem `characterId` não há `char/<id>` para criar),
-então não são risco — são lixo. Ficam para uma próxima faxina.
+**Segunda faxina, em 01/09/2026:** os 14 documentos em `items` **sem
+`characterId`** também saíram, com backup. `items` foi de 319 para **305**.
+
+Correção de rumo que vale registrar: eu os havia descrito como "lixo com nome
+`undefined`". Estava **errado** — o `undefined` era do meu diagnóstico lendo o
+campo `nome`, e aqueles documentos usam o esquema antigo em inglês (`name`,
+`quantity`). Todos os 14 tinham nome e conteúdo: "Ka'Lunis" ×999.997, "Lunis"
+×99.235, "Loção de Cura Rápida" ×9.997, além de armas soltas — restos de teste
+da era antiga, todos do criador e nenhum preso a ficha. Foram apagados com a
+descrição certa na mesa, não com a errada.
+
+Estado final de `items`: 305 documentos — 62 de personagem, 228 de NPC, 14 na
+Caixa do Mestre e **1 órfão**, o container "Saco de Luns Simples", preservado
+na primeira faxina por ter item vivo dentro. Esse item era justamente um dos 14,
+então hoje o saco está vazio e não há mais razão para mantê-lo. Nenhum item
+aponta para container inexistente.
 
 ---
 
