@@ -2277,6 +2277,52 @@ html:not(.dark) .meta-card {
     white-space: nowrap;
 }
 
+/* ---------- menu da conta (o nome é o botão) ---------- */
+.portal-usuario { position: relative; }
+
+.portal-topo .toolbar .portal-usuario-botao {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    padding: 0 var(--lr-space-2);
+}
+
+.portal-usuario-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 60;
+    min-width: 190px;
+    display: flex;
+    flex-direction: column;
+    background: var(--lr-surface-1);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-shadow-2, 0 10px 30px rgba(0,0,0,.35));
+    overflow: hidden;
+}
+
+.portal-usuario-menu[hidden] { display: none; }
+
+.portal-usuario-menu button {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-space-2);
+    background: none;
+    border: none;
+    color: var(--lr-text-1);
+    font-family: inherit;
+    font-size: var(--lr-fs-sm);
+    text-align: left;
+    padding: var(--lr-space-3) var(--lr-space-4);
+    cursor: pointer;
+}
+
+.portal-usuario-menu button:hover { background: var(--lr-surface-2); color: var(--lr-gold); }
+.portal-usuario-menu .portal-usuario-sair:hover { color: var(--lr-blood-2); }
+.portal-usuario-menu .lr-ico { width: 15px; height: 15px; flex: none; }
+
 /* ---------- hero: selo rúnico guiado pelo scroll ---------- */
 /* Seção de topo, fora do container da mesa: a largura da janela vem de graça,
    sem `100vw` (que conta a barra de rolagem e cria rolagem horizontal). */
@@ -2638,6 +2684,13 @@ html:not(.dark) .meta-card {
 }
 
 .conta-linha span { color: var(--lr-text-2); }
+
+.conta-nota {
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2);
+    line-height: 1.5;
+    margin-top: 4px;
+}
 
 .conta-rotulo {
     display: block;

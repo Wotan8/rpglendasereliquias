@@ -21,7 +21,7 @@
 <script type="module">import '/shared/detalhe.js?v=6';</script>
 <link rel="stylesheet" href="/shared/dialogo.css?v=3">
 <script type="module">import '/shared/dialogo.js?v=2';</script>
-    <link rel="stylesheet" href="/menu/css/menu.css?v=47">
+    <link rel="stylesheet" href="/menu/css/menu.css?v=48">
     <link rel="stylesheet" href="/shared/tokens.css?v=11">
     <script src="/shared/theme.js"></script>
     <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout Mercado Pago contra bots/abuso. -->
@@ -110,16 +110,29 @@
                 onclick="abrirRoleta()">
                 <svg class="lr-ico"><use href="#i-roleta" /></svg>
                 <span class="badge" id="girosBadge" style="display:none">0</span></button>
-            <button class="portal-cargo" id="btnMinhaConta" title="Minha conta — senha e contatos de recuperação"
-                onclick="abrirMinhaConta()">
-                <svg class="lr-ico"><use href="#i-pessoa" /></svg></button>
             <button class="portal-cargo" id="btnCarrinho" title="Carrinho de compras" style="position:relative"
                 onclick="abrirCarrinho()">
                 <svg class="lr-ico"><use href="#i-carrinho" /></svg>
                 <span class="badge" id="carrinhoBadge" style="display:none">0</span></button>
-            <span id="userDisplayName" title=""></span>
-            <button class="portal-cargo portal-sair" onclick="logout()" title="Sair da conta">
-            <svg class="lr-ico"><use href="#i-sair" /></svg></button>
+
+            <!-- CONTA — o nome é o botão. No celular o texto some (ele é o
+                 primeiro a ceder na barra) e o ícone continua, senão o menu
+                 inteiro sumiria junto com o nome. -->
+            <div class="portal-usuario">
+                <button class="portal-cargo portal-usuario-botao" id="btnUsuario" title="Sua conta"
+                    aria-haspopup="true" aria-expanded="false" onclick="alternarMenuUsuario(event)">
+                    <svg class="lr-ico"><use href="#i-pessoa" /></svg>
+                    <span id="userDisplayName" title=""></span>
+                </button>
+                <div class="portal-usuario-menu" id="menuUsuario" role="menu" hidden>
+                    <button type="button" role="menuitem" onclick="abrirMinhaConta()">
+                        <svg class="lr-ico"><use href="#i-engrenagem" /></svg> Configurações
+                    </button>
+                    <button type="button" role="menuitem" class="portal-usuario-sair" onclick="logout()">
+                        <svg class="lr-ico"><use href="#i-sair" /></svg> Sair
+                    </button>
+                </div>
+            </div>
             </div>
         </div>
 
@@ -674,7 +687,7 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="/menu/js/menu-firebase.js?v=35"></script>
+    <script type="module" src="/menu/js/menu-firebase.js?v=36"></script>
     <!-- A janela da Roleta. Depois do menu-firebase.js: ela usa window.db e
          window.lrFunctions, que nascem lá. -->
     <script type="module" src="/menu/js/menu-roleta.js?v=12"></script>

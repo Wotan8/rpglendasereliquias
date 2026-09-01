@@ -4,7 +4,7 @@
 // =============================================
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, sendPasswordResetEmail, verifyBeforeUpdateEmail } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
     getFirestore,
     collection,
@@ -186,6 +186,7 @@ onAuthStateChanged(auth, async (user) => {
         atalhosNoLugar();
         document.dispatchEvent(new CustomEvent('portal:logado'));
         avisarEmailNaoVerificado(user);
+        sincronizarEmailDoDocumento(user);
     } else {
         // Não autenticado → SEM redirect: a própria página vira o login.
         currentUser = null;
@@ -1957,9 +1958,51 @@ window.portalEsqueciSenha = async function () {
         'Procure também no spam.', 'success');
 };
 
-/* Janela "Minha conta": onde a pessoa vê o estado do próprio e-mail, guarda
-   os contatos de recuperação e pede uma nova senha sem precisar deslogar. */
+/* Depois de trocar o e-mail nas Configurações, o Auth muda e o documento fica
+   para trás. Aqui ele acompanha, no login seguinte. A rule aceita a gravação
+   porque o valor é o do próprio token — apontar para o endereço de outra
+   pessoa continua impossível. */
+async function sincronizarEmailDoDocumento(user) {
+    try {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if (snap.exists() && user.email && snap.data().email !== user.email) {
+            await updateDoc(doc(db, 'users', user.uid), { email: user.email });
+        }
+    } catch (e) { console.warn('sincronia de e-mail:', e); }
+}
+
+/* Menu da conta. O gatilho é o nome — e o ícone junto, porque no celular o
+   nome é o primeiro elemento a ceder espaço na barra: se o menu dependesse só
+   do texto, o celular ficaria sem Configurações e sem Sair. */
+window.alternarMenuUsuario = function (ev) {
+    ev?.stopPropagation();
+    const menu = document.getElementById('menuUsuario');
+    const botao = document.getElementById('btnUsuario');
+    if (!menu) return;
+    const abrindo = menu.hidden;
+    menu.hidden = !abrindo;
+    botao?.setAttribute('aria-expanded', String(abrindo));
+};
+
+function fecharMenuUsuario() {
+    const menu = document.getElementById('menuUsuario');
+    if (menu && !menu.hidden) {
+        menu.hidden = true;
+        document.getElementById('btnUsuario')?.setAttribute('aria-expanded', 'false');
+    }
+}
+
+// Clique fora e Esc fecham — um menu que só fecha no próprio botão fica preso
+// atrás de qualquer outra coisa que a pessoa clique.
+document.addEventListener('click', (ev) => {
+    if (!ev.target.closest('.portal-usuario')) fecharMenuUsuario();
+});
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') fecharMenuUsuario(); });
+
+/* Janela "Configurações": nome de exibição, e-mail, senha e os contatos de
+   recuperação. Tudo o que é da CONTA num lugar só. */
 window.abrirMinhaConta = async function () {
+    fecharMenuUsuario();
     if (!currentUser) return;
 
     let dados = {};
@@ -1969,15 +2012,21 @@ window.abrirMinhaConta = async function () {
     janela.className = 'lr-dialogo';
     janela.innerHTML = `
         <form class="lr-dialogo-form" method="dialog">
-            <div class="lr-dialogo-titulo">👤 Minha conta</div>
+            <div class="lr-dialogo-titulo">⚙️ Configurações da conta</div>
 
-            <div class="conta-linha">
-                <span>E-mail de entrada</span>
-                <strong>${escapeHtml(currentUser.email || '')}</strong>
-            </div>
-            <div class="conta-linha">
-                <span>Confirmado</span>
-                <strong>${currentUser.emailVerified ? '✅ sim' : '⚠️ ainda não'}</strong>
+            <label for="contaNome" class="conta-rotulo">Nome de exibição</label>
+            <input id="contaNome" class="lr-dialogo-input" maxlength="60"
+                placeholder="Como a mesa te chama" value="${escapeHtml(currentUser.displayName || '')}">
+
+            <label for="contaEmail" class="conta-rotulo">E-mail de entrada</label>
+            <input id="contaEmail" class="lr-dialogo-input" type="email" maxlength="120"
+                value="${escapeHtml(currentUser.email || '')}">
+            <div class="conta-nota">
+                ${currentUser.emailVerified
+                    ? '✅ e-mail confirmado'
+                    : '⚠️ ainda não confirmado — procure a mensagem na caixa de entrada'}
+                <br>Trocar o e-mail manda uma confirmação para o endereço NOVO. A troca só
+                acontece quando você clicar nela; até lá, entra pelo endereço atual.
             </div>
 
             <p class="lr-dialogo-msg">
@@ -2017,18 +2066,51 @@ window.abrirMinhaConta = async function () {
         }
     });
 
-    janela.querySelector('#contaSalvar').addEventListener('click', async () => {
+    janela.querySelector('#contaSalvar').addEventListener('click', async (ev) => {
+        const b = ev.currentTarget;
+        b.disabled = true;
+        const nome = janela.querySelector('#contaNome').value.trim().slice(0, 60);
+        const novoEmail = janela.querySelector('#contaEmail').value.trim().slice(0, 120);
         const whatsapp = janela.querySelector('#contaWhats').value.trim().slice(0, 24);
         const emailRecuperacao = janela.querySelector('#contaEmailAlt').value.trim().slice(0, 120);
+        const recados = [];
+
         try {
-            // O documento é `users/{uid}` e estes dois campos não estão na lista
-            // de protegidos — são contato, não identidade nem saldo.
-            await updateDoc(doc(db, 'users', currentUser.uid), { whatsapp, emailRecuperacao });
-            showAlert('✅ Contatos salvos.', 'success');
+            if (nome && nome !== (currentUser.displayName || '')) {
+                await updateProfile(currentUser, { displayName: nome });
+                recados.push('nome atualizado');
+            }
+            /* `displayName`, `whatsapp` e `emailRecuperacao` nao estao na lista de
+               campos protegidos das rules: sao apelido e contato, nao identidade
+               nem saldo. O `email` e outra historia — ver abaixo. */
+            await updateDoc(doc(db, 'users', currentUser.uid),
+                { whatsapp, emailRecuperacao, ...(nome ? { displayName: nome } : {}) });
+
+            if (novoEmail && novoEmail !== (currentUser.email || '')) {
+                /* `verifyBeforeUpdateEmail` e nao `updateEmail`: a troca so vale
+                   depois que a pessoa clicar no link enviado para o endereco NOVO.
+                   Sem isso dava para apontar a conta para um e-mail que nao e seu
+                   e depois "recuperar a senha" por ele.
+                   O documento acompanha no proximo login — a rule aceita gravar
+                   `email` quando ele bate com o do token. */
+                await verifyBeforeUpdateEmail(currentUser, novoEmail);
+                recados.push('confirmacao enviada para ' + novoEmail);
+            }
+
+            showAlert('✅ ' + (recados.length ? recados.join(' · ') : 'Configuracoes salvas.'), 'success');
             janela.close();
+            const el = document.getElementById('userDisplayName');
+            if (el && nome) el.textContent = nome;
         } catch (e) {
-            console.error('salvar contatos:', e);
-            showAlert('❌ Não foi possível salvar.', 'danger');
+            console.error('salvar conta:', e);
+            /* Trocar e-mail exige login recente. Dizer so "erro" aqui manda a
+               pessoa procurar defeito onde nao tem. */
+            showAlert(e?.code === 'auth/requires-recent-login'
+                ? '🔒 Por seguranca, saia e entre de novo antes de trocar o e-mail.'
+                : e?.code === 'auth/invalid-email' ? '❌ Esse e-mail nao parece valido.'
+                : e?.code === 'auth/email-already-in-use' ? '❌ Ja existe conta com esse e-mail.'
+                : '❌ Nao foi possivel salvar.', 'danger');
+            b.disabled = false;
         }
     });
 };

@@ -137,8 +137,11 @@ buraco tinha sobrevivido.
    e [worldbuilding](worldbuilding/js/wb-core.js:59). Todos agora leem
    `users/{uid}` e nada mais.
 2. Nas rules, `uid` e `email` viraram identidade: no `create` só podem repetir o
-   que está no token (`identidadeCorreta`), e no `update` não mudam mais
-   (`naoMexeuNaIdentidade`).
+   que está no token (`identidadeCorreta`). No `update`, `uid` nunca muda; o
+   `email` só pode ser gravado com o valor do **próprio token** — o que libera
+   a troca de e-mail nas Configurações (o documento acompanha o Auth no login
+   seguinte) sem reabrir o buraco: apontar o próprio documento para o endereço
+   de outra pessoa continua impossível, e há teste para os dois lados.
 3. O Portal cria o documento se ele não existir — conta feita fora do cadastro
    não fica sem doc agora que não há mais fallback.
 

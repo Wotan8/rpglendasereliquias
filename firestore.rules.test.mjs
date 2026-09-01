@@ -96,6 +96,14 @@ await teste('não grava o próprio uid depois (identidade é imutável)',
   () => assertFails(updateDoc(eu, { uid: JOG })));
 await teste('não troca o e-mail para o de outra pessoa',
   () => assertFails(updateDoc(eu, { email: 'vitima@teste.com' })));
+await teste('não troca o e-mail para um endereço qualquer',
+  () => assertFails(updateDoc(eu, { email: 'inventado@teste.com' })));
+// ...mas gravar o e-mail DO PRÓPRIO TOKEN passa: é como o documento acompanha
+// o Auth depois que a pessoa troca o e-mail nas Configurações.
+await teste('grava o e-mail do próprio token (sincronia com o Auth)',
+  () => assertSucceeds(updateDoc(eu, { email: EMAIL })));
+await teste('trocar o nome de exibição passa (é apelido, não identidade)',
+  () => assertSucceeds(updateDoc(eu, { displayName: 'Outro Apelido' })));
 await teste('não se dá Frag$',
   () => assertFails(updateDoc(eu, { fragmentos: 99999 })));
 await teste('não escreve no doc de outra pessoa',

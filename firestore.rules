@@ -62,9 +62,15 @@ service cloud.firestore {
         && (!('email' in request.resource.data) || request.resource.data.email == request.auth.token.email);
     }
 
+    /* `uid` nunca muda. `email` pode — mas só para o do próprio token, que é o
+       que o Firebase Auth confirmou. Isso libera a troca de e-mail nas
+       Configurações (o documento acompanha o Auth no login seguinte) sem
+       reabrir o buraco do item 2: continua sendo impossível apontar o próprio
+       documento para o endereço de outra pessoa. */
     function naoMexeuNaIdentidade() {
-      return !request.resource.data.diff(resource.data).affectedKeys()
-        .hasAny(['uid', 'email']);
+      let mexeu = request.resource.data.diff(resource.data).affectedKeys();
+      return !mexeu.hasAny(['uid'])
+        && (!mexeu.hasAny(['email']) || request.resource.data.email == request.auth.token.email);
     }
 
     // ========== Coleções do Painel de Criador (system/data/*) ==========
