@@ -12,7 +12,7 @@
      portal:deslogado → mostra o convite de login
    ===================================================================== */
 import { pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
-import { estiloInline } from '../../shared/livro-estilo.js';
+import { estiloInline, formatoDoLivro } from '../../shared/livro-estilo.js';
 import { resolverCampos, carregadorPadrao } from '../../shared/campo-vinculado.js';
 
 let livros = [];        // [{id, title, description, cover, capitulos:[...]}]
@@ -142,6 +142,8 @@ window.wikiAbrirCap = function (i, marcar) {
     // O container e um <article> fixo no index.html, entao a aparencia entra
     // por setAttribute — e para isso o helper tem a forma sem o `style="`.
     corpo.setAttribute('style', estiloInline(l));
+    const fmt = formatoDoLivro(l);
+    if (fmt) corpo.dataset.pag = fmt; else delete corpo.dataset.pag;
     corpo.innerHTML = l.capitulos[capAberto].contentHTML || '';
     resolverCampos(corpo, _carregarCampos);
     if (marcar) destacar(corpo, marcar);

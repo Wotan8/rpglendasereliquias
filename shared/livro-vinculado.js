@@ -57,8 +57,9 @@
        Enquanto não chega, devolve '' — que é exatamente o livro sem
        aparência escolhida, então uma falha aqui não desfigura nada. */
     let estiloDoLivro = () => '';
+    let formatoAttr = () => '';
     const _est = import('/shared/livro-estilo.js')
-        .then(m => { estiloDoLivro = m.estiloDoLivro; return m; })
+        .then(m => { estiloDoLivro = m.estiloDoLivro; formatoAttr = m.formatoAttr; return m; })
         .catch(e => { console.warn('📖 livro-estilo:', e); return null; });
 
     /* Campo vinculado, pelo mesmo caminho. Falhar aqui deixa a RESERVA na

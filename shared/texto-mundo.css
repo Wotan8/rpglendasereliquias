@@ -329,6 +329,130 @@
     column-rule: 1px solid var(--lr-border);
 }
 
+/* ── Esquemas de coluna ────────────────────────────────────
+   Duas familias, porque sao duas coisas diferentes:
+
+   FLUXO (tm-cols--2, --3) usa `columns`: o texto ENCHE uma coluna e
+   transborda para a proxima, como numa pagina de livro. Serve para corpo
+   corrido — regra longa, descricao, historia.
+
+   GRADE (tm-cols--margem, --margem-dir, --desloc, --grade3) usa `grid`:
+   cada bloco fica onde foi posto. Serve para o que NAO e corrido — a nota
+   de margem ao lado do texto, o sumario em tres celulas, a coluna deslocada
+   com arte do lado.
+
+   Tentar fazer nota de margem com `columns` e o erro classico: a nota
+   escorrega para a coluna seguinte no dia em que o texto encolhe. */
+.texto-mundo [class*="tm-cols--"] { margin: 1.4em 0; }
+
+.texto-mundo .tm-cols--2,
+.texto-mundo .tm-cols--3 {
+    column-gap: 2.2em;
+    column-rule: 1px solid var(--lr-border-soft);
+}
+.texto-mundo .tm-cols--2 { column-count: 2; }
+.texto-mundo .tm-cols--3 { column-count: 3; }
+/* Titulo dentro de coluna de fluxo nao pode nascer no pe da coluna. */
+.texto-mundo [class*="tm-cols--"] h2,
+.texto-mundo [class*="tm-cols--"] h3,
+.texto-mundo [class*="tm-cols--"] h4 { break-after: avoid; }
+.texto-mundo [class*="tm-cols--"] > *:first-child { margin-top: 0; }
+
+/* Margem + corpo. O PRIMEIRO filho vai para a coluna estreita; o resto
+   empilha na larga. E a assinatura do livro de regras: a nota fica na
+   altura do paragrafo que ela comenta, e nao onde o fluxo jogar. */
+.texto-mundo .tm-cols--margem,
+.texto-mundo .tm-cols--margem-dir {
+    display: grid;
+    gap: 0 2em;
+    align-items: start;
+}
+.texto-mundo .tm-cols--margem { grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); }
+.texto-mundo .tm-cols--margem-dir { grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr); }
+.texto-mundo .tm-cols--margem > *:first-child { grid-column: 1; grid-row: 1; }
+.texto-mundo .tm-cols--margem > *:not(:first-child) { grid-column: 2; }
+.texto-mundo .tm-cols--margem-dir > *:first-child { grid-column: 2; grid-row: 1; }
+.texto-mundo .tm-cols--margem-dir > *:not(:first-child) { grid-column: 1; }
+
+/* Coluna deslocada: o texto ocupa so um lado, e o outro fica para a arte
+   que corre por tras (ou para o branco, que tambem e diagramacao). */
+.texto-mundo .tm-cols--desloc { display: grid; grid-template-columns: 1fr 2.2fr; gap: 0 2em; }
+.texto-mundo .tm-cols--desloc > * { grid-column: 2; }
+
+/* Tres celulas lado a lado — o sumario, a fileira de cards. Aqui cada
+   filho e uma celula, entao envolver tres blocos da tres colunas. */
+.texto-mundo .tm-cols--grade3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--lr-space-4) 2em; align-items: start; }
+.texto-mundo .tm-cols--grade3 > * { margin-top: 0; }
+
+/* ── Blocos que dao vida as colunas ────────────────────────
+   A coluna estreita sem nada dentro e so espaco vazio. Estes tres sao os
+   que aparecem em toda pagina de livro de regras. */
+
+/* Nota de margem: alinhada a direita e com filete em cima, como uma
+   anotacao no canto da pagina. Na coluna da direita, espelha o alinhamento —
+   nota grudada na borda de fora e o que a faz parecer margem, nao coluna. */
+.texto-mundo .tm-nota {
+    font-size: .88em;
+    line-height: 1.45;
+    color: var(--lr-text-2);
+    text-align: right;
+    border-top: 1px solid var(--tm-cor-destaque, var(--lr-bronze));
+    padding-top: .7em;
+    font-style: italic;
+}
+.texto-mundo .tm-cols--margem-dir .tm-nota { text-align: left; }
+
+/* Leitura em voz alta: monoespacada e emoldurada. O mestre precisa achar o
+   trecho no meio da pagina sem procurar. */
+.texto-mundo .tm-leitura {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: .84em;
+    line-height: 1.6;
+    border: 1px solid var(--tm-cor-destaque, var(--lr-bronze));
+    padding: 1.1em 1.3em;
+    margin: 1.4em 0;
+    background: var(--lr-bg-1);
+}
+
+/* Aviso com icone: o icone e ::before para nao entrar no HTML gravado. */
+.texto-mundo .tm-aviso {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0 .9em;
+    align-items: start;
+    border: 1px solid var(--lr-border);
+    border-left: 3px solid var(--tm-cor-destaque, var(--lr-bronze));
+    background: var(--lr-bg-1);
+    padding: .9em 1.1em;
+    margin: 1.4em 0;
+    font-size: .92em;
+}
+.texto-mundo .tm-aviso::before { content: "⚠️"; font-size: 1.4em; line-height: 1; }
+.texto-mundo .tm-aviso--nota::before { content: "📖"; }
+.texto-mundo .tm-aviso--segredo::before { content: "🔒"; }
+
+/* ── Formato de pagina ─────────────────────────────────────
+   A largura da mancha em milimetros de papel de verdade, menos as margens.
+   Nao e capricho: quem diagrama um livro de regras pensa em A5, e uma
+   mancha de A5 num monitor de 27" tem outro ritmo de leitura que uma de A3.
+   `min()` com 100% para o papel grande nao estourar a tela pequena. */
+.texto-mundo[data-pag] { max-width: min(100%, var(--tm-pag-larg)); margin-left: auto; margin-right: auto; }
+.texto-mundo[data-pag="a3"]     { --tm-pag-larg: 277mm; }
+.texto-mundo[data-pag="a4"]     { --tm-pag-larg: 180mm; }
+.texto-mundo[data-pag="a5"]     { --tm-pag-larg: 128mm; }
+.texto-mundo[data-pag="a6"]     { --tm-pag-larg: 90mm; }
+.texto-mundo[data-pag="carta"]  { --tm-pag-larg: 186mm; }
+.texto-mundo[data-pag="oficio"] { --tm-pag-larg: 186mm; }
+/* Formatos de LIVRO, em polegadas convertidas — sao os do mercado, e e por
+   eles que uma pagina "parece livro" em vez de "parece relatorio". */
+.texto-mundo[data-pag="romance"] { --tm-pag-larg: 115mm; }  /* 5.5x8.5" */
+.texto-mundo[data-pag="digest"]  { --tm-pag-larg: 128mm; }  /* 5.83x8.27" */
+.texto-mundo[data-pag="rpg"]     { --tm-pag-larg: 190mm; }  /* 8.5x11", o padrao de livro de RPG */
+.texto-mundo[data-pag="quadrado"]{ --tm-pag-larg: 160mm; }
+/* Largura da mancha escolhida a mao vence o formato: ela e mais especifica
+   que "papel A4", e quem mexeu nela quis aquele numero. */
+.texto-mundo[data-pag][style*="--tm-largura"] { max-width: var(--tm-largura); }
+
 /* ── Telas estreitas: nada de float nem coluna dupla ─────── */
 @media (max-width: 640px) {
     .texto-mundo .tm-fig--flut-esq,
@@ -341,6 +465,19 @@
     .texto-mundo .tm-img--m,
     .texto-mundo .tm-img--g { width: 100%; }
     .texto-mundo .tm-colunas { column-count: 1; }
+    /* Toda coluna vira uma so. Duas colunas num celular sao duas colunas de
+       tres palavras — e a nota de margem vira um paragrafo antes do texto,
+       que e onde ela faz sentido quando nao ha margem. */
+    .texto-mundo .tm-cols--2,
+    .texto-mundo .tm-cols--3 { column-count: 1; }
+    .texto-mundo .tm-cols--margem,
+    .texto-mundo .tm-cols--margem-dir,
+    .texto-mundo .tm-cols--desloc,
+    .texto-mundo .tm-cols--grade3 { display: block; }
+    .texto-mundo .tm-cols--margem > *,
+    .texto-mundo .tm-cols--margem-dir > *,
+    .texto-mundo .tm-cols--desloc > * { grid-column: auto; }
+    .texto-mundo .tm-nota { text-align: left; }
 }
 
 /* ── Impressão ───────────────────────────────────────────── */

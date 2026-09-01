@@ -24,7 +24,7 @@ import { WB, esc, uid, ToolModal, setTitle, contentBody, searchables, KIND, pool
 import { dossieHTML } from './wb-dossie.js';
 import { TOOLBAR_HTML, bindRich } from './wb-rich.js';
 import { PUBLICACOES, pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
-import { ESTILO_CAMPOS, FONTES, estiloDoLivro, estiloInline, estiloDoLivro_obj } from '../../shared/livro-estilo.js';
+import { ESTILO_CAMPOS, FONTES, FORMATOS, estiloDoLivro, estiloInline, estiloDoLivro_obj, formatoAttr, formatoDoLivro } from '../../shared/livro-estilo.js';
 import { proximaVersao, mesmaVersao } from '../../shared/versao-canone.js';
 import { alvos, avisoDeVersao, enviarAviso } from '../../shared/avisar-livro.js';
 import { camposDe, resolverCampos, carregadorPadrao, FONTES_CAMPO } from '../../shared/campo-vinculado.js';
@@ -531,6 +531,11 @@ export const Editor = (() => {
     function campoEstiloHTML(c) {
         const v = String(est[c.k] ?? '');
         const dica = c.dica ? `<span class="wbt-muted wb-bkhint">${esc(c.dica)}</span>` : '';
+        if (c.tipo === 'formato') return `
+            <label>${c.label}
+                <select class="form-select" data-est="${c.k}">
+                    ${FORMATOS.map(([val, nome]) => `<option value="${esc(val)}" ${val === v ? 'selected' : ''}>${esc(nome)}</option>`).join('')}
+                </select>${dica}</label>`;
         if (c.tipo === 'fonte') return `
             <label>${c.label}
                 <select class="form-select" data-est="${c.k}">
@@ -683,6 +688,8 @@ export const Editor = (() => {
         const pintarAmostra = () => {
             const alvo = $('#bkAmostra'); if (!alvo) return;
             alvo.setAttribute('style', estiloInline({ estilo: est }));
+            const f = formatoDoLivro({ estilo: est });
+            if (f) alvo.dataset.pag = f; else delete alvo.dataset.pag;
         };
         document.querySelector('[data-bkpanel="estilo"]').addEventListener('input', (e) => {
             const el = e.target.closest('[data-est]'); if (!el) return;
@@ -994,7 +1001,7 @@ export const Editor = (() => {
                 <!-- Colada no texto e grudada no topo quando a página rola. -->
                 <div class="wbt-toolbar wb-richbar" id="richToolbar">${TOOLBAR_HTML}</div>
 
-                <div id="richEditor" class="wbt-rich texto-mundo"${estiloDoLivro(books.find(x => x.id === a.bookId))} contenteditable="${lendo ? 'false' : 'true'}"
+                <div id="richEditor" class="wbt-rich texto-mundo"${estiloDoLivro(books.find(x => x.id === a.bookId))}${formatoAttr(books.find(x => x.id === a.bookId))} contenteditable="${lendo ? 'false' : 'true'}"
                      data-placeholder="Escreva aqui. Digite @ para vincular NPCs, Tribos, Locais ou eventos…">${a.contentHTML || ''}</div>
                 <p class="wbt-muted" id="editorStatus"></p>
                 ${navCapsHTML()}

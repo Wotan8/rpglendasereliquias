@@ -17,7 +17,7 @@
 import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { statusDoCapitulo } from './conhecimento-calc.js';
 import { pubDoLivro, versaoDoLivro } from '../../shared/livros-pub.js';
-import { estiloDoLivro } from '../../shared/livro-estilo.js';
+import { estiloDoLivro, formatoAttr } from '../../shared/livro-estilo.js';
 import { resolverCampos, carregadorPadrao } from '../../shared/campo-vinculado.js';
 
 /* Um carregador por sessao: o cache dele evita reler a colecao a cada

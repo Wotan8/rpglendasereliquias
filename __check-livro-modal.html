@@ -13,9 +13,9 @@
 <link rel="stylesheet" href="shared/sanfona.css">
 <link rel="stylesheet" href="shared/acervo.css">
 <link rel="stylesheet" href="shared/dialogo.css">
-<link rel="stylesheet" href="shared/texto-mundo.css?v=5">
+<link rel="stylesheet" href="shared/texto-mundo.css?v=6">
 <link rel="stylesheet" href="worldbuilding/css/worldbuilding.css?v=2">
-<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=21">
+<link rel="stylesheet" href="worldbuilding/css/wb-ferramentas.css?v=22">
 <script src="shared/theme.js"></script>
 <script src="shared/campo-imagem.js?v=2"></script>
 
@@ -34,11 +34,11 @@
      instancia que o editor enxerga, senao GRAVADO fica vazio. -->
 <script type="importmap">
 { "imports": {
-    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=9",
-    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=9",
-    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=9",
-    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=9",
-    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=9"
+    "/worldbuilding/js/firebase-config.js": "/__check-stub-firestore.js?v=10",
+    "/worldbuilding/js/wb-editor.js": "/worldbuilding/js/wb-editor.js?v=10",
+    "/worldbuilding/js/wb-rich.js": "/worldbuilding/js/wb-rich.js?v=10",
+    "/worldbuilding/js/wb-tabela.js": "/worldbuilding/js/wb-tabela.js?v=10",
+    "/worldbuilding/js/wb-rich-sanitize.js": "/worldbuilding/js/wb-rich-sanitize.js?v=10"
 } }
 </script>
 
@@ -75,7 +75,7 @@
 </div>
 
 <script type="module">
-import { GRAVADO } from './__check-stub-firestore.js?v=9';
+import { GRAVADO } from './__check-stub-firestore.js?v=10';
 import { Editor } from './worldbuilding/js/wb-editor.js';
 
 window.WB = { data: {}, user: { email: 'check@harness' } };
@@ -87,7 +87,7 @@ const espera = (ms = 80) => new Promise(r => setTimeout(r, ms));
 /* Modulo com query e outro modulo para o navegador. Sem isso o harness roda
    o que ficou no cache — ja aconteceu duas vezes aqui. UM token para todos
    os `import()` de shared/, subido a cada mexida. */
-const CB = '?h=3';
+const CB = '?h=4';
 // Salvamento deliberado (o mesmo caminho do botao 💾) e volta a Biblioteca.
 const save2 = async () => { $('#saveArticle').click(); await espera(200); };
 // Tolerante a ja estar na Biblioteca: os blocos de teste rodam em sequencia
@@ -583,6 +583,47 @@ $('#chkRun').onclick = async () => {
         nivel: 3, vazio: '', lista: [1, 2], obj: {}, _interno: 'nao', ownerUid: 'abc' });
     t('oferece so escalar com conteudo',
         String(campos.map(c => c.campo).sort()) === 'expectativaVida,nivel,nome');
+
+    // ── Esquemas de coluna e formato de pagina ──
+    const LE = await import('/shared/livro-estilo.js' + CB);
+    t('formato invalido no banco nao vira atributo',
+        LE.formatoAttr({ estilo: { formato: 'papiro' } }) === '');
+    t('formato valido vira data-pag', LE.formatoAttr({ estilo: { formato: 'a5' } }) === ' data-pag="a5"');
+    t('formato NAO entra no style — ele escolhe regra, nao carrega valor',
+        !LE.estiloInline({ estilo: { formato: 'a5' } }).includes('formato'));
+    t('e o resto do estilo continua entrando',
+        LE.estiloInline({ estilo: { formato: 'a5', corTexto: '#111111' } }) === '--tm-cor:#111111');
+
+    // As duas familias de coluna sao coisas diferentes, e o CSS tem de saber.
+    const pal = document.createElement('div');
+    pal.className = 'texto-mundo';
+    pal.style.width = '600px';
+    pal.innerHTML =
+        '<div class="tm-cols--2"><p>a</p><p>b</p></div>'
+        + '<div class="tm-cols--margem"><p class="tm-nota">nota</p><p>corpo</p><p>corpo2</p></div>'
+        + '<div class="tm-cols--grade3"><p>1</p><p>2</p><p>3</p></div>';
+    document.body.appendChild(pal);
+    const [c2, cm, cg] = pal.children;
+    t('coluna de FLUXO usa columns', getComputedStyle(c2).columnCount === '2');
+    t('coluna de GRADE usa grid', getComputedStyle(cm).display === 'grid');
+    // A nota tem de ficar na coluna 1 e o corpo na 2 — se ela escorregar
+    // para o fluxo, deixa de ser nota de margem.
+    t('a nota fica na coluna estreita',
+        cm.children[0].getBoundingClientRect().left < cm.children[1].getBoundingClientRect().left);
+    t('o corpo todo fica na coluna larga',
+        Math.round(cm.children[1].getBoundingClientRect().left) === Math.round(cm.children[2].getBoundingClientRect().left));
+    t('a coluna estreita e mesmo mais estreita',
+        cm.children[0].getBoundingClientRect().width < cm.children[1].getBoundingClientRect().width);
+    t('grade3 poe os tres lado a lado',
+        new Set([...cg.children].map(x => Math.round(x.getBoundingClientRect().top))).size === 1);
+
+    // Formato de pagina limita a mancha, e a largura escolhida a mao vence.
+    pal.dataset.pag = 'a6';
+    const largA6 = pal.getBoundingClientRect().width;
+    pal.dataset.pag = 'a4';
+    t('A4 e mais largo que A6', pal.getBoundingClientRect().width > largA6);
+    t('papel grande nao estoura o container', pal.getBoundingClientRect().width <= 600);
+    pal.remove();
 
     // ── Tabela: a GRADE, que e onde da para errar em silencio ──
     const T = await import('/worldbuilding/js/wb-tabela.js' + CB);

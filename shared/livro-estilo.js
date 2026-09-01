@@ -34,14 +34,34 @@ export const FONTES = [
     ['ui-monospace, "Cascadia Mono", Consolas, monospace', 'Monoespaçada — nota de campo'],
 ];
 
+/* Formatos de pagina. Os tres primeiros grupos sao papel de escritorio; os
+   ultimos sao os formatos com que livro se imprime de verdade — e um livro
+   de regras diagramado em A4 de relatorio parece um relatorio. */
+export const FORMATOS = [
+    ['', 'Livre (acompanha a tela)'],
+    ['a5', 'A5 — 148×210 mm'],
+    ['a4', 'A4 — 210×297 mm'],
+    ['a3', 'A3 — 297×420 mm'],
+    ['a6', 'A6 — 105×148 mm (bolso)'],
+    ['carta', 'Carta — 216×279 mm'],
+    ['oficio', 'Ofício — 216×356 mm'],
+    ['romance', 'Romance — 5,5×8,5 pol'],
+    ['digest', 'Digest — 5,83×8,27 pol'],
+    ['rpg', 'Livro de RPG — 8,5×11 pol'],
+    ['quadrado', 'Quadrado — 21×21 cm'],
+];
+
 /**
  * Os botões da aparência. `var` é a custom property que o texto-mundo.css
- * consome; `tipo` diz ao formulário que campo desenhar.
+ * consome; `tipo` diz ao formulário que campo desenhar. Campo sem `var`
+ * (o formato) viaja em ATRIBUTO — `data-pag` —, porque ele escolhe entre
+ * regras prontas do texto-mundo.css em vez de carregar um valor.
  *
  * Mexeu aqui, o formulário do Escritório e as cinco telas de leitura
  * acompanham sozinhos — é por isso que a lista mora aqui e não lá.
  */
 export const ESTILO_CAMPOS = [
+    { k: 'formato', var: null, tipo: 'formato', label: 'Formato da página', dica: 'A mancha ganha a largura do papel escolhido, menos as margens. Em tela estreita ele encolhe junto — papel não estoura celular.' },
     { k: 'fonteTexto',  var: '--tm-fonte',        tipo: 'fonte', label: 'Fonte do texto' },
     { k: 'fonteTitulo', var: '--tm-fonte-titulo', tipo: 'fonte', label: 'Fonte dos títulos' },
     { k: 'tamanho',     var: '--tm-tamanho',      tipo: 'medida', label: 'Corpo do texto', min: 0.8, max: 1.6, passo: 0.05, sufixo: 'rem', dica: 'Tudo escala junto — título, citação e legenda são múltiplos deste corpo.' },
@@ -72,6 +92,18 @@ export function estiloDoLivro(livro) {
     return css ? ` style="${css}"` : '';
 }
 
+/** O formato escolhido, para quem monta o atributo `data-pag`. */
+export function formatoDoLivro(livro) {
+    const v = String(estiloDoLivro_obj(livro).formato || '').trim();
+    return FORMATOS.some(([k]) => k && k === v) ? v : '';
+}
+
+/** `data-pag="a5"` (ou ''), o par do estiloDoLivro para o mesmo container. */
+export function formatoAttr(livro) {
+    const f = formatoDoLivro(livro);
+    return f ? ` data-pag="${f}"` : '';
+}
+
 /**
  * As declarações cruas, sem o `style="…"` em volta — para o container que
  * já existe no HTML e recebe por `setAttribute('style', …)`, como o
@@ -81,6 +113,7 @@ export function estiloInline(livro) {
     const e = estiloDoLivro_obj(livro);
     const partes = [];
     for (const campo of ESTILO_CAMPOS) {
+        if (!campo.var) continue;   // formato viaja em atributo, não em variável
         const v = String(e[campo.k] ?? '').trim();
         if (!v) continue;
         if (campo.tipo === 'imagem') partes.push(`${campo.var}:url("${cssSeguro(v)}")`);

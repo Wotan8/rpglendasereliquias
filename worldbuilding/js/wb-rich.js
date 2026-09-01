@@ -54,7 +54,24 @@ export const TOOLBAR_HTML = `
 <button class="btn btn-secondary btn-sm" data-rich="cmd" data-cmd="insertHorizontalRule" title="Filete separador">—</button>
 <span class="wb-rich-sep"></span>
 <button class="btn btn-secondary btn-sm" data-rich="classe" data-classe="tm-capitular" title="Capitular — primeira letra grande">✒️</button>
-<button class="btn btn-secondary btn-sm" data-rich="classe" data-classe="tm-colunas" title="Duas colunas">▥</button>
+<select class="wb-rich-sel" data-rich="cols" title="Dividir em colunas — envolve os blocos selecionados">
+    <option value="">▥ Colunas…</option>
+    <option value="">Uma coluna (desfaz)</option>
+    <option value="tm-cols--2">Duas, texto corrido</option>
+    <option value="tm-cols--3">Três, texto corrido</option>
+    <option value="tm-cols--margem">Nota à esquerda + texto</option>
+    <option value="tm-cols--margem-dir">Texto + nota à direita</option>
+    <option value="tm-cols--desloc">Texto deslocado (arte à esquerda)</option>
+    <option value="tm-cols--grade3">Três células lado a lado</option>
+</select>
+<select class="wb-rich-sel" data-rich="bloco2" title="Blocos de livro de regras">
+    <option value="">▤ Bloco…</option>
+    <option value="tm-nota">Nota de margem</option>
+    <option value="tm-leitura">Ler em voz alta</option>
+    <option value="tm-aviso">⚠️ Aviso</option>
+    <option value="tm-aviso tm-aviso--nota">📖 Nota do mestre</option>
+    <option value="tm-aviso tm-aviso--segredo">🔒 Segredo</option>
+</select>
 <button class="btn btn-secondary btn-sm" data-rich="link" title="Inserir link">🔗</button>
 <button class="btn btn-secondary btn-sm" data-rich="imagem" title="Inserir imagem">🖼️</button>
 <button class="btn btn-secondary btn-sm" data-rich="tabela" title="Inserir tabela">▦</button>
@@ -532,6 +549,66 @@ export function bindRich(ed, toolbar, onChange, opts = {}) {
         document.execCommand('foreColor', false, e.target.value);
         avisar();
     });
+
+    /* ── Colunas: envolve os blocos escolhidos ──────────────
+       `columns`/`grid` precisam de um PAI. Sem envolver, "duas colunas"
+       viraria uma classe solta num parágrafo, que não divide nada. */
+    toolbar.querySelector('[data-rich="cols"]').addEventListener('change', (e) => {
+        const classe = e.target.value;
+        e.target.selectedIndex = 0;
+        const blocos = blocosDaSelecao();
+        if (!blocos.length) return;
+        ed.focus();
+        const dentro = blocos[0].closest('[class*="tm-cols--"]');
+        if (dentro) desembrulhar(dentro);
+        if (classe) envolver(blocos, classe);
+        avisar();
+    });
+
+    /* Blocos: classe no bloco onde o cursor está, ligando/desligando. */
+    toolbar.querySelector('[data-rich="bloco2"]').addEventListener('change', (e) => {
+        const classes = e.target.value.split(' ').filter(Boolean);
+        e.target.selectedIndex = 0;
+        if (!classes.length) return;
+        ed.focus();
+        const bloco = blocosDaSelecao()[0];
+        if (!bloco) return;
+        const jaTem = classes.every(c => bloco.classList.contains(c));
+        // Trocar de bloco não pode empilhar: sair de "aviso" para "leitura"
+        // com as duas classes daria uma caixa que é as duas e não é nenhuma.
+        bloco.classList.remove('tm-nota', 'tm-leitura', 'tm-aviso', 'tm-aviso--nota', 'tm-aviso--segredo');
+        if (!jaTem) bloco.classList.add(...classes);
+        avisar();
+    });
+
+    /** Os blocos de topo tocados pela seleção — é neles que coluna e caixa
+     *  fazem sentido, não no <span> onde o cursor por acaso está. */
+    function blocosDaSelecao() {
+        const sel = window.getSelection();
+        if (!sel.rangeCount) return [];
+        const r = sel.getRangeAt(0);
+        const deTopo = (no) => {
+            let n = no?.nodeType === Node.TEXT_NODE ? no.parentElement : no;
+            while (n && n.parentElement && n.parentElement !== ed) n = n.parentElement;
+            return n && n !== ed ? n : null;
+        };
+        const ini = deTopo(r.startContainer), fim = deTopo(r.endContainer);
+        if (!ini) return [];
+        const todos = [...ed.children];
+        const a2 = todos.indexOf(ini), b2 = fim ? todos.indexOf(fim) : a2;
+        return todos.slice(Math.min(a2, b2), Math.max(a2, b2) + 1);
+    }
+
+    function envolver(blocos, classe) {
+        const caixa = document.createElement('div');
+        caixa.className = classe;
+        blocos[0].before(caixa);
+        blocos.forEach(b => caixa.appendChild(b));
+    }
+    function desembrulhar(caixa) {
+        while (caixa.firstChild) caixa.before(caixa.firstChild);
+        caixa.remove();
+    }
 
     toolbar.querySelector('[data-rich="bloco"]').addEventListener('change', (e) => {
         ed.focus();
