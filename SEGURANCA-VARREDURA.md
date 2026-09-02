@@ -24,7 +24,7 @@ Legenda de esforço: **P** = pequeno (uma linha / uma regra), **M** = médio
 | 4 | Webhook do Mercado Pago sem assinatura, sem conferência de valor e sem estorno | 🟠 Alto | M ✅ |
 | 5 | `npcs` e `items` de NPC graváveis por qualquer autenticado | 🟠 Alto | P ✅ |
 | 6 | Coleção `users` legível inteira por qualquer autenticado | 🟠 Alto | M ✅ |
-| 7 | reCAPTCHA falha aberto + zero rate limit / App Check nas callables | 🟠 Alto | M ✅ parcial |
+| 7 | reCAPTCHA falha aberto + zero rate limit / App Check nas callables | 🟠 Alto | M ✅ |
 | 8 | Storage: qualquer autenticado sobrescreve hero, favicon e imagem de item | 🟡 Médio | P ✅ |
 | 9 | `escapeHtml()` não escapa aspas → XSS em atributo | 🟡 Médio | P ✅ |
 | 10 | Sem verificação de e-mail no cadastro | 🟡 Médio | P ✅ |
@@ -467,7 +467,7 @@ numa subcoleção dele, e **nunca** no espelho.
 
 ---
 
-## 🟠 7. reCAPTCHA falha aberto, e não há App Check nem rate limit ✅ parcial
+## 🟠 7. reCAPTCHA falha aberto, e não há App Check nem rate limit ✅ corrigido
 
 **Onde:** [functions/index.js:43](functions/index.js:43)
 
@@ -510,34 +510,51 @@ callables já são limitadas pelo próprio saldo — girar exige giro, re-rolar
 exige re-rolagem, comprar com Frag$ exige Frag$, aplicar EXP exige o item no
 Repertório. O checkout era a única que criava recurso do nada.
 
-### 3. App Check — PARADO em 31/08/2026, por decisão do Google
+### 3. App Check — ligado em 02/09/2026, em monitoramento
 
-Tentado até o fim e desfeito. O motivo não é o projeto nem a configuração: o
-**Google descontinuou o provedor reCAPTCHA clássico para App Check**. O painel
-do Firebase ainda desenha o formulário ("Chave reCAPTCHA do secret", vida útil
-do token), mas com os campos desabilitados e um aviso vermelho no topo —
-*"reCAPTCHA is deprecated, please use reCAPTCHA Enterprise instead"*. Não há
-como registrar o app por ali.
+Parou uma vez e voltou. A primeira tentativa morreu porque o **Google
+descontinuou o provedor reCAPTCHA clássico** para App Check — o painel do
+Firebase ainda desenha o formulário, com os campos desabilitados e um aviso
+vermelho. Todo o código daquela tentativa foi revertido na hora, em vez de
+ficar pedindo token a um provedor inexistente.
 
-Antes de esbarrar nisso, o caminho todo foi percorrido: chave v3 criada no
-projeto certo (com os dois domínios), módulo `shared/app-check.js` escrito e os
-10 pontos de `initializeApp` do projeto ligados a ele. Tudo isso foi
-**revertido e o hosting republicado**, porque em produção aquele código pediria
-token a um provedor que não existe: erro no console de toda página, sem
-proteger nada. Meia funcionalidade que só faz barulho é pior que nenhuma.
+O caminho que restou é o **reCAPTCHA Enterprise**, e ele exigiu console em um
+ponto só: criar a chave. A conta de serviço do Firebase bate em 403 no
+`recaptchaenterprise.googleapis.com` — ela é do Firebase, não do projeto
+inteiro. O resto foi feito por API, sem console:
 
-**O que sobrou de caminho:** reCAPTCHA Enterprise, que é o único provedor que o
-App Check aceita hoje para web. Tem camada gratuita (10 mil verificações/mês,
-muito acima do tamanho desta mesa) e o projeto já está no Blaze. A diferença
-para o que foi feito: a chave se cria no console do **Google Cloud**
-(Segurança → reCAPTCHA), não no `google.com/recaptcha/admin`, e o App Check
-pede só o ID da chave — não há segredo para colar. No cliente muda uma linha:
-`ReCaptchaEnterpriseProvider` no lugar de `ReCaptchaV3Provider`.
+- chave registrada em `recaptchaEnterpriseConfig` do app web;
+- `shared/app-check.js` com `ReCaptchaEnterpriseProvider`, ligado nos **10**
+  pontos onde o projeto inicializa o Firebase;
+- falha do App Check nunca derruba a página — `try/catch` no início e nenhuma
+  exceção escapando.
 
-**Não é urgente.** O que segura o abuso na prática já está no ar: o freio de 10
-checkouts por hora e o reCAPTCHA que parou de falhar calado. O App Check
-protegeria contra chamada de fora do navegador com login válido — real, mas
-uma camada acima do que já existe.
+**Verificado em produção:** a página carrega com **zero erros no console** e o
+cliente obtém um token de verdade (JWT de 965 caracteres). Em `localhost` o
+erro aparece, e é o certo: o domínio não está na chave.
+
+**Agora é fase de monitoramento, e ela importa.** Nada está sendo exigido:
+
+| serviço | estado |
+|---|---|
+| `firestore.googleapis.com` | UNENFORCED |
+| `firebasestorage.googleapis.com` | UNENFORCED |
+| `identitytoolkit.googleapis.com` | UNENFORCED |
+
+Deixar rodar alguns dias e olhar o painel do App Check é o que evita descobrir
+uma página esquecida travando a mesa no meio de uma sessão. Quando as métricas
+mostrarem tráfego quase todo verificado, a exigência entra **em degraus**:
+
+1. `enforceAppCheck: true` nas callables de dinheiro (`criarCheckoutMercadoPago`,
+   `comprarComFragmentos`, `girarRoleta`, `gastarRerolagem`) — isso é código, e
+   não passa pela tabela acima;
+2. Firestore e Storage pela API de serviços;
+3. **`identitytoolkit` fica por último, ou nunca** — é o login. Exigir token ali
+   erra para o lado mais caro possível: quem não conseguir obter token não
+   consegue nem entrar para reclamar.
+
+O webhook do Mercado Pago **não** entra em nenhum degrau: quem o chama é o MP,
+que não manda token de App Check. Ele é protegido por assinatura (item 4).
 
 ---
 
@@ -828,9 +845,8 @@ passar de ~300 KB, aí sim vale mover `inventario` para subcoleção.
 
 6. ✅ `recusarItemDaMesa` devolve pelo aviso, não pelo doc de `items` (item **3**).
 7. ✅ Webhook: assinatura, conferência de valor, status de estorno (item **4**).
-8. ✅ reCAPTCHA fail-closed e freio de 10 checkouts/hora (item **7**). App
-   Check parado: o Google descontinuou o provedor reCAPTCHA clássico, e o que
-   resta é o Enterprise.
+8. ✅ reCAPTCHA fail-closed, freio de 10 checkouts/hora e App Check ligado em
+   monitoramento (item **7**).
 
 **Frente própria** — mexe em dado existente:
 

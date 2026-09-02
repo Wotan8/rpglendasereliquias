@@ -25,6 +25,7 @@ import { ehMesmaLinha } from '../../shared/repertorio-linha.js';
 import { confirmar, toast } from '../../shared/dialogo.js?v=2';
 import { estadoPush, ativarPush, desativarPush } from '../../shared/push.js?v=1';
 
+import { ligarAppCheck } from '../../shared/app-check.js?v=2';
 // ===== CONFIG =====
 const firebaseConfig = {
     apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -36,6 +37,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+ligarAppCheck(app);
 const auth = getAuth(app);
 // 💾 PERSISTÊNCIA OFFLINE (Firebase v10+): cache local em IndexedDB.
 // Leituras funcionam offline e escritas ficam na fila e sincronizam

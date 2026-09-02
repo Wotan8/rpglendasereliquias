@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS } from './painel-mechanics.js?v=16';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS, _renderEquationTerm, _collectEquacaoFromContainer, _restoreEquacaoRefs, _formatEquation } from './painel-mechanics.js?v=16';
 import {
     CAMPOS_EQUIPAMENTO, normalizaFormaEquipar,
     SECOES_EQUIPAMENTO, htmlBarraFerramentas, ligarFormulario, agruparEmSecoesDOM, atualizarResumo,
@@ -29,6 +29,7 @@ import {
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { confirmar, toast } from '../../shared/dialogo.js?v=2';
 
+import { ligarAppCheck } from '../../shared/app-check.js?v=2';
 // ===== CONFIG =====
 const firebaseConfig = {
     apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -40,6 +41,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+ligarAppCheck(app);
 const auth = getAuth(app);
 // 💾 PERSISTÊNCIA OFFLINE (Firebase v10+): cache local em IndexedDB.
 // Leituras funcionam offline e escritas ficam na fila e sincronizam
@@ -2713,6 +2715,7 @@ function buildField(field, value, existingData) {
     // === CLASS MODULES EDITOR (inline, legado — mantido para retro-compat) ===
     if (field.type === 'class_modules_editor') {
         wrap.innerHTML = _buildClassModulesEditorHTML(field.key, field.label, Array.isArray(value) ? value : []);
+        _cmRestaurarRedutores(wrap);
         return wrap;
     }
 
@@ -2720,6 +2723,7 @@ function buildField(field, value, existingData) {
     if (field.type === 'class_module_standalone_editor') {
         const moduleData = (typeof value === 'object' && value) ? value : (existingData || {});
         wrap.innerHTML = _buildClassModuleEditorRow(0, moduleData);
+        _cmRestaurarRedutores(wrap);
         // Remove header com botão de remover (não faz sentido no standalone)
         const header = wrap.querySelector('.array-item-header');
         if (header) header.style.display = 'none';
@@ -3777,7 +3781,8 @@ const CM_SCHEMA_TIPOS = [
     { v: 'select_botao', label: '🔘 Select Botão' },
     { v: 'separador', label: '➖ Separador de seção' },
     { v: 'valor_derivado', label: '📊 Valor Derivado' },
-    { v: 'select_vd', label: '📊 Select VD (Valor Derivado)' }
+    { v: 'select_vd', label: '📊 Select VD (Valor Derivado)' },
+    { v: 'redutor', label: '➖ Redutor (equação)' }
 ];
 
 const CM_LARGURAS = [
@@ -4030,6 +4035,21 @@ function _collectEquipCostArea(areaEl) {
 /**
  * Linha completa de um Módulo da Classe no editor.
  */
+/**
+ * Restaura o que o template string não consegue: o valor dos <select> de
+ * referência de ficha na equação do Redutor, e o campo a que ele se vincula.
+ * Chamar DEPOIS de inserir o HTML no DOM — antes disso os elementos não existem.
+ */
+function _cmRestaurarRedutores(raiz) {
+    raiz?.querySelectorAll('.schema-field-row[data-sf-redutor]').forEach(row => {
+        let d; try { d = JSON.parse(row.dataset.sfRedutor); } catch { return; }
+        const cont = row.querySelector('.sf-red-eq');
+        if (cont && Array.isArray(d.equacao)) _restoreEquacaoRefs(cont, d.equacao);
+        const sel = row.querySelector('[data-sf-key="vinculadoA"]');
+        if (sel) { sel.dataset.valor = d.vinculadoA || ''; window.cmRedutorPreencheVinculos(row); }
+    });
+}
+
 function _buildClassModuleEditorRow(idx, data) {
     data = data || {};
     const schemaArr = Array.isArray(data.schema) ? data.schema : [];
@@ -4379,7 +4399,7 @@ function _buildSchemaFieldRow(moduleIdx, fieldIdx, data) {
     const btnChips = btnMechIds.map(id => _cmMechChip(id)).join('');
     const dvChip = data.tipo === 'valor_derivado' && data.derivedValueId ? _cmDVChip(data.derivedValueId) : '';
     return `
-        <div class="schema-field-row" data-field-index="${fieldIdx}">
+        <div class="schema-field-row" data-field-index="${fieldIdx}"${data.tipo === 'redutor' ? ` data-sf-redutor='${escapeHtml(JSON.stringify({ equacao: data.equacao || [], vinculadoA: data.vinculadoA || '' }))}'` : ''}>
             <div class="schema-field-main">
                 <button type="button" class="btn-array-move" onclick="cmMoveSchemaFieldUp(this)" title="Mover para cima" style="padding: 2px 5px; font-size: 0.7rem;">↑</button>
                 <button type="button" class="btn-array-move" onclick="cmMoveSchemaFieldDown(this)" title="Mover para baixo" style="padding: 2px 5px; font-size: 0.7rem;">↓</button>
@@ -4394,6 +4414,15 @@ function _buildSchemaFieldRow(moduleIdx, fieldIdx, data) {
                 <label class="cm-sf-ro" title="Ocultar se vazio na ficha de personagem" style="margin-left:4px">👁️<input type="checkbox" data-sf-key="ocultarSeVazio" ${data.ocultarSeVazio ? 'checked' : ''}></label>
                 <label class="cm-sf-ro cm-sf-veiculo" title="Esta coluna é uma FORMA DE CONJURAR: o VD dela dá o Acerto, e o Tabuleiro oferece esta opção em vez de arma/parte do corpo" style="margin-left:4px;display:${data.tipo === 'select_vd' ? '' : 'none'}">🪄<input type="checkbox" data-sf-key="ehVeiculo" ${data.ehVeiculo ? 'checked' : ''}></label>
                 <button type="button" class="cm-chip-remove" onclick="this.closest('.schema-field-row').remove()">✕</button>
+            </div>
+            <div class="schema-field-redutor" style="display:${data.tipo === 'redutor' ? '' : 'none'}">
+                <span class="cm-mini-title">➖ Subtrai do Alvo deste campo:</span>
+                <select class="sf-red-vinculado" data-sf-key="vinculadoA" style="width:170px">
+                    <option value="">— Nenhum (só exibe) —</option>
+                </select>
+                <label class="cm-sf-ro" title="Somar também o redutor do Domínio: Qualidade da magia acima do nível do Domínio (cap. 12 §12.3b)" style="margin-left:6px">🎓 Domínio<input type="checkbox" data-sf-key="somaDominio" ${data.somaDominio !== false ? 'checked' : ''}></label>
+                <div class="eq-terms-container sf-red-eq">${(Array.isArray(data.equacao) && data.equacao.length ? data.equacao : [{ tipo: 'fixo', valor: '' }]).map((t, ti) => _renderEquationTerm(t, 0, ti)).join('')}</div>
+                <button type="button" class="eq-add-term-btn" onclick="cmRedutorAddTerm(this)">➕ Adicionar Termo</button>
             </div>
             <div class="schema-field-botao-mechs" style="display:${data.tipo === 'botao' ? '' : 'none'}">
                 <div class="aura-grau-mechs" data-sf-key="mecanicaIds">
@@ -4431,6 +4460,11 @@ window.cmSchemaTipoChange = function (select) {
     if (veic) {
         veic.style.display = select.value === 'select_vd' ? '' : 'none';
         if (select.value !== 'select_vd') veic.querySelector('input').checked = false;
+    }
+    const red = row.querySelector('.schema-field-redutor');
+    if (red) {
+        red.style.display = select.value === 'redutor' ? '' : 'none';
+        if (select.value === 'redutor') cmRedutorPreencheVinculos(row);
     }
 };
 
@@ -4779,10 +4813,42 @@ function _readSchemaFromDOM(modItemEl) {
         if (row.querySelector('[data-sf-key="somenteLeitura"]')?.checked) sf.somenteLeitura = true;
         if (row.querySelector('[data-sf-key="ocultarSeVazio"]')?.checked) sf.ocultarSeVazio = true;
         if (row.querySelector('[data-sf-key="ehVeiculo"]')?.checked) sf.ehVeiculo = true;
+        if (tipo === 'redutor') {
+            const cont = row.querySelector('.sf-red-eq');
+            if (cont) sf.equacao = _collectEquacaoFromContainer(cont);
+            sf.vinculadoA = row.querySelector('[data-sf-key="vinculadoA"]')?.value || '';
+            sf.somaDominio = !!row.querySelector('[data-sf-key="somaDominio"]')?.checked;
+        }
         schema.push(sf);
     });
     return schema;
 }
+
+/* ➖ Redutor (cap. 12 §12.3b): o campo subtrai do Alvo de um `select_vd` da mesma
+   linha. O select de vínculo é preenchido na hora, lendo as chaves que existem
+   AGORA na grade — o schema ainda não foi gravado quando o Criador está aberto. */
+window.cmRedutorPreencheVinculos = function (row) {
+    const sel = row.querySelector('[data-sf-key="vinculadoA"]');
+    if (!sel) return;
+    const atual = sel.value || sel.dataset.valor || '';
+    const cont = row.closest('.schema-fields-container');
+    const alvos = [...(cont?.querySelectorAll('.schema-field-row') || [])]
+        .map(r => ({
+            tipo: r.querySelector('[data-sf-key="tipo"]')?.value,
+            key: (r.querySelector('[data-sf-key="key"]')?.value || '').trim(),
+            label: (r.querySelector('[data-sf-key="label"]')?.value || '').trim(),
+        }))
+        .filter(f => (f.tipo === 'select_vd' || f.tipo === 'valor_derivado') && f.key);
+    sel.innerHTML = '<option value="">— Nenhum (só exibe) —</option>'
+        + alvos.map(f => `<option value="${escapeHtml(f.key)}" ${f.key === atual ? 'selected' : ''}>${escapeHtml(f.label || f.key)}</option>`).join('');
+};
+
+window.cmRedutorAddTerm = function (btn) {
+    const cont = btn.previousElementSibling;
+    if (!cont) return;
+    const i = cont.querySelectorAll('.eq-term').length;
+    cont.insertAdjacentHTML('beforeend', _renderEquationTerm({ tipo: 'fixo', valor: '' }, 0, i));
+};
 
 window.cmSyncPredefFields = function (btn) {
     const predefItem = btn.closest('.cm-predef-item');
@@ -4817,6 +4883,7 @@ window.addClassModule = function (fieldKey) {
     const idx = container.children.length;
     const temp = document.createElement('div');
     temp.innerHTML = _buildClassModuleEditorRow(idx, {});
+    _cmRestaurarRedutores(temp);
     container.appendChild(temp.firstElementChild);
 };
 

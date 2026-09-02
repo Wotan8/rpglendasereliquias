@@ -10,6 +10,7 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 import { toast, confirmar } from '../../shared/dialogo.js?v=2';
 
+import { ligarAppCheck } from '../../shared/app-check.js?v=2';
 // ===== CONFIG (mesma do projeto rpg-lendasereliquias) =====
 const firebaseConfig = {
     apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
@@ -21,6 +22,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+ligarAppCheck(app);
 const auth = getAuth(app);
 // 💾 PERSISTÊNCIA OFFLINE (Firebase v10+): cache local em IndexedDB.
 // Leituras funcionam offline e escritas ficam na fila e sincronizam

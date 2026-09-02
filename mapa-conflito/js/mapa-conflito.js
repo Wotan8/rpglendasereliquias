@@ -16,6 +16,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { ligarAppCheck } from '../../shared/app-check.js?v=2';
 import {
     getFirestore, collection, getDocs, onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -32,6 +33,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+ligarAppCheck(app);
 const auth = getAuth(app);
 const db = getFirestore(app);
 

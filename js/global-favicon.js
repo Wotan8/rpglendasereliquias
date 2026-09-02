@@ -9,6 +9,7 @@ import { mostrarBadgeDeVersao } from '/js/version-badge.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
+import { ligarAppCheck } from '../shared/app-check.js?v=2';
 // ---------------------------------------------
 // 1) MANIFEST — garante o link para o manifest.json estático
 //    (display_override cuida do modo de exibição por plataforma)
@@ -74,6 +75,7 @@ const firebaseConfig = {
 let db;
 try {
     const app = initializeApp(firebaseConfig, "GlobalFaviconApp");
+ligarAppCheck(app);
     db = getFirestore(app);
 } catch (e) {
     console.warn("GlobalFavicon: não foi possível iniciar app auxiliar", e);

@@ -3,6 +3,7 @@ import { getFirestore, collection, getDocs, doc, setDoc, getDoc, query, where } 
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 import { toast, confirmar } from '../../shared/dialogo.js?v=2';
 
+import { ligarAppCheck } from '../../shared/app-check.js?v=2';
 const firebaseConfig = {
     apiKey: "AIzaSyA6r79XcsMr3KZUT1YZ8vQntIGspgULXcE",
     authDomain: "rpg-lendasereliquias.firebaseapp.com",
@@ -13,6 +14,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+ligarAppCheck(app);
 const db = getFirestore(app);
 const functions = getFunctions(app, 'southamerica-east1');
 
