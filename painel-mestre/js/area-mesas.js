@@ -368,6 +368,18 @@ window.abrirAdicionarAvulso = async function () {
     _avulsoSelecionado = null;
 
     let avulsos = [];
+    /* Quem é o dono de cada um. Nem toda ficha guarda `ownerEmail` — muitas só
+       têm o `ownerUid` —, e mostrar "sem dono" para elas seria mentira: o
+       mestre precisa saber de quem é a ficha antes de trazê-la para a mesa. */
+    const donos = new Map();
+    try {
+        const us = await getDocs(collection(db, 'users'));
+        us.forEach(d => {
+            const x = d.data();
+            donos.set(d.id, x.displayName || x.email || d.id);
+        });
+    } catch (e) { console.warn('nomes dos donos:', e); }
+
     try {
         /* Sem `where('mesaId','==',null)`: essa consulta só acha quem tem o
            campo gravado como null, e personagem antigo simplesmente não tem o
@@ -384,6 +396,7 @@ window.abrirAdicionarAvulso = async function () {
         return;
     }
 
+    avulsos.forEach(c => { c._dono = donoDoChar(c, donos); });
     avulsos.sort((a, b) => nomeDoChar(a).localeCompare(nomeDoChar(b)));
 
     const janela = document.createElement('dialog');
@@ -415,7 +428,7 @@ window.abrirAdicionarAvulso = async function () {
     function desenhar(termo = '') {
         const t = termo.trim().toLowerCase();
         const vis = !t ? avulsos : avulsos.filter(c =>
-            [nomeDoChar(c), c.ownerEmail || c.jogador || '', c.fields?.classe || c.classe || '',
+            [nomeDoChar(c), c._dono, c.fields?.classe || c.classe || '',
              c.fields?.raca || c.raca || ''].join(' ').toLowerCase().includes(t));
 
         if (!avulsos.length) {
@@ -430,7 +443,7 @@ window.abrirAdicionarAvulso = async function () {
             <button type="button" class="avulso-item${_avulsoSelecionado === c.id ? ' selecionado' : ''}"
                 data-id="${escapeHtml(c.id)}">
                 <span class="avulso-nome">${escapeHtml(nomeDoChar(c))}</span>
-                <span class="avulso-meta">👤 ${escapeHtml(c.ownerEmail || c.jogador || 'sem dono')}
+                <span class="avulso-meta">👤 ${escapeHtml(c._dono)}
                     · ⚔️ ${escapeHtml(c.fields?.classe || c.classe || '—')}
                     · 🎭 ${escapeHtml(c.fields?.raca || c.raca || '—')}</span>
             </button>`).join('');
@@ -463,7 +476,7 @@ window.abrirAdicionarAvulso = async function () {
             // O dono entra na mesa junto. Sem isto o personagem está na mesa e
             // o jogador não — e é ele quem precisa enxergá-la no Portal.
             const dono = c?.ownerUid;
-            const jogadores = [...(S.currentMesaData.jogadores || [])];
+            const jogadores = [...(S.currentMesaData?.jogadores || [])];
             if (dono && !jogadores.includes(dono)) {
                 jogadores.push(dono);
                 await updateDoc(doc(db, 'mesas', S.currentMesaId), { jogadores });
@@ -491,6 +504,11 @@ window.abrirAdicionarAvulso = async function () {
 /** O nome do personagem vive em dois formatos — o novo aninhado em `fields`. */
 function nomeDoChar(c) {
     return (c?.fields?.nome) || c?.nome || 'Sem nome';
+}
+
+/** O dono, na melhor forma disponível: nome de exibição > e-mail > uid. */
+function donoDoChar(c, donos) {
+    return donos.get(c?.ownerUid) || c?.ownerEmail || c?.jogador || c?.ownerUid || 'sem dono';
 }
 
 // ===== EXP MODE & INVENTORY MODE =====
