@@ -181,8 +181,8 @@ t('T11b · o Portal do iframe subiu com a versão atual dos módulos', prontoIfr
     t('T14 · a barra de abas mora DENTRO do cabeçalho', topo.contains(abas));
     t('T15 · o botão "Buscar no cânone" saiu do cabeçalho (a Home já tem busca)',
         !topo.querySelector('.portal-busca-atalho'));
-    t('T16 · a primeira aba é "Cânone", não "Home"',
-        /Cânone/.test(abas.querySelector('.tab').textContent)
+    t('T16 · a primeira aba é "Início", não "Home"',
+        /Início/.test(abas.querySelector('.tab').textContent)
         && !/Home/.test(abas.textContent));
     /* Visitante não tem mesa: as abas só aparecem depois de entrar.
        ⚠️ Sem `await` entre pôr a classe e medir. A autenticação de verdade
