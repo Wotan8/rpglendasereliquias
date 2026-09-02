@@ -293,9 +293,16 @@ O caso da malformada importa mais do que parece: é onde a implementação ingê
 estoura no `timingSafeEqual` comparando buffers de tamanhos diferentes e devolve
 500 — o que faz o MP reenviar a notificação em laço.
 
-O outro sentido — assinatura **válida** passar — só o MP consegue produzir, e
-por isso não foi testado daqui: quem tem o segredo é a conta, não este repo. O
-botão **Simular notificação** do painel do MP fecha essa metade.
+O outro sentido — assinatura **válida** passar — foi fechado em 02/09/2026 pelo
+**Simular notificação** do painel do MP: notificação assinada com a chave real,
+no mesmo formato que sem assinatura tomava 401 (`type: "payment"`,
+`data: {id: "123456"}`), respondida com **200 - OK**. Como o id simulado não é
+pagamento real, a função reconsultou a API, tomou 404 e ignorou — que é o certo:
+assinatura conferida, e nada entregue por um id que não existe.
+
+**Item 4 fechado por inteiro:** assinatura recusada quando falta, é forjada ou
+vem malformada; aceita quando o MP assina; valor conferido antes de entregar; e
+estorno reconhecido.
 
 ---
 
