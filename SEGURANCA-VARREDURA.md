@@ -905,25 +905,21 @@ recuperação no Painel exigem sessão logada, e eu não tenho credencial. O que
 para checar de fora foi checado — as funções existem no bundle servido, o
 "Esqueci minha senha" responde certo com campo vazio, a callable recusa quem
 não está logado, e as 63 asserções de rules cobrem a privacidade dos contatos.
-Falta você abrir as duas telas uma vez.
-
 **Se um dia virar automático:** código de uso único, validade curta, limite de
 tentativas e envio pelo servidor. Nunca um número não verificado bastando.
 
-### Achado de dados: três contas com o mesmo e-mail
+### Contas duplicadas — resolvido em 01/09/2026
 
-`eliesiorocha4@gmail.com` tem **três** contas no Firebase Auth. Duas têm
-documento em `users` (`C1FK6wWV2Gg…` e `x40bX21pw8c…`); a terceira
-(`t1XT9y2onjO…`, criada e usada uma única vez em 09/11/2025) não tem nenhum.
+`eliesiorocha4@gmail.com` tinha **três** contas no Firebase Auth, todas criadas
+no mesmo dia e todas **vazias**: sem Frag$, sem inventário, sem apoios, sem
+personagem, sem mesa. Enquanto o fallback por e-mail existia, uma delas entrava
+e recebia o documento de outra — qual, dependia da consulta.
 
-Enquanto o fallback por e-mail existia, essa terceira conta entrava e recebia
-**o documento de uma das outras duas** — qual delas, dependia da consulta. Com a
-correção do item 2 ela passa a ter o próprio documento, vazio, criado no
-primeiro acesso. Nada foi perdido: o que estava nos outros dois documentos
-continua lá, e continua acessível entrando pelas contas correspondentes.
-
-Não mexi nesses dados — decidir qual conta é a boa e apagar as outras é chamada
-sua. Se quiser, eu junto os Repertórios num só e removo as sobras.
+Ficou a última usada (`C1FK6wWV2Gg…`), com o nome de exibição preservado. As
+outras duas saíram, do Auth e do Firestore, com backup de metadado (hash de
+senha não entra em arquivo). Depois disso: **17 contas no Auth, 17 documentos em
+`users`, 17 espelhos públicos** — sem e-mail duplicado, sem órfão de nenhum
+lado.
 
 ### Também ficou anotado
 
