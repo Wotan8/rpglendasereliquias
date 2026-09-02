@@ -3615,3 +3615,19 @@ html:not(.dark) .meta-card {
 /* Os botões de ação do cartão do Repertório ficam numa linha própria: com dois
    deles soltos na coluna, o segundo empurrava o rodapé de recebimento. */
 .rep-acoes { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* O aviso do Personagem Avulso. Vermelho de propósito: jogador novo estava
+   criando avulso achando que já entrava na mesa, e "não vinculado a nenhuma
+   mesa" em letra pequena não segurava ninguém. */
+.avulso-alerta {
+    background: var(--lr-blood-soft, rgba(168, 44, 57, .12));
+    border-left: 4px solid var(--lr-blood-2, #A82C39);
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-3) var(--lr-space-4);
+    margin-bottom: var(--lr-space-3);
+    font-size: var(--lr-fs-sm);
+    line-height: 1.6;
+}
+
+.avulso-alerta p { margin: 0 0 var(--lr-space-2); }
+.avulso-alerta p:last-child { margin-bottom: 0; }

@@ -619,3 +619,45 @@
     padding-top: var(--lr-space-3);
     border-top: var(--lr-border-w) solid var(--lr-border-soft);
 }
+
+/* ===== Trazer avulso para a mesa ===== */
+.avulso-lista {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+.avulso-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--light);
+    font-family: inherit;
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.avulso-item:last-child { border-bottom: none; }
+.avulso-item:hover { background: rgba(127, 127, 127, .12); }
+
+.avulso-item.selecionado {
+    background: rgba(201, 162, 39, .16);
+    box-shadow: inset 3px 0 0 var(--accent, #c9a227);
+}
+
+.avulso-nome { font-weight: 800; font-size: .95rem; }
+.avulso-meta { font-size: .76rem; color: var(--muted); }
+
+.avulso-vazio {
+    padding: 24px 12px;
+    text-align: center;
+    color: var(--muted);
+    font-size: .85rem;
+}

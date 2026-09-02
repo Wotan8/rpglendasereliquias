@@ -292,6 +292,22 @@ await teste('MESTRE lista a coleção users (é o que o painel faz)',
   () => assertSucceeds(getDocs(collection(dbMestre, 'users'))));
 await teste('MESTRE lê o documento de um jogador',
   () => assertSucceeds(getDoc(doc(dbMestre, 'users', JOG))));
+// O "+Avulso" do painel: grava mesaId na ficha e poe o dono em mesas.jogadores.
+await teste('MESTRE traz um avulso para a mesa (grava mesaId na ficha alheia)',
+  async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'char', 'char-avulso'), { ownerUid: VIT, nome: 'Avulso' });
+    });
+    await assertSucceeds(updateDoc(doc(dbMestre, 'char', 'char-avulso'), { mesaId: MESA }));
+  });
+await teste('MESTRE poe o dono do avulso na mesa',
+  () => assertSucceeds(updateDoc(doc(dbMestre, 'mesas', MESA), { jogadores: [JOG, VIT] })));
+// ...e o jogador comum continua sem poder nada disso
+await teste('jogador não puxa ficha alheia para a mesa dele',
+  () => assertFails(updateDoc(doc(db, 'char', 'char-avulso'), { mesaId: MESA })));
+await teste('jogador não se adiciona à mesa',
+  () => assertFails(updateDoc(doc(db, 'mesas', MESA), { jogadores: [JOG, 'penetra'] })));
+
 await teste('MESTRE lê a trilha de auditoria',
   () => assertSucceeds(getDocs(collection(dbMestre, 'logs'))));
 await teste('MESTRE edita item de qualquer NPC',

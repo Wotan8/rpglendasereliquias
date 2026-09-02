@@ -389,8 +389,8 @@ window.recuperarConta = async function (userId) {
             </div>
             <textarea class="lr-dialogo-input" id="recLink" readonly rows="4">${esc(r.link)}</textarea>
             <div class="lr-dialogo-botoes">
-                <button value="cancel" class="lr-dialogo-btn">Fechar</button>
                 <button type="button" class="lr-dialogo-btn lr-dialogo-btn--ok" id="recCopiar">Copiar link</button>
+                <button value="cancel" class="lr-dialogo-btn">Fechar</button>
             </div>
         </form>`;
     document.body.appendChild(janela);

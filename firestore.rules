@@ -262,16 +262,21 @@ service cloud.firestore {
         request.resource.data.ownerUid == request.auth.uid || isMaster()
       );
 
-      // Atualização: dono (sem mudar ownerUid) OU mestre
+      /* Atualização: dono (sem mudar ownerUid) OU mestre.
+         `temPapelMestre()` ao lado de `isMaster()` pelo motivo de sempre: HÁ
+         DOIS JEITOS DE SER MESTRE aqui, e eles não coincidem — dois dos três
+         mestres não têm doc na coleção `masters`. Para eles, o painel abria e
+         a escrita era negada, sem nada na tela explicando. É o que faz o
+         "+Avulso" (que grava `mesaId` na ficha) funcionar para todos. */
       allow update: if isSignedIn() && (
         (resource.data.ownerUid == request.auth.uid && 
          request.resource.data.ownerUid == resource.data.ownerUid) || 
-        isMaster()
+        isMaster() || temPapelMestre()
       );
       
       // Exclusão: dono OU mestre
       allow delete: if isSignedIn() && (
-        resource.data.ownerUid == request.auth.uid || isMaster()
+        resource.data.ownerUid == request.auth.uid || isMaster() || temPapelMestre()
       );
     }
 
@@ -607,7 +612,10 @@ service cloud.firestore {
     // ========== ADICIONADO: Coleção de Mesas (Campanhas) ==========
     match /mesas/{mesaId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isMaster();
+      /* Idem: os dois jeitos de ser mestre. O "+Avulso" põe o dono do
+         personagem em `mesas.jogadores`, e sem isto só o mestre que tem doc em
+         `masters` conseguiria. */
+      allow create, update, delete: if isMaster() || temPapelMestre();
 
       // ===== Subcoleções do Tabuleiro (VTT) — FASE 7.1 =====
       // Leitura: qualquer usuário autenticado (o modo público filtra a visibilidade no cliente).

@@ -413,7 +413,7 @@ window.createNewCharacter = async function () {
                         <div class="mesa-option-icon">📜</div>
                         <div class="mesa-option-info">
                             <div class="mesa-option-name">Personagem Avulso</div>
-                            <div class="mesa-option-detail">Não vinculado a nenhuma mesa</div>
+                            <div class="mesa-option-detail">Só para testar o sistema — não entra em mesa nem em sessão</div>
                         </div>
                         <div class="mesa-option-arrow">→</div>
                     </div>
@@ -443,7 +443,15 @@ window.createNewCharacter = async function () {
     }
 };
 
-window.selectMesaForCreation = function (mesaId) {
+window.selectMesaForCreation = async function (mesaId) {
+    /* Avulso PARA e explica. Jogador novo clica aqui achando que já está
+       entrando na mesa — o card diz "não vinculado a nenhuma mesa", o que é
+       verdade e não é aviso: ninguém lê legenda pequena antes de um botão com
+       seta. Só a mesa vinculada leva EXP inicial, limite de peculiaridades e
+       introdução do mestre; o avulso não vai para mesa nenhuma sozinho.
+       Por isso é confirmação, e não texto: exige um segundo clique consciente. */
+    if (!mesaId && !await confirmarAvulso()) return;
+
     const modal = document.getElementById('createCharModal');
     if (modal) modal.remove();
 
@@ -453,6 +461,52 @@ window.selectMesaForCreation = function (mesaId) {
         window.location.href = '/criar-personagem/criacao.html';
     }
 };
+
+/** A confirmação do Avulso. Devolve true se a pessoa quer mesmo seguir. */
+function confirmarAvulso() {
+    return new Promise((resolve) => {
+        const janela = document.createElement('dialog');
+        janela.className = 'lr-dialogo';
+        janela.innerHTML = `
+            <form class="lr-dialogo-form" method="dialog">
+                <div class="lr-dialogo-titulo">📜 Este personagem não entra em nenhuma mesa</div>
+
+                <div class="avulso-alerta">
+                    <p><strong>Personagem avulso é para testar e conhecer o sistema.</strong></p>
+                    <p>Ele <strong>não pertence a nenhuma mesa</strong> e <strong>não participa de
+                    sessão</strong>. Criar um não te coloca em jogo.</p>
+                    <p>Se você veio para jogar numa mesa, feche isto e escolha a mesa na lista —
+                    é ela que traz o EXP inicial e as regras que o mestre definiu. Não aparece
+                    nenhuma? Peça ao mestre para te vincular.</p>
+                </div>
+
+                <p class="lr-dialogo-msg">
+                    O mestre pode trazer um avulso para a mesa depois, se quiser.
+                    Mas isso é decisão dele, não acontece sozinho.
+                </p>
+
+                <div class="lr-dialogo-botoes">
+                    <button type="button" class="lr-dialogo-btn lr-dialogo-btn--ok" id="avulsoSeguir">
+                        Entendi, criar avulso
+                    </button>
+                    <button value="cancel" class="lr-dialogo-btn">Voltar e escolher uma mesa</button>
+                </div>
+            </form>`;
+        document.body.appendChild(janela);
+
+        let seguiu = false;
+        janela.querySelector('#avulsoSeguir').addEventListener('click', () => {
+            seguiu = true;
+            janela.close();
+        });
+        // Fechar por Esc, pelo botão ou clicando fora conta como NÃO seguir.
+        janela.addEventListener('close', () => {
+            janela.remove();
+            resolve(seguiu);
+        });
+        janela.showModal();
+    });
+}
 
 // ===== CRIAR FICHA EM BRANCO =====
 window.createBlankCharacter = async function () {
@@ -2082,9 +2136,9 @@ window.abrirMinhaConta = async function () {
                 placeholder="outro@email.com" value="${escapeHtml(dados.emailRecuperacao || '')}">
 
             <div class="lr-dialogo-botoes">
-                <button type="button" class="lr-dialogo-btn" id="contaTrocarSenha">🔑 Trocar minha senha</button>
-                <button value="cancel" class="lr-dialogo-btn">Fechar</button>
                 <button type="button" value="ok" class="lr-dialogo-btn lr-dialogo-btn--ok" id="contaSalvar">Salvar</button>
+                <button value="cancel" class="lr-dialogo-btn">Fechar</button>
+                <button type="button" class="lr-dialogo-btn" id="contaTrocarSenha">🔑 Trocar minha senha</button>
             </div>
         </form>`;
     document.body.appendChild(janela);

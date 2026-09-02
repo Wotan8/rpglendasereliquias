@@ -352,6 +352,147 @@ function displayMesaCharacters() {
 
 window.openCharacter = function(id) { window.open(`../ficha-v1.7_1/ficha-v1.7_1.html?id=${id}`, '_blank'); };
 
+/* ===== TRAZER UM AVULSO PARA A MESA =====
+   Personagem avulso é o que foi criado sem mesa — serve para testar o sistema.
+   Às vezes o jogador cria avulso sem entender e depois quer jogar com ele; às
+   vezes o mestre quer adotar um personagem pronto. Este é o caminho.
+
+   Duas coisas acontecem no Confirmar, e a segunda é fácil de esquecer:
+   o personagem ganha `mesaId`, E o dono dele entra em `mesas.jogadores`.
+   Sem a segunda, o personagem aparece na mesa e o jogador não — ele não veria
+   a mesa no Portal, não mandaria item para a Caixa, não criaria os Laços. */
+let _avulsoSelecionado = null;
+
+window.abrirAdicionarAvulso = async function () {
+    if (!S.currentMesaId) { showAlert('⚠️ Abra uma mesa primeiro', 'warning'); return; }
+    _avulsoSelecionado = null;
+
+    let avulsos = [];
+    try {
+        /* Sem `where('mesaId','==',null)`: essa consulta só acha quem tem o
+           campo gravado como null, e personagem antigo simplesmente não tem o
+           campo. Varrer e filtrar aqui é o que pega os dois casos — e são
+           dezenas de documentos, não milhares. */
+        const snap = await getDocs(collection(db, 'char'));
+        snap.forEach(d => {
+            const x = d.data();
+            if (!x.mesaId) avulsos.push({ id: d.id, ...x });
+        });
+    } catch (e) {
+        console.error('avulsos:', e);
+        showAlert('❌ Não foi possível carregar os personagens avulsos', 'danger');
+        return;
+    }
+
+    avulsos.sort((a, b) => nomeDoChar(a).localeCompare(nomeDoChar(b)));
+
+    const janela = document.createElement('dialog');
+    janela.className = 'lr-dialogo';
+    janela.id = 'dlgAvulso';
+    janela.innerHTML = `
+        <form class="lr-dialogo-form" method="dialog">
+            <div class="lr-dialogo-titulo">➕ Trazer avulso para a mesa</div>
+            <p class="lr-dialogo-msg">
+                Ao confirmar, o personagem deixa de ser avulso e o dono dele entra
+                como jogador desta mesa.
+            </p>
+            <input id="avulsoBusca" class="lr-dialogo-input" placeholder="🔍 Buscar por nome, jogador, classe ou raça"
+                autocomplete="off">
+            <div class="avulso-lista" id="avulsoLista"></div>
+            <div class="lr-dialogo-botoes">
+                <button type="button" class="lr-dialogo-btn lr-dialogo-btn--ok" id="avulsoConfirmar" disabled>Confirmar</button>
+                <button type="button" class="lr-dialogo-btn" id="avulsoVerFicha" disabled>Ver Ficha</button>
+                <button value="cancel" class="lr-dialogo-btn">Cancelar</button>
+            </div>
+        </form>`;
+    document.body.appendChild(janela);
+    janela.addEventListener('close', () => janela.remove());
+
+    const lista = janela.querySelector('#avulsoLista');
+    const btnFicha = janela.querySelector('#avulsoVerFicha');
+    const btnOk = janela.querySelector('#avulsoConfirmar');
+
+    function desenhar(termo = '') {
+        const t = termo.trim().toLowerCase();
+        const vis = !t ? avulsos : avulsos.filter(c =>
+            [nomeDoChar(c), c.ownerEmail || c.jogador || '', c.fields?.classe || c.classe || '',
+             c.fields?.raca || c.raca || ''].join(' ').toLowerCase().includes(t));
+
+        if (!avulsos.length) {
+            lista.innerHTML = '<div class="avulso-vazio">Não há personagem avulso no sistema.</div>';
+            return;
+        }
+        if (!vis.length) {
+            lista.innerHTML = '<div class="avulso-vazio">Nenhum avulso com esse termo.</div>';
+            return;
+        }
+        lista.innerHTML = vis.map(c => `
+            <button type="button" class="avulso-item${_avulsoSelecionado === c.id ? ' selecionado' : ''}"
+                data-id="${escapeHtml(c.id)}">
+                <span class="avulso-nome">${escapeHtml(nomeDoChar(c))}</span>
+                <span class="avulso-meta">👤 ${escapeHtml(c.ownerEmail || c.jogador || 'sem dono')}
+                    · ⚔️ ${escapeHtml(c.fields?.classe || c.classe || '—')}
+                    · 🎭 ${escapeHtml(c.fields?.raca || c.raca || '—')}</span>
+            </button>`).join('');
+
+        lista.querySelectorAll('.avulso-item').forEach(b => b.addEventListener('click', () => {
+            _avulsoSelecionado = b.dataset.id;
+            lista.querySelectorAll('.avulso-item').forEach(x => x.classList.remove('selecionado'));
+            b.classList.add('selecionado');
+            btnFicha.disabled = false;
+            btnOk.disabled = false;
+        }));
+    }
+
+    desenhar();
+    janela.querySelector('#avulsoBusca').addEventListener('input', (ev) => desenhar(ev.target.value));
+
+    // Ver Ficha abre em outra aba, e a janela FICA ABERTA: o mestre confere e
+    // volta para confirmar sem ter de procurar o personagem de novo.
+    btnFicha.addEventListener('click', () => {
+        if (_avulsoSelecionado) window.openCharacter(_avulsoSelecionado);
+    });
+
+    btnOk.addEventListener('click', async () => {
+        if (!_avulsoSelecionado) return;
+        btnOk.disabled = true;
+        const c = avulsos.find(x => x.id === _avulsoSelecionado);
+        try {
+            await updateDoc(doc(db, 'char', _avulsoSelecionado), { mesaId: S.currentMesaId });
+
+            // O dono entra na mesa junto. Sem isto o personagem está na mesa e
+            // o jogador não — e é ele quem precisa enxergá-la no Portal.
+            const dono = c?.ownerUid;
+            const jogadores = [...(S.currentMesaData.jogadores || [])];
+            if (dono && !jogadores.includes(dono)) {
+                jogadores.push(dono);
+                await updateDoc(doc(db, 'mesas', S.currentMesaId), { jogadores });
+                S.currentMesaData.jogadores = jogadores;
+            }
+
+            await addLog(S.currentUser?.email,
+                `trouxe o personagem avulso "${nomeDoChar(c)}" para a mesa`, nomeDoChar(c), 'mesa',
+                { charId: _avulsoSelecionado, mesaId: S.currentMesaId });
+
+            showAlert(`✅ ${nomeDoChar(c)} agora é desta mesa.`, 'success');
+            janela.close();
+            await loadMesaCharacters();
+            if (typeof loadMesaPlayers === 'function') await loadMesaPlayers();
+        } catch (e) {
+            console.error('adicionar avulso:', e);
+            showAlert('❌ Não foi possível adicionar: ' + (e.message || e), 'danger');
+            btnOk.disabled = false;
+        }
+    });
+
+    janela.showModal();
+};
+
+/** O nome do personagem vive em dois formatos — o novo aninhado em `fields`. */
+function nomeDoChar(c) {
+    return (c?.fields?.nome) || c?.nome || 'Sem nome';
+}
+
 // ===== EXP MODE & INVENTORY MODE =====
 window.toggleExpMode = function() {
     S.setIsExpMode(!S.isExpMode);
