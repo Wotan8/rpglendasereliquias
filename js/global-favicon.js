@@ -111,11 +111,6 @@ async function updateFavicon() {
                 }
                 link.href = faviconUrl;
             }
-            
-            const windowsIconUrl = data['app-windows'];
-            if (windowsIconUrl) {
-                updateManifestIcon(windowsIconUrl);
-            }
         }
     } catch (e) {
         // Offline ou sem config — mantém o ícone padrão em cache
@@ -123,37 +118,35 @@ async function updateFavicon() {
     }
 }
 
-async function updateManifestIcon(iconUrl) {
-    try {
-        const res = await fetch('/manifest.json');
-        const manifest = await res.json();
-        
-        // Remove existing 512x512 icons so the OS is forced to use the new one
-        manifest.icons = manifest.icons ? manifest.icons.filter(i => !i.sizes.includes("512x512")) : [];
-        
-        manifest.icons.push({
-            src: iconUrl,
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any"
-        });
-        
-        const jsonStr = JSON.stringify(manifest);
-        const manifestUrl = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(jsonStr);
-        
-        let link = document.querySelector("link[rel~='manifest']");
-        if (link) {
-            link.href = manifestUrl;
-        } else {
-            link = document.createElement('link');
-            link.rel = 'manifest';
-            link.href = manifestUrl;
-            document.head.appendChild(link);
-        }
-    } catch (e) {
-        console.warn("Failed to update manifest dynamically:", e);
-    }
-}
+/* ═══════════════════════════════════════════════════════════════
+   POR QUE NÃO EXISTE MAIS UM `updateManifestIcon()` AQUI
+
+   Existia, e era a razão de o ícone do app aparecer minúsculo dentro de
+   um quadrado branco no Android — encolhendo mais a cada reinstalação.
+   Ele reescrevia o manifest em tempo de execução e quebrava três coisas
+   de uma vez:
+
+   1. Filtrava TODO ícone 512×512 para trocar por um só — e o que caía
+      junto era o `purpose: "maskable"`. Sem ícone maskable, o Android
+      trata o `any` de fundo transparente como ícone LEGADO: põe num shim
+      branco e ENCOLHE para caber na zona segura do ícone adaptativo. O
+      quadrado branco com a logo pequena era exatamente isso.
+   2. Servia o manifest de uma URL `data:`. URL `data:` não serve de base
+      para resolver caminho relativo, então `"/icons/icon-192.png"` e
+      `start_url: "/"` viravam inválidos — e um manifest inválido faz o
+      navegador cair no favicon da página, que encolhe de novo.
+   3. A URL `data:` mudava a cada carga (o token do Storage vai dentro),
+      e manifest que muda de endereço é app que muda de identidade.
+
+   E o recurso nem entregava o que prometia: o Android grava o ícone no
+   momento da INSTALAÇÃO. Trocar o manifest depois não muda o ícone de
+   quem já instalou. Ou seja: custava um manifest quebrado em toda visita
+   para não mudar ícone nenhum.
+
+   O ícone do app agora mora em `/icons/` e no `/manifest.json` estático —
+   um endereço só, servido do disco, com o `maskable` de fundo cheio que o
+   Android espera. Trocar o ícone é trocar os três PNGs e publicar.
+   ═══════════════════════════════════════════════════════════════ */
 
 updateFavicon();
 

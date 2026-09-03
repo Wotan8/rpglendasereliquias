@@ -39,9 +39,15 @@ function esc(t) {
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/* As duas vagas de "Ícone do App" saíram daqui.
+   `pwa-icon` nunca foi lido por lugar nenhum, e `app-windows` reescrevia o
+   manifest em tempo de execução — era o que fazia o ícone aparecer
+   minúsculo num quadrado branco no Android (ver o comentário longo em
+   js/global-favicon.js). Um botão que promete e não entrega é pior do que
+   botão nenhum: o ícone do app mora em `/icons/` e no `/manifest.json`,
+   porque o Android grava o ícone na INSTALAÇÃO e trocar depois não muda
+   nada para quem já instalou. Os favicons de aba abaixo continuam valendo. */
 const faviconsConfig = [
-    { id: 'pwa-icon', name: 'Ícone do App (PWA - 512x512)' },
-    { id: 'app-windows', name: 'Ícone do App (Windows)' },
     { id: 'index', name: 'Login (index.html)' },
     { id: 'menu', name: 'Menu Principal' },
     { id: 'criar-personagem', name: 'Criar Personagem' },
@@ -306,18 +312,14 @@ async function loadFavicons() {
             const saveBtn = document.getElementById(`fav-save-${fav.id}`);
             const preview = document.getElementById(`fav-preview-${fav.id}`);
 
-            // A imagem só é aceita depois de carregar — e, no ícone do app, só se
-            // for quadrada. Vale igual para arquivo enviado e para URL colada.
+            // A imagem só é aceita depois de carregar. Vale igual para arquivo
+            // enviado e para URL colada.
             input.addEventListener('input', () => {
                 const url = input.value.trim();
                 saveBtn.disabled = true;
                 if (!url) return;
                 const img = new Image();
                 img.onload = () => {
-                    if ((fav.id === 'app-windows' || fav.id === 'pwa-icon') && img.width !== img.height) {
-                        toast("O Ícone do App deve ser uma imagem quadrada (ex: 256x256, 512x512).", 'aviso');
-                        return;
-                    }
                     preview.src = url;
                     preview.style.display = 'block';
                     saveBtn.disabled = false;
