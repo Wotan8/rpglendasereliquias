@@ -355,11 +355,14 @@ function showWizardToast(message, type) {
 
 /* ===== UTILITY ===== */
 
+/* `textContent → innerHTML` escapa `<`, `>` e `&`, mas NENHUMA aspa — e este
+   arquivo monta atributo dos dois jeitos, inclusive `onclick="fn('...')"`.
+   Cobrir só a dupla, como estava, deixava o caminho da simples aberto. */
 function escHtml(str) {
-    if (!str) return '';
+    if (str === null || str === undefined) return '';
     const d = document.createElement('div');
     d.textContent = str;
-    return d.innerHTML.replace(/"/g, '&quot;'); // innerHTML não escapa aspas; atributos dependem disso
+    return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
 /* ===== COMPRA DE NÍVEL COM EXP (atributos e perícias) =====

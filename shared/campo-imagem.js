@@ -31,10 +31,15 @@
     var CDN = 'https://www.gstatic.com/firebasejs/10.7.1/';
     var seq = 0;
 
+    /* Escapa aspas SIMPLES também. Este projeto monta atributo dos dois jeitos
+       — `value="..."` e `onclick="fn('...')"` —, e um helper que cobre só as
+       duplas protege metade dos lugares. Meia proteção em escape é pior que
+       nenhuma: parece resolvido. */
     function esc(t) {
         return String(t == null ? '' : t)
             .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     /** Recusa o que não é imagem ou não cabe. Devolve null quando está tudo bem.

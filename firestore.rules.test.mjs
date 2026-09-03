@@ -182,6 +182,36 @@ await teste('não apaga log',
 await teste('jogador não lê a trilha dos outros',
   () => assertFails(getDocs(collection(db, 'logs'))));
 
+// ===== O CARGO VEM DO TOKEN, COM O DOCUMENTO DE RESERVA =====
+// A claim chega assinada pelo Auth e nao custa leitura de documento. A reserva
+// existe porque a claim so entra no token na sessao SEGUINTE — sem ela, o dia
+// da virada seria um dia de mestre trancado para fora do painel.
+{
+  // (a) so a claim, sem documento nenhum: ja vale
+  const soClaim = env.authenticatedContext('uid-claim', { email: 'c@t.com', role: 'criador' }).firestore();
+  await teste('cargo pela CLAIM funciona sem documento de usuário',
+    () => assertSucceeds(setDoc(doc(soClaim, 'system/data/skills/nova'), { nome: 'Perícia' })));
+
+  // (b) so o documento, sem claim: a reserva cobre (e o Criador atual e assim)
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'users', 'uid-so-doc'), { email: 'd@t.com', role: 'criador' });
+  });
+  const soDoc = env.authenticatedContext('uid-so-doc', { email: 'd@t.com' }).firestore();
+  await teste('cargo pelo DOCUMENTO ainda funciona (a reserva da transição)',
+    () => assertSucceeds(setDoc(doc(soDoc, 'system/data/skills/outra'), { nome: 'Perícia' })));
+
+  // (c) claim forjada nao existe: quem nao tem cargo em lugar nenhum nao passa
+  await teste('sem claim e sem documento, não é criador',
+    () => assertFails(setDoc(doc(db, 'system/data/skills/proibida'), { nome: 'X' })));
+
+  // (d) a claim vale para mestre tambem
+  const mestreClaim = env.authenticatedContext('uid-mestre-claim', { email: 'm@t.com', role: 'mestre' }).firestore();
+  await teste('claim de mestre lê a fila de avisos',
+    () => assertSucceeds(getDocs(collection(mestreClaim, 'avisos_mestre'))));
+  await teste('claim de mestre NÃO escreve o catálogo (isso é do criador)',
+    () => assertFails(setDoc(doc(mestreClaim, 'system/data/skills/nao'), { nome: 'X' })));
+}
+
 // ===== PRIVACIDADE DE `users` (item 6) =====
 // A leitura era aberta: uma consulta trazia e-mail, saldo, Repertório e
 // histórico de compras em reais de todo mundo.

@@ -11,19 +11,42 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/masters/$(request.auth.uid));
     }
 
-    function isCriador() {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid))
-          .data.role == 'criador';
+    /* O papel vem do TOKEN quando existe, e do documento quando não.
+
+       O token é a fonte melhor: chega assinado pelo Firebase Auth, não custa
+       leitura de documento, e não depende de `users` continuar legível — se um
+       dia essa regra apertar, o cargo para de funcionar junto, sem aviso.
+
+       O documento fica como reserva porque a claim só aparece no token DEPOIS
+       de o usuário renovar a sessão. Sem a reserva, o dia da virada seria um
+       dia de mestre trancado para fora do painel. Quando todo mundo tiver
+       claim, esta metade vira peso morto inofensivo.
+
+       `definirCargo` grava os dois e revoga a sessão — ver o comentário lá. */
+    function papelNoToken() {
+      return isSignedIn() ? request.auth.token.get('role', '') : '';
     }
 
-    /* Papel de Mestre pelo campo `role` — é assim que painel-mestre/js/auth.js
-       decide quem entra no painel. `isMaster()` acima é outra coisa: olha a
-       coleção `masters`, que nem todo mestre tem. */
-    function temPapelMestre() {
+    function papelNoDoc() {
       return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid))
-          .data.role in ['mestre', 'criador'];
+        exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '')
+        : '';
+    }
+
+    function papel() {
+      return papelNoToken() != '' ? papelNoToken() : papelNoDoc();
+    }
+
+    function isCriador() {
+      return isSignedIn() && papel() == 'criador';
+    }
+
+    /* Papel de Mestre — é assim que painel-mestre/js/auth.js decide quem entra
+       no painel. `isMaster()` acima é outra coisa: olha a coleção `masters`,
+       que nem todo mestre tem. */
+    function temPapelMestre() {
+      return isSignedIn() && papel() in ['mestre', 'criador'];
     }
 
     /* Campos que só o servidor (Cloud Functions) e mestres podem alterar.

@@ -1,6 +1,7 @@
 // Rodar: node escape-html.test.mjs
 //
-// Uma coisa só: todo helper de escape do projeto tem de escapar ASPAS DUPLAS.
+// Uma coisa só: todo helper de escape do projeto tem de escapar ASPAS — as
+// duplas E as simples.
 //
 // Não é preciosismo. Todos os painéis montam atributo por interpolação
 // (`value="${escapeHtml(x)}"`, `src="${escapeHtml(url)}"`,
@@ -49,7 +50,8 @@ function corpoDaFuncao(fonte, indiceDaChave) {
 }
 
 const DECL = /(?:export\s+)?function\s+(esc|escHtml|escapeHtml|escapeHTML)\s*\([^)]*\)\s*\{/g;
-const ESCAPA_ASPAS = /&quot;|&#0*34;|&#x0*22;/i;
+const ESCAPA_DUPLAS  = /&quot;|&#0*34;|&#x0*22;/i;
+const ESCAPA_SIMPLES = /&#0*39;|&apos;|&#x0*27;/i;
 
 const suspeitos = [];
 let encontradas = 0;
@@ -59,8 +61,13 @@ for (const arquivo of jsDoProjeto(RAIZ)) {
     for (const m of fonte.matchAll(DECL)) {
         encontradas++;
         const corpo = corpoDaFuncao(fonte, m.index + m[0].length - 1);
-        if (!ESCAPA_ASPAS.test(corpo)) {
+        if (!ESCAPA_DUPLAS.test(corpo)) {
             suspeitos.push(`${arquivo.replace(RAIZ, '')} → ${m[1]}() não escapa aspas duplas`);
+        }
+        /* A simples também: o projeto monta `onclick="fn('...')"` em vários
+           lugares, e ali quem quebra o atributo é ela. */
+        if (!ESCAPA_SIMPLES.test(corpo)) {
+            suspeitos.push(`${arquivo.replace(RAIZ, '')} → ${m[1]}() não escapa aspas simples`);
         }
     }
 }

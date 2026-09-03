@@ -481,6 +481,26 @@ exports.definirCargo = onCall(
       resultado = { cargo: d.cargoDepois, aprovado: d.decisao === "aprovado" };
     });
 
+    /* O cargo também vai para o TOKEN, como custom claim. As rules leem de lá
+       primeiro: chega assinado pelo Auth, não custa leitura de documento e não
+       depende de `users` continuar legível.
+
+       E a sessão é REVOGADA junto. Sem isso, rebaixar alguém não teria efeito
+       até o token dele expirar — até uma hora com o cargo antigo na mão, que é
+       a última coisa que se quer de uma revogação de acesso. O preço é a pessoa
+       precisar entrar de novo, o que numa mudança de cargo é aceitável e até
+       esperado.
+
+       Depois da transação de propósito: se isto falhar, o documento já está
+       certo e a reserva das rules (`papelNoDoc`) cobre. O contrário — claim
+       gravada e documento não — deixaria os dois discordando. */
+    try {
+      await getAuth().setCustomUserClaims(uid, { role: resultado.cargo });
+      await getAuth().revokeRefreshTokens(uid);
+    } catch (e) {
+      console.error("cargo gravado no documento, mas a claim falhou:", uid, e);
+    }
+
     return { ok: true, ...resultado };
   }
 );
