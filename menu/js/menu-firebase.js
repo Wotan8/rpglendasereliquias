@@ -600,6 +600,7 @@ async function loadInventory(dadosProntos) {
             _repExp = [];
             _repMesa = [];
             _repNarr = [];
+            _repEquip = [];
             grid.innerHTML = inventario.map(item => {
                 const imgHtml = item.imagem
                     ? `<div class="loja-card-media">
@@ -658,6 +659,17 @@ async function loadInventory(dadosProntos) {
                 const usosNarr = usosRestantes(item);
                 if (usosNarr > 0) _repNarr[i] = { nome: item.nome, itemId: item.itemId || '', usos: usosNarr };
 
+                /* Pacote que carrega equipamento. Isso só chegava à ficha DENTRO
+                   do assistente de criação; comprado depois, ficava parado aqui
+                   com a etiqueta "🎒 Equipamentos especiais" e nada acontecia. */
+                const temEquip = qtd > 0 && !!item.isItemPersonagem
+                    && Array.isArray(item.personagemItensVinculados)
+                    && item.personagemItensVinculados.length > 0;
+                if (temEquip) _repEquip[i] = {
+                    nome: item.nome, quantidade: qtd,
+                    pecas: item.personagemItensVinculados.length,
+                };
+
                 return `
                 <div class="loja-card${longa ? ' rep-abrivel' : ''}"
                     ${longa ? `onclick="abrirDetalheItem(${i})" title="Ver a ficha completa"` : ''}>
@@ -674,7 +686,12 @@ async function loadInventory(dadosProntos) {
                             ${benef ? `<p><b>O que dá:</b> ${escapeHtmlWithBreaks(benef)}</p>` : ''}
                             ${quando ? `<p><b>Quando vale:</b> ${escapeHtmlWithBreaks(quando)}</p>` : ''}
                         </div>` : ''}
-                        ${eExp || podeIrParaMesa || usosNarr ? `<div class="rep-acoes">
+                        ${eExp || podeIrParaMesa || usosNarr || temEquip ? `<div class="rep-acoes">
+                            ${temEquip ? `
+                            <button class="loja-btn loja-btn-real rep-usar"
+                                onclick="event.stopPropagation();abrirEntregarEquipamento(${i})"
+                                title="Pôr o equipamento deste pacote no inventário de um personagem seu">
+                                🎒 Pôr na ficha</button>` : ''}
                             ${usosNarr ? `
                             <button class="loja-btn loja-btn-real rep-usar"
                                 onclick="event.stopPropagation();abrirUsarNarrativo(${i})"
@@ -745,6 +762,7 @@ function etiquetasDoItem(item) {
 let _repDetalhes = [];
 let _repExp = [];
 let _repNarr = [];
+let _repEquip = [];
 let _repMesa = [];
 
 window.abrirDetalheItem = function (i) {
@@ -821,6 +839,67 @@ window.abrirEnviarParaMesa = async function (i) {
         await loadInventory();
     } catch (e) {
         console.error('Erro ao mandar item para a mesa:', e);
+        showAlert(`❌ ${e.message}`, 'danger', 7000);
+    }
+};
+
+/* ===== PÔR O EQUIPAMENTO DO PACOTE NUMA FICHA =====
+   Comprar um pacote com equipamento vinculado só funcionava dentro do
+   assistente de criação. Depois dele, a peça caía no Repertório e parava:
+   o jogador pagava e nenhum equipamento chegava a personagem nenhum.
+
+   Gêmeo de `abrirAplicarExp`, e pelo mesmo desenho — o jogador escolhe a
+   ficha, o servidor gasta a unidade e materializa os itens. */
+window.abrirEntregarEquipamento = async function (i) {
+    const alvo = _repEquip[i];
+    if (!alvo) return;
+
+    if (characters.length === 0) {
+        showAlert('❌ Você não tem nenhum personagem para receber o equipamento.', 'warning');
+        return;
+    }
+
+    const opcoes = characters.map(c => {
+        const f = c.fields || {};
+        return `<option value="${escapeHtml(c.id)}">${escapeHtml(f.nome || c.nome || 'Sem nome')}</option>`;
+    }).join('');
+
+    const janela = document.createElement('dialog');
+    janela.className = 'lr-dialogo';
+    janela.innerHTML = `
+        <form class="lr-dialogo-form" method="dialog">
+            <div class="lr-dialogo-titulo">🎒 Pôr ${escapeHtml(alvo.nome)} na ficha</div>
+            <p class="lr-dialogo-msg">
+                Cada unidade entrega <strong>${alvo.pecas} peça${alvo.pecas === 1 ? '' : 's'}</strong>
+                de equipamento no inventário do personagem. Você tem ${alvo.quantidade}.
+            </p>
+            <label for="eqChar" style="font-size:.8rem;font-weight:700;">Em qual personagem?</label>
+            <select id="eqChar" class="lr-dialogo-input">${opcoes}</select>
+            <label for="eqQtd" style="font-size:.8rem;font-weight:700;">Quantas unidades?</label>
+            <input id="eqQtd" class="lr-dialogo-input" type="number" min="1"
+                max="${alvo.quantidade}" value="1" inputmode="numeric">
+            <div class="lr-dialogo-botoes">
+                <button type="submit" value="ok" class="lr-dialogo-ok">Pôr na ficha</button>
+                <button type="button" class="lr-dialogo-cancel">Cancelar</button>
+            </div>
+        </form>`;
+    document.body.appendChild(janela);
+
+    const escolha = await esperarDecisao(janela);
+    const charId = janela.querySelector('#eqChar').value;
+    const quantidade = Math.max(1, Math.min(alvo.quantidade,
+        parseInt(janela.querySelector('#eqQtd').value, 10) || 1));
+    janela.remove();
+    if (escolha !== 'ok') return;
+
+    try {
+        const entregar = httpsCallable(functions, 'entregarEquipamentoDoItem');
+        const r = (await entregar({ itemNome: alvo.nome, charId, quantidade })).data;
+        const resumo = r.entregues.map(x => `${x.quantidade}x ${x.nome}`).join(', ');
+        showAlert(`🎒 ${r.personagem} recebeu ${resumo}.`, 'success', 9000);
+        await loadInventory();
+    } catch (e) {
+        console.error('Erro ao entregar equipamento:', e);
         showAlert(`❌ ${e.message}`, 'danger', 7000);
     }
 };

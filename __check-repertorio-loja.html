@@ -203,8 +203,9 @@ const cartao = (item) => {
                 ${item.narrativoBeneficio ? `<p><b>O que dá:</b> ${item.narrativoBeneficio}</p>` : ''}
                 ${item.narrativoQuando ? `<p><b>Quando vale:</b> ${item.narrativoQuando}</p>` : ''}
             </div>` : ''}
-            ${usosRestantes(item) ? `<div class="rep-acoes">
-                <button class="loja-btn loja-btn-real rep-usar">📜 Usar</button>
+            ${usosRestantes(item) || item.isItemPersonagem ? `<div class="rep-acoes">
+                ${usosRestantes(item) ? '<button class="loja-btn loja-btn-real rep-usar">📜 Usar</button>' : ''}
+                ${item.isItemPersonagem ? '<button class="loja-btn loja-btn-real rep-usar rep-equip">🎒 Pôr na ficha</button>' : ''}
             </div>` : ''}
             <div class="rep-recebimento"><span>Recebimento</span><strong>${item.formaRecebimento}</strong></div>
         </div>
@@ -270,6 +271,20 @@ document.getElementById('grid-loja').innerHTML = `
         !!document.querySelector('.rep-acoes .rep-usar'));
     t('T5g · e o item sem nada narrativo não ganha bloco nenhum',
         document.querySelectorAll('.rep-narrativo').length === 1);
+}
+
+/* ===== equipamento do pacote =====
+   Só chegava à ficha dentro do assistente de criação. Comprado depois, o
+   pacote ficava parado no Repertório com a etiqueta e nada acontecia. */
+{
+    t('T5h · pacote com equipamento ganha o botão de pôr na ficha',
+        !!document.querySelector('.rep-equip'));
+    t('T5i · e um pacote só, não um botão em cada card',
+        document.querySelectorAll('.rep-equip').length === 1);
+    // Os dois botões convivem na mesma linha quando a peça faz as duas coisas.
+    const acoes = [...document.querySelectorAll('.rep-acoes')];
+    t('T5j · as ações do card ficam lado a lado, não empilhadas por acidente',
+        acoes.length > 0 && acoes.every(a => cs(a).display !== 'block' || a.children.length === 1));
 }
 
 /* ===== a quantidade ===== */

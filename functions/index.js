@@ -24,6 +24,7 @@ const { charIdsVinculados, normalizarDonos, mudou } = require("./npc-donos");
 const { empilhar } = require("./repertorio");
 const { avisoNovo, tokensMortos } = require("./push-aviso");
 const { gastarAplicacao, usosRestantes } = require("./narrativo-uso");
+const { planejarEntrega } = require("./equip-repertorio");
 
 initializeApp();
 const db = getFirestore();
@@ -1621,6 +1622,136 @@ exports.usarBeneficioNarrativo = onCall(
     });
 
     return { ok: true, restantes, nome: nomeDaPeca };
+  }
+);
+
+// =============================================
+// EQUIPAMENTO DO REPERTÓRIO → FICHA (callable)
+//
+// Um item da Loja pode carregar equipamento (`personagemItensVinculados`).
+// Isso só chegava à ficha DENTRO do assistente de criação: comprado depois,
+// o pacote caía no Repertório e parava ali. O jogador via a etiqueta
+// "🎒 Equipamentos especiais" e nenhum equipamento aparecia em personagem
+// nenhum — pagou e não recebeu.
+//
+// Irmã de `aplicarExpDoItem`, e o desenho é o mesmo: o jogador escolhe a
+// ficha, o SERVIDOR gasta a unidade e materializa. `inventario` é campo
+// protegido, e a peça só pode sair de um lado se entrar no outro.
+// =============================================
+exports.entregarEquipamentoDoItem = onCall(
+  { region: "southamerica-east1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Você precisa estar logado.");
+    }
+    const uid = request.auth.uid;
+    const email = request.auth.token.email || "";
+    const { itemNome, charId, quantidade } = request.data || {};
+
+    if (!itemNome || typeof itemNome !== "string") {
+      throw new HttpsError("invalid-argument", "Diga qual pacote usar.");
+    }
+    if (!charId || typeof charId !== "string") {
+      throw new HttpsError("invalid-argument", "Escolha o personagem.");
+    }
+
+    /* O catálogo vem ANTES da transação. Transação do Firestore não deixa ler
+       depois de escrever, e este documento é do sistema — ninguém o altera no
+       meio de uma compra. */
+    const eqSnap = await db.collection("system").doc("data").collection("equipment").get();
+    const catalogo = new Map(eqSnap.docs.map((d) => [String(d.id), { ...d.data(), id: d.id }]));
+
+    const userRef = resolveUserRef(uid);
+    const charRef = db.collection("char").doc(charId);
+
+    let plano;
+    let entregues = [];
+    let nomePersonagem = "";
+
+    await db.runTransaction(async (tx) => {
+      const [uSnap, cSnap] = await Promise.all([tx.get(userRef), tx.get(charRef)]);
+      if (!uSnap.exists) throw new HttpsError("not-found", "Documento de usuário não existe.");
+      if (!cSnap.exists) throw new HttpsError("not-found", "Personagem não encontrado.");
+
+      const ficha = cSnap.data();
+      // A ficha tem de ser DELE — mesma trava do EXP, pela mesma razão.
+      if (ficha.ownerUid !== uid) {
+        throw new HttpsError("permission-denied", "Este personagem não é seu.");
+      }
+      nomePersonagem = (ficha.fields && ficha.fields.nome) || ficha.nome || "seu personagem";
+
+      const data = uSnap.data();
+      try {
+        plano = planejarEntrega(data, itemNome, quantidade);
+      } catch (e) {
+        throw new HttpsError(e.codigo || "failed-precondition", e.message);
+      }
+
+      /* Equipamento que saiu do catálogo desde a compra não pode derrubar a
+         entrega inteira: entrega o que existe e conta o que faltou. Abortar
+         deixaria o jogador com um pacote que nunca mais funciona, e sem
+         entender por quê. */
+      const perdidos = [];
+      for (const e of plano.entregas) {
+        const base = catalogo.get(String(e.equipId));
+        if (!base) { perdidos.push(e.equipId); continue; }
+
+        const itemId = "item_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+        tx.set(db.collection("items").doc(itemId), {
+          ...base,
+          id: itemId,
+          originalEquipId: String(e.equipId),
+          characterId: charId,
+          ownerUid: uid,
+          ownerId: uid,
+          quantidade: e.quantidade,
+          equipado: false,
+          estadoEquip: null,
+          slotAnatomico: null,
+          maosUsadas: null,
+          parentItemId: null,
+          origemPacote: itemNome,
+          lastModified: new Date().toISOString(),
+        });
+        entregues.push({ nome: base.nome || String(e.equipId), quantidade: e.quantidade });
+      }
+
+      if (entregues.length === 0) {
+        throw new HttpsError("failed-precondition",
+          `Nenhum equipamento de "${itemNome}" existe mais no catálogo. Fale com o mestre.`);
+      }
+
+      const resumo = entregues.map((x) => `${x.quantidade}x ${x.nome}`).join(", ");
+      const notifications = data.notifications || [];
+      notifications.unshift({
+        id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+        type: "inventory_item_received",
+        message: `🎒 ${nomePersonagem} recebeu ${resumo} (${itemNome}).`,
+        timestamp: Date.now(),
+        isNew: true,
+        data: { highlight: "inventory", characterName: nomePersonagem },
+      });
+      if (notifications.length > 100) notifications.length = 100;
+
+      tx.update(userRef, { inventario: plano.inventario, notifications });
+
+      // Trilha: o pacote foi comprado com dinheiro, então tem de dar para
+      // reconstruir o que entrou em qual ficha, e o que se perdeu no caminho.
+      tx.set(db.collection("exp_logs").doc(), {
+        uid,
+        jogador: data.displayName || data.email || email,
+        charId,
+        personagem: nomePersonagem,
+        itemNome,
+        tipo: "equipamento",
+        entregues,
+        perdidos,
+        origem: "Repertório do jogador",
+        criadoEm: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return { ok: true, entregues, restante: plano.restante, personagem: nomePersonagem };
   }
 );
 
