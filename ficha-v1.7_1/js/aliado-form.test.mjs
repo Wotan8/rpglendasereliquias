@@ -51,9 +51,8 @@ const OBRIGATORIOS = [
   'al_dv_grid', 'al_structured_skills_grid', 'al_class_modules', 'al_class_modules_section',
   // inventário
   'aliadoInvRoot',
-  // role play
-  'al_personalidade1', 'al_personalidade2', 'al_personalidade3', 'al_trejeitos',
-  'al_motivacao', 'al_segredos', 'al_aliado', 'al_rival', 'al_devedor', 'al_frases', 'al_historia',
+  // role play — os campos vêm de config/campos (npcs.lore) e são renderizados no contêiner
+  'al_lore',
   // loot
   'al_itens', 'al_luns', 'al_pistas', 'al_complicacoes',
   // cabeçalho

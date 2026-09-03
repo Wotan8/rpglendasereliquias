@@ -62,6 +62,33 @@ const REGRAS_CRIACAO = {
     }
 };
 
+/**
+ * Os números acima são o padrão de partida; a verdade é o cadastro `config/regras`
+ * (shared/regras-padrao.js define as chaves). O loader chama isto assim que o
+ * documento chega, e os seis consumidores de REGRAS_CRIACAO continuam lendo os
+ * mesmos nomes de sempre.
+ */
+window.aplicarRegrasNaCriacao = function (R) {
+    if (!R) return;
+    const c = R.criacao || {}, e = R.exp || {};
+    const g = Array.isArray(c.atributosPorGrupo) ? c.atributosPorGrupo : [];
+    if (g.length === 3) Object.assign(REGRAS_CRIACAO.atributos, { primario: g[0], intermediario: g[1], fraco: g[2] });
+    if (c.atributoMaxExtra != null) REGRAS_CRIACAO.atributos.limite_max_por_atributo = c.atributoMaxExtra;
+    if (c.atributoBase != null) REGRAS_CRIACAO.atributos.base_inicial = c.atributoBase;
+    const p = Array.isArray(c.periciasPorGrupo) ? c.periciasPorGrupo : [];
+    if (p.length === 4) Object.assign(REGRAS_CRIACAO.pericias, { primario: p[0], segundo: p[1], terceiro: p[2], fraco: p[3] });
+    if (c.periciaMax != null) REGRAS_CRIACAO.pericias.limite_max_por_pericia = c.periciaMax;
+    if (e.atributoPorNivel != null) REGRAS_CRIACAO.compra_exp.custo_atributo_por_nivel = e.atributoPorNivel;
+    if (e.periciaPorNivel != null) REGRAS_CRIACAO.compra_exp.custo_pericia_padrao = e.periciaPorNivel;
+    if (c.pecsPositivasGratis != null) REGRAS_CRIACAO.peculiaridades_individuais.max_positivas_gratis = c.pecsPositivasGratis;
+    if (c.pecsNegativasGratis != null) REGRAS_CRIACAO.peculiaridades_individuais.max_negativas_gratis = c.pecsNegativasGratis;
+    if (e.pecExtraPositiva != null) REGRAS_CRIACAO.peculiaridades_individuais.custo_adicional_positiva = e.pecExtraPositiva;
+    if (e.pecExtraNegativa != null) REGRAS_CRIACAO.peculiaridades_individuais.ganho_adicional_negativa = e.pecExtraNegativa;
+    if (e.bonusPorNpc != null) REGRAS_CRIACAO.npcs.exp_por_npc = e.bonusPorNpc;
+    if (e.maxNpcs != null) REGRAS_CRIACAO.npcs.max_exp_npcs = e.maxNpcs;
+    if (e.bonusMemorias != null) REGRAS_CRIACAO.memorias.exp_bonus_completo = e.bonusMemorias;
+};
+
 const NIVEIS_INICIO = [
     { id: "iniciante",    nome: "Iniciante",    exp: 0,   desc: "Recém-desperto. Você é novo neste mundo de perigos e maravilhas." },
     { id: "tardio",       nome: "Tardio",       exp: 10,  desc: "Alguns passos adiante. Você já viu coisas que a maioria não veria." },

@@ -30,8 +30,7 @@ async function loadMesaNpcs() {
                     </div>
                 </div>
                 ${n.imagem?`<div class="npc-image-container"><img src="${n.imagem}" class="npc-card-image"></div>`:''}
-                ${n.rolePlay?.personalidade?.[0]?`<div style="font-size:.82rem;color:var(--muted);margin-top:6px">- ${escapeHtml(n.rolePlay.personalidade[0])}</div>`:''}
-                ${n.rolePlay?.trejeitos?`<div style="font-size:.82rem;color:var(--muted)">🎭 ${escapeHtml(n.rolePlay.trejeitos)}</div>`:''}
+                ${typeof window.npcCardLore === 'function' ? window.npcCardLore(n) : ''}
                 ${tags?`<div class="npc-tags">${tags}</div>`:''}
             </div>`;
         }).join('');

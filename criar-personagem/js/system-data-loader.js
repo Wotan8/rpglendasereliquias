@@ -114,6 +114,18 @@ window.loadSystemData = async function () {
             });
         }));
 
+        // Regras do sistema como cadastro (config/regras sobre o padrão de shared/regras-padrao.js)
+        try {
+            const cfg = await getDocs(collection(window.db, 'config'));
+            let regrasDoc = null;
+            cfg.forEach(d => { if (d.id === 'regras') regrasDoc = d.data(); });
+            window.REGRAS = window.LR_REGRAS ? window.LR_REGRAS.mesclarRegras(regrasDoc || {}) : (regrasDoc || {});
+        } catch (e) {
+            console.warn('config/regras indisponível; usando o padrão', e);
+            window.REGRAS = window.LR_REGRAS ? window.LR_REGRAS.REGRAS_PADRAO : {};
+        }
+        if (typeof window.aplicarRegrasNaCriacao === 'function') window.aplicarRegrasNaCriacao(window.REGRAS);
+
         window._systemData.loaded = true;
         console.log('✅ Dados do sistema carregados:', {
             races: window._systemData.races.length,

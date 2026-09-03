@@ -11,6 +11,17 @@ import {
     updateDoc, deleteDoc, query, orderBy, where
 } from './firebase-config.js';
 import { confirmar, toast } from '../../shared/dialogo.js?v=2';
+import { camposDe, mesclarCampos, valoresDoDoc, aparece } from '../../shared/campos-cadastro.js?v=1';
+
+        // Campos configuráveis (config/campos): carregados uma vez, sob demanda.
+        let _camposCfg = null;
+        async function camposCfg() {
+            if (_camposCfg) return _camposCfg;
+            try { const s = await getDoc(doc(db, 'config', 'campos')); _camposCfg = mesclarCampos(s.exists() ? s.data() : {}); }
+            catch (e) { console.warn('config/campos indisponível; usando o padrão', e); _camposCfg = mesclarCampos({}); }
+            return _camposCfg;
+        }
+        camposCfg();
 
         let currentUser = null;
         let currentCategory = 'dashboard';
@@ -2262,13 +2273,21 @@ import { confirmar, toast } from '../../shared/dialogo.js?v=2';
                     ${vdHtml}
                     ${bloco('⚔️ Ataques', entry.ataques)}
                     ${bloco('📚 Perícias', entry.skills)}
-                    ${bloco('🎭 Personalidade', personalidade)}
-                    ${bloco('Trejeitos', rp.trejeitos)}
-                    ${bloco('Motivação', rp.motivacao)}
-                    ${bloco('Segredos', rp.segredos)}
-                    ${(rel.aliado || rel.rival || rel.devedor) ? `<div class="form-group" style="grid-column:1/-1"><label class="form-label">🤝 Relações</label><div class="wb-chips-row">${chip('Aliado', rel.aliado)}${chip('Rival', rel.rival)}${chip('Devedor', rel.devedor)}</div></div>` : ''}
-                    ${bloco('💬 Frases', rp.frases)}
-                    ${bloco('📖 História', rp.historia)}
+                    ${(() => {
+                        // Lore pelo schema de config/campos (npcs.lore): campos da seção "Relações"
+                        // e "Personalidade" curtos viram chips; o resto vira bloco.
+                        const sch = camposDe(_camposCfg, 'npcs', 'lore').filter(f => aparece(f, 'wiki') && f.tipo !== 'separador');
+                        const vals = valoresDoDoc(sch, entry);
+                        const secoes = [];
+                        for (const f of sch) { let s = secoes.find(x => x.nome === (f.secao || '')); if (!s) { s = { nome: f.secao || '', campos: [] }; secoes.push(s); } s.campos.push(f); }
+                        return secoes.map(s => {
+                            const curtos = s.campos.filter(f => f.tipo === 'text' || f.tipo === 'number' || f.tipo === 'tags');
+                            const longos = s.campos.filter(f => !curtos.includes(f));
+                            const chips = curtos.map(f => chip(f.rotulo || f.chave, Array.isArray(vals[f.chave]) ? vals[f.chave].join(', ') : vals[f.chave])).join('');
+                            return (chips ? `<div class="form-group" style="grid-column:1/-1"><label class="form-label">${esc(s.nome || 'Lore')}</label><div class="wb-chips-row">${chips}</div></div>` : '')
+                                + longos.map(f => bloco(f.rotulo || f.chave, vals[f.chave])).join('');
+                        }).join('');
+                    })()}
                     ${(loot.itens || loot.luns || loot.pistas || loot.complicacoes) ? `<div class="form-group" style="grid-column:1/-1"><label class="form-label">💰 Espólio</label><div class="wb-chips-row">${chip('Itens', loot.itens)}${chip('Luns', loot.luns)}${chip('Pistas', loot.pistas)}${chip('Complicações', loot.complicacoes)}</div></div>` : ''}
                     ${criHtml}
                 </div>

@@ -4,6 +4,8 @@
 // Coexiste com window._systemData usado por outros módulos do painel.
 // =============================================
 import { db, collection, getDocs } from './firebase-config.js';
+import { mesclarRegras, REGRAS_PADRAO } from '../../shared/regras-padrao.js?v=1';
+import { mesclarCampos } from '../../shared/campos-cadastro.js?v=1';
 
 const COLLECTIONS = [
     'races', 'classes', 'tribes', 'peculiarities',
@@ -47,6 +49,20 @@ export async function ensureNpcSystemData() {
                 console.warn(`⚠️ registro do sistema: "${COLLECTIONS[i]}" não carregou`, x.reason);
             }
         });
+
+        // Cadastro de regras e de campos configuráveis (config/regras, config/campos).
+        // Vale para o Painel do Mestre e para o Tabuleiro, que importa este loader.
+        try {
+            const cfg = await getDocs(collection(db, 'config'));
+            let regrasDoc = null, camposDoc = null;
+            cfg.forEach(d => { if (d.id === 'regras') regrasDoc = d.data(); if (d.id === 'campos') camposDoc = d.data(); });
+            window.REGRAS = mesclarRegras(regrasDoc || {});
+            window.CAMPOS = mesclarCampos(camposDoc || {});
+        } catch (e) {
+            console.warn('config/regras ou config/campos indisponível; usando o padrão', e);
+            window.REGRAS = window.REGRAS || REGRAS_PADRAO;
+            window.CAMPOS = window.CAMPOS || mesclarCampos({});
+        }
 
         const sd = window._systemData;
         const byId = arr => { const m = {}; (arr || []).forEach(x => m[x.id] = x); return m; };
@@ -98,6 +114,8 @@ export async function ensureNpcSystemData() {
             classModules: (sd.classModules || []).map(normalizeClassModule).filter(Boolean),
             equipment: sd.equipment || [],
             bodyParts: sd.bodyParts || [],
+            regras: window.REGRAS,
+            campos: window.CAMPOS,
         };
 
         sys.racesById = byId(sys.races);

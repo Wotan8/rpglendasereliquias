@@ -124,6 +124,21 @@ async function loadSystemData(db, collectionFn, getDocsFn) {
             });
         }));
 
+        // Regras do sistema como cadastro (config/regras), mescladas sobre o padrão
+        // de shared/regras-padrao.js. Sem o doc, vale o padrão; sem o módulo, idem.
+        try {
+            const cfg = await getDocsFn(collectionFn(db, 'config'));
+            let regrasDoc = null, camposDoc = null;
+            cfg.forEach(d => { if (d.id === 'regras') regrasDoc = d.data(); if (d.id === 'campos') camposDoc = d.data(); });
+            const R = window.LR_REGRAS, C = window.LR_CAMPOS;
+            window.REGRAS = R ? R.mesclarRegras(regrasDoc || {}) : (regrasDoc || {});
+            window.CAMPOS = C ? C.mesclarCampos(camposDoc || {}) : (camposDoc || {});
+        } catch (e) {
+            console.warn('config/regras ou config/campos indisponível; usando o padrão', e);
+            window.REGRAS = window.LR_REGRAS ? window.LR_REGRAS.REGRAS_PADRAO : {};
+            window.CAMPOS = window.LR_CAMPOS ? window.LR_CAMPOS.mesclarCampos({}) : {};
+        }
+
         window._systemData.loaded = true;
 
         // Disparar evento para scripts antigos saberem que os dados chegaram

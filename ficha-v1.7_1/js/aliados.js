@@ -377,16 +377,20 @@ function _alAbaInventario() {
         _alSecao('Inventário do Aliado', _alPlaceholder('aliadoInvRoot', 'Abra esta aba para carregar o inventário.')));
 }
 
+/** Schema do bloco Lore (config/campos → npcs.lore); o Criador edita na aba Campos. */
+function _alLoreSchema() {
+    const C = window.LR_CAMPOS;
+    return C ? C.camposDe(window.CAMPOS, 'npcs', 'lore') : [];
+}
+
 function _alAbaRoleplay() {
-    return _alAba('roleplay', _alSecao('Role Play', [
-        _alLinha([1, 2, 3].map(n => _alTexto(`Personalidade ${n}`, `al_personalidade${n}`)), '1fr 1fr 1fr'),
-        _alLinha([_alTexto('Trejeitos', 'al_trejeitos')]),
-        _alLinha([_alArea('Motivação', 'al_motivacao', 2)]),
-        _alLinha([_alArea('Segredos', 'al_segredos', 2)]),
-        _alLinha([_alTexto('Aliado', 'al_aliado'), _alTexto('Rival', 'al_rival'), _alTexto('Devedor', 'al_devedor')], '1fr 1fr 1fr'),
-        _alLinha([_alArea('💬 Frases', 'al_frases', 2)]),
-        _alLinha([_alArea('📖 História', 'al_historia', 3)]),
-    ].join('')));
+    // Os campos são renderizados em fillAliadoForm() pelo schema; aqui só o contêiner.
+    return _alAba('roleplay', _alSecao('Role Play',
+        `<style>#al_lore .cc-secao{font-weight:600;margin:10px 0 6px}#al_lore .cc-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+        #al_lore .cc-campo{display:flex;flex-direction:column;gap:4px}#al_lore .cc-campo label{font-size:.8rem;opacity:.8}
+        #al_lore .cc-campo input,#al_lore .cc-campo textarea,#al_lore .cc-campo select{width:100%;box-sizing:border-box}
+        @media (max-width:640px){#al_lore .cc-campo{grid-column:1 / -1 !important}}</style>
+        <div id="al_lore"></div>`));
 }
 
 function _alAbaLoot() {
@@ -768,18 +772,14 @@ function fillAliadoForm(npc) {
         skillsGrid.innerHTML = html;
     }
 
-    if (npc.rolePlay) {
-        document.getElementById('al_personalidade1').value = npc.rolePlay.personalidade?.[0] || '';
-        document.getElementById('al_personalidade2').value = npc.rolePlay.personalidade?.[1] || '';
-        document.getElementById('al_personalidade3').value = npc.rolePlay.personalidade?.[2] || '';
-        document.getElementById('al_trejeitos').value = npc.rolePlay.trejeitos || '';
-        document.getElementById('al_motivacao').value = npc.rolePlay.motivacao || '';
-        document.getElementById('al_segredos').value = npc.rolePlay.segredos || '';
-        document.getElementById('al_aliado').value = npc.rolePlay.aliado || '';
-        document.getElementById('al_rival').value = npc.rolePlay.rival || '';
-        document.getElementById('al_devedor').value = npc.rolePlay.devedor || '';
-        document.getElementById('al_frases').value = npc.rolePlay.frases || '';
-        document.getElementById('al_historia').value = npc.rolePlay.historia || '';
+    // Lore pelo schema de config/campos: cada campo lê do doc pelo caminho que declara
+    // (as relações moram em rolePlay.relacoes.*, o mesmo contrato do Painel do Mestre e do WB).
+    {
+        const C = window.LR_CAMPOS, lore = document.getElementById('al_lore');
+        if (C && lore) {
+            const sch = _alLoreSchema();
+            lore.innerHTML = C.formularioHtml(sch, C.valoresDoDoc(sch, npc), { onde: 'ficha', prefixo: 'alLore' });
+        }
     }
 
     if (npc.loot) {
@@ -855,19 +855,20 @@ window.saveAliadoNpc = async function() {
             updateData.periciasEstruturadas = newPs;
         }
 
-        updateData['rolePlay.personalidade'] = [
-            document.getElementById('al_personalidade1').value.trim(),
-            document.getElementById('al_personalidade2').value.trim(),
-            document.getElementById('al_personalidade3').value.trim()
-        ].filter(p => p);
-        updateData['rolePlay.trejeitos'] = document.getElementById('al_trejeitos').value.trim();
-        updateData['rolePlay.motivacao'] = document.getElementById('al_motivacao').value.trim();
-        updateData['rolePlay.segredos'] = document.getElementById('al_segredos').value.trim();
-        updateData['rolePlay.aliado'] = document.getElementById('al_aliado').value.trim();
-        updateData['rolePlay.rival'] = document.getElementById('al_rival').value.trim();
-        updateData['rolePlay.devedor'] = document.getElementById('al_devedor').value.trim();
-        updateData['rolePlay.frases'] = document.getElementById('al_frases').value.trim();
-        updateData['rolePlay.historia'] = document.getElementById('al_historia').value.trim();
+        // Lore pelo schema: monta o objeto inteiro a partir do que o NPC já tem e grava as
+        // chaves de topo (Firestore não aceita índice de lista em caminho pontilhado).
+        {
+            const C = window.LR_CAMPOS, lore = document.getElementById('al_lore');
+            if (C && lore) {
+                const sch = _alLoreSchema();
+                const vals = C.coletarCampos(sch, lore, { prefixo: 'alLore' });
+                for (const k of Object.keys(vals)) if (typeof vals[k] === 'string') vals[k] = vals[k].trim();
+                const base = { rolePlay: JSON.parse(JSON.stringify(currentAliadoNpc.rolePlay || {})) };
+                C.aplicarNoDoc(sch, vals, base);
+                if (Array.isArray(base.rolePlay?.personalidade)) base.rolePlay.personalidade = base.rolePlay.personalidade.map(p => p || '');
+                for (const k of Object.keys(base)) updateData[k] = base[k];
+            }
+        }
 
         updateData['loot.itens'] = document.getElementById('al_itens').value.trim();
         updateData['loot.luns'] = document.getElementById('al_luns').value.trim();

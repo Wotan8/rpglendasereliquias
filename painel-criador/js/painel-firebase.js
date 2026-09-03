@@ -11,6 +11,7 @@ import {
 import {
     SECOES_CONDICAO, SECOES_CLASSE, SECOES_TRIBO, SECOES_VALOR_DERIVADO,
 } from './cadastro-secoes.js?v=1';
+import { REGRAS_PADRAO, mesclarRegras, listarRegras } from '../../shared/regras-padrao.js?v=1';
 
 /** Gaveta nasce aberta quando o registro já tem algo dentro dela. */
 const _preenchidoNoDado = (dado, k) => {
@@ -867,18 +868,22 @@ window.switchModule = function (moduleName, btnEl) {
     if (mechArea) mechArea.style.display = 'none';
     window._mechParentFieldKey = null;
 
-    // Duas abas não têm CRUD e têm área própria: o Dashboard e a Sanidade.
-    // O cabeçalho do painel vive só no Dashboard — as demais vão direto ao conteúdo.
+    // Abas sem CRUD de lista, cada uma com área própria: Dashboard, Sanidade,
+    // Regras (config/regras) e Campos (config/campos). O cabeçalho do painel
+    // vive só no Dashboard — as demais vão direto ao conteúdo.
+    const AREAS = { dashboard: 'dashboardArea', sanidade: 'sanidadeArea', regras: 'regrasArea', campos: 'camposArea' };
     const isDash = moduleName === 'dashboard';
-    const isSan = moduleName === 'sanidade';
     const header = document.querySelector('.menu-header');
     if (header) header.style.display = isDash ? '' : 'none';
-    document.getElementById('dashboardArea').style.display = isDash ? '' : 'none';
-    const sanArea = document.getElementById('sanidadeArea');
-    if (sanArea) sanArea.style.display = isSan ? '' : 'none';
-    document.getElementById('moduleContent').style.display = (isDash || isSan) ? 'none' : '';
+    for (const [mod, id] of Object.entries(AREAS)) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = mod === moduleName ? '' : 'none';
+    }
+    document.getElementById('moduleContent').style.display = AREAS[moduleName] ? 'none' : '';
     if (isDash) return loadDashboard();
-    if (isSan) return loadSanidade();
+    if (moduleName === 'sanidade') return loadSanidade();
+    if (moduleName === 'regras') return loadRegras();
+    if (moduleName === 'campos') return loadCampos();
 
     const modDef = MODULE_DEFS[moduleName];
     const titleEl = document.getElementById('createCardTitle');
@@ -1350,6 +1355,193 @@ async function loadSanidade() {
 }
 
 window.sanRefresh = () => loadSanidade();
+
+// ===== REGRAS DO SISTEMA (config/regras) =====
+// Formulário gerado do próprio documento: cada chave vira um campo, agrupada
+// pelo primeiro nível (teste, combate, exp…). O padrão vem de shared/regras-padrao.js;
+// o que o Criador gravar por cima é o que as páginas leem em window.REGRAS.
+let _regrasDoc = null;
+
+async function loadRegras() {
+    const area = document.getElementById('regrasArea');
+    if (!area) return;
+    area.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">⏳ Carregando regras...</div>';
+    try {
+        const snap = await getDoc(doc(db, 'config', 'regras'));
+        _regrasDoc = snap.exists() ? snap.data() : {};
+        const regras = mesclarRegras(_regrasDoc);
+        const lista = listarRegras(regras);
+        const grupos = {};
+        for (const r of lista) { const g = r.caminho.split('.')[0]; (grupos[g] ||= []).push(r); }
+        const campo = r => {
+            const id = 'regra__' + r.caminho.replace(/\./g, '__');
+            const padrao = listarRegras(REGRAS_PADRAO).find(p => p.caminho === r.caminho);
+            const mudou = padrao && JSON.stringify(padrao.valor) !== JSON.stringify(r.valor);
+            let input;
+            if (r.tipo === 'numero') input = `<input type="number" step="any" id="${id}" data-caminho="${r.caminho}" data-tipo="numero" value="${escapeHtml(String(r.valor))}">`;
+            else if (r.tipo === 'lista') {
+                const simples = r.valor.every(v => typeof v !== 'object');
+                input = simples
+                    ? `<input type="text" id="${id}" data-caminho="${r.caminho}" data-tipo="lista" value="${escapeHtml(r.valor.join(', '))}" title="valores separados por vírgula">`
+                    : `<textarea id="${id}" data-caminho="${r.caminho}" data-tipo="json" rows="${Math.min(8, r.valor.length + 1)}">${escapeHtml(JSON.stringify(r.valor, null, 1))}</textarea>`;
+            } else input = `<input type="text" id="${id}" data-caminho="${r.caminho}" data-tipo="texto" value="${escapeHtml(String(r.valor))}">`;
+            return `<label class="regra-linha${mudou ? ' regra-mudou' : ''}" title="${escapeHtml(r.caminho)}${mudou ? ' · padrão: ' + escapeHtml(JSON.stringify(padrao.valor)) : ''}">
+                <span class="regra-rotulo">${escapeHtml(r.rotulo)}</span>${input}</label>`;
+        };
+        area.innerHTML = `
+            <div class="dash-head">
+                <div class="dash-total">📏 <strong>${lista.length}</strong> regras em ${Object.keys(grupos).length} grupos · versão ${escapeHtml(String(regras.versao || '1.00'))}</div>
+                <button type="button" class="btn-edit" onclick="saveRegras()">💾 Salvar regras</button>
+            </div>
+            <div class="dash-tab-resumo">Estes são os números do sistema. O que você mudar aqui vale na ficha, no assistente de criação, no Painel do Mestre e no Tabuleiro na próxima carga. Linha marcada = diferente do padrão.</div>
+            <style>
+                .regra-grupo{margin:1rem 0}.regra-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:.5rem .9rem}
+                .regra-linha{display:flex;flex-direction:column;gap:.2rem;font-size:.85rem}.regra-rotulo{color:var(--muted)}
+                .regra-linha input,.regra-linha textarea{width:100%;box-sizing:border-box}.regra-mudou .regra-rotulo{color:var(--gold,#D4AF37)}
+            </style>
+            ${Object.entries(grupos).filter(([g]) => g !== 'versao' && g !== 'updatedAt').map(([g, rs]) => `
+                <div class="regra-grupo">
+                    <div class="skills-category-header">${escapeHtml(g)} <span class="skills-category-count">${rs.length}</span></div>
+                    <div class="regra-grid">${rs.map(campo).join('')}</div>
+                </div>`).join('')}`;
+    } catch (e) {
+        console.error(e);
+        area.innerHTML = `<div class="dash-tab-resumo tem-falta">❌ Não foi possível carregar config/regras: ${escapeHtml(String(e.message || e))}</div>`;
+    }
+}
+
+window.saveRegras = async function () {
+    const area = document.getElementById('regrasArea');
+    const novo = JSON.parse(JSON.stringify(mesclarRegras(_regrasDoc || {})));
+    const poe = (obj, caminho, valor) => { const ks = caminho.split('.'); let o = obj; for (const k of ks.slice(0, -1)) o = (o[k] ||= {}); o[ks[ks.length - 1]] = valor; };
+    for (const el of area.querySelectorAll('[data-caminho]')) {
+        const t = el.dataset.tipo; let v = el.value;
+        if (t === 'numero') { v = Number(v); if (Number.isNaN(v)) { showAlert(`❌ "${el.dataset.caminho}" precisa ser número`, 'danger'); return; } }
+        else if (t === 'lista') v = v.split(',').map(s => s.trim()).filter(s => s !== '').map(s => (s !== '' && !Number.isNaN(Number(s))) ? Number(s) : s);
+        else if (t === 'json') { try { v = JSON.parse(v); } catch { showAlert(`❌ "${el.dataset.caminho}" não é JSON válido`, 'danger'); return; } }
+        poe(novo, el.dataset.caminho, v);
+    }
+    const sobe = s => ((Math.round((parseFloat(s) || 1) * 100) + 1) / 100).toFixed(2);
+    novo.versao = sobe(novo.versao);
+    novo.updatedAt = Date.now();
+    try {
+        await setDoc(doc(db, 'config', 'regras'), novo);
+        _regrasDoc = novo;
+        showAlert(`✅ Regras salvas (v${novo.versao})`, 'success');
+        loadRegras();
+    } catch (e) { showAlert('❌ Erro ao salvar regras: ' + e.message, 'danger'); }
+};
+
+window.regrasRefresh = () => loadRegras();
+
+// ===== CAMPOS CONFIGURÁVEIS (config/campos) =====
+// Por coleção e bloco, a lista de campos que o cadastro tem. As telas renderizam
+// pelo schema (shared/campos-cadastro.js); aqui o Criador cria, funde, esconde e
+// reordena campos sem mexer em código.
+let _camposDoc = null;
+const CAMPOS_TIPOS = ['text', 'textarea', 'number', 'select', 'checkbox', 'tags', 'link', 'imagem', 'separador', 'equacao', 'mecanica'];
+const CAMPOS_ONDE = ['painel', 'card', 'ficha', 'tabuleiro', 'wiki'];
+const CAMPOS_FUNCOES = ['narrativo', 'mecanico', 'equacao'];
+const CAMPOS_LARGURAS = ['full', 'metade', 'terco'];
+const CAMPOS_ROTULO_COLECAO = { npcs: '👤 NPCs', races: '🧬 Raças', classes: '⚔️ Classes', tribes: '🏕️ Tribos', equipment: '🗡️ Equipamentos', conditions: '💀 Condições', escolas: '🔮 Escolas', classModules: '📦 Ramos' };
+
+async function loadCampos() {
+    const area = document.getElementById('camposArea');
+    if (!area) return;
+    area.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted)">⏳ Carregando campos...</div>';
+    try {
+        const { mesclarCampos } = await import('../../shared/campos-cadastro.js?v=1');
+        const snap = await getDoc(doc(db, 'config', 'campos'));
+        _camposDoc = mesclarCampos(snap.exists() ? snap.data() : {});
+        renderCampos();
+    } catch (e) {
+        console.error(e);
+        area.innerHTML = `<div class="dash-tab-resumo tem-falta">❌ Não foi possível carregar config/campos: ${escapeHtml(String(e.message || e))}</div>`;
+    }
+}
+
+function _campoLinhaHtml(col, bloco, f, i, total) {
+    const sel = (name, opts, val) => `<select data-k="${name}">${opts.map(o => `<option value="${o}" ${o === val ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+    const onde = CAMPOS_ONDE.map(o => `<label class="cf-onde"><input type="checkbox" data-onde="${o}" ${(f.onde || []).includes(o) ? 'checked' : ''}>${o}</label>`).join('');
+    return `<div class="cf-linha" data-col="${escapeHtml(col)}" data-bloco="${escapeHtml(bloco)}" data-i="${i}">
+        <input data-k="chave" value="${escapeHtml(f.chave || '')}" placeholder="chave" title="identificador (sem espaços)">
+        <input data-k="rotulo" value="${escapeHtml(f.rotulo || '')}" placeholder="rótulo">
+        ${sel('tipo', CAMPOS_TIPOS, f.tipo || 'text')}
+        <input data-k="caminho" value="${escapeHtml(f.caminho || '')}" placeholder="caminho no doc (ex.: rolePlay.historia)" title="onde grava no documento; vazio = a própria chave">
+        <input data-k="secao" value="${escapeHtml(f.secao || '')}" placeholder="seção">
+        ${sel('largura', CAMPOS_LARGURAS, f.largura || 'full')}
+        ${sel('funcao', CAMPOS_FUNCOES, f.funcao || 'narrativo')}
+        <input data-k="opcoes" value="${escapeHtml((f.opcoes || []).join(', '))}" placeholder="opções (select), por vírgula">
+        <div class="cf-ondes">${onde}</div>
+        <div class="cf-acoes">
+            <button type="button" class="btn-edit" onclick="camposMover('${col}','${bloco}',${i},-1)" ${i === 0 ? 'disabled' : ''} title="subir">▲</button>
+            <button type="button" class="btn-edit" onclick="camposMover('${col}','${bloco}',${i},1)" ${i === total - 1 ? 'disabled' : ''} title="descer">▼</button>
+            <button type="button" class="btn-edit" onclick="camposRemover('${col}','${bloco}',${i})" title="remover">🗑️</button>
+        </div>
+    </div>`;
+}
+
+function renderCampos() {
+    const area = document.getElementById('camposArea');
+    const doc_ = _camposDoc || {};
+    const blocos = [];
+    for (const [col, bs] of Object.entries(doc_)) { if (col === 'versao' || col === 'updatedAt' || !bs || typeof bs !== 'object' || Array.isArray(bs)) continue; for (const [b, campos] of Object.entries(bs)) if (Array.isArray(campos)) blocos.push({ col, bloco: b, campos }); }
+    area.innerHTML = `
+        <div class="dash-head">
+            <div class="dash-total">🧩 <strong>${blocos.reduce((n, b) => n + b.campos.length, 0)}</strong> campos em ${blocos.length} blocos · versão ${escapeHtml(String(doc_.versao || '1.00'))}</div>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+                <input id="cfNovaCol" placeholder="coleção (ex.: races)" style="width:11rem"><input id="cfNovoBloco" placeholder="bloco (ex.: lore)" style="width:9rem">
+                <button type="button" class="btn-edit" onclick="camposNovoBloco()">➕ Bloco</button>
+                <button type="button" class="btn-edit" onclick="saveCampos()">💾 Salvar campos</button>
+            </div>
+        </div>
+        <div class="dash-tab-resumo">Cada linha é um campo de um cadastro. <b>Caminho</b> diz onde ele grava no documento (pontilhado; número vira posição de lista). <b>Onde</b> diz em que telas aparece. Campo com função <b>equação</b> ou <b>mecânica</b> é só leitura na tela e será calculado quando o consumidor do bloco souber calcular.</div>
+        <style>
+            .cf-bloco{margin:1rem 0}.cf-linha{display:grid;grid-template-columns:8rem 10rem 7rem 1fr 7rem 5.5rem 6.5rem 1fr auto auto;gap:.35rem;align-items:center;padding:.25rem 0;border-bottom:1px dashed var(--border,#333);font-size:.8rem}
+            .cf-linha input,.cf-linha select{width:100%;box-sizing:border-box;font-size:.8rem}.cf-ondes{display:flex;gap:.3rem;flex-wrap:wrap}.cf-onde{font-size:.7rem;white-space:nowrap}.cf-acoes{display:flex;gap:.2rem}
+            .cf-cab{display:grid;grid-template-columns:8rem 10rem 7rem 1fr 7rem 5.5rem 6.5rem 1fr auto auto;gap:.35rem;font-size:.7rem;color:var(--muted);padding:.2rem 0}
+            @media (max-width:1100px){.cf-linha,.cf-cab{grid-template-columns:1fr 1fr 1fr 1fr}}
+        </style>
+        ${blocos.map(b => `
+            <div class="cf-bloco">
+                <div class="skills-category-header">${CAMPOS_ROTULO_COLECAO[b.col] || escapeHtml(b.col)} · ${escapeHtml(b.bloco)} <span class="skills-category-count">${b.campos.length}</span>
+                    <button type="button" class="btn-edit" style="margin-left:auto" onclick="camposAdicionar('${b.col}','${b.bloco}')">➕ Campo</button></div>
+                <div class="cf-cab"><span>chave</span><span>rótulo</span><span>tipo</span><span>caminho</span><span>seção</span><span>largura</span><span>função</span><span>opções</span><span>onde aparece</span><span></span></div>
+                ${b.campos.map((f, i) => _campoLinhaHtml(b.col, b.bloco, f, i, b.campos.length)).join('')}
+            </div>`).join('')}`;
+}
+
+function _lerCamposDoDOM() {
+    const out = JSON.parse(JSON.stringify(_camposDoc || {}));
+    for (const linha of document.querySelectorAll('#camposArea .cf-linha')) {
+        const { col, bloco, i } = linha.dataset;
+        const f = out[col][bloco][Number(i)] || {};
+        for (const el of linha.querySelectorAll('[data-k]')) f[el.dataset.k] = el.dataset.k === 'opcoes' ? el.value.split(',').map(s => s.trim()).filter(Boolean) : el.value.trim();
+        f.onde = [...linha.querySelectorAll('[data-onde]')].filter(c => c.checked).map(c => c.dataset.onde);
+        f.ordem = Number(i) + 1;
+        if (!f.caminho) delete f.caminho;
+        if (!f.opcoes.length) delete f.opcoes;
+        out[col][bloco][Number(i)] = f;
+    }
+    return out;
+}
+
+window.camposAdicionar = (col, bloco) => { _camposDoc = _lerCamposDoDOM(); _camposDoc[col][bloco].push({ chave: '', rotulo: '', tipo: 'text', onde: ['painel'], funcao: 'narrativo', largura: 'full' }); renderCampos(); };
+window.camposRemover = (col, bloco, i) => { _camposDoc = _lerCamposDoDOM(); _camposDoc[col][bloco].splice(i, 1); renderCampos(); };
+window.camposMover = (col, bloco, i, d) => { _camposDoc = _lerCamposDoDOM(); const a = _camposDoc[col][bloco]; const j = i + d; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; renderCampos(); };
+window.camposNovoBloco = () => {
+    const col = (document.getElementById('cfNovaCol').value || '').trim(), bloco = (document.getElementById('cfNovoBloco').value || '').trim();
+    if (!col || !bloco) { showAlert('Informe coleção e bloco', 'warning'); return; }
+    _camposDoc = _lerCamposDoDOM(); (_camposDoc[col] ||= {}); (_camposDoc[col][bloco] ||= []); renderCampos();
+};
+window.saveCampos = async function () {
+    const novo = _lerCamposDoDOM();
+    for (const [col, bs] of Object.entries(novo)) { if (!bs || typeof bs !== 'object' || Array.isArray(bs)) continue; for (const [b, campos] of Object.entries(bs)) if (Array.isArray(campos)) for (const f of campos) { if (!f.chave || /\s/.test(f.chave)) { showAlert(`❌ ${col}.${b}: todo campo precisa de chave sem espaços`, 'danger'); return; } } }
+    const sobe = s => ((Math.round((parseFloat(s) || 1) * 100) + 1) / 100).toFixed(2);
+    novo.versao = sobe(novo.versao); novo.updatedAt = Date.now();
+    try { await setDoc(doc(db, 'config', 'campos'), novo); _camposDoc = novo; showAlert(`✅ Campos salvos (v${novo.versao})`, 'success'); renderCampos(); }
+    catch (e) { showAlert('❌ Erro ao salvar campos: ' + e.message, 'danger'); }
+};
 
 window.dashRefresh = () => loadDashboard();
 

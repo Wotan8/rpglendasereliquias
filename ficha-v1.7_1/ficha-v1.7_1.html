@@ -16,6 +16,11 @@
   import * as dominioRedutor from '../shared/dominio-redutor.js?v=1';
   window.LR_DOMINIO = dominioRedutor;
 </script>
+<!-- 📏 Regras do sistema como cadastro (config/regras sobre o padrão). O módulo
+     já se expõe como window.LR_REGRAS; o loader mescla o doc em window.REGRAS. -->
+<script type="module">import '../shared/regras-padrao.js?v=1';</script>
+<!-- 🧩 Campos configuráveis (config/campos): window.LR_CAMPOS; o loader mescla o doc em window.CAMPOS. -->
+<script type="module">import '../shared/campos-cadastro.js?v=1';</script>
 <link rel="stylesheet" href="../shared/acervo.css?v=3">
     <link rel="stylesheet" href="css/styles_v2.css?v=23">
     <link rel="stylesheet" href="css/inventory.css?v=14">

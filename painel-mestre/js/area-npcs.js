@@ -202,6 +202,25 @@ function _seloPoderCard(n) {
     return `<span class="npc-poder-badge" title="${resumo}">⚡ ${poder.total}</span>`;
 }
 
+/** Linhas de lore que o schema marca para o card (onde inclui 'card'). */
+function _npcCardLore(n) {
+    const C = window.LR_CAMPOS; if (!C) return '';
+    const sch = C.camposDe(window.CAMPOS, 'npcs', 'lore').filter(f => C.aparece(f, 'card') && f.tipo !== 'separador');
+    const vals = C.valoresDoDoc(sch, n);
+    return sch.map((f, i) => {
+        const v = vals[f.chave]; if (v == null || v === '' || (Array.isArray(v) && !v.length)) return '';
+        return `<div style="font-size:.82rem;color:var(--muted)${i === 0 ? ';margin-top:6px' : ''}">${i === 0 ? '- ' : '🎭 '}${escapeHtml(Array.isArray(v) ? v.join(', ') : String(v))}</div>`;
+    }).join('');
+}
+window.npcCardLore = _npcCardLore;
+/** Todo texto de lore do NPC numa string, para busca. */
+function _npcLoreTexto(n) {
+    const C = window.LR_CAMPOS;
+    if (!C) { const rp = n.rolePlay || {}; return [Array.isArray(rp.personalidade) ? rp.personalidade.join(' ') : rp.personalidade, rp.trejeitos, rp.motivacao, rp.segredos, rp.frases, rp.historia].filter(Boolean).join(' '); }
+    const vals = C.valoresDoDoc(C.camposDe(window.CAMPOS, 'npcs', 'lore'), n);
+    return Object.values(vals).filter(Boolean).map(v => Array.isArray(v) ? v.join(' ') : String(v)).join(' ');
+}
+
 function renderNpcs(npcs) {
     const el = document.getElementById('npcsList'); if (!el) return;
     if (!npcs.length) { el.innerHTML = '<div class="no-npcs">Nenhum NPC encontrado</div>'; return; }
@@ -210,8 +229,7 @@ function renderNpcs(npcs) {
         return `<div class="npc-card" onclick="if(!event.target.classList.contains('npc-checkbox'))openNpcModal('${n.id}')">
             <div class="npc-card-header"><input type="checkbox" class="npc-checkbox" data-npc-id="${n.id}" onclick="event.stopPropagation()"><div class="npc-card-info"><div class="npc-name">${escapeHtml(n.nome||'Sem nome')}</div><div class="npc-card-selos"><span class="npc-type-badge">${n.tipo==='criatura'?'🐉 Criatura':n.tipo==='eco'?'ᛉ Eco':'👤 NPC'}</span>${_seloPoderCard(n)}</div></div></div>
             ${n.imagem?`<div class="npc-image-container"><img src="${n.imagem}" class="npc-card-image"></div>`:''}
-            ${n.rolePlay?.personalidade?.[0]?`<div style="font-size:.82rem;color:var(--muted);margin-top:6px">- ${escapeHtml(n.rolePlay.personalidade[0])}</div>`:''}
-            ${n.rolePlay?.trejeitos?`<div style="font-size:.82rem;color:var(--muted)">🎭 ${escapeHtml(n.rolePlay.trejeitos)}</div>`:''}
+            ${_npcCardLore(n)}
             ${tags?`<div class="npc-tags">${tags}</div>`:''}
         </div>`;
     }).join('');
@@ -286,8 +304,7 @@ window.filterNpcs = function() {
     let filtered = S.allNpcs.filter(n => {
         // Global search
         if (searchStr) {
-            const rpPers = Array.isArray(n.rolePlay?.personalidade) ? n.rolePlay.personalidade.join(' ') : (n.rolePlay?.personalidade || '');
-            const combined = [n.nome, n.papel, n.local, n.tribo, n.raca, n.tags, rpPers, n.rolePlay?.motivacao, n.rolePlay?.historia].filter(Boolean).join(' ').toLowerCase();
+            const combined = [n.nome, n.papel, n.local, n.tribo, n.raca, n.tags, _npcLoreTexto(n)].filter(Boolean).join(' ').toLowerCase();
             if (!combined.includes(searchStr)) return false;
         }
 
@@ -342,9 +359,7 @@ window.filterNpcs = function() {
         if (adv.advF_dev === 'nao' && rp.relacoes?.devedor) return false;
 
         if (adv.advF_rpBusca) {
-            const rpPers = Array.isArray(rp.personalidade) ? rp.personalidade.join(' ') : (rp.personalidade || '');
-            const rpStr = [rpPers, rp.trejeitos, rp.motivacao, rp.segredos, rp.frases, rp.historia].filter(Boolean).join(' ').toLowerCase();
-            if (!rpStr.includes(adv.advF_rpBusca.toLowerCase())) return false;
+            if (!_npcLoreTexto(n).toLowerCase().includes(adv.advF_rpBusca.toLowerCase())) return false;
         }
 
         // Loot
@@ -1010,37 +1025,29 @@ function _npcSecaoInventario() {
 `;
 }
 
-/** Como interpretar: personalidade, motivação, segredos e relações. */
+/** Schema do bloco Lore do NPC: config/campos → npcs.lore (o Criador edita na aba Campos). */
+function _npcLoreSchema() {
+    const C = window.LR_CAMPOS;
+    return C ? C.camposDe(window.CAMPOS, 'npcs', 'lore') : [];
+}
+
+/** Como interpretar: personalidade, motivação, segredos e relações — campos configuráveis. */
 function _npcSecaoRoleplay() {
+    const C = window.LR_CAMPOS;
+    const corpo = C ? C.formularioHtml(_npcLoreSchema(), {}, { onde: 'painel', prefixo: 'npcLore' }) : '<div class="npcv2-card">Campos indisponíveis.</div>';
     return `
-    <!-- ============ SEÇÃO: ROLE PLAY ============ -->
+    <!-- ============ SEÇÃO: ROLE PLAY (campos de config/campos → npcs.lore) ============ -->
+    <style>
+        #npcSec_roleplay .cc-secao{font-weight:600;margin:10px 0 6px;color:var(--gold,#D4AF37)}
+        #npcSec_roleplay .cc-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+        #npcSec_roleplay .cc-campo{display:flex;flex-direction:column;gap:4px}
+        #npcSec_roleplay .cc-campo label{font-size:.8rem;color:var(--muted)}
+        #npcSec_roleplay .cc-campo input,#npcSec_roleplay .cc-campo textarea,#npcSec_roleplay .cc-campo select{width:100%;box-sizing:border-box}
+        #npcSec_roleplay .cc-separador{border-top:1px solid var(--border,#333);margin:6px 0}
+        @media (max-width:640px){#npcSec_roleplay .cc-campo{grid-column:1 / -1 !important}}
+    </style>
     <div class="npcv2-section" id="npcSec_roleplay">
-        <div class="npcv2-card">
-            <div class="npcv2-block-title">🎭 Presença em cena</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-                <div class="form-group"><label class="form-label">Personalidade 1</label><input type="text" class="form-input" id="npcPersonalidade1"></div>
-                <div class="form-group"><label class="form-label">Personalidade 2</label><input type="text" class="form-input" id="npcPersonalidade2"></div>
-                <div class="form-group"><label class="form-label">Personalidade 3</label><input type="text" class="form-input" id="npcPersonalidade3"></div>
-            </div>
-            <div class="form-group"><label class="form-label">Trejeitos</label><input type="text" class="form-input" id="npcTrejeitos"></div>
-            <div class="form-group"><label class="form-label">💬 Frases</label><textarea class="form-textarea" id="npcFrases" rows="2"></textarea></div>
-        </div>
-
-        <div class="npcv2-card">
-            <div class="npcv2-block-title">🎯 O que move e o que esconde</div>
-            <div class="form-group"><label class="form-label">Motivação</label><textarea class="form-textarea" id="npcMotivacao" rows="2"></textarea></div>
-            <div class="form-group"><label class="form-label">Segredos</label><textarea class="form-textarea" id="npcSegredos" rows="2"></textarea></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-                <div class="form-group"><label class="form-label">Aliado</label><input type="text" class="form-input" id="npcAliado"></div>
-                <div class="form-group"><label class="form-label">Rival</label><input type="text" class="form-input" id="npcRival"></div>
-                <div class="form-group"><label class="form-label">Devedor</label><input type="text" class="form-input" id="npcDevedor"></div>
-            </div>
-        </div>
-
-        <div class="npcv2-card">
-            <div class="npcv2-block-title">📖 História</div>
-            <div class="form-group" style="margin-bottom:0"><textarea class="form-textarea" id="npcHistoria" rows="4"></textarea></div>
-        </div>
+        <div class="npcv2-card">${corpo}</div>
     </div>
 `;
 }
@@ -2210,10 +2217,17 @@ function fillNpcForm(n) {
     ATTR_SIGLAS.forEach(a => set('npcAttr_' + a, n.atributos?.[a] || 0));
     set('npcAtaques', n.ataques); set('npcSkills', n.skills);
 
-    set('npcPersonalidade1', n.rolePlay?.personalidade?.[0]); set('npcPersonalidade2', n.rolePlay?.personalidade?.[1]); set('npcPersonalidade3', n.rolePlay?.personalidade?.[2]);
-    set('npcTrejeitos', n.rolePlay?.trejeitos); set('npcMotivacao', n.rolePlay?.motivacao); set('npcSegredos', n.rolePlay?.segredos);
-    set('npcAliado', n.rolePlay?.relacoes?.aliado); set('npcRival', n.rolePlay?.relacoes?.rival); set('npcDevedor', n.rolePlay?.relacoes?.devedor);
-    set('npcFrases', n.rolePlay?.frases); set('npcHistoria', n.rolePlay?.historia);
+    // Lore: cada campo do schema lê do doc pelo caminho que ele declara
+    {
+        const C = window.LR_CAMPOS, sch = _npcLoreSchema();
+        const vals = C ? C.valoresDoDoc(sch, n) : {};
+        for (const f of sch) {
+            const el = document.getElementById('npcLore__' + f.chave);
+            if (!el) continue;
+            if (f.tipo === 'checkbox') el.checked = !!vals[f.chave];
+            else el.value = Array.isArray(vals[f.chave]) ? vals[f.chave].join(', ') : (vals[f.chave] ?? '');
+        }
+    }
 
     set('npcItens', n.loot?.itens); set('npcLuns', n.loot?.luns); set('npcPistas', n.loot?.pistas); set('npcComplicacoes', n.loot?.complicacoes);
     set('npcHabitat', n.criatura?.habitat); set('npcComportamento', n.criatura?.comportamento); set('npcDieta', n.criatura?.dieta); set('npcNivelAmeaca', n.criatura?.nivelAmeaca);
@@ -2470,7 +2484,16 @@ function collectNpcData() {
         ai: gi('npcNivel') || n.ai || 0, // AI legado ≈ nível
 
         ataques: g('npcAtaques'), skills: g('npcSkills'),
-        rolePlay: { personalidade: [g('npcPersonalidade1'), g('npcPersonalidade2'), g('npcPersonalidade3')], trejeitos: g('npcTrejeitos'), motivacao: g('npcMotivacao'), segredos: g('npcSegredos'), relacoes: { aliado: g('npcAliado'), rival: g('npcRival'), devedor: g('npcDevedor') }, frases: g('npcFrases'), historia: g('npcHistoria') },
+        // Lore pelo schema: cada campo grava no caminho que declara (rolePlay.* por padrão;
+        // campo novo criado no Criador pode apontar para qualquer caminho do doc)
+        ...(() => {
+            const C = window.LR_CAMPOS; if (!C) return {};
+            const sch = _npcLoreSchema();
+            const sec = document.getElementById('npcSec_roleplay');
+            const vals = sec ? C.coletarCampos(sch, sec, { prefixo: 'npcLore' }) : {};
+            const base = { rolePlay: JSON.parse(JSON.stringify(n.rolePlay || {})) };
+            return C.aplicarNoDoc(sch, vals, base);
+        })(),
         loot: { itens: g('npcItens'), luns: g('npcLuns'), pistas: g('npcPistas'), complicacoes: g('npcComplicacoes') },
         criatura: tipo === 'criatura' ? { habitat: g('npcHabitat'), comportamento: g('npcComportamento'), dieta: g('npcDieta'), nivelAmeaca: g('npcNivelAmeaca') } : null,
         /* ᛉ Eco da Alma — Disposição e Máscara são segredo do Mestre. */
