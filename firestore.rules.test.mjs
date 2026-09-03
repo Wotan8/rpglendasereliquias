@@ -355,6 +355,42 @@ await teste('editar item da própria ficha passa',
     await assertSucceeds(updateDoc(doc(db, 'items', 'item-meu'), { nome: 'Espada afiada' }));
   });
 
+/* ── narrativo_logs: a trilha do benefício narrativo ──
+   O jogador paga dinheiro real por essas peças. Gasto sem trilha é gasto que
+   ninguém consegue contestar; trilha que o navegador escreve é trilha que o
+   navegador forja. Então: leitura do dono e do mestre, escrita de ninguém. */
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), 'narrativo_logs', 'log-meu'), {
+    uid: JOG, jogador: 'Jogador', nome: 'Desejo Narrativo', pedido: 'uma corda na carroça',
+  });
+  await setDoc(doc(ctx.firestore(), 'narrativo_logs', 'log-alheio'), {
+    uid: VIT, jogador: 'Vítima', nome: 'Desejo Narrativo', pedido: 'segredo dos outros',
+  });
+});
+
+await teste('narrativo_logs: leio o MEU gasto',
+  () => assertSucceeds(getDoc(doc(db, 'narrativo_logs', 'log-meu'))));
+await teste('narrativo_logs: NÃO leio o gasto de outro jogador',
+  () => assertFails(getDoc(doc(db, 'narrativo_logs', 'log-alheio'))));
+await teste('narrativo_logs: MESTRE lê o gasto de qualquer um',
+  () => assertSucceeds(getDoc(doc(dbMestre, 'narrativo_logs', 'log-alheio'))));
+await teste('narrativo_logs: NÃO forjo um gasto',
+  () => assertFails(setDoc(doc(db, 'narrativo_logs', 'forjado'), { uid: JOG, pedido: 'inventei' })));
+await teste('narrativo_logs: NÃO reescrevo o meu gasto',
+  () => assertFails(updateDoc(doc(db, 'narrativo_logs', 'log-meu'), { pedido: 'outra coisa' })));
+await teste('narrativo_logs: NÃO apago o meu gasto',
+  () => assertFails(deleteDoc(doc(db, 'narrativo_logs', 'log-meu'))));
+await teste('narrativo_logs: nem o MESTRE apaga a trilha',
+  () => assertFails(deleteDoc(doc(dbMestre, 'narrativo_logs', 'log-meu'))));
+
+/* E o que sustenta tudo isto: `inventario` é campo protegido. Se o jogador
+   pudesse mexer nele pelo navegador, a callable inteira seria teatro — ele
+   devolveria a aplicação gasta sozinho. */
+await teste('inventario continua fora do alcance do navegador',
+  () => assertFails(updateDoc(doc(db, 'users', JOG), {
+    inventario: [{ nome: 'Desejo Narrativo', isNarrativo: true, quantidade: 99 }],
+  })));
+
 console.log('\n══════ RULES: users ══════');
 for (const t of ok) console.log('  OK   ' + t);
 for (const t of falhou) console.log('  FALHOU ' + t);

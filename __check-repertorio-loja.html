@@ -143,7 +143,12 @@ const src = (await (await fetch('/menu/js/menu-firebase.js?cb=' + Date.now())).t
 const i0 = src.indexOf('const ETIQUETAS = [');
 const i1 = src.indexOf('\n}\n', src.indexOf('function etiquetasDoItem')) + 3;
 if (i0 < 0 || i1 < 3) throw new Error('as etiquetas mudaram de forma — reveja o recorte');
-const etiquetasDoItem = new Function('escapeHtml', src.slice(i0, i1) + '\nreturn etiquetasDoItem;')(esc);
+/* `usosRestantes` entra junto porque a etiqueta narrativa passou a mostrar o
+   SALDO de usos, e o recorte acima não carrega os imports do arquivo real —
+   sem injetar aqui, a etiqueta estoura com "não definido" na primeira renda. */
+const { usosRestantes } = await import('/shared/repertorio-linha.js?cb=' + Date.now());
+const etiquetasDoItem = new Function('escapeHtml', 'usosRestantes',
+    src.slice(i0, i1) + '\nreturn etiquetasDoItem;')(esc, usosRestantes);
 
 const FICHA_LONGA = [
     'MEDALHÃO DO VIAJANTE ASTUTO (Amuleto +5)',
@@ -161,7 +166,10 @@ const FICHA_LONGA = [
 const ITENS = [
     { nome: 'Frasco de Éter Bruto', quantidade: 3, imagem: '', formaRecebimento: 'Entregue na sessão',
       descricao: 'Um vidro grosso, lacrado com cera preta.',
-      isExp: true, expAmount: 20, isNarrativo: true },
+      isExp: true, expAmount: 20, isNarrativo: true,
+      narrativoAplicacoes: 2, narrativoUsadas: 1,
+      narrativoBeneficio: 'Uma vantagem pequena e plausível na cena — um objeto útil que estava ali o tempo todo.',
+      narrativoQuando: 'Antes da rolagem, e só uma vez por cena.' },
     // Ficha de trinta linhas: era ela que esticava a coluna inteira da grade.
     { nome: 'Medalhão do Viajante', quantidade: 1, imagem: '', formaRecebimento: 'Digital, na ficha',
       descricao: FICHA_LONGA, isNarrativo: true },
@@ -191,6 +199,13 @@ const cartao = (item) => {
             ${desc ? `<div class="loja-card-desc${longa ? ' rep-desc-curta' : ''}">${desc}</div>` : ''}
             ${longa ? '<div class="rep-mais">🔎 Clique para ver a ficha completa</div>' : ''}
             <div class="loja-card-tags">${etiquetasDoItem(item)}</div>
+            ${item.narrativoBeneficio || item.narrativoQuando ? `<div class="rep-narrativo">
+                ${item.narrativoBeneficio ? `<p><b>O que dá:</b> ${item.narrativoBeneficio}</p>` : ''}
+                ${item.narrativoQuando ? `<p><b>Quando vale:</b> ${item.narrativoQuando}</p>` : ''}
+            </div>` : ''}
+            ${usosRestantes(item) ? `<div class="rep-acoes">
+                <button class="loja-btn loja-btn-real rep-usar">📜 Usar</button>
+            </div>` : ''}
             <div class="rep-recebimento"><span>Recebimento</span><strong>${item.formaRecebimento}</strong></div>
         </div>
     </div>`;
@@ -229,6 +244,32 @@ document.getElementById('grid-loja').innerHTML = `
         parseFloat(cs(exp).borderTopWidth) >= 1);
     t('T05 · e é pílula, como os selos de livro',
         parseFloat(cs(exp).borderRadius) > 20);
+}
+
+/* ===== o benefício narrativo =====
+   Os dois textos eram gravados pelo painel do mestre e lidos por NINGUÉM: o
+   jogador comprava "Desejo Narrativo" e nunca via o que ele dava. E o
+   contador de aplicações nunca decrementava, porque não havia como gastar. */
+{
+    const cx2 = document.querySelector('.rep-narrativo');
+    t('T5a · o que o benefício DÁ aparece no card', !!cx2 && /O que dá:/.test(cx2.textContent));
+    t('T5b · e QUANDO ele vale também', !!cx2 && /Quando vale:/.test(cx2.textContent));
+    // Texto de regra tem marca lateral, como a nota de leitura: não é descrição.
+    t('T5c · o bloco se separa da descrição por uma marca lateral',
+        !!cx2 && parseFloat(cs(cx2).borderLeftWidth) >= 2);
+    t('T5d · e não some no fundo do card',
+        !!cx2 && cs(cx2).backgroundColor !== 'rgba(0, 0, 0, 0)');
+
+    // A etiqueta diz o SALDO. 3 unidades x 2 aplicações - 1 usada = 5.
+    const tagN = document.querySelector('.loja-tag--narrativo');
+    t('T5e · a etiqueta mostra quantos usos sobraram, não só o tipo',
+        !!tagN && /\b5 usos\b/.test(tagN.textContent));
+
+    // Sem saldo não há botão: botão que promete e nega é pior do que botão nenhum.
+    t('T5f · peça com uso sobrando ganha o botão de registrar',
+        !!document.querySelector('.rep-acoes .rep-usar'));
+    t('T5g · e o item sem nada narrativo não ganha bloco nenhum',
+        document.querySelectorAll('.rep-narrativo').length === 1);
 }
 
 /* ===== a quantidade ===== */

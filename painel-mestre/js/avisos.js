@@ -28,6 +28,10 @@ const QUANDO = (ts) => {
 const ICONE = {
     'personagem-entregue': '📜',
     'item-para-mesa': '🎁',
+    // O jogador registrou o uso de um benefício narrativo que ele COMPROU.
+    // Sem ícone próprio cairia no 📣 e se perderia na fila — e este é
+    // justamente o aviso que o mestre precisa honrar na mesa.
+    'beneficio-narrativo': '🌟',
     // Dinheiro que voltou, e cobrança que não bateu: os dois vêm do webhook do
     // Mercado Pago e ninguém mais os cria. Sem ícone próprio caíam no 📣 e se
     // perdiam no meio da fila.

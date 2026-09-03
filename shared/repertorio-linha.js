@@ -38,6 +38,27 @@ export function assinaturaDeEfeito(x) {
     }).join('|');
 }
 
+/* ── Benefício narrativo: quantos usos a linha ainda tem ──
+   GÊMEO de `functions/narrativo-uso.js`, pelo mesmo motivo do resto deste
+   arquivo: `functions/` sobe sozinho, sem a pasta `shared/`, e é CommonJS.
+   Mexeu em um, mexa no outro.
+
+   Ausente e zero valem UM uso. Dos dois itens narrativos do catálogo em
+   02/09/2026, nenhum tem `narrativoAplicacoes` gravado — ler ausente como
+   zero deixaria o jogador com a peça comprada e nenhum uso, que é pior do
+   que o defeito que isto veio consertar. */
+export function aplicacoesPorUnidade(linha) {
+    const n = Math.floor(Number(linha && linha.narrativoAplicacoes));
+    return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+export function usosRestantes(linha) {
+    if (!linha || !linha.isNarrativo) return 0;
+    const unidades = Math.max(0, Math.floor(Number(linha.quantidade) || 0));
+    const usadas = Math.max(0, Math.floor(Number(linha.narrativoUsadas) || 0));
+    return Math.max(0, unidades * aplicacoesPorUnidade(linha) - usadas);
+}
+
 /** Com id dos dois lados, o id decide — o nome pode ter sido corrigido. */
 export function ehMesmaLinha(a, b) {
     if (!a || !b) return false;

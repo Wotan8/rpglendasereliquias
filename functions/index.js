@@ -23,6 +23,7 @@ const { decidirLimite, esperaEmTexto } = require("./rate-limit");
 const { charIdsVinculados, normalizarDonos, mudou } = require("./npc-donos");
 const { empilhar } = require("./repertorio");
 const { avisoNovo, tokensMortos } = require("./push-aviso");
+const { gastarAplicacao, usosRestantes } = require("./narrativo-uso");
 
 initializeApp();
 const db = getFirestore();
@@ -1537,6 +1538,89 @@ exports.gastarRerolagem = onCall(
     });
 
     return { ok: true, restantes };
+  }
+);
+
+// =============================================
+// BENEFÍCIO NARRATIVO — gastar uma aplicação (callable)
+//
+// Irmã de `gastarRerolagem`, e pela mesma razão: `inventario` é campo
+// protegido nas rules, então quem tira uma aplicação de lá é o servidor.
+//
+// A DIFERENÇA para a re-rolagem: re-rolagem é mecânica e se resolve sozinha
+// — rola o dado de novo e pronto. Benefício narrativo é um pedido que o
+// MESTRE precisa honrar na mesa. Por isso o gasto nasce junto de um aviso
+// para ele, na mesma transação: benefício gasto que o mestre não fica
+// sabendo é dinheiro do jogador virando nada.
+//
+// O clique é RECIBO, não pedido: o combinado na mesa acontece na conversa, e
+// o jogador registra depois que o mestre aceitou. A tela diz isso.
+// =============================================
+exports.usarBeneficioNarrativo = onCall(
+  { region: "southamerica-east1" },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Você precisa estar logado para usar um benefício.");
+    }
+    const uid = request.auth.uid;
+    const email = request.auth.token.email || "";
+    const { itemId, nome, pedido, mesaId } = request.data || {};
+
+    if (!itemId && !nome) {
+      throw new HttpsError("invalid-argument", "Diga qual benefício você quer usar.");
+    }
+    const texto = String(pedido || "").trim().slice(0, 300);
+    if (!texto) {
+      throw new HttpsError("invalid-argument", "Escreva o que você combinou com o mestre.");
+    }
+
+    const userRef = resolveUserRef(uid);
+    let restantes = 0;
+    let nomeDaPeca = "";
+
+    await db.runTransaction(async (tx) => {
+      const uSnap = await tx.get(userRef);
+      if (!uSnap.exists) throw new HttpsError("not-found", "Documento de usuário não existe.");
+      const data = uSnap.data();
+
+      let saida;
+      try {
+        saida = gastarAplicacao(data.inventario || [], { itemId, nome });
+      } catch (e) {
+        // A conta explica o que houve na língua do jogador; repassar a frase
+        // dela é melhor do que um "erro interno" que não ajuda ninguém.
+        throw new HttpsError("failed-precondition", e.message);
+      }
+      restantes = saida.restantes;
+      nomeDaPeca = saida.linha.nome || "Benefício narrativo";
+
+      const jogador = data.displayName || data.email || email;
+
+      // Baixa, registro e aviso na MESMA transação: duas abas abertas não
+      // gastam a mesma aplicação duas vezes, e não existe benefício gasto
+      // sem trilha nem sem o mestre saber.
+      tx.update(userRef, { inventario: saida.inventario });
+      tx.set(db.collection("narrativo_logs").doc(), {
+        uid,
+        jogador,
+        itemId: String(itemId || ""),
+        nome: nomeDaPeca,
+        pedido: texto,
+        mesaId: String(mesaId || ""),
+        restantesDepois: restantes,
+        criadoEm: FieldValue.serverTimestamp(),
+      });
+      avisarMestre(tx, {
+        tipo: "beneficio-narrativo",
+        titulo: `📜 ${jogador} usou ${nomeDaPeca}`,
+        mensagem: texto,
+        jogadorUid: uid,
+        jogador,
+        mesaId: String(mesaId || ""),
+      });
+    });
+
+    return { ok: true, restantes, nome: nomeDaPeca };
   }
 );
 

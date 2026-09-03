@@ -21,7 +21,7 @@ import {
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
 import { somarApoiosDoJogador, somarMetaTotais, progressoDasEtapas, proximaEtapa, valorApoio, parseMetaIds, resolveMetaId } from '../../shared/apoios-calc.js';
-import { ehMesmaLinha } from '../../shared/repertorio-linha.js';
+import { ehMesmaLinha, usosRestantes } from '../../shared/repertorio-linha.js?v=2';
 import { confirmar, toast } from '../../shared/dialogo.js?v=2';
 import { estadoPush, ativarPush, desativarPush } from '../../shared/push.js?v=2';
 
@@ -599,6 +599,7 @@ async function loadInventory(dadosProntos) {
             _repDetalhes = [];
             _repExp = [];
             _repMesa = [];
+            _repNarr = [];
             grid.innerHTML = inventario.map(item => {
                 const imgHtml = item.imagem
                     ? `<div class="loja-card-media">
@@ -620,10 +621,18 @@ async function loadInventory(dadosProntos) {
                    o começo; o resto abre numa janela, que é onde texto longo
                    cabe. `_repDetalhes` guarda o descritor e o clique só carrega
                    o índice. */
+                /* Os dois textos que o mestre escreve no cadastro do benefício.
+                   Eram gravados pelo painel e lidos por NINGUÉM no site inteiro —
+                   o jogador comprava um "Desejo Narrativo" e nunca via o que ele
+                   dava nem quando valia. */
+                const benef = String(item.narrativoBeneficio || '').trim();
+                const quando = String(item.narrativoQuando || '').trim();
+
                 const i = _repDetalhes.push({
                     nome: item.nome || 'Item sem nome',
                     icone: '🎒',
-                    descricao: desc,
+                    descricao: [desc, benef && `O que dá: ${benef}`, quando && `Quando vale: ${quando}`]
+                        .filter(Boolean).join('\n\n'),
                     nota: item.formaRecebimento ? `Recebimento: ${item.formaRecebimento}` : '',
                 }) - 1;
                 const longa = desc.length > 180;
@@ -642,6 +651,13 @@ async function loadInventory(dadosProntos) {
                 const podeIrParaMesa = qtd > 0 && !item.isRoleta;
                 if (podeIrParaMesa) _repMesa[i] = { nome: item.nome, quantidade: qtd };
 
+                /* Benefício narrativo deixa de ser card parado: daqui sai o
+                   registro do uso. `_repNarr` guarda o que a callable precisa,
+                   pelo mesmo motivo do `_repExp` — nome com apóstrofo não
+                   sobrevive dentro de um `onclick`. */
+                const usosNarr = usosRestantes(item);
+                if (usosNarr > 0) _repNarr[i] = { nome: item.nome, itemId: item.itemId || '', usos: usosNarr };
+
                 return `
                 <div class="loja-card${longa ? ' rep-abrivel' : ''}"
                     ${longa ? `onclick="abrirDetalheItem(${i})" title="Ver a ficha completa"` : ''}>
@@ -654,7 +670,16 @@ async function loadInventory(dadosProntos) {
                         ${desc ? `<div class="loja-card-desc${longa ? ' rep-desc-curta' : ''}">${escapeHtmlWithBreaks(desc)}</div>` : ''}
                         ${longa ? '<div class="rep-mais">🔎 Clique para ver a ficha completa</div>' : ''}
                         ${tagsHtml ? `<div class="loja-card-tags">${tagsHtml}</div>` : ''}
-                        ${eExp || podeIrParaMesa ? `<div class="rep-acoes">
+                        ${benef || quando ? `<div class="rep-narrativo">
+                            ${benef ? `<p><b>O que dá:</b> ${escapeHtmlWithBreaks(benef)}</p>` : ''}
+                            ${quando ? `<p><b>Quando vale:</b> ${escapeHtmlWithBreaks(quando)}</p>` : ''}
+                        </div>` : ''}
+                        ${eExp || podeIrParaMesa || usosNarr ? `<div class="rep-acoes">
+                            ${usosNarr ? `
+                            <button class="loja-btn loja-btn-real rep-usar"
+                                onclick="event.stopPropagation();abrirUsarNarrativo(${i})"
+                                title="Registrar o uso depois que o mestre aceitar">
+                                📜 Usar</button>` : ''}
                             ${eExp ? `
                             <button class="loja-btn loja-btn-real rep-usar"
                                 onclick="event.stopPropagation();abrirAplicarExp(${i})"
@@ -694,7 +719,13 @@ const ETIQUETAS = [
     { quando: (i) => i.isExp, classe: 'exp', texto: (i) => `⭐ ${i.expAmount} EXP${i.isExpVip ? ' · VIP' : ''}` },
     { quando: (i) => i.isRoleta, classe: 'roleta', texto: (i) => `🎰 +${i.roletaGiros} giro${i.roletaGiros > 1 ? 's' : ''}` },
     { quando: (i) => i.isRerolagem, classe: 'reroll', texto: (i) => `🎲 Re-roll ${i.rerolagensAmount}×` },
-    { quando: (i) => i.isNarrativo, classe: 'narrativo', texto: () => '📜 Benefício narrativo' },
+    /* A etiqueta diz o SALDO, não o tipo. "Benefício narrativo" o jogador já
+       sabe pelo nome da peça; o que ele não sabia era quantos usos sobraram —
+       e não sabia porque o contador nunca decrementava. */
+    {
+        quando: (i) => i.isNarrativo, classe: 'narrativo',
+        texto: (i) => { const n = usosRestantes(i); return `📜 ${n} uso${n === 1 ? '' : 's'}`; },
+    },
     {
         quando: (i) => i.isItemPersonagem && i.personagemItensVinculados?.length,
         classe: 'equip', texto: () => '🎒 Equipamentos especiais',
@@ -713,6 +744,7 @@ function etiquetasDoItem(item) {
    é o que uma ficha de trinta linhas precisa. */
 let _repDetalhes = [];
 let _repExp = [];
+let _repNarr = [];
 let _repMesa = [];
 
 window.abrirDetalheItem = function (i) {
@@ -789,6 +821,87 @@ window.abrirEnviarParaMesa = async function (i) {
         await loadInventory();
     } catch (e) {
         console.error('Erro ao mandar item para a mesa:', e);
+        showAlert(`❌ ${e.message}`, 'danger', 7000);
+    }
+};
+
+/* ===== USAR UM BENEFÍCIO NARRATIVO =====
+   O jogador comprava "Desejo Narrativo" e a peça ficava no Repertório para
+   sempre: não havia como gastar uma aplicação, e por isso o contador nunca
+   decrementava.
+
+   O clique é RECIBO, não pedido. O combinado acontece na mesa, na conversa
+   com o mestre; aqui o jogador registra o que foi aceito. A tela diz isso com
+   todas as letras, porque a ordem inversa — gastar e torcer — seria o
+   jogador perdendo dinheiro real por um "não" do mestre.
+
+   Quem baixa a aplicação é o servidor: `inventario` é campo protegido, e o
+   mesmo movimento que gasta também avisa o mestre e grava a trilha. */
+window.abrirUsarNarrativo = async function (i) {
+    const alvo = _repNarr[i];
+    if (!alvo) return;
+
+    /* A mesa é opcional: o benefício vale mesmo fora de uma mesa cadastrada,
+       e travar o registro por falta dela deixaria o jogador sem como gastar o
+       que comprou. Vem das `mesas.jogadores`, o vínculo confiável. */
+    let minhasMesas = [];
+    try {
+        const snap = await getDocs(collection(db, 'mesas'));
+        snap.forEach(d => {
+            if ((d.data().jogadores || []).includes(currentUser.uid)) {
+                minhasMesas.push({ id: d.id, nome: d.data().nome || 'Mesa sem nome' });
+            }
+        });
+    } catch (e) {
+        console.warn('não deu para listar as mesas:', e);
+    }
+
+    const janela = document.createElement('dialog');
+    janela.className = 'lr-dialogo';
+    janela.innerHTML = `
+        <form class="lr-dialogo-form" method="dialog">
+            <div class="lr-dialogo-titulo">📜 Usar ${escapeHtml(alvo.nome)}</div>
+            <p class="lr-dialogo-msg">
+                Registre <b>depois que o mestre aceitar</b> — isto não pede
+                autorização, gasta uma aplicação e avisa ele do que foi combinado.
+                Você tem ${alvo.usos} uso${alvo.usos === 1 ? '' : 's'}.
+            </p>
+            <label for="narrPedido" style="font-size:.8rem;font-weight:700;">O que ficou combinado?</label>
+            <textarea id="narrPedido" class="lr-dialogo-input" rows="3" maxlength="300"
+                placeholder="Ex.: havia uma corda na carroça do mercador."></textarea>
+            ${minhasMesas.length ? `
+            <label for="narrMesa" style="font-size:.8rem;font-weight:700;">Em qual mesa?</label>
+            <select id="narrMesa" class="lr-dialogo-input">
+                ${minhasMesas.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.nome)}</option>`).join('')}
+            </select>` : ''}
+            <div class="lr-dialogo-botoes">
+                <button type="submit" value="ok" class="lr-dialogo-ok">Registrar o uso</button>
+                <button type="button" class="lr-dialogo-cancel">Cancelar</button>
+            </div>
+        </form>`;
+    document.body.appendChild(janela);
+
+    const escolha = await esperarDecisao(janela);
+    const pedido = janela.querySelector('#narrPedido').value.trim();
+    const mesaId = janela.querySelector('#narrMesa')?.value || '';
+    janela.remove();
+    if (escolha !== 'ok') return;
+
+    if (!pedido) {
+        showAlert('✏️ Escreva o que você combinou com o mestre — é isso que ele vai ler.', 'warning');
+        return;
+    }
+
+    try {
+        const usar = httpsCallable(functions, 'usarBeneficioNarrativo');
+        const r = (await usar({ itemId: alvo.itemId, nome: alvo.nome, pedido, mesaId })).data;
+        showAlert(
+            `📜 ${r.nome} usado. ` +
+            (r.restantes ? `Sobra${r.restantes === 1 ? '' : 'm'} ${r.restantes}.` : 'Era o último uso.') +
+            ' O mestre foi avisado.', 'success', 9000);
+        await loadInventory();
+    } catch (e) {
+        console.error('Erro ao usar benefício narrativo:', e);
         showAlert(`❌ ${e.message}`, 'danger', 7000);
     }
 };

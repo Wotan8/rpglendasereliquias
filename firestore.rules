@@ -232,6 +232,16 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    /* Cada aplicação de benefício narrativo gasta: quem gastou, o que pediu e
+       quanto sobrou. Escrita SÓ pelo servidor (`usarBeneficioNarrativo`) — o
+       jogador paga dinheiro real por essas peças, e gasto sem trilha é gasto
+       que ninguém consegue contestar depois. Leitura do dono e do mestre: é
+       ele quem honra o pedido na mesa. */
+    match /narrativo_logs/{logId} {
+      allow read: if isSignedIn() && (isMaster() || temPapelMestre() || resource.data.uid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
     // Compras pendentes (Mercado Pago) — criadas/atualizadas SOMENTE pelas Cloud Functions.
     // O jogador só lê as próprias compras; mestre lê todas; ninguém escreve pelo cliente.
     match /compras_pendentes/{compraId} {

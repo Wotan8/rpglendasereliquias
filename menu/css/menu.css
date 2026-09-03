@@ -1552,6 +1552,23 @@ html:not(.dark) .loja-card {
 
 /* Forma de recebimento: era um bloco com rótulo em caixa-alta de 9px sobre o
    valor. Virou uma linha — o rótulo diz do que é, o valor é o dado. */
+/* O que o benefício narrativo DÁ e QUANDO vale — os dois textos que o mestre
+   escreve no cadastro. Vinham sendo gravados e lidos por ninguém; agora moram
+   no card, entre as etiquetas e os botões, com a mesma marca lateral da nota
+   de leitura: é texto de regra, não descrição de peça. */
+.rep-narrativo {
+    margin: var(--lr-space-2) 0 0;
+    padding: var(--lr-space-2) var(--lr-space-3);
+    border-left: 3px solid var(--lr-nature);
+    background: var(--lr-nature-soft);
+    border-radius: 0 var(--lr-radius-sm) var(--lr-radius-sm) 0;
+    font-size: var(--lr-fs-xs);
+    color: var(--lr-text-2, var(--muted));
+}
+.rep-narrativo p { margin: 0; }
+.rep-narrativo p + p { margin-top: 4px; }
+.rep-narrativo b { color: var(--lr-text-1); }
+
 .rep-recebimento {
     display: flex;
     align-items: baseline;
