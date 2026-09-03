@@ -99,7 +99,7 @@ window.loadSystemData = async function () {
     const collections = [
         'races', 'classes', 'tribes', 'peculiarities', 'mechanics',
         'skills', 'conditions', 'equipment', 'maneuvers', 'spells',
-        'derivedValues', 'vitalStats', 'auras', 'bodyParts', 'classModules'
+        'derivedValues', 'vitalStats', 'auras', 'bodyParts', 'classModules', 'escolas'
     ];
 
     try {

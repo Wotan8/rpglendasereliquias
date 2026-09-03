@@ -23,7 +23,7 @@ const ms = v => v && typeof v.toMillis === 'function' ? new Date(v.toMillis()).t
 
 // perícias atuais → chave de dots (mesma regra do system-data-loader)
 const CAT = { mental: 'mental', fisica: 'fisico', fisico: 'fisico', social: 'social', combate: 'combate', defensiva: 'combate', exclusivo: 'classe', classe: 'classe' };
-const skills = (await db.collection('system/data/skills').get()).docs.map(d => ({ id: d.id, ...d.data() }));
+const skills = (await db.collection('system/data/skills').get()).docs.map(d => ({ ...d.data(), id: d.id }));
 const porNome = new Map();
 for (const s of skills) porNome.set(strip(s.nome), `sk_${CAT[(s.categoria || 'mental').toLowerCase()] || 'mental'}_${slug(s.nome)}`);
 // nomes do sistema antigo → nome atual

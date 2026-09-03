@@ -17,7 +17,7 @@ const iRef = process.argv.indexOf('--ref');
 const PROCURA = iRef > -1 ? process.argv[iRef + 1] : null;
 
 const norm = s => String(s || '').trim();
-const col = async n => { const s = await db.collection(`system/data/${n}`).get(); return s.docs.map(d => ({ id: d.id, ...d.data() })); };
+const col = async n => { const s = await db.collection(`system/data/${n}`).get(); return s.docs.map(d => ({ ...d.data(), id: d.id })); };
 
 const [skills, vds, vitals, mechanics, equipment, classModules, peculiarities, conditions, classes, races, tribes, runicElements] = await Promise.all(
     ['skills', 'derivedValues', 'vitalStats', 'mechanics', 'equipment', 'classModules', 'peculiarities', 'conditions', 'classes', 'races', 'tribes', 'runicElements'].map(col));

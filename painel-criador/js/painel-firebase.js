@@ -645,6 +645,31 @@ const MODULE_DEFS = {
             { key: '_moduleData', label: '', type: 'class_module_standalone_editor' }
         ]
     },
+    // ═══ ESCOLA (Livro de 12 Páginas, Regra 7) ═══
+    // A Escola é a arte: perícia, Forma, Tributo, Leis (no Compêndio) e Desastre.
+    // O Ramo é um Módulo de Classe com `escolaId`; a classe é a lista de ramos.
+    escolas: {
+        name: 'Escola', namePlural: 'Escolas', icon: '🔮',
+        collection: 'system/data/escolas',
+        fields: [
+            { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Hemomancia' },
+            { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: 🩸' },
+            { key: 'ordem', label: 'Ordem', type: 'number', placeholder: '1' },
+            { key: 'descricao', label: 'Descrição (o que é a arte)', type: 'textarea' },
+            {
+                key: 'atributo', label: 'Atributo da perícia da Escola', type: 'select',
+                options: ['INT', 'RAC', 'PRS', 'FOR', 'DES', 'VIG', 'PRE', 'MAN', 'AUT'].map(a => ({ value: a, label: a }))
+            },
+            { key: 'periciaNome', label: 'Perícia da Escola (nome)', type: 'text', placeholder: 'Ex: Hemomancia — a única perícia que conjura nesta escola' },
+            { key: 'periciaIds', label: '📚 Perícia da Escola (registro)', type: 'mechanic_selector', selectorTarget: 'skills' },
+            { key: 'formaIds', label: '🪄 Formas de conjurar (o que precisa estar na mão ou livre)', type: 'tags', placeholder: 'ids de castingForms — vazio = nenhuma Forma exigida' },
+            { key: 'tributo', label: '💸 Tributo (a única regra própria além da Energia)', type: 'textarea', placeholder: 'Ex: Só sangue vivo obedece; 3 VIT = 1 Carga.' },
+            { key: 'desastre', label: '💥 Desastre (o que o 10 faz nesta escola)', type: 'textarea', placeholder: 'Vazio = regra geral' },
+            { key: 'leis', label: '📜 Leis (resumo; o cânone inteiro fica no Compêndio)', type: 'textarea' },
+            { key: 'compendioId', label: '📖 Compêndio (id do livro no Cronista)', type: 'text', placeholder: 'Ex: book_ms3gb8zgr21roi' },
+            { key: 'publicado', label: 'Publicado', type: 'boolean' },
+        ]
+    },
     runicElements: RUNIC_MODULE_DEF
 };
 
@@ -884,6 +909,7 @@ window.switchModule = function (moduleName, btnEl) {
     if (moduleName === 'sanidade') return loadSanidade();
     if (moduleName === 'regras') return loadRegras();
     if (moduleName === 'campos') return loadCampos();
+    if (moduleName === 'classModules') refreshEscolasCache();   // o editor do ramo escolhe a Escola
 
     const modDef = MODULE_DEFS[moduleName];
     const titleEl = document.getElementById('createCardTitle');
@@ -1355,6 +1381,16 @@ async function loadSanidade() {
 }
 
 window.sanRefresh = () => loadSanidade();
+
+// ===== ESCOLAS (cache para o editor de ramos) =====
+let _escolasCache = [];
+async function refreshEscolasCache() {
+    try {
+        const snap = await getDocs(collection(db, 'system/data/escolas'));
+        _escolasCache = snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => (a.ordem ?? 99) - (b.ordem ?? 99));
+    } catch (e) { console.warn('escolas: não carregou', e); }
+    return _escolasCache;
+}
 
 // ===== REGRAS DO SISTEMA (config/regras) =====
 // Formulário gerado do próprio documento: cada chave vira um campo, agrupada
@@ -4352,6 +4388,20 @@ function _buildClassModuleEditorRow(idx, data) {
             </div>
 
             <div class="cm-section">
+                <div class="cm-section-title">🔮 Escola (este módulo é um Ramo?)</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Escola</label>
+                        <select data-cm-key="escolaId">
+                            <option value="">— Nenhuma (módulo marcial ou geral)</option>
+                            ${_escolasCache.map(e => `<option value="${escapeHtml(e.id)}" ${data.escolaId === e.id ? 'selected' : ''}>${escapeHtml((e.icone ? e.icone + ' ' : '') + e.nome)}</option>`).join('')}
+                        </select>
+                        <div class="cm-hint">Ramo é um módulo com Escola. A perícia que conjura, a Forma, o Tributo e o Desastre vêm da Escola; o módulo traz só as habilidades (com Qualidade) e, no máximo, uma regra própria.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cm-section">
                 <div class="cm-section-title">💰 Custos por Item</div>
                 <div class="form-grid">
                     <div class="form-group">
@@ -5146,6 +5196,7 @@ function _collectSingleModuleData(item) {
         icone: (item.querySelector('[data-cm-key="icone"]')?.value || '').trim() || '📦',
         custoExpPorItem: parseInt(item.querySelector('[data-cm-key="custoExpPorItem"]')?.value || '0', 10) || 0,
         custoExpLabel: (item.querySelector('[data-cm-key="custoExpLabel"]')?.value || '').trim(),
+        escolaId: (item.querySelector('[data-cm-key="escolaId"]')?.value || '') || null,
         cadastrarBloqueio: cadastrarBloqueio,
         bloqueioMecanicaIds: bloqueioMecanicaIds,
         limiteFixo: limiteFixo,

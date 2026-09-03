@@ -111,7 +111,7 @@ window._classModules = {};
  */
 async function loadSystemData(db, collectionFn, getDocsFn) {
     const collections = ['races', 'classes', 'tribes', 'peculiarities', 'mechanics',
-        'skills', 'conditions', 'equipment', 'maneuvers', 'spells', 'derivedValues', 'vitalStats', 'auras', 'itemRules', 'bodyParts', 'runicElements', 'classModules'];
+        'skills', 'conditions', 'equipment', 'maneuvers', 'spells', 'derivedValues', 'vitalStats', 'auras', 'itemRules', 'bodyParts', 'runicElements', 'classModules', 'escolas'];
 
     try {
         await Promise.all(collections.map(async (col) => {
