@@ -44,7 +44,7 @@ export const REGRAS_PADRAO = {
         segundoRamo: 10, segundoRamoPericiaMinima: 2,
     },
     criacao: {
-        atributosPorGrupo: [5, 4, 3], atributoBase: 1, atributoMaxExtra: 2,
+        atributosPorGrupo: [5, 4, 3], atributoBase: 1, atributoMaxExtra: 2, custoQuintaBolinha: 1,
         periciasPorGrupo: [6, 4, 3, 2], periciaMax: 3,
         pecsPositivasGratis: 2, pecsNegativasGratis: 2,
     },

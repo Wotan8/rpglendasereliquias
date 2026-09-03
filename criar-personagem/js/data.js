@@ -74,6 +74,7 @@ window.aplicarRegrasNaCriacao = function (R) {
     const g = Array.isArray(c.atributosPorGrupo) ? c.atributosPorGrupo : [];
     if (g.length === 3) Object.assign(REGRAS_CRIACAO.atributos, { primario: g[0], intermediario: g[1], fraco: g[2] });
     if (c.atributoMaxExtra != null) REGRAS_CRIACAO.atributos.limite_max_por_atributo = c.atributoMaxExtra;
+    if (c.custoQuintaBolinha != null) REGRAS_CRIACAO.atributos.custo_quinta_bolinha = c.custoQuintaBolinha;   // v2: 1 (a regra "5ª custa 2" saiu)
     if (c.atributoBase != null) REGRAS_CRIACAO.atributos.base_inicial = c.atributoBase;
     const p = Array.isArray(c.periciasPorGrupo) ? c.periciasPorGrupo : [];
     if (p.length === 4) Object.assign(REGRAS_CRIACAO.pericias, { primario: p[0], segundo: p[1], terceiro: p[2], fraco: p[3] });

@@ -24,7 +24,7 @@ const [skills, vds, vitals, mechanics, equipment, classModules, peculiarities, c
 
 // ---- universo de nomes válidos ----
 const ATTR = new Set(['INT', 'RAC', 'PRS', 'FOR', 'DES', 'VIG', 'PRE', 'MAN', 'AUT']);
-const skillNames = new Set(skills.map(s => norm(s.nome)));
+const skillNames = new Set(skills.filter(s => s.publicado !== false).map(s => norm(s.nome)));   // despublicada é órfã: ninguém deve citar
 const vdNames = new Set();
 for (const v of vds) { const n = norm(v.nome); ['', ' (Atual)', ' (Máximo)', ' (Máxima)'].forEach(suf => vdNames.add(n + suf)); }
 // alvos que o motor conhece sem serem VD: EXP livre da ficha e a pressão do inventário

@@ -55,16 +55,20 @@ export const ALVOS_FIXOS = [
     'Presença', 'Manipulação', 'Autocontrole',
     // status vitais e campos da ficha
     'Vitalidade Máxima', 'Energia Máxima', 'Sanidade Máxima', 'Blindagem',
-    // perícias com apelido antigo — o cadastro nem sempre tem o nome exato
-    'Abismo', 'Alquimancia', 'Alquimia', 'Essência', 'Fluxomancia', 'Erudição',
-    'História', 'Herbalismo', 'Investigação', 'Medicina', 'Ofícios', 'Ofício Intel.',
-    'Religião', 'Relíquia', 'Runomancia',
-    'Agilidade', 'Arma', 'Arremessar', 'Atletismo', 'Briga', 'Disparo',
-    'Furtividade', 'Montaria', 'Ofício Braç.', 'Sobrevivência',
-    'Barganha', 'Diplomacia', 'Domar', 'Empatia', 'Intimidação', 'Liderança',
-    'Malandragem', 'Performance', 'Sedução', 'Observação',
-    'Esquiva', 'Aparar', 'Bloquear', 'Desviar', 'Evadir', 'Cobertura',
-    'Proteger', 'Reflexo', 'Contra-Ataque', 'Contra-Ataq.', 'Ambidestria',
+    // perícias do Núcleo v2 (32 gerais + 8 de Escola), mais os apelidos antigos
+    // que o TARGET_MAP ainda resolve para a chave nova
+    'Anatomia', 'Medicina', 'Erudição', 'História', 'Tradição', 'Ofícios', 'Ofício Intel.',
+    'Relíquia', 'Religião', 'Fluxomancia', 'Essência', 'Herbalismo', 'Investigação',
+    'Percepção', 'Observação', 'Resiliência',
+    'Acrobacia', 'Agilidade', 'Atletismo', 'Furtividade', 'Prestidigitação', 'Montaria',
+    'Sobrevivência', 'Domar', 'Labuta', 'Ofício Braç.',
+    'Barganha', 'Diplomacia', 'Lábia', 'Malandragem', 'Sedução', 'Intimidação',
+    'Liderança', 'Performance', 'Empatia',
+    'Arma', 'Precisão', 'Briga', 'Disparo', 'Arremesso', 'Arremessar',
+    'Esquiva', 'Desviar', 'Evadir', 'Aparar', 'Contra-Ataque', 'Contra-Ataq.',
+    'Bloquear', 'Cobertura', 'Proteger',
+    'Hemomancia', 'Abismancia', 'Abismo', 'Necromancia', 'Pallomancia', 'Sonoromancia',
+    'Totemancia', 'Runomancia', 'Alquimancia', 'Alquimia',
     // avulsos
     'Ações por turno', 'EXP',
 ];
