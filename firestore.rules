@@ -301,14 +301,21 @@ service cloud.firestore {
          mestres não têm doc na coleção `masters`. Para eles, o painel abria e
          a escrita era negada, sem nada na tela explicando. É o que faz o
          "+Avulso" (que grava `mesaId` na ficha) funcionar para todos. */
-      allow update: if isSignedIn() && (
+      /* `!idReservado` aqui TAMBÉM, e não só no create. O create já barrava
+         `char/__caixa_mestre__<mesa>`, mas a guarda parava ali: bastasse o
+         documento existir — plantado pelo servidor, por uma migração antiga,
+         por qualquer caminho — e o jogador cujo uid estivesse em `ownerUid`
+         reescrevia a caixa do mestre à vontade. Meia guarda é a pior espécie:
+         parece que fecha e deixa a segunda porta aberta.
+         Hoje não há nenhum doc `char/__*` no banco, e é assim que fica. */
+      allow update: if isSignedIn() && !idReservado(charId) && (
         (resource.data.ownerUid == request.auth.uid && 
          request.resource.data.ownerUid == resource.data.ownerUid) || 
         isMaster() || temPapelMestre()
       );
       
-      // Exclusão: dono OU mestre
-      allow delete: if isSignedIn() && (
+      // Exclusão: dono OU mestre — e nunca no namespace do servidor.
+      allow delete: if isSignedIn() && !idReservado(charId) && (
         resource.data.ownerUid == request.auth.uid || isMaster() || temPapelMestre()
       );
     }

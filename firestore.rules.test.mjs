@@ -12,6 +12,21 @@
    (mais simples: copie este arquivo para a pasta /tmp/rt e rode de lá,
     passando o caminho de firestore.rules como argumento.)
 
+   ⚠️ SEM ABRIR JANELA DE JAVA NA CARA DE NINGUÉM. O `emulators:exec` sobe o
+   emulador com `java.exe`, que no Windows cria console e ícone na barra de
+   tarefas — e ele NÃO morre no fim, então cada rodada deixa mais um. Suba UM
+   emulador com `javaw.exe` (sem console), reaproveite, e feche no fim:
+
+     $jar = "$env:USERPROFILE\.cacheirebase\emulators\cloud-firestore-emulator-v1.19.8.jar"
+     $p = Start-Process "C:\Program Files\Java\jdk-17in\javaw.exe" -WindowStyle Hidden -PassThru `
+          -ArgumentList @("-Duser.language=en","-jar",$jar,"--host","127.0.0.1","--port","8532",
+                          "--websocket_port","9151","--project_id","demo-rules","--single_project_mode","true")
+     # ...roda o teste...
+     Stop-Process -Id $p.Id -Force
+
+   O `--websocket_port` não é opcional: sem ele a suíte trava no meio, com o
+   SDK repetindo "UNKNOWN: Application error processing RPC" para sempre.
+
    Precisa de Java. O firebase-tools atual exige JDK 21; o 13 roda com 17,
    daí o `@13` acima.
 
@@ -38,8 +53,20 @@ const CAIXA = '__caixa_mestre__' + MESA;
 
 const env = await initializeTestEnvironment({
   projectId: 'demo-rules',
-  firestore: { rules: fs.readFileSync(process.argv[2], 'utf8'), host: '127.0.0.1', port: 8532 },
+  /* A porta vem do emulador que estiver rodando. Estava fixa em 8532, e isso
+     custou uma investigação inteira: duas rodadas caíam no MESMO banco, o
+     `logs/log-1` da anterior já existia, e o `setDoc` que devia ser um create
+     virava um update negado. O teste acusava furo de regra onde não havia. */
+  firestore: (() => {
+    const [host, porta] = (process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8532').split(':');
+    return { rules: fs.readFileSync(process.argv[2], 'utf8'), host, port: Number(porta) };
+  })(),
 });
+
+/* Banco limpo ANTES de tudo. Sem isto a suíte só passa na primeira rodada
+   contra um emulador novo: da segunda em diante ela tropeça no próprio
+   rastro, e o falso positivo se parece com defeito de regra. */
+await env.clearFirestore();
 
 // Estado de partida, gravado sem rules.
 await env.withSecurityRulesDisabled(async (ctx) => {
@@ -140,6 +167,14 @@ await teste('não cria personagem com qualquer outro id reservado',
 await env.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(ctx.firestore(), 'char', CAIXA), { ownerUid: JOG, nome: 'plantado' });
 });
+
+/* E o doc EXISTINDO com o uid dele em `ownerUid` — que é exatamente o estado
+   que a cadeia de ataque queria — ele também não mexe. A guarda vivia só no
+   create: meia guarda parece que fecha e deixa a segunda porta aberta. */
+await teste('não REESCREVE personagem no namespace do servidor',
+  () => assertFails(updateDoc(doc(db, 'char', CAIXA), { nome: 'reescrito' })));
+await teste('não APAGA personagem no namespace do servidor',
+  () => assertFails(deleteDoc(doc(db, 'char', CAIXA))));
 await teste('não edita peça na Caixa do Mestre nem sendo "dono" do char da caixa',
   () => assertFails(updateDoc(doc(db, 'items', 'item-na-caixa'), { quantidade: 999, origemItemNome: 'Pacote de 500 EXP' })));
 await teste('não apaga peça na Caixa do Mestre',
