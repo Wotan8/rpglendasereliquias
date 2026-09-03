@@ -6,6 +6,7 @@ import { addLog } from './logs.js';
 import { notifyUsers } from './notify.js';
 import { parseMetaIds, resolveMetaId as resolveMetaIdPuro, somarMetaTotais, chaveApoio, valorApoio, progressoDasEtapas } from '../../shared/apoios-calc.js';
 import { empilhar } from '../../shared/repertorio-linha.js';
+import { idsGemeos } from '../../shared/loja-gemeos.js?v=1';
 import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 
 let dynamicMetas = [];
@@ -1020,6 +1021,12 @@ function renderLojaUI() {
     }
 
     container.innerHTML = '';
+    /* Produtos indistinguíveis: mesmo nome-base E mesmo efeito. Quem tem os
+       dois vê no Repertório dois cards que dizem a mesma coisa com palavras
+       diferentes, e o criador não tem como perceber isso rolando a lista.
+       "Roleta 3x" e "Roleta 1x" NÃO entram: efeito diferente, produtos
+       legítimos — ver shared/loja-gemeos.js. */
+    const gemeos = idsGemeos(lojaItens);
     lojaItens.forEach(item => {
         const card = document.createElement('div');
         card.className = 'apoio-card';
@@ -1034,6 +1041,7 @@ function renderLojaUI() {
         if (item.isNarrativo) tagsHtml += `<span style="background:#047857;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Narrativo</span>`;
         if (Number(item.pesoProducao) > 1) tagsHtml += `<span style="background:#7C2D12;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">Produção ${item.pesoProducao}×</span>`;
         if (item.isItemPersonagem && item.personagemItensVinculados?.length) tagsHtml += `<span style="background:var(--lr-abyssal);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">🎒 Itens: ${item.personagemItensVinculados.length}</span>`;
+        if (gemeos.has(item.id)) tagsHtml += `<span title="Existe outro item com o mesmo nome-base e o MESMO efeito. Quem tiver os dois vai ver dois cards iguais no Repertório." style="background:#B45309;color:#fff;padding:2px 6px;border-radius:4px;font-size:0.7rem;">⚠️ Gêmeo no catálogo</span>`;
         
         const imgHtml = item.imagem ? `<div style="height:120px;width:100%;background-image:url('${escapeHtml(item.imagem)}');background-size:contain;background-repeat:no-repeat;background-position:center;border-radius:8px;background-color:var(--lr-bg-1);"></div>` : '';
 
