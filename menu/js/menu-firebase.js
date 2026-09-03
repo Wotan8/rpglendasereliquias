@@ -23,7 +23,7 @@ import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/
 import { somarApoiosDoJogador, somarMetaTotais, progressoDasEtapas, proximaEtapa, valorApoio, parseMetaIds, resolveMetaId } from '../../shared/apoios-calc.js';
 import { ehMesmaLinha } from '../../shared/repertorio-linha.js';
 import { confirmar, toast } from '../../shared/dialogo.js?v=2';
-import { estadoPush, ativarPush, desativarPush } from '../../shared/push.js?v=1';
+import { estadoPush, ativarPush, desativarPush } from '../../shared/push.js?v=2';
 
 import { ligarAppCheck } from '../../shared/app-check.js?v=2';
 // ===== CONFIG =====

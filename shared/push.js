@@ -31,7 +31,7 @@ import { doc, updateDoc, arrayUnion, arrayRemove }
     from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 /** Chave pública de Web Push do projeto. Vazia = push desligado no site. */
-export const VAPID = '';
+export const VAPID = 'BIbyxORGy9HvX9lfNQK8xo2tLng5-a1wa8svmQvZMBkEAm8PJDR1ZhIEFra0XUmZZUQotEU56FpW4aoTB0TCeBo';
 
 /** Onde o token deste aparelho fica guardado, para não repetir o pedido. */
 const CHAVE_LOCAL = 'lr_fcm_token';
