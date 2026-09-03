@@ -649,10 +649,7 @@ exports.espelharDonoDoNpc = onDocumentWritten(
 
     const uids = [];
     for (const charId of charIdsVinculados(npc)) {
-      // `char` é a coleção viva; `characters` é a legada, e ainda há aliado
-      // apontando para lá.
-      let snap = await db.collection("char").doc(charId).get();
-      if (!snap.exists) snap = await db.collection("characters").doc(charId).get();
+      const snap = await db.collection("char").doc(charId).get();
       if (snap.exists && snap.data().ownerUid) uids.push(snap.data().ownerUid);
     }
 

@@ -249,30 +249,6 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Coleção de personagens (CORRIGIDA)
-    match /characters/{characterId} {
-      // ✅ Leitura: QUALQUER usuário autenticado pode ver todos os personagens
-      // (necessário para rankings públicos)
-      allow read: if isSignedIn();
-
-      // ✅ Criação: usuário define ele mesmo como dono OU mestre pode criar para qualquer jogador
-      allow create: if isSignedIn() && (
-        request.resource.data.ownerUid == request.auth.uid || isMaster()
-      );
-
-      // ✅ CORREÇÃO DO BUG: Atualização precisa garantir que ownerUid não mude
-      allow update: if isSignedIn() && (
-        (resource.data.ownerUid == request.auth.uid && 
-         request.resource.data.ownerUid == resource.data.ownerUid) || 
-        isMaster()
-      );
-      
-      // ✅ Exclusão: dono OU mestre
-      allow delete: if isSignedIn() && (
-        resource.data.ownerUid == request.auth.uid || isMaster()
-      );
-    }
-
     /* O prefixo `__` é namespace do SERVIDOR: `__caixa_mestre__<mesaId>` é o
        dono virtual da Caixa do Mestre, e não é personagem de ninguém.
 

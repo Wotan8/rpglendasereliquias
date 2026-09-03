@@ -489,7 +489,7 @@ window._saveMestrePeculiaridade = async function() {
             const charNome = (charData.fields && charData.fields.nome) || charData.nome || 'Sem nome';
             window.addLog(S.currentUser?.email,
                 isEdit ? `✨ Peculiaridade "${pecId}" editada pelo Mestre` : `✨ Peculiaridade "${pecId}" atribuída pelo Mestre`,
-                charNome, 'characters', {
+                charNome, 'char', {
                     charId, mesaId: S.currentMesaId, category: 'Peculiaridades',
                     changes: [
                         { label: 'Peculiaridade', from: isEdit ? pecId : '—', to: pecId },
@@ -542,7 +542,7 @@ window._deleteMestrePeculiaridade = async function(charId, idx) {
             if (window.addLog) {
                 const charNome = (charData.fields && charData.fields.nome) || charData.nome || 'Sem nome';
                 window.addLog(S.currentUser?.email, `✨ Peculiaridade "${removidaId}" removida pelo Mestre`,
-                    charNome, 'characters', {
+                    charNome, 'char', {
                         charId, mesaId: S.currentMesaId, category: 'Peculiaridades',
                         changes: [{ label: 'Peculiaridade', from: String(removidaId || '—'), to: '—' }]
                     });

@@ -706,7 +706,7 @@ window.applyExpBulk = async function(isAdd) {
         const newExpTotal = isAdd ? curExpTotal + v : Math.max(0, curExpTotal - v);
         // Update in 'char' collection using nested fields path
         await updateDoc(doc(db, 'char', charId), { 'fields.exp': newExp, 'fields.exp_total': newExpTotal });
-        await addLog(S.currentUser?.email, `⭐ ${isAdd?'+':'-'}${v} EXP concedido pelo Mestre`, nome, 'characters', {
+        await addLog(S.currentUser?.email, `⭐ ${isAdd?'+':'-'}${v} EXP concedido pelo Mestre`, nome, 'char', {
             charId, mesaId: S.currentMesaId, category: 'Progressão & EXP',
             changes: [
                 { label: 'EXP Disponível', from: String(curExp), to: String(newExp) },

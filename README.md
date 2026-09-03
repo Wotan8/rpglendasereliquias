@@ -215,7 +215,7 @@ service cloud.firestore {
     }
 
     // Coleção de personagens
-    match /characters/{characterId} {
+    match /char/{charId} {
       allow read: if isSignedIn() && (
         resource.data.ownerUid == request.auth.uid || isMaster()
       );

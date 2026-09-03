@@ -373,7 +373,7 @@ window._saveMestreCondition = async function() {
             const charNome = (charData.fields && charData.fields.nome) || charData.nome || 'Sem nome';
             window.addLog(S.currentUser?.email,
                 isEdit ? `💀 Condição "${nome}" editada pelo Mestre` : `💀 Condição "${nome}" aplicada pelo Mestre`,
-                charNome, 'characters', {
+                charNome, 'char', {
                     charId, mesaId: S.currentMesaId, category: 'Condições',
                     changes: [
                         { label: 'Condição', from: isEdit ? nome : '—', to: nome },
@@ -416,7 +416,7 @@ window._deleteMestreCondition = async function(charId, idx) {
             if (window.addLog) {
                 const charNome = (charData.fields && charData.fields.nome) || charData.nome || 'Sem nome';
                 window.addLog(S.currentUser?.email, `💀 Condição "${removida?.nome || ''}" removida pelo Mestre`,
-                    charNome, 'characters', {
+                    charNome, 'char', {
                         charId, mesaId: S.currentMesaId, category: 'Condições',
                         changes: [{ label: 'Condição', from: removida?.nome || '—', to: '—' }]
                     });
