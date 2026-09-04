@@ -349,13 +349,16 @@ export function efeitoDasCondicoes(condicoes, registro) {
         }
         // 🎲 DESVANTAGEM (Livro, p. 9–10): Prostrado, Cego, o nível 3 das trilhas.
         // Nunca soma com outra Desvantagem — é uma flag, não um número.
-        if (reg.desvantagem) { out.desvantagem = true; marca('desvantagem'); }
+        if (reg.desvantagem || (Number(reg.desvantagemNoNivel) > 0 && c.nivel >= Number(reg.desvantagemNoNivel))) { out.desvantagem = true; marca('desvantagem'); }
 
         if (reg.testeParaSair && reg.testeNome) {
             out.testes.push({
                 condicao: c.nome, icone: c.icone, nome: reg.testeNome,
                 mod: Number(reg.testeMod) || 0, quando: reg.testeQuando || 'fim_do_turno',
                 sucessoRemove: reg.testeSucessoRemove || 'tudo',
+                // Beira da Morte: falhou → Acuado; Morrendo: é o Teste de Morte (Livro, p. 10)
+                falhaAplica: reg.testeFalhaAplica || null, falhaRodadas: Number(reg.testeFalhaRodadas) || 1,
+                testeMorte: !!reg.testeMorte,
             });
         }
 
@@ -479,4 +482,54 @@ export function curarAflicoes(condicoes, registro, potencia) {
         return false;
     });
     return { condicoes: resto, curadas };
+}
+
+// =============================================
+// 🩹 AS TRILHAS AUTOMÁTICAS (Livro de 12 Páginas, p. 10)
+// Ferimento pela Vitalidade e Sobrecarga pelo peso: a ficha e o Tabuleiro
+// põem e tiram a condição sozinhos. Nenhuma trilha toca a Defesa.
+// =============================================
+export const FAIXAS_FERIMENTO = ['Ferido', 'Grave', 'Beira da Morte', 'Morrendo'];
+
+/** Em que faixa a Vitalidade está. `faixas` = % [75, 50, 25] (config/regras ferimento.faixas). null = inteiro. */
+export function faixaDeFerimento(atual, max, faixas = [75, 50, 25]) {
+    const m = Number(max) || 0, a = Number(atual);
+    if (!(m > 0) || !Number.isFinite(a)) return null;
+    if (a <= 0) return 'Morrendo';
+    const pct = (a / m) * 100;
+    const [f1 = 75, f2 = 50, f3 = 25] = (faixas || []).map(Number);
+    if (pct <= f3) return 'Beira da Morte';
+    if (pct <= f2) return 'Grave';
+    if (pct <= f1) return 'Ferido';
+    return null;
+}
+
+/**
+ * As condições do participante com a faixa de Ferimento certa: tira as quatro
+ * e põe a que vale. As condições manuais ficam como estão.
+ * @returns { condicoes, entrou, saiu } — nomes, para o log
+ */
+export function condicoesDeFerimento(condicoes, faixa, registro) {
+    const daTrilha = (registro || []).filter(r => r.trilha === 'ferimento' || FAIXAS_FERIMENTO.includes(r.nome));
+    const nomes = new Set([...daTrilha.map(r => _normCond(r.nome)), ...FAIXAS_FERIMENTO.map(_normCond)]);
+    const nomeDe = (c) => _normCond(condDoParticipante(c).nome);
+    const atuais = (condicoes || []).filter(c => nomes.has(nomeDe(c)));
+    const resto = (condicoes || []).filter(c => !nomes.has(nomeDe(c)));
+    const alvo = _normCond(faixa || '');
+    const saiu = atuais.filter(c => nomeDe(c) !== alvo).map(c => condDoParticipante(c).nome);
+    if (!faixa) return { condicoes: resto, entrou: null, saiu };
+    const jaTinha = atuais.find(c => nomeDe(c) === alvo);
+    if (jaTinha) return { condicoes: [...resto, jaTinha], entrou: null, saiu };
+    const reg = daTrilha.find(r => _normCond(r.nome) === alvo) || null;
+    const nova = { nome: reg?.nome || faixa, icone: reg?.icone || '🩸', descricao: reg?.descricao || '', expiraNaRodada: null, nivel: 1, automatica: 'ferimento' };
+    return { condicoes: [...resto, nova], entrou: nova.nome, saiu };
+}
+
+/** Sobrecarga: nível pela % acima da Carga — faixas [25, 50] de config/regras. 0 = sem. */
+export function nivelDeSobrecarga(pressao, carga, faixas = [25, 50]) {
+    const c = Number(carga) || 0, p = Number(pressao) || 0;
+    if (!(c > 0) || p <= c) return 0;
+    const pct = ((p - c) / c) * 100;
+    const [f1 = 25, f2 = 50] = (faixas || []).map(Number);
+    return pct <= f1 ? 1 : pct <= f2 ? 2 : 3;
 }

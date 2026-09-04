@@ -270,7 +270,7 @@ assert.equal(ef([{ nome: 'Exaustão', nivel: 9 }]).niveis[0].efeito, '', 'nível
 assert.equal(ef(['Exaustão']).niveis[0].nivel, 1, 'sem nível gravado, é o nível 1');
 
 // teste para sair: sai no formato que o Tabuleiro já pede (nome + mod)
-assert.deepEqual(ef(['Preso']).testes, [{ condicao: 'Preso', icone: '☠️', nome: 'Força', mod: 0, quando: 'fim_do_turno', sucessoRemove: 'tudo' }]);
+assert.deepEqual(ef(['Preso']).testes, [{ condicao: 'Preso', icone: '☠️', nome: 'Força', mod: 0, quando: 'fim_do_turno', sucessoRemove: 'tudo', falhaAplica: null, falhaRodadas: 1, testeMorte: false }]);
 const tExa = ef(['Exaustão']).testes[0];
 assert.equal(tExa.mod, -2);
 assert.equal(tExa.quando, 'virada_da_rodada');

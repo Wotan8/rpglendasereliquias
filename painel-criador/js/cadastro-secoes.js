@@ -35,12 +35,12 @@ export const SECOES_CONDICAO = [
     {
         id: 'niveis', icone: '📈', titulo: 'Acúmulo em níveis',
         dica: 'Condição que empilha em vez de repetir. Sem marcar aqui, o nível fica em 1 — em silêncio.',
-        campos: ['acumulaNiveis', 'nivelMaximo', 'efeitoPorNivel'],
+        campos: ['acumulaNiveis', 'nivelMaximo', 'efeitoPorNivel', 'desvantagemNoNivel', 'trilha'],
     },
     {
         id: 'teste', icone: '🎲', titulo: 'Teste para sair',
         dica: 'Rolagem de 1d10 contra o Alvo, em Graus. Nada de "CD" — esse número não existe neste sistema.',
-        campos: ['testeParaSair', 'testeNome', 'testeMod', 'testeQuando', 'testeSucessoRemove'],
+        campos: ['testeParaSair', 'testeNome', 'testeMod', 'testeQuando', 'testeSucessoRemove', 'testeFalhaAplica', 'testeFalhaRodadas', 'testeMorte'],
     },
     {
         /* O sangramento por rodada quis ser gaveta própria e não pode: os dois

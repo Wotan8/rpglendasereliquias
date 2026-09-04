@@ -880,6 +880,9 @@ function recalcAll() {
     // 7) Tabela "Ataques e Efeitos Ativos" — depende de state.derived já calculado
     //    acima. Só lê e escreve no DOM; não recalcula nada (evita laço infinito).
     if (typeof renderActiveEffects === 'function') renderActiveEffects();
+    // ⚡ Poder (Livro, p. 12) e 🩹 Ferimento (p. 10): leem o que já foi calculado.
+    if (typeof atualizarPoderFicha === 'function') atualizarPoderFicha();
+    window.sincronizarFerimentoFicha?.();
 
     // 8) Painel de Combate — espelha Status Vitais e Valores Derivados já
     //    calculados. Também só lê e escreve no DOM.
@@ -1300,6 +1303,8 @@ function ligarArredondamentoAtual(atualKey) {
 function initDerivedListeners() {
     // Campos ATUAL dos Status Vitais: arredondam para cima (Máximo faz o mesmo)
     ligarArredondamentoAtual('vit_atual');
+    // 🩹 Ferimento (Livro, p. 10): a faixa da Vitalidade vira condição sozinha.
+    document.querySelector('[data-key="vit_atual"]')?.addEventListener('change', () => window.sincronizarFerimentoFicha?.());
     ligarArredondamentoAtual('ener_atual');
     ligarArredondamentoAtual('san_atual');
 

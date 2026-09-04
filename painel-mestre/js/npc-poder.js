@@ -11,6 +11,8 @@
 // e race-peculiarities.js). Se o custo mudar lá, muda aqui.
 // =============================================
 
+import { poderDeItem } from '../../shared/poder.js?v=1';
+
 /** Custo do degrau `nivel` (não acumulado). Atributo: 5×N. Perícia: custoEvolucao×N. */
 function custoDoDegrau(nivel, porNivel) {
     return nivel * porNivel;
@@ -152,6 +154,18 @@ export function calcularPoderNpc(npc, sys, opts = {}) {
             itens.push({ nome: def.titulo || 'Módulo', nivel: (vinc.itens || []).length, exp: expMod });
         }
         partes.push({ chave: 'modulos', icone: '🧩', label: 'Módulos de Classe', exp, itens });
+    }
+
+    /* --- Itens (Livro, p. 12): (Qualidade + Afiação) × 5, +10 por Encantamento, +25 por Aura — quando o chamador traz o inventário --- */
+    if (Array.isArray(opts.itens) && opts.itens.length) {
+        const itens = [];
+        let exp = 0;
+        for (const it of opts.itens) {
+            const c = poderDeItem(it, opts.regras || null);
+            if (!c) continue;
+            exp += c; itens.push({ nome: it.nome || 'Item', nivel: Number(it.qualidade) || 0, exp: c });
+        }
+        if (exp) partes.push({ chave: 'itens', icone: '🗡️', label: 'Itens', exp, itens });
     }
 
     const total = partes.reduce((s, p) => s + p.exp, 0);

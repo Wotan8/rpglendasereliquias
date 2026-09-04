@@ -11,7 +11,8 @@ import { temDoRecurso, creditarRecurso } from './tab-turno.js';
 import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas, FACCOES, faccaoDoParticipante, acoesNovas, participanteDaVez, efeitoDasCondicoes, alvoDoTickRodada } from '../../shared/combate-cenas.js';
 import { rolarFormula, rolarD10 } from './tab-conflito-calc.js';
 import { valorComponente as componenteDe } from './tab-state.js';
-import { condicaoPega } from '../../shared/combate-cenas.js';
+import { condicaoPega, faixaDeFerimento, condicoesDeFerimento } from '../../shared/combate-cenas.js';
+import { REGRAS_PADRAO } from '../../shared/regras-padrao.js?v=1';
 import { tirarRetrato, avancarRitual } from '../../shared/turno-efeitos.js?v=1';
 import { logChat } from './tab-chat.js';
 import { CONDICAO_TRANSE } from '../../shared/incorporacao.js?v=1';
@@ -542,6 +543,14 @@ window.tbCombTurno = async function(dir) {
         const vez = participanteDaVez({ ...c, turnoAtual: turno });
         if (vez) logChat(`▶️ Vez de ${vez.name || '?'}${rodada !== rodadaAntes ? ` (Rodada ${rodada})` : ''}`);
     }
+    // 🎲 Testes de fim e de início de turno (Beira da Morte, Teste de Morte,
+    // condições que saem com teste). Só quem sai e quem entra.
+    if (c.iniciado && dir > 0) {
+        const saindo = participanteDaVez(c);
+        if (saindo) await pedirTestesDeSaida(partsNovos, 'fim_do_turno', [saindo.id]);
+        const entra = parts[turno];
+        if (entra) await pedirTestesDeSaida(partsNovos, 'inicio_do_turno', [entra.id]);
+    }
     // F4.3: expira templates com duração ao virar a rodada
     if (rodada > rodadaAntes) {
         if (!c.iniciado) logChat(`🔄 Rodada ${rodada}`);   // com cena iniciada a vez já anuncia a rodada
@@ -656,10 +665,11 @@ async function aplicarTickDeRodada(participantes) {
  * cadastro mandou. Reusa o mesmo `cena.testes` do "🎯 Pedir teste" do mestre —
  * quando o resultado sai positivo, `tbTesteRolar` tira a condição sozinho.
  */
-async function pedirTestesDeSaida(participantes, quando) {
+async function pedirTestesDeSaida(participantes, quando, soIds = null) {
     const testes = (cenaAtiva(T.combate).testes || []).map(t => ({ ...t, resultados: { ...(t.resultados || {}) } }));
     let mudou = false;
     for (const p of participantes) {
+        if (soIds && !soIds.includes(p.id)) continue;
         for (const t of efeitoDoParticipante(p).testes) {
             if (t.quando !== quando) continue;
             // um teste por condição por rodada: se já existe e este participante
@@ -670,7 +680,7 @@ async function pedirTestesDeSaida(participantes, quando) {
             if (irmao) { irmao.participantes = [...(irmao.participantes || []), p.id]; }
             else testes.push({
                 id: 't' + uid(), nome: t.nome, mod: t.mod, participantes: [p.id], resultados: {},
-                condSaida: { condicao: t.condicao, sucessoRemove: t.sucessoRemove },
+                condSaida: { condicao: t.condicao, sucessoRemove: t.sucessoRemove, falhaAplica: t.falhaAplica || null, falhaRodadas: t.falhaRodadas || 1, testeMorte: !!t.testeMorte },
             });
             mudou = true;
         }
@@ -750,6 +760,14 @@ window.tbCombStat = async function(pid, stat, amt) {
     // 20,4 e a ficha, que arredonda, devolvia 21 no save seguinte: pisca-pisca.
     const novoVal = vitalTela(Math.max(0, Math.min(curVal + amt, vitalTela(maxVal))));
     p[cur] = novoVal;
+    // 🩹 Ferimento (Livro, p. 10): a faixa da Vitalidade vira condição sozinha.
+    // A ficha faz a própria conta ao abrir; aqui não se espelha (é automática).
+    if (stat === 'VIT' && maxVal > 0 && maxVal !== 999) {
+        const faixas = (window.REGRAS?.ferimento || REGRAS_PADRAO.ferimento).faixas;
+        const r = condicoesDeFerimento(p.condicoes, faixaDeFerimento(novoVal, vitalTela(maxVal), faixas), T.condicoesSistema);
+        p.condicoes = r.condicoes;
+        if (r.entrou || r.saiu.length) logChat(`🩹 ${p.name || '?'}: ${[r.entrou ? `entra em ${r.entrou}` : '', r.saiu.length ? `sai de ${r.saiu.join(', ')}` : ''].filter(Boolean).join(' · ')}`);
+    }
     await salvar(parts);
 
     // ===== Sincronização bidirecional: Combat → Ficha =====
@@ -1235,7 +1253,7 @@ window.tbTesteRolar = async function(tid, pid) {
         (dado === 1 ? ' ✨ crítico!' : dado === 10 ? ' 💀 falha crítica!' : ''));
     logChat(`🎯 ${p.name} — ${t.nome}: d10 ${dado} vs Alvo ${alvo} → ${fmtGraus(graus)}` +
         (dado === 1 ? ' ✨ crítico' : dado === 10 ? ' 💀 falha crítica' : ''));
-    await resolverTesteDeSaida(t, pid, graus);
+    await resolverTesteDeSaida(t, pid, graus, dado);
 };
 
 /**
@@ -1244,11 +1262,47 @@ window.tbTesteRolar = async function(tid, pid) {
  * Chamada pelos DOIS caminhos de resultado (rolar no mapa e digitar na mão),
  * porque teste rolado na mesa física livra tanto quanto o rolado aqui.
  */
-async function resolverTesteDeSaida(teste, pid, graus) {
+async function resolverTesteDeSaida(teste, pid, graus, dado = null) {
     const cfg = teste?.condSaida;
-    if (!cfg || !(graus > 0)) return;
+    if (!cfg) return;
     const parts = partsDaCena().map(p => ({ ...p }));
     const p = parts.find(x => x.id === pid); if (!p) return;
+    const tirarDoPedido = () => testesDaCena().map(x => x.id !== teste.id ? x : {
+        ...x, participantes: (x.participantes || []).filter(id => id !== pid),
+    }).filter(x => (x.participantes || []).length);
+    const passou = graus > 0;
+
+    // ☠️ Teste de Morte (Livro, p. 10): passou, +1 Vitalidade e estabiliza (a faixa
+    // sai sozinha); falhou, −1; desastre, −2. Morre no negativo do máximo.
+    if (cfg.testeMorte) {
+        await salvar(parts, { testes: tirarDoPedido() });
+        if (passou) {
+            await window.tbCombStat?.(pid, 'VIT', 1);
+            logChat(`❤️ ${p.name || '?'} passou no Teste de Morte: +1 Vitalidade, estabiliza`);
+        } else {
+            const perda = dado === 10 ? 2 : 1;
+            const n = (Number(p.contagemMorte) || 0) + perda;
+            await salvar(partsDaCena().map(x => x.id !== pid ? x : { ...x, contagemMorte: n }));
+            const max = Number(VITAIS.get(p.characterId)?.hpMax) || Number(p.hpMax) || 0;
+            logChat(`☠️ ${p.name || '?'} falhou no Teste de Morte: −${perda} (${n} abaixo de zero${max ? ` · morre em ${max}` : ''})`);
+            if (max && n >= max) toast(`☠️ ${p.name || '?'} morreu: a contagem chegou ao máximo da Vitalidade`, 'warning');
+        }
+        return;
+    }
+    if (!passou) {
+        // Beira da Morte: falhou → Acuado por uma rodada (o cadastro diz o quê)
+        if (cfg.falhaAplica) {
+            await salvar(parts, { testes: tirarDoPedido() });
+            await aplicarCondicaoEmVarios([pid], cfg.falhaAplica, Number(cfg.falhaRodadas) || 1, null, 1).catch(e => console.warn('falha do teste', e));
+            logChat(`❌ ${p.name || '?'} falhou no teste de ${cfg.condicao}: ${cfg.falhaAplica}`);
+        }
+        return;
+    }
+    if (cfg.sucessoRemove === 'nenhuma') {
+        await salvar(parts, { testes: tirarDoPedido() });
+        logChat(`✅ ${p.name || '?'} passou no teste de ${cfg.condicao}`);
+        return;
+    }
 
     const alvo = (p.condicoes || []).map(condDoParticipante)
         .findIndex(c => (c.nome || '').toLowerCase() === (cfg.condicao || '').toLowerCase());

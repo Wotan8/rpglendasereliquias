@@ -243,6 +243,8 @@ function recalcInventoryPressure() {
     // a pressão via _resolveSheetRef('Pressão Total (Equipados)')
     if (typeof recalcAll === 'function') recalcAll();
     if (typeof recalcMainTests === 'function') recalcMainTests();
+    // ⚖️ Sobrecarga (Livro, p. 10): peso acima da Carga vira condição de 3 níveis, sozinha.
+    window.sincronizarSobrecargaFicha?.(totalPressure);
 }
 
 function _findDerivedKey(nome) {
@@ -3537,6 +3539,62 @@ window.updateConditionTime = function(idx, field, value) {
         scheduleAutosave();
     }
 };
+
+/* =============================================
+   🩹⚖️ TRILHAS AUTOMÁTICAS (Livro de 12 Páginas, p. 10)
+   Ferimento pela Vitalidade e Sobrecarga pelo peso entram e saem sozinhas. A
+   conta mora em shared/combate-cenas.js (window.LR_COMBATE); o cadastro da
+   condição diz o efeito (`trilha: 'ferimento' | 'sobrecarga'`).
+   ============================================= */
+let _trilhaSincronizando = false;
+window.sincronizarFerimentoFicha = function () {
+    const C = window.LR_COMBATE;
+    if (!C?.faixaDeFerimento || !Array.isArray(state.conditions)) return;
+    const atual = parseFloat(String(document.querySelector('[data-key="vit_atual"]')?.value ?? '').replace(',', '.'));
+    const max = parseFloat(String(document.getElementById('vit_max_display')?.value ?? '').replace(',', '.'));
+    if (!(max > 0) || !Number.isFinite(atual)) return;
+    const faixas = (window.REGRAS?.ferimento || window.LR_REGRAS?.REGRAS_PADRAO?.ferimento || {}).faixas || [75, 50, 25];
+    _sincronizarTrilhaFicha('ferimento', C.faixaDeFerimento(atual, max, faixas), 1);
+};
+window.sincronizarSobrecargaFicha = function (pressao) {
+    const C = window.LR_COMBATE;
+    if (!C?.nivelDeSobrecarga || !Array.isArray(state.conditions)) return;
+    const dv = (window.DERIVED_VALUES || []).find(d => d.nome === 'Carga');
+    const carga = dv ? Number(state.derived?.[dv.key]) : NaN;
+    if (!(carga > 0)) return;
+    const faixas = (window.REGRAS?.sobrecarga || window.LR_REGRAS?.REGRAS_PADRAO?.sobrecarga || {}).faixas || [25, 50];
+    const nivel = C.nivelDeSobrecarga(pressao, carga, faixas);
+    _sincronizarTrilhaFicha('sobrecarga', nivel ? 'Sobrecarregado' : null, nivel);
+};
+/** Põe/tira a condição automática de uma trilha, sem duplicar e sem tocar nas manuais. */
+function _sincronizarTrilhaFicha(trilha, nome, nivel) {
+    if (_trilhaSincronizando) return;
+    const reg = window._systemData?.conditions || [];
+    const daTrilha = reg.filter(c => c.trilha === trilha);
+    const nomesDaTrilha = trilha === 'ferimento' ? ['ferido', 'grave', 'beira da morte', 'morrendo'] : ['sobrecarregado'];
+    const ehDaTrilha = (c) => c.automatica === trilha || daTrilha.some(r => r.id === c.modeloId) || nomesDaTrilha.includes(String(c.nome || '').toLowerCase());
+    const atual = state.conditions.find(ehDaTrilha);
+    if (!nome) {
+        if (!atual) return;
+        state.conditions = state.conditions.filter(c => !ehDaTrilha(c));
+    } else {
+        const tpl = daTrilha.find(r => String(r.nome).toLowerCase() === String(nome).toLowerCase())
+            || reg.find(r => String(r.nome).toLowerCase() === String(nome).toLowerCase()) || null;
+        if (atual && String(atual.nome).toLowerCase() === String(nome).toLowerCase() && (Number(atual.nivel) || 1) === nivel) return;
+        state.conditions = state.conditions.filter(c => !ehDaTrilha(c));
+        state.conditions.push({
+            nome: tpl?.nome || nome, icone: tpl?.icone || '🩹', descricao: tpl?.descricao || '',
+            tempoAtual: '', tempoRestante: tpl?.duracao || '', modeloId: tpl?.id || null,
+            efeitoMecanicaIds: tpl?.efeitoMecanicaIds || [], nivel, automatica: trilha,
+        });
+    }
+    _trilhaSincronizando = true;
+    try {
+        if (typeof renderConditions === 'function') renderConditions();
+        _triggerConditionMechanicsUpdate();
+        scheduleAutosave();
+    } finally { _trilhaSincronizando = false; }
+}
 
 function _triggerConditionMechanicsUpdate() {
     if (typeof applyAllRaceMechanics === 'function') {

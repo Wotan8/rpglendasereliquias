@@ -292,6 +292,11 @@ const MODULE_DEFS = {
             // nível (Exaustão 1→6). Fica FORA do interruptor do Tabuleiro de
             // propósito — o nível vale na ficha também, não só no mapa.
             { key: 'acumulaNiveis', label: '📈 Acumula em níveis (aplicar de novo sobe o nível)', type: 'boolean' },
+            { key: 'desvantagemNoNivel', label: '🎲 Dá Desvantagem a partir deste nível (trilhas: 3)', type: 'number', placeholder: 'vazio = nunca', showWhenBoolean: 'acumulaNiveis' },
+            { key: 'trilha', label: '🩹 Trilha automática (a ficha e o Tabuleiro aplicam sozinhos)', type: 'select', options: [
+                { value: 'ferimento', label: '🩹 Ferimento — pela Vitalidade (Ferido, Grave, Beira da Morte, Morrendo)' },
+                { value: 'sobrecarga', label: '⚖️ Sobrecarga — pelo peso acima da Carga' },
+            ] },
             {
                 key: 'nivelMaximo', label: 'Nível máximo', type: 'number',
                 placeholder: 'Ex: 6 — vazio = sem teto', showWhenBoolean: 'acumulaNiveis'
@@ -357,8 +362,12 @@ const MODULE_DEFS = {
                 options: [
                     { value: 'tudo', label: '✅ Sai inteira' },
                     { value: 'um_nivel', label: '📉 Cai um nível (só para condição que acumula)' },
+                    { value: 'nenhuma', label: '🎯 Só decide o efeito — a condição fica (Beira da Morte, Teste de Morte)' },
                 ]
             },
+            { key: 'testeFalhaAplica', label: '❌ Falhou → aplica a condição (nome)', type: 'text', placeholder: 'Ex: Acuado', showWhenBoolean: 'testeParaSair' },
+            { key: 'testeFalhaRodadas', label: 'Rodadas da condição aplicada na falha', type: 'number', placeholder: '1', showWhenBoolean: 'testeParaSair' },
+            { key: 'testeMorte', label: '☠️ É o Teste de Morte (passou: +1 Vitalidade; falhou: −1; desastre: −2)', type: 'boolean', showWhenBoolean: 'testeParaSair' },
 
             // ===== 🎲 TABULEIRO (VTT) =====
             // O que a condição TIRA ou MUDA no token, em vocabulário que o motor
