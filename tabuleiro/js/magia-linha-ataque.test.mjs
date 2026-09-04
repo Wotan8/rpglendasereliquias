@@ -23,7 +23,7 @@ const corpo = recorta('resolveDadoDaMagia') + '\n' + recorta('linhasAtaqueMagia'
 const DV = [
     { id: 'vd_teste', nome: 'Inst. Sopro', icone: '🎵' },
     { id: 'vd_ess',   nome: 'Dano Sanguíneo', icone: '🩸' },
-    { id: 'vd_bolha', nome: 'Bolha de Sangue', campoAtual: true },
+    { id: 'vd_bolha', nome: 'Carga de Sangue', campoAtual: true },
 ];
 const _sys = { derivedValues: DV, classModulesById: {}, skills: [{ id: 'sk_sono', nome: 'Sonoromancia', categoria: 'exclusivo' }] };
 // A chave tem que sair do MESMO normChave que o motor usa; o stub abaixo é
@@ -86,13 +86,13 @@ assert.equal(l[0].canais.length, 0, 'sem Essência, dano físico');
 
 /* Referência a VD na fórmula: a Explosão Hemática joga fora a bolha inteira. */
 modulo.itensPredefinidos.push({ id: 'p4', nome: 'EXPLOSÃO', qualidade: 4, formaArea: 'circulo',
-    valores: { '4': 'vd_teste', dado: '1d8+[Bolha de Sangue]', ataqueDireto: true } });
-const comBolha = { dots: { sk_classe_sonoromancia: 4 }, _atuais: { 'Bolha de Sangue': 7 },
+    valores: { '4': 'vd_teste', dado: '1d8+[Carga de Sangue]', ataqueDireto: true } });
+const comBolha = { dots: { sk_classe_sonoromancia: 4 }, _atuais: { 'Carga de Sangue': 7 },
     classModuleData: { mod_sono: [{ _predefId: 'p4' }] } };
 l = linhasAtaqueMagia({ itens: [] }, comBolha, dt);
 assert.equal(l[0].dano, '1d8+7', 'a bolha entra no dano com o valor ATUAL dela');
 
-/* Bolha vazia vira 0 — a magia existe, o dano é só o dado. */
+/* Carga vazia vira 0 — a magia existe, o dano é só o dado. */
 l = linhasAtaqueMagia({ itens: [] }, { ...comBolha, _atuais: {} }, dt);
 assert.equal(l[0].dano, '1d8+0');
 

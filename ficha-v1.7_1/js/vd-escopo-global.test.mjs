@@ -56,7 +56,7 @@ const escudo = { id: 'escudo1', nome: 'Escudo Grande' };
 
 // --- VD já global: sempre no personagem ------------------------------------
 // A chave "ITEM:" é a trilha paralela do que veio de PEÇA — é ela que o teto
-// do Domínio de proteção morde, sem tocar no que peculiaridade e condição
+// do Treino de proteção morde, sem tocar no que peculiaridade e condição
 // somam no mesmo alvo. Ver teto-de-itens.test.mjs.
 {
     const r = aplicar(escudo, [{ id: 'dv-blind', modificador: 3 }]);

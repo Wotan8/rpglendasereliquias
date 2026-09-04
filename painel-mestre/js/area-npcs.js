@@ -520,7 +520,7 @@ function normalizeNpc(raw, sys) {
     if (!vd.overrides) {
         // Migra números manuais legados para overrides nas keys do registro
         const overrides = {};
-        const legacyMap = { VIT: 'VIT', ENER: 'ENER', SAN: 'SAN', PERC: 'PERC', INI: 'INI', REA: 'REA', BLD: 'BLD' };
+        const legacyMap = { VIT: 'VIT', ENER: 'ENER', SAN: 'SAN', PERC: 'PERC', INI: 'INI', BLD: 'BLD' };
         for (const [legacy] of Object.entries(legacyMap)) {
             const val = vd[legacy];
             if (val !== undefined && val !== null && val !== '' && Number(val) !== 0) {
@@ -1786,9 +1786,9 @@ function renderDvGrid() {
     // 📊 VDs: apenas os vinculados ao NPC (não lista mais todos os VDs do sistema)
     const vinc = F.npc.valoresDer.vinculados || [];
     // ⚔️ "Status de Combate" é um jeito de EXIBIR, não um vínculo: um VD de
-    // classe (Graça de Palla, Bolha de Sangue) só aparece em quem realmente o
+    // classe (Carga de Sangue, Harmonia) só aparece em quem realmente o
     // tem. Antes a grade mostrava todo VD marcado no registro, e um bardo
-    // ficava com a Graça do Pallacerdote na ficha.
+    // ficava com a Harmonia do Bardo na ficha.
     const vitals = allDvs.filter(dv => dv.isVital || (combateKeys.has(dv.key) && vinc.includes(dv.key)));
     const dvs = allDvs.filter(dv => !dv.isVital && !combateKeys.has(dv.key) && vinc.includes(dv.key));
 
@@ -2424,7 +2424,7 @@ function collectNpcData() {
     const calc = calcularNpc(n, F.sys, _npcCalcOpts(n.id || F.npc?.id));
     const legacyDv = {};
     const atualEspelho = { ...(n.valoresDer.atual || {}) };
-    for (const legacy of ['VIT', 'ENER', 'SAN', 'PERC', 'INI', 'REA', 'BLD']) {
+    for (const legacy of ['VIT', 'ENER', 'SAN', 'PERC', 'INI', 'BLD']) {
         const key = findDvKeyLike(legacy, F.sys);
         if (key && calc.derived[key]) {
             legacyDv[legacy] = calc.derived[key].final;

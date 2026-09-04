@@ -3,9 +3,9 @@
  *
  * Regras verificadas:
  *  • sem item em escopo (ou item inexistente) → 0, como qualquer ref desconhecida;
- *  • preço/liga/capacidade vêm do modelo do catálogo (a instância não os copia);
- *  • liga é string ('3') no cadastro e precisa sair numérica;
- *  • ausente/vazio → 0 (92 dos 155 equipamentos não têm preço nem liga);
+ *  • preço/aura/capacidade vêm do modelo do catálogo (a instância não os copia);
+ *  • aura é string ('3') no cadastro e precisa sair numérica;
+ *  • ausente/vazio → 0 (boa parte do catálogo não tem preço nem aura);
  *  • peso usa pressaoOverride > pressaoBase > peso.
  *
  * Roda com: node ficha-v1.7_1/js/item-props.test.mjs

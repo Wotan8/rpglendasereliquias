@@ -414,7 +414,7 @@ const LabBancada = (() => {
             runomancia: nivelRunomancia(),
             pericia: nivelRunomancia(),
             qualidadeTinta: qualidadeTintaSelecionada(),
-            temDominio: nivelRunomancia() >= 1,
+            temPorta: nivelRunomancia() >= 1,
             // Runa vinda do Grimório traz a própria escolha; a que está sendo
             // montada agora usa a da bancada.
             condicoesEscolhidas: runa.condicoesEscolhidas || state.escolhas.condicoes,

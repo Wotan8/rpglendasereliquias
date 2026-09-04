@@ -197,7 +197,7 @@ export function getMechanicTargetsHTML() {
     return html;
 }
 
-export const FONTE_LABELS = { raca: '🧬 Raça', classe: '⚔️ Classe', tribo: '🏕️ Tribo', peculiaridade: '✨ Pecul.', item: '🗡️ Item', condicao: '💀 Condição', booleana: '🔀 Booleana', manobra: '💥 Manobra', magia: '🔮 Magia', individual: '👤 Individual', generica: '⚙️ Genérica' };
+export const FONTE_LABELS = { raca: '🧬 Raça', classe: '⚔️ Classe', tribo: '🏕️ Tribo', peculiaridade: '✨ Pecul.', item: '🗡️ Item', condicao: '💀 Condição', booleana: '🔀 Booleana', magia: '🔮 Magia', individual: '👤 Individual', generica: '⚙️ Genérica' };
 export const TIPO_ICONS = { modificar: '➕', limitar: '🔒', conceder: '🎁', condicional: '⚡', narrativo: '📝', distribuir: '🎲', booleano: '🔀', condicional_encadeado: '🔗' };
 export const TIPO_LABELS = { modificar: 'Modificar', limitar: 'Limitar', conceder: 'Conceder', condicional: 'Condicional', narrativo: 'Narrativo', distribuir: 'Distribuir', booleano: 'Booleano', condicional_encadeado: 'Cond. Encadeada' };
 
@@ -2263,7 +2263,6 @@ export function openMechanicEditor(itemId, allItems, mechanicsCache, callbacks, 
                                     <select id="mech_expRecurso" onchange="window._mechRecursoExpChange()">
                                         <option value="energia" ${(data.recursoExp || 'energia') === 'energia' ? 'selected' : ''}>⚡ Energia</option>
                                         <option value="sanidade" ${data.recursoExp === 'sanidade' ? 'selected' : ''}>🧠 Sanidade</option>
-                                        <option value="graca" ${data.recursoExp === 'graca' ? 'selected' : ''}>✨ Graça</option>
                                         <option value="vitalidade" ${data.recursoExp === 'vitalidade' ? 'selected' : ''}>❤️ Vitalidade</option>
                                         <option value="outro" ${data.recursoExp === 'outro' ? 'selected' : ''}>📝 Outro</option>
                                     </select>
@@ -4017,35 +4016,3 @@ export function buildConditionSelectorHTML(fieldKey, label, currentIds, cache) {
     </div>`;
 }
 
-export function buildManeuverSelectorHTML(fieldKey, label, currentIds, cache) {
-    const published = cache.filter(m => m.publicado !== false);
-    const ids = currentIds || [];
-
-    const chips = ids.map(mid => {
-        const m = cache.find(x => x.id === mid);
-        if (!m) return '';
-        const custo = m.custo || '';
-        return `<div class="mechsel-chip" style="border-left-color:var(--danger)"><div class="mechsel-chip-info"><div class="mechsel-chip-name">💥 ${esc(m.nome)}</div><div class="mechsel-chip-preview">${esc(m.classe || '')} — Custo: ${esc(custo)}</div></div><button type="button" class="mechsel-chip-remove" onclick="window._mechSelRemove('field_${fieldKey}','${mid}')">✖</button></div>`;
-    }).join('');
-
-    const opts = published.map(m => {
-        const custo = m.custo || '';
-        return `<label class="mechsel-result" data-fonte="${esc(m.classe || '')}"><input type="checkbox" value="${m.id}" ${ids.includes(m.id) ? 'checked' : ''}><span class="mechsel-result-name">💥 ${esc(m.nome)}</span><span class="mechsel-result-preview">${esc(m.classe || '')} — Custo: ${esc(custo)}</span></label>`;
-    }).join('');
-
-    return `
-    <div class="mechsel-wrap" id="field_${fieldKey}_wrap">
-        <span class="mechsel-label">${esc(label)}</span>
-        <div class="mechsel-chips" id="field_${fieldKey}_chips">${chips || '<span style="color:var(--muted);font-size:.75rem">Nenhuma manobra vinculada</span>'}</div>
-        <button type="button" class="mechsel-add-btn" onclick="document.getElementById('field_${fieldKey}_search').classList.toggle('open')">➕ Adicionar Manobra</button>
-        <div class="mechsel-search" id="field_${fieldKey}_search">
-            <div class="mechsel-search-bar">
-                <input type="text" placeholder="🔍 Buscar manobra..." oninput="window._mechSelFilter('field_${fieldKey}', this.value)">
-            </div>
-            <div class="mechsel-results" id="field_${fieldKey}_results" onchange="window._mechSelChange('field_${fieldKey}')">
-                ${opts}
-            </div>
-        </div>
-        <input type="hidden" id="field_${fieldKey}" value='${JSON.stringify(ids)}'>
-    </div>`;
-}

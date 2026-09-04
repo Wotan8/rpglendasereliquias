@@ -1,6 +1,6 @@
 // node ficha-v1.7_1/js/pec-duplicada.test.mjs
 // Mesma peculiaridade vinda por dois caminhos (Classe + avulsa) aplica as
-// mecânicas UMA vez. Sem isto o Teto de Ofício do Guerreiro com "Domínio de
+// mecânicas UMA vez. Sem isto o Teto de Arma do Guerreiro com "Domínio de
 // Armas de Braço" soma [FOR] duas vezes.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -24,7 +24,7 @@ ctx.applyMechanicToSheet = (mech, pec) => aplicadas.push(`${pec.id}:${mech.id}`)
 const aplicar = vm.runInContext('_aplicarPecUmaVez', ctx);
 const limpar = () => vm.runInContext('_pecsAplicadas.clear()', ctx);
 
-const dominio = { id: 'dom1', key: 'dom1', nome: 'Domínio de Armas de Braço', mecanicas: [{ id: 'm_teto' }] };
+const dominio = { id: 'dom1', key: 'dom1', nome: 'Mestre em Armas', mecanicas: [{ id: 'm_teto' }] };
 
 // --- Herdada da classe e comprada como avulsa: aplica uma vez só ---
 aplicar(dominio);

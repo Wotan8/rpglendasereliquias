@@ -1248,8 +1248,8 @@ $('#chkRun').onclick = async () => {
     const FC = CV.FONTES_CAMPO;
     t('o registro passou de 11 para mais de 20 cadastros', Object.keys(FC).length >= 20);
     for (const k of ['peculiarities', 'bodyParts', 'derivedValues', 'mechanics', 'skills',
-                     'equipment', 'spells', 'conditions', 'classModules', 'runicElements',
-                     'vitalStats', 'maneuvers', 'auras', 'itemRules', 'castingForms',
+                     'equipment', 'conditions', 'classModules', 'runicElements',
+                     'vitalStats', 'auras', 'itemRules', 'castingForms',
                      'lineages', 'books', 'articles', 'tribesMec']) {
         t(`o banco alcança ${k}`, !!FC[k] && !!FC[k].col);
     }

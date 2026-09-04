@@ -180,9 +180,9 @@ assert.equal(recursoInsuficiente('', { ener: 0 }), null, 'sem custo nada falta')
 
 // custo declarado por MECÂNICA (é assim que o cadastro guarda: "-1 ENER")
 const mechEner = { nome: '-1 ENER', tipo: 'modificar', config: { calculos: [{ alvo: 'Energia Atual', operacao: '-', equacao: [{ valor: 1, tipo: 'fixo' }] }] } };
-const mechGraca = { nome: '-2 Graça', tipo: 'modificar', config: { calculos: [{ alvo: 'Graça de Palla', operacao: '-', equacao: [{ valor: 2, tipo: 'fixo' }] }] } };
+const mechCarga = { nome: '-2 Carga', tipo: 'modificar', config: { calculos: [{ alvo: 'Carga de Sangue', operacao: '-', equacao: [{ valor: 2, tipo: 'fixo' }] }] } };
 assert.deepEqual(custoDaMecanica(mechEner), { rotulo: '-1 ENER', alvo: 'Energia Atual', qtd: 1 });
-assert.deepEqual(custoDaMecanica(mechGraca), { rotulo: '-2 Graça', alvo: 'Graça de Palla', qtd: 2 }, 'recurso de classe é VD, não vital');
+assert.deepEqual(custoDaMecanica(mechCarga), { rotulo: '-2 Carga', alvo: 'Carga de Sangue', qtd: 2 }, 'recurso de classe é VD, não vital');
 assert.equal(custoDaMecanica({ nome: '+1 ENER', tipo: 'modificar', config: { calculos: [{ alvo: 'Energia Atual', operacao: '+', equacao: [{ valor: 1 }] }] } }), null, 'somar não é custo');
 assert.equal(custoDaMecanica({ tipo: 'booleano' }), null, 'mecânica de outro tipo não é custo');
 assert.equal(custoDaMecanica(null), null);

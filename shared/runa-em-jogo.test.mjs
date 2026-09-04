@@ -64,9 +64,9 @@ assert.deepEqual(lanca.mira, { tipo: 'alvos', alcanceM: 15, maxAlvos: 1 }, 'a mi
 assert.equal(lanca.canal, 'Dano', 'sem Sublimador a runa fere na forma FÍSICA da essência');
 assert.equal(lanca.formaEssencia, false);
 
-/* ===== 2) o Teto de Ofício corta a perícia no Alvo ===== */
+/* ===== 2) a Runomancia entra inteira no Alvo (Núcleo v2: sem Teto de Ofício) ===== */
 assert.equal(bloco([no('artus_criar', 2), no('asp_fogo', 2), no('sig_projetor', 2)],
-    { runomancia: 5, tetoOficio: 2 }).alvo, 2 + 2 + 2 + 2, 'o Teto de Ofício corta a Runomancia');
+    { runomancia: 5 }).alvo, 2 + 2 + 2 + 5, 'a Runomancia entra inteira');
 
 /* ===== 3) Sublimador troca o canal e a barreira ===== */
 const sublimada = bloco([no('artus_criar', 2), no('asp_fogo', 2), no('sig_projetor', 2), no('sig_sublimador', 1)]);
@@ -154,9 +154,9 @@ assert.equal(usosDaRuna({ ramo: 'talha', ct: 200, pericia: 1 }).usos, 10, 'o pis
 assert.equal(usosDaRuna({ ramo: 'escripta', ct: 200, pericia: 1 }).usos, 1, 'o piso da Escripta é 1');
 assert.deepEqual(usosDaRuna({ ramo: 'tatuagem', ct: 40, pericia: 3 }),
     { usos: null, permanente: true, rascunho: false }, 'tatuagem não conta usos');
-assert.equal(usosDaRuna({ ramo: 'talha', ct: 20, pericia: 5, temDominio: false }).usos, 1,
-    '🔒 sem o Domínio do ofício é rascunho: 1 uso, por melhor que seja a perícia');
-assert.equal(usosDaRuna({ ramo: 'talha', ct: 20, pericia: 5, temDominio: false }).rascunho, true);
+assert.equal(usosDaRuna({ ramo: 'talha', ct: 20, pericia: 5, temPorta: false }).usos, 1,
+    '🔒 sem a porta (Runomancia) é rascunho: 1 uso, por melhor que seja a gravação');
+assert.equal(usosDaRuna({ ramo: 'talha', ct: 20, pericia: 5, temPorta: false }).rascunho, true);
 
 /* ===== 13) Erosor aplica EROSÃO junto, e ela é permanente ===== */
 const eroC = bloco([no('artus_criar', 3), no('asp_fogo', 3), no('sig_projetor', 1), no('sig_erosor', 2)]);

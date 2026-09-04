@@ -75,7 +75,7 @@ window.CharLogger = (function () {
         vicio: 'Vício', virtude: 'Virtude', arrependimento: 'Arrependimento',
         exp: 'EXP Disponível', exp_total: 'EXP Total', sessoes: 'Sessões', nivel: 'Nível',
         vit_atual: 'Vitalidade Atual', ener_atual: 'Energia Atual', san_atual: 'Sanidade Atual',
-        blindagem: 'Blindagem', marca_caca: 'Marca de Caça'
+        marca_caca: 'Marca de Caça'
     };
 
     const ATTR_LABELS = {
@@ -101,13 +101,6 @@ window.CharLogger = (function () {
         if (ATTR_LABELS[key]) return 'Atributo ' + ATTR_LABELS[key];
         const sk = skillLabel(key);
         if (sk) return 'Perícia ' + sk;
-        // Campos indexados: inv_name_3, wpn_dano_1, cond_desc_0...
-        const m = key.match(/^(inv|wpn|arm|proj|cond)_([a-z]+)_(\d+)$/);
-        if (m) {
-            const grp = { inv: 'Inventário (ficha)', wpn: 'Arma', arm: 'Armadura', proj: 'Projétil', cond: 'Condição' }[m[1]];
-            const sub = { name: 'Nome', desc: 'Descrição', qtd: 'Qtd', dano: 'Dano', integ: 'Integridade', tam: 'Tamanho', bld: 'Blindagem', rea: 'Reação', tipo: 'Tipo', tempo: 'Tempo' }[m[2]] || humanize(m[2]);
-            return `${grp} #${Number(m[3]) + 1} — ${sub}`;
-        }
         return humanize(key);
     }
 

@@ -161,7 +161,7 @@ ${RUNO_TABELAS.intensidade.map(r => `<tr><td>${r.nv}</td><td>${r.intensidade}</t
 <h4>Reação por Dose Infundida (§4.4)</h4>
 <table><tr><th>Dose (Ess)</th><th>Alta</th><th>Moderada</th><th>Baixa</th><th>Sem afinidade</th></tr>
 <tr><td>Mínima (1–3)</td><td>Benefício sutil</td><td>Formigamento</td><td>Náusea, tremores</td><td>Dor aguda, −1 Alvo</td></tr>
-<tr><td>Baixa (4–8)</td><td>Terapêutico</td><td>Moderado + colaterais</td><td>1d6</td><td>2d6, hemorragia</td></tr>
+<tr><td>Baixa (4–8)</td><td>Terapêutico</td><td>Moderado + colaterais</td><td>1d6</td><td>2d6, Sangrando</td></tr>
 <tr><td>Moderada (9–20)</td><td>Bônus temporários</td><td>Forte mas instável</td><td>3d6, falência parcial</td><td>5d6, morte provável</td></tr>
 <tr><td>Alta (21–40)</td><td>Transformação</td><td>Sobrecarga perigosa</td><td>Morte quase certa</td><td>Morte instantânea</td></tr></table>
 <p><b>Protocolo de Valdris:</b> nunca injetar mais de 3 Ess em um ser vivo sem supervisão de um Mestre Runomante.</p>`
@@ -254,33 +254,17 @@ ${RUNO_TABELAS.confluencias.map(c => `<tr><td><b>${c.elemento}</b></td><td>${c.a
 <p><b>O que atravessa (§9.9):</b> Nv1 só Sinais; Nv2 + Essência Genérica; Nv3 + Padrões. Essência Aspectada e Elementos Confluídos despem-se da natureza no trajeto e chegam genéricos.</p>`
     },
     {
-        id: 'pericias', icone: '📚', titulo: 'Parte XI — Aprendizado, Perícias e Manobras', html: `
+        id: 'pericias', icone: '📚', titulo: 'Parte XI — Aprendizado e Perícia', html: `
 <p><b>Lista de Estudo (§11.1):</b> 2 slots base; ao menos um momento de estudo por sessão — sem o roleplay, nada progride.</p>
 <h4>Erudição Rúnica (§11.3)</h4>
 <table><tr><th>Nível</th><th>Slots</th><th>Bônus</th></tr>
 <tr><td>0</td><td>2</td><td>—</td></tr><tr><td>1</td><td>3</td><td>−1 sessão p/ Sigilus Iniciantes</td></tr>
 <tr><td>2</td><td>4</td><td>−1 até Intermediário</td></tr><tr><td>3</td><td>5</td><td>−1 p/ todos os Sigilus</td></tr>
 <tr><td>4</td><td>6</td><td>−1 também p/ Artus e Aspectus</td></tr><tr><td>5</td><td>7</td><td>2 itens do mesmo tipo</td></tr></table>
-<h4>Perícias do Runomago (§11.4)</h4>
-<table><tr><th>Perícia</th><th>Função</th><th>Limitada por</th></tr>
-<tr><td>Gravação Rúnica</td><td>Gravar; −tempo; +durabilidade</td><td>Runomancia</td></tr>
-<tr><td>Erudição Rúnica</td><td>Slots e descontos; +1 identificar runas</td><td>INT</td></tr>
-<tr><td>Diagnóstico Rúnico</td><td>Analisar/desmontar runas; desarma armadilhas</td><td>menor(Runomancia, Investigação)</td></tr>
-<tr><td>Eficiência Arcana</td><td>+1/nível com Essência limitada</td><td>RAC</td></tr></table>
+<h4>Perícia do Runimago (§11.4)</h4>
+<p>No Núcleo v2 a perícia é uma só: <b>Runomancia</b>, a Perícia de Escola do Runimago. É a porta do ofício, entra inteira no Alvo da runa e dá os usos da gravação.</p>
 <h4>Runas em Combate (§11.5)</h4>
-<ul><li><b>Preparadas:</b> gravadas antes; ação simples; sem DET</li></ul>
-<h4>Manobras do Runimago (§11.6 — custam DET; 1/turno)</h4>
-<table><tr><th>Manobra</th><th>Custo</th><th>Efeito / Requisitos</th></tr>
-<tr><td>Inscrição Veloz</td><td>1</td><td>Grava runa simples (3 comp.) como ação de movimento; ativa até o fim da cena</td></tr>
-<tr><td>Sobrecarga</td><td>2</td><td>+50% potência; teste −4 ou a runa colapsa. Req.: Eficiência Arcana 2</td></tr>
-<tr><td>Desconstrução</td><td>1</td><td>Diagnóstico vs. dificuldade; sucesso desativa. Req.: Diagnóstico 2</td></tr>
-<tr><td>Encadeamento</td><td>2</td><td>Par de Elos Nv1 temporários (5 m, só sinal) até o fim da cena. Req.: Gravação 3</td></tr>
-<tr><td>Improvisação</td><td>3</td><td>Artus/Aspectus sem nível (1×/cena), +2 Redutor</td></tr>
-<tr><td>Escudo Rúnico</td><td>2</td><td>REAÇÃO: barreira que absorve Runomancia×3. Req.: Criar 2</td></tr>
-<tr><td>Gatilho Remoto</td><td>1</td><td>Ativa runa preparada a até 30 m</td></tr>
-<tr><td>Análise de Campo</td><td>1</td><td>Detecta runas/magias/Leys em 15 m. Req.: Fluxomancia 5</td></tr>
-<tr><td>Ruína</td><td>3</td><td>Colapsa runa inimiga: (nível)d6 em 3 m. Req.: Diagnóstico 3, Destruir 2</td></tr>
-<tr><td>Transferência</td><td>2</td><td>Move uma runa de superfície (até 5 m)</td></tr></table>`
+<ul><li><b>Preparadas:</b> gravadas antes; ação simples; sem custo de Energia</li></ul>`
     },
     {
         id: 'etica', icone: '⚖️', titulo: 'Parte XII — Ética, Lei e Sociedade', html: `

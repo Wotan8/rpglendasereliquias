@@ -19,7 +19,7 @@ const ctx = vm.createContext({
     saveWizardToStorage: () => { salvou++; },
     // Pool vem do mechanics-engine na página real; aqui, um dublê.
     getDistribuirPool: nome => nome === 'Perícias Mentais'
-        ? ['Ciências', 'Investigação', 'Medicina']
+        ? ['Ciências', 'Investigação', 'Anatomia']
         : (nome === 'Elementos Rúnicos' ? [] : [nome]),
     wizardState: {
         racaSelecionada: 'Yotun', classeSelecionada: null, triboSelecionada: null,
@@ -52,20 +52,20 @@ ctx.INDIVIDUAL_PECULIARITIES = [];
 // --- O pool rúnico não abre no wizard (runicElements nem é carregado) ---
 let disp = chamar('distribuicoesDisponiveis()');
 assert.equal(disp.length, 1, 'só a distribuição de perícia aparece');
-assert.equal(disp[0].alvos.join(','), 'Ciências,Investigação,Medicina');
+assert.equal(disp[0].alvos.join(','), 'Ciências,Investigação,Anatomia');
 assert.equal(disp[0].quantidade, 2);
 
 // --- Nada distribuído: a criação segue, mecanicasAplicadas sai vazia ---
 assert.equal(json(chamar('distribuicoesParaFicha()')), '{}', 'distribuir é opcional');
 
 // --- Distribuiu 1 dos 2 slots: vai para a ficha como pendente ---
-ws.distribuicoes = { mec_estudo: [{ nome: 'Medicina', valor: 1 }] };
+ws.distribuicoes = { mec_estudo: [{ nome: 'Anatomia', valor: 1 }] };
 let paraFicha = chamar('distribuicoesParaFicha()');
 assert.equal(paraFicha.mec_estudo.aplicada, false, 'slot vazio = distribuição pendente na ficha');
-assert.equal(json(paraFicha.mec_estudo.alvosEscolhidos), json([{ nome: 'Medicina', valor: 1 }]));
+assert.equal(json(paraFicha.mec_estudo.alvosEscolhidos), json([{ nome: 'Anatomia', valor: 1 }]));
 
 // --- Os 2 slots preenchidos: aplicada ---
-ws.distribuicoes = { mec_estudo: [{ nome: 'Medicina', valor: 1 }, { nome: 'Ciências', valor: 1 }] };
+ws.distribuicoes = { mec_estudo: [{ nome: 'Anatomia', valor: 1 }, { nome: 'Ciências', valor: 1 }] };
 assert.equal(chamar('distribuicoesParaFicha()').mec_estudo.aplicada, true);
 
 // --- Alvo que saiu do pool é descartado, o resto fica ---
@@ -79,7 +79,7 @@ chamar('sincronizarDistribuicoes()');
 assert.equal(ws.distribuicoes.mec_estudo.length, 1);
 
 // --- Trocar a raça tira a peculiaridade: a escolha inteira some ---
-ws.distribuicoes = { mec_estudo: [{ nome: 'Medicina', valor: 1 }, { nome: 'Ciências', valor: 1 }] };
+ws.distribuicoes = { mec_estudo: [{ nome: 'Anatomia', valor: 1 }, { nome: 'Ciências', valor: 1 }] };
 ws.racaSelecionada = 'Pogo';
 chamar('sincronizarDistribuicoes()');
 assert.equal(json(ws.distribuicoes), '{}', 'sem a peculiaridade, sem os valores distribuídos');
@@ -98,13 +98,13 @@ ctx._adjustMechanicForLevel = (m, nivel) => {
 };
 ctx.INDIVIDUAL_PECULIARITIES = [{ id: 'pec_dom', nome: 'Domínio', mecanicas: [mecEvo] }];
 ws.peculiaridadesIndividuais = [{ id: 'pec_dom', nome: 'Domínio', nivel: 2 }];
-ws.distribuicoes = { mec_dom: [{ nome: 'Medicina', valor: 1 }, { nome: 'Ciências', valor: 1 }] };
+ws.distribuicoes = { mec_dom: [{ nome: 'Anatomia', valor: 1 }, { nome: 'Ciências', valor: 1 }] };
 chamar('sincronizarDistribuicoes()');
 assert.equal(ws.distribuicoes.mec_dom.length, 2, 'Nv.2 dá dois alvos');
 
 ws.peculiaridadesIndividuais[0].nivel = 1;
 chamar('sincronizarDistribuicoes()');
-assert.equal(json(ws.distribuicoes.mec_dom), json([{ nome: 'Medicina', valor: 1 }]), 'Nv.1 devolve só o primeiro slot');
+assert.equal(json(ws.distribuicoes.mec_dom), json([{ nome: 'Anatomia', valor: 1 }]), 'Nv.1 devolve só o primeiro slot');
 
 // --- Largar a avulsa apaga tudo dela ---
 ws.peculiaridadesIndividuais = [];
@@ -143,9 +143,9 @@ assert.equal(bonus().sk_disparo, 1, 'o +1 fixo da classe entra na linha da perí
 assert.equal(bonus().attr_for, 2, 'alvo de atributo resolve para attr_*');
 
 // O que o jogador distribuiu soma na mesma conta
-ws.distribuicoes = { mec_estudo: [{ nome: 'Medicina', valor: 1 }] };
+ws.distribuicoes = { mec_estudo: [{ nome: 'Anatomia', valor: 1 }] };
 assert.equal(bonus().sk_medicina, undefined, 'perícia fora de SKILLS não vira chave inventada');
-ctx.SKILLS.mental = [{ name: 'Medicina', key: 'medicina' }];
+ctx.SKILLS.mental = [{ name: 'Anatomia', key: 'medicina' }];
 assert.equal(bonus().sk_medicina, 1, 'o distribuído soma na linha da perícia');
 
 // Operação "-" desconta; "=" é override, não bônus somável

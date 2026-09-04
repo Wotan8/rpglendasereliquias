@@ -41,28 +41,18 @@ const TARGET_MAP = {
 
     // === VALORES DERIVADOS: vêm do Firebase via populateTargetMapFromDerivedValues() ===
 
-    // === PERÍCIAS (Núcleo v2: 32 gerais + 8 de Escola) ===
-    // Nomes antigos continuam resolvendo para a chave nova, para mecânica velha não quebrar.
+    // === PERÍCIAS (Núcleo v2: 32 gerais + 8 de Escola) — só os nomes vivos; ref antiga vira 0 ===
     // Mentais
     "Anatomia": "sk_mental_anatomia",
-    "Medicina": "sk_mental_anatomia",
     "Erudição": "sk_mental_erudicao",
-    "História": "sk_mental_erudicao",
-    "Tradição": "sk_mental_erudicao",
-    "Ofícios": "sk_mental_erudicao",
-    "Ofício Intel.": "sk_mental_erudicao",
     "Relíquia": "sk_mental_reliquia",
-    "Religião": "sk_mental_reliquia",
     "Fluxomancia": "sk_mental_fluxomancia",
-    "Essência": "sk_mental_fluxomancia",
     "Herbalismo": "sk_mental_herbalismo",
     "Investigação": "sk_mental_investigacao",
     "Percepção": "sk_mental_percepcao",
-    "Observação": "sk_mental_percepcao",
     "Resiliência": "sk_mental_resiliencia",
     // Físicas
     "Acrobacia": "sk_fisico_acrobacia",
-    "Agilidade": "sk_fisico_acrobacia",
     "Atletismo": "sk_fisico_atletismo",
     "Furtividade": "sk_fisico_furtividade",
     "Prestidigitação": "sk_fisico_prestidigitacao",
@@ -70,12 +60,10 @@ const TARGET_MAP = {
     "Sobrevivência": "sk_fisico_sobrevivencia",
     "Domar": "sk_fisico_domar",
     "Labuta": "sk_fisico_labuta",
-    "Ofício Braç.": "sk_fisico_labuta",
     // Sociais
     "Barganha": "sk_social_barganha",
     "Diplomacia": "sk_social_diplomacia",
     "Lábia": "sk_social_labia",
-    "Malandragem": "sk_social_labia",
     "Sedução": "sk_social_seducao",
     "Intimidação": "sk_social_intimidacao",
     "Liderança": "sk_social_lideranca",
@@ -87,27 +75,18 @@ const TARGET_MAP = {
     "Briga": "sk_combate_briga",
     "Disparo": "sk_combate_disparo",
     "Arremesso": "sk_combate_arremesso",
-    "Arremessar": "sk_combate_arremesso",
     "Esquiva": "sk_combate_esquiva",
-    "Desviar": "sk_combate_esquiva",
-    "Evadir": "sk_combate_esquiva",
     "Aparar": "sk_combate_aparar",
-    "Contra-Ataque": "sk_combate_aparar",
-    "Contra-Ataq.": "sk_combate_aparar",
     "Bloquear": "sk_combate_bloquear",
-    "Cobertura": "sk_combate_bloquear",
-    "Proteger": "sk_combate_bloquear",
     // Escolas (entram pela classe; chave na convenção sk_classe_)
     "Hemomancia": "sk_classe_hemomancia",
     "Abismancia": "sk_classe_abismancia",
-    "Abismo": "sk_classe_abismancia",
     "Necromancia": "sk_classe_necromancia",
     "Pallomancia": "sk_classe_pallomancia",
     "Sonoromancia": "sk_classe_sonoromancia",
     "Totemancia": "sk_classe_totemancia",
     "Runomancia": "sk_classe_runomancia",
     "Alquimancia": "sk_classe_alquimancia",
-    "Alquimia": "sk_classe_alquimancia",
 
     // === PROPRIEDADES DE COMBATE ===
     // "Alvo de Ataque", "Alvo de Defesa", "Dano" e "Dano Crítico" eram alvos
@@ -1289,9 +1268,8 @@ function _resolveSheetRef(ref, mult) {
 }
 
 /* Uma peculiaridade aplica suas mecânicas UMA vez por passada, mesmo quando
-   chega por dois caminhos — o Guerreiro que herda "Domínio de Armas de Braço"
-   da classe E comprou o mesmo doc como avulsa. Sem isto o Teto de Ofício soma
-   [FOR] duas vezes. O nível é o mesmo nos dois: sai de state.dots['pec_'+key]. */
+   chega por dois caminhos — a que a classe concede E a mesma comprada como avulsa.
+   Sem isto a mecânica soma duas vezes. O nível é o mesmo nos dois: sai de state.dots['pec_'+key]. */
 const _pecsAplicadas = new Set();
 
 function _aplicarPecUmaVez(pec) {

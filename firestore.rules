@@ -374,38 +374,6 @@ service cloud.firestore {
       allow delete: if isMaster();
     }
     
-    // ========== CORRIGIDO: Coleção de Containers ==========
-    match /containers/{containerId} {
-      // ✅ Permitir leitura/query para usuários autenticados
-      allow read: if isSignedIn();
-
-      // ✅ Criação: dono OU mestre pode criar
-      allow create: if isSignedIn() && 
-        (request.resource.data.ownerId == request.auth.uid || request.resource.data.ownerUid == request.auth.uid || isMaster());
-
-      // ✅ Atualização: dono do container, dono do personagem vinculado, OU mestre
-      allow update: if isSignedIn() && (
-        // Dono do container pode atualizar (mantendo o mesmo ownerId/ownerUid)
-        (resource.data.ownerId == request.auth.uid && 
-         request.resource.data.ownerId == resource.data.ownerId) ||
-        (resource.data.ownerUid == request.auth.uid && 
-         request.resource.data.ownerUid == resource.data.ownerUid) ||
-        // Dono do personagem vinculado pode atualizar (verificando via characterId)
-        (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
-         get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
-        // Mestre pode sempre atualizar
-        isMaster()
-      );
-      
-      // ✅ Exclusão: dono do container, dono do personagem, OU mestre
-      allow delete: if isSignedIn() && (
-        resource.data.ownerId == request.auth.uid || 
-        resource.data.ownerUid == request.auth.uid || 
-        (exists(/databases/$(database)/documents/char/$(resource.data.characterId)) &&
-         get(/databases/$(database)/documents/char/$(resource.data.characterId)).data.ownerUid == request.auth.uid) ||
-        isMaster()
-      );
-    }
     
     /* Peça que está na Caixa do Mestre. O jogador manda para lá pelo servidor
        (enviarItemParaMesa) e ela só sai por decisão do mestre — recusando o
@@ -470,28 +438,6 @@ service cloud.firestore {
         ehDonoDoNpcAliado() ||
         isMaster() || temPapelMestre()
       );
-    }
-
-    // ========== ADICIONADO: Coleções de Economia ==========
-    match /economy-items/{itemId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isMaster();
-    }
-
-    match /economy-locations/{locationId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isMaster();
-    }
-
-    match /economy-events/{eventId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isMaster();
-    }
-
-    // ========== ADICIONADO: Coleção de Coisas da Economia ==========
-    match /economy-coisas/{coisaId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isMaster();
     }
 
     // ========== ADICIONADO: Coleção de Hexmaps ==========

@@ -39,9 +39,9 @@ assert.deepEqual(Object.keys(mapaNpc).sort(), Object.keys(mapaFicha).sort(),
     'os dois motores expõem propriedades diferentes de item');
 
 const FIXTURES = [
-    [{ qualidade: '4', afiacao: 3, liga: '5', peso: 2, tamanho: 1, quantidade: 7 }, {}],
+    [{ qualidade: '4', afiacao: 3, peso: 2, tamanho: 1, quantidade: 7 }, {}],
     [{ fio: '2' }, {}],                               // instância no nome antigo
-    [{}, { qualidade: '3', afiacao: 1, liga: '4' }],   // valor só no modelo
+    [{}, { qualidade: '3', afiacao: 1 }],   // valor só no modelo
     [{ qualidade: '1' }, { qualidade: '5' }],          // instância vence modelo
     [{}, {}],                                          // tudo ausente → nunca NaN
     [{ pressaoBase: 4, pressaoOverride: 0.5 }, {}],
@@ -59,8 +59,8 @@ for (const prop of Object.keys(mapaFicha)) {
 const DV_DANO = { id: 'dvDano', key: 'DANO', nome: 'Dano', escopoItem: 'dano', ordem: 1, publicado: true };
 const ATTR_FOR = { id: 'aFor', nome: 'Força', sigla: 'FOR', ordem: 1, publicado: true };
 
-const TPL_ESPADA = { id: 'tplEspada', nome: 'Espada Longa', formulaDano: '1d8', liga: '5', qualidade: '4', afiacao: 3 };
-const TPL_ARCO = { id: 'tplArco', nome: 'Arco Longo', formulaDano: '1d10', liga: '3' };
+const TPL_ESPADA = { id: 'tplEspada', nome: 'Espada Longa', formulaDano: '1d8', qualidade: '4', afiacao: 3 };
+const TPL_ARCO = { id: 'tplArco', nome: 'Arco Longo', formulaDano: '1d10' };
 const TPL_FLECHA = { id: 'tplFlecha', nome: 'Flecha de Guerra', qualidade: '2', afiacao: 2 };
 
 const sys = {

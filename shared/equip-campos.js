@@ -238,7 +238,7 @@ export const valorDoItem = (item, f) => {
 
 /** Campo cujo valor VAZIO na instância cai no modelo do catálogo. */
 const HERDA_DO_MODELO = new Set([
-    'liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'preco', 'formulaDano', 'formulaDano2Maos',
+    'qualidade', 'afiacao', 'reforco', 'preco', 'formulaDano', 'formulaDano2Maos',
     'valoresDerivadosVinculados', 'statusVitaisVinculados', 'atributosVinculados',
     'periciasVinculadas', 'condicaoIds', 'slotsAdicionais', 'tags', 'tipoGolpe',
     'equipavelEmGuardado', 'periciaId', 'afiacaoArcana', 'essenciaArcana', 'encantamento',
@@ -249,7 +249,7 @@ export const herdaDoModelo = (key) => HERDA_DO_MODELO.has(key);
 /**
  * Semente de uma instância a partir de um modelo do catálogo — CÓPIA INTEGRAL.
  *
- * Traz TODO o cadastro: identidade, físico, Liga/Qualidade/Afiação/Reforço,
+ * Traz TODO o cadastro: identidade, físico, Qualidade/Afiação/Reforço,
  * preço, tags, e os vínculos completos (Valores Derivados COM suas equações,
  * Status Vitais, Atributos, Perícias, Condições, Slots Adicionais). O Mestre
  * abre a janela com a peça inteira preenchida e ajusta o que quiser.
@@ -451,7 +451,7 @@ export const SECOES_EQUIPAMENTO = [
     },
     {
         id: 'qualidade', icone: '⚒️', titulo: 'Qualidade, acabamento e encantamento',
-        dica: 'A Liga é o teto e a Qualidade nunca passa dela. Afiação e Reforço são o acabamento pago.',
+        dica: 'Qualidade 0–5 é a régua da peça; só a Aura passa do 5. Afiação e Reforço são o acabamento pago.',
         campos: ['qualidade', 'aura', 'afiacao', 'afiacaoArcana', 'essenciaArcana', 'reforco',
             'encantamento', 'imunidadeCondicaoIds', 'vantagemPericiaId', 'danificada', 'ehReliquia'],
     },

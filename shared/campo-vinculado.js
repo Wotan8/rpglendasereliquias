@@ -67,11 +67,6 @@ export const FONTES_CAMPO = {
     conditions: { col: 'system/data/conditions',   icone: '🌀', rotulo: 'Condição', grupo: 'Sistema' },
     equipment:  { col: 'system/data/equipment',    icone: '🗡️', rotulo: 'Equipamento', grupo: 'Sistema' },
     itemRules:  { col: 'system/data/itemRules',    icone: '📏', rotulo: 'Regra de Item', grupo: 'Sistema' },
-    spells:     { col: 'system/data/spells',       icone: '🔮', rotulo: 'Magia', grupo: 'Sistema' },
-    /* Entra mesmo com a coleção vazia hoje: coleção vazia não é coleção
-       inexistente, e deixá-la de fora obrigaria a mexer aqui de novo no dia
-       em que a primeira manobra for cadastrada. Vazia, ela só não devolve
-       resultado — nada quebra. */
     auras:      { col: 'system/data/auras',        icone: '🌟', rotulo: 'Aura', grupo: 'Sistema' },
     castingForms: { col: 'system/data/castingForms', icone: '🗣️', rotulo: 'Forma de Conjuração', grupo: 'Sistema' },
     runicElements: { col: 'system/data/runicElements', icone: '🔯', rotulo: 'Elemento Rúnico', grupo: 'Sistema' },

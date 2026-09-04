@@ -55,20 +55,17 @@ export const ALVOS_FIXOS = [
     'Presença', 'Manipulação', 'Autocontrole',
     // status vitais e campos da ficha
     'Vitalidade Máxima', 'Energia Máxima', 'Sanidade Máxima', 'Blindagem',
-    // perícias do Núcleo v2 (32 gerais + 8 de Escola), mais os apelidos antigos
-    // que o TARGET_MAP ainda resolve para a chave nova
-    'Anatomia', 'Medicina', 'Erudição', 'História', 'Tradição', 'Ofícios', 'Ofício Intel.',
-    'Relíquia', 'Religião', 'Fluxomancia', 'Essência', 'Herbalismo', 'Investigação',
-    'Percepção', 'Observação', 'Resiliência',
-    'Acrobacia', 'Agilidade', 'Atletismo', 'Furtividade', 'Prestidigitação', 'Montaria',
-    'Sobrevivência', 'Domar', 'Labuta', 'Ofício Braç.',
-    'Barganha', 'Diplomacia', 'Lábia', 'Malandragem', 'Sedução', 'Intimidação',
+    // perícias do Núcleo v2 (32 gerais + 8 de Escola) — espelho do TARGET_MAP
+    'Anatomia', 'Erudição', 'Relíquia', 'Fluxomancia', 'Herbalismo', 'Investigação',
+    'Percepção', 'Resiliência',
+    'Acrobacia', 'Atletismo', 'Furtividade', 'Prestidigitação', 'Montaria',
+    'Sobrevivência', 'Domar', 'Labuta',
+    'Barganha', 'Diplomacia', 'Lábia', 'Sedução', 'Intimidação',
     'Liderança', 'Performance', 'Empatia',
-    'Arma', 'Precisão', 'Briga', 'Disparo', 'Arremesso', 'Arremessar',
-    'Esquiva', 'Desviar', 'Evadir', 'Aparar', 'Contra-Ataque', 'Contra-Ataq.',
-    'Bloquear', 'Cobertura', 'Proteger',
-    'Hemomancia', 'Abismancia', 'Abismo', 'Necromancia', 'Pallomancia', 'Sonoromancia',
-    'Totemancia', 'Runomancia', 'Alquimancia', 'Alquimia',
+    'Arma', 'Precisão', 'Briga', 'Disparo', 'Arremesso',
+    'Esquiva', 'Aparar', 'Bloquear',
+    'Hemomancia', 'Abismancia', 'Necromancia', 'Pallomancia', 'Sonoromancia',
+    'Totemancia', 'Runomancia', 'Alquimancia',
     // avulsos
     'Ações por turno', 'Melhor Perícia de Arte', 'EXP',
 ];

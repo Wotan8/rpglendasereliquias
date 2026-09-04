@@ -2,7 +2,7 @@
  * Teto sobre a parcela de ITENS (tipoLimite 'maximo_itens').
  *
  * O bag geral de um Valor Derivado mistura peculiaridade, condição e item no
- * mesmo número. O Domínio de proteção precisa limitar SÓ o que veio das peças
+ * mesmo número. O Treino de proteção precisa limitar SÓ o que veio das peças
  * — capar o total puniria quem tem Blindagem de raça ou de bênção.
  *
  * Este teste protege as duas metades da regra:

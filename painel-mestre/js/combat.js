@@ -363,7 +363,7 @@ window.adjustCombatStat = function(pid, stat, amt, ev) {
                 const patch = { [`valoresDer.atual.${legacyKey}`]: novoVal };
                 // Também atualizar chaves do sistema que existam no atual
                 // (chaves que NÃO são legacy e cujo valor antigo coincidia com o legacy)
-                const LEGACY_KEYS = new Set(['VIT','ENER','SAN','PERC','INI','REA','BLD']);
+                const LEGACY_KEYS = new Set(['VIT','ENER','SAN','PERC','INI','BLD']);
                 for (const [k, v] of Object.entries(atualObj)) {
                     if (LEGACY_KEYS.has(k)) continue;
                     // Se o valor dessa chave do sistema é igual ao antigo valor legacy,

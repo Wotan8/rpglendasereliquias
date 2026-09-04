@@ -49,11 +49,10 @@ function nivelData(el, nv) {
  * cânone só admite Regime Contínuo para efeito estático e NÃO-ADVERSO (§2.7).
  * Uma tatuagem que queima o dono o tempo todo não é runa, é ferida.
  */
-const ADVERSAS = new Set(['queimadura', 'hemorragia', 'definhado', 'afogando', 'erosao',
-    'chaga', 'fratura', 'corrompido', 'delirio', 'amedrontado', 'atordoado', 'cego', 'surdo',
-    'imobilizado', 'prostrado', 'lento', 'estagnado', 'abalado', 'exaustao', 'drenado',
-    'entorpecido', 'desorientado', 'ofuscado', 'exposto', 'envelhecido', 'congelamento',
-    'inflamado', 'eletrocutado', 'sobrecarregado', 'agarrado', 'ancorado', 'opaco']);
+const ADVERSAS = new Set(['queimando', 'sangrando', 'erosao', 'corrompido', 'amedrontado', 'atordoado',
+    'cego', 'surdo', 'preso', 'prostrado', 'lento', 'abalado', 'exaustao', 'drenado', 'entorpecido',
+    'ofuscado', 'exposto', 'congelamento', 'sobrecarregado', 'envenenado', 'peconha', 'acuado',
+    'enlouquecendo', 'ferido', 'grave', 'beira da morte', 'morrendo', 'trauma', 'fome', 'sede', 'provocado']);
 
 /* ===================== ativação ===================== */
 
@@ -78,12 +77,12 @@ export function ativacaoDoCircuito(nos) {
  *   Escripta: perícia + qualidade da tinta − ⌈CT÷20⌉, mínimo 1
  *   Talha:    a mesma conta × 10, mínimo 10
  *   Tatuagem: permanente enquanto a pele for do portador
- * Sem o Domínio do ofício grava-se rascunho: usos travados em 1.
+ * Sem a porta (perícia Runomancia) grava-se rascunho: usos travados em 1.
  */
-export function usosDaRuna({ ramo, ct, pericia = 0, qualidadeTinta = 0, temDominio = true }) {
+export function usosDaRuna({ ramo, ct, pericia = 0, qualidadeTinta = 0, temPorta = true }) {
     const r = norm(ramo);
-    if (r === 'tatuagem') return { usos: null, permanente: true, rascunho: !temDominio };
-    if (!temDominio) return { usos: 1, permanente: false, rascunho: true };
+    if (r === 'tatuagem') return { usos: null, permanente: true, rascunho: !temPorta };
+    if (!temPorta) return { usos: 1, permanente: false, rascunho: true };
     const base = Math.max(1, Number(pericia || 0) + Number(qualidadeTinta || 0) - Math.ceil(Number(ct || 0) / 20));
     if (r === 'talha') return { usos: Math.max(10, base * 10), permanente: false, rascunho: false };
     return { usos: base, permanente: false, rascunho: false };
@@ -97,11 +96,10 @@ export function usosDaRuna({ ramo, ct, pericia = 0, qualidadeTinta = 0, temDomin
  * @param nodes         [{ id, elementId, nivel }] — o desenho
  * @param elementsById  catálogo de system/data/runicElements
  * @param opts.runomancia   perícia de quem gravou
- * @param opts.tetoOficio   Teto de Ofício: Runomancia (corta a perícia)
  * @param opts.ct           CT da auditoria
  * @param opts.ramo         escripta | talha | tatuagem
  * @param opts.pericia      perícia do ramo, para os usos
- * @param opts.qualidadeTinta / opts.temDominio
+ * @param opts.qualidadeTinta / opts.temPorta
  * @param opts.condicoesEscolhidas  nomes marcados no Impressor
  * @param opts.manifestacao chave escolhida quando há Manifestador
  *
@@ -213,8 +211,7 @@ export function blocoDeCombate({ nodes, elementsById, ...opts } = {}) {
     }
 
     /* ---- Alvo da Runa ---- */
-    const per = Math.min(Number(opts.runomancia || 0),
-        opts.tetoOficio != null ? Number(opts.tetoOficio) : Number(opts.runomancia || 0));
+    const per = Number(opts.runomancia || 0);
     const alvo = (artus && aspectus) ? nvArtus + nvAsp + nvEmissor + per : 0;
 
     /* ---- pedágios do Aspectus ---- */
@@ -245,7 +242,7 @@ export function blocoDeCombate({ nodes, elementsById, ...opts } = {}) {
         manifestacao: opts.manifestacao || null,
         ativacao,
         ...usosDaRuna({ ramo: opts.ramo, ct: opts.ct, pericia: opts.pericia,
-                        qualidadeTinta: opts.qualidadeTinta, temDominio: opts.temDominio }),
+                        qualidadeTinta: opts.qualidadeTinta, temPorta: opts.temPorta }),
         nucleo: {
             artus: artus?.el?.nome || null, nvArtus,
             aspectus: asp?.nome || null, nvAspectus: nvAsp,

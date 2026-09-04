@@ -931,8 +931,8 @@ function _applyMechanicModifiers(key, value, bonuses, limits, baseExtra = 0) {
 
     // Teto sobre a parcela de PEÇAS (tipoLimite 'maximo_itens'). O bag geral
     // acima já somou tudo; aqui devolvemos só o excesso que veio de item, para
-    // que peculiaridade e condição continuem passando inteiras. Ver Domínio de
-    // proteção: sem o treino, o que o aço rende para no atributo.
+    // que peculiaridade e condição continuem passando inteiras: sem o treino,
+    // o que o aço rende para no atributo.
     const capItens = bonuses[`ITEMCAP:${bonusKey}`];
     if (capItens !== undefined) {
         const dasPecas = bonuses[`ITEM:${bonusKey}`] || 0;

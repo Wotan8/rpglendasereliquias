@@ -497,3 +497,13 @@ img, svg, video, canvas { max-width: 100%; }
         margin-right: auto;
     }
 }
+
+/* 🎓 Redutor do Domínio no chip de Valor Derivado (cap. 12 §12.2).
+   O Alvo mostrado JÁ É o reduzido; a conta ao lado é o rastro de como chegou. */
+.cm-dv-formula {
+    font-size: .82em;
+    opacity: .6;
+    margin-right: .35em;
+    white-space: nowrap;
+}
+.cm-dv-reduzido .cm-dv-value { color: var(--danger, #c0392b); font-weight: 600; }

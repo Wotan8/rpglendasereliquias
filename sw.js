@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v392';
+const VERSION = 'v393';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -67,7 +67,6 @@ const PRECACHE_URLS = [
   '/ficha-v1.7_1/js/derived-values.js',
   '/ficha-v1.7_1/js/detail-modal.js',
   '/ficha-v1.7_1/js/drag-drop.js',
-  '/ficha-v1.7_1/js/equipment.js',
   '/ficha-v1.7_1/js/exp-upgrade.js',
   '/ficha-v1.7_1/js/poder-ficha.js',
   '/ficha-v1.7_1/js/firebase.js',
@@ -150,7 +149,6 @@ const PRECACHE_URLS = [
   '/painel-mestre/js/npc-inventario.js',
   '/painel-mestre/js/npc-poder.js',
   '/painel-mestre/js/npc-system-data.js',
-  '/painel-mestre/js/repertorio.js',
   '/painel-mestre/js/state.js',
   '/painel-mestre/js/ui-utils.js',
   '/painel-mestre/painel-mestre.html',
@@ -192,6 +190,9 @@ const PRECACHE_URLS = [
   '/shared/campo-imagem.js',
   '/shared/combate-cenas.js',
   '/shared/poder.js',
+  '/shared/inventario-motor.css',
+  '/worldbuilding/css/wb-ferramentas.css',
+  '/worldbuilding/css/worldbuilding.css',
   '/shared/regras-padrao.js',
   '/shared/campos-cadastro.js',
   '/shared/dominio-redutor.js',

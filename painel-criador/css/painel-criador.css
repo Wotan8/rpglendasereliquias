@@ -375,7 +375,7 @@ body {
    Aqui a mesma classe é uma lista VERTICAL na barra lateral, então os eixos
    precisam ser trocados de volta — sem isso o shared corta a lista na altura
    da janela e as últimas abas ficam inalcançáveis (não havia como abrir
-   Manobras, Magias ou Elementos Rúnicos). A rolagem é desta lista, não da
+   as últimas abas). A rolagem é desta lista, não da
    barra, para o botão de recolher nunca sair da tela. */
 .sidebar .tabs {
     flex: 1 1 auto;
@@ -1482,7 +1482,6 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     --fonte-item: #4A32A0;
     --fonte-condicao: #A82C39;
     --fonte-booleana: #0F766E;
-    --fonte-manobra: #382678;
     --fonte-magia: #0E7490;
     --fonte-individual: #C2410C;
     --fonte-generica: #4A5462;

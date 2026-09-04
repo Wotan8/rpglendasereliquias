@@ -255,7 +255,7 @@ const _KNOWN_ATTRS = new Set(['FOR', 'DES', 'VIG', 'INT', 'RAC', 'PRS', 'PRE', '
  * Reconhece:
  *   - Atributos: FOR, DES, INT, etc.
  *   - "X ou Y" → "X|Y" (escolha do maior)
- *   - Nomes de perícias/especializações (qualquer token não-genérico)
+ *   - Nomes de perícias (qualquer token não-genérico)
  *   - Referências DOM: @id
  * Ignora tokens genéricos como Equip., B.Arma, Ferramenta, etc.
  * @param {string} formula - ex: "FOR ou DES + Arma + Equip."
@@ -1047,7 +1047,7 @@ function buildAurasFromFirebase() {
 /**
  * Resolve o nome da propriedade vinculada ao dotKey correspondente.
  * @param {string} propName - Nome ou key da propriedade (e.g., 'FOR', 'Agilidade')
- * @param {string} propTipo - 'atributo', 'pericia', ou 'especializacao'
+ * @param {string} propTipo - 'atributo' ou 'pericia'
  * @returns {string|null} dotKey
  */
 function _resolveAuraPropToDotKey(propName, propTipo) {

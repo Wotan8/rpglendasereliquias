@@ -4,19 +4,19 @@
 
 const ATRIBUTOS = {
     Mental: [
-        { id: "INT", key: "attr_int", nome: "Inteligência", tooltip: "Representa a sabedoria, memória e conhecimento acumulado. Governa perícias mentais como Erudição, Medicina e Investigação." },
+        { id: "INT", key: "attr_int", nome: "Inteligência", tooltip: "Representa a sabedoria, memória e conhecimento acumulado. Governa perícias mentais como Erudição, Anatomia e Investigação." },
         { id: "RAC", key: "attr_rac", nome: "Raciocínio", tooltip: "Velocidade de pensamento, percepção e capacidade de reagir mentalmente. Governa perícias como Alquimancia e Runomancia." },
         { id: "PRS", key: "attr_prs", nome: "Perseverança", tooltip: "Força de vontade prolongada, resistência mental e foco sob pressão. Governa Fluxomancia e Abismo." }
     ],
     Fisico: [
         { id: "FOR", key: "attr_for", nome: "Força", tooltip: "Potência muscular, capacidade de carga e poder de dano corpo-a-corpo." },
-        { id: "DES", key: "attr_des", nome: "Destreza", tooltip: "Agilidade, coordenação motora e precisão de movimentos. Governa Agilidade, Furtividade e Disparo." },
+        { id: "DES", key: "attr_des", nome: "Destreza", tooltip: "Agilidade, coordenação motora e precisão de movimentos. Governa Acrobacia, Furtividade e Disparo." },
         { id: "VIG", key: "attr_vig", nome: "Vigor", tooltip: "Resistência física, saúde e capacidade de suportar dano. Contribui para Vitalidade Máxima." }
     ],
     Social: [
         { id: "PRE", key: "attr_pre", nome: "Presença", tooltip: "Magnetismo pessoal, capacidade de impressionar e intimidar. Governa Liderança, Performance e Intimidação." },
         { id: "MAN", key: "attr_man", nome: "Manipulação", tooltip: "Habilidade de influenciar, persuadir e enganar outros. Governa Barganha, Diplomacia e Sedução." },
-        { id: "AUT", key: "attr_aut", nome: "Autocontrole", tooltip: "Domínio sobre as próprias emoções e calma sob pressão. Governa Empatia e Observação." }
+        { id: "AUT", key: "attr_aut", nome: "Autocontrole", tooltip: "Domínio sobre as próprias emoções e calma sob pressão. Governa Empatia e Percepção." }
     ]
 };
 

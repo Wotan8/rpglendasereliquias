@@ -23,7 +23,7 @@
 </style>
 <header>
   <h1>🎭 HUD do token — barras e condições</h1>
-  <div>Esquerda: 3 vitais + Harmonia 3/7 + Bolha 8/8. Direita: condição repetida em duas fontes.</div>
+  <div>Esquerda: 3 vitais + Harmonia 3/7 + Carga 8/8. Direita: condição repetida em duas fontes.</div>
 </header>
 <canvas id="cv" width="520" height="260"></canvas>
 <div id="saida">rodando…</div>
@@ -138,7 +138,7 @@ const token = (pos, s) => {
 const vitais = { hp: 12, hpMax: 20, ener: 4, enerMax: 6, san: 80, sanMax: 100 };
 const vds = [
     { key: 'HARMONIA', nome: 'Harmonia', icone: '🎵', campoAtual: true, atual: 3, valor: 7, prefixo: '', sufixo: '' },
-    { key: 'BOLHA_DE_SANGUE', nome: 'Bolha de Sangue', icone: '🩸', campoAtual: true, atual: 8, valor: 8, prefixo: '', sufixo: '' },
+    { key: 'CARGA_DE_SANGUE', nome: 'Carga de Sangue', icone: '🩸', campoAtual: true, atual: 8, valor: 8, prefixo: '', sufixo: '' },
     { key: 'BLINDAGEM', nome: 'Blindagem', icone: '🛡️', campoAtual: false, atual: null, valor: 3, prefixo: '', sufixo: '' },
 ];
 
@@ -158,7 +158,7 @@ diz(med.length === 5, `pilha com ${med.length} barras: 3 vitais + 2 recursos de 
 diz(med[3].cur === 3 && med[3].max === 7, 'Harmonia entrou como barra 3/7, não como texto');
 diz(med[3].icone === '🎵' && med[4].icone === '🩸', 'cada barra de VD leva o ícone dela');
 diz(corDoVd('HARMONIA') === corDoVd('HARMONIA'), 'a cor de um VD é estável entre sessões');
-diz(corDoVd('HARMONIA') !== corDoVd('BOLHA_DE_SANGUE'), 'dois VDs diferentes não saem da mesma cor');
+diz(corDoVd('HARMONIA') !== corDoVd('CARGA_DE_SANGUE'), 'dois VDs diferentes não saem da mesma cor');
 diz(!vds.filter(d => d.campoAtual && d.atual != null).length !== true, 'Blindagem (sem atual/máx) fica na linha de texto');
 
 document.getElementById('saida').innerHTML = linhas.join('\n');

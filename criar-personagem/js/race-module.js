@@ -251,21 +251,6 @@ function openClassModal(className, event) {
         html += `</div></div>`;
     }
 
-    // Manobras/Técnicas
-    if (cls.manobras?.length) {
-        const maneuverData = (cls.manobras || []).map(mId => {
-            return window._systemData.maneuvers?.find(m => m.id === mId);
-        }).filter(Boolean);
-        if (maneuverData.length) {
-            html += `<div class="detail-section"><div class="detail-section-title">💥 Manobras / Técnicas</div><div class="detail-fields-grid">`;
-            for (const man of maneuverData) {
-                const rotulo = man.custo ? `${man.nome} · ${man.custo}` : man.nome;
-                html += `<div class="detail-field"><span class="detail-field-label">${escHtml(rotulo)}</span><span class="detail-field-value">${escHtml(man.efeito || '—')}</span></div>`;
-            }
-            html += `</div></div>`;
-        }
-    }
-
     // 📦 Módulos da Classe — o que o jogador vai poder cadastrar na ficha.
     // Entradas podem ser ID (novo formato) ou objeto inline (legado).
     const modulos = (cls.modulosDaClasse || []).map(entry =>

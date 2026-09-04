@@ -25,7 +25,7 @@ function prop(nome, { escopo = 'w1', items = [], catalog = [] } = {}) {
     return sandbox.resultado;
 }
 
-const TPL_FLECHA = { id: 'tplFlecha', nome: 'Flecha de Guerra', liga: '3', qualidade: '2', afiacao: 2 };
+const TPL_FLECHA = { id: 'tplFlecha', nome: 'Flecha de Guerra', qualidade: '2', afiacao: 2 };
 const arco = { id: 'w1', nome: 'Arco Longo', projetilId: 'p1' };
 const flecha = { id: 'p1', nome: 'Flecha de Guerra', modeloId: 'tplFlecha', quantidade: 20 };
 

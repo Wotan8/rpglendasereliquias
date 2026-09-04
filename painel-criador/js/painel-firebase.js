@@ -544,31 +544,6 @@ const MODULE_DEFS = {
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas (definem a fórmula)', type: 'mechanic_selector', fontePreFilter: '' },
         ]
     },
-    spells: {
-        name: 'Magia', namePlural: 'Magias', icon: '🔮',
-        collection: 'system/data/spells',
-        fields: [
-            { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Nome da magia' },
-            {
-                key: 'escola', label: 'Escola Mágica', type: 'select', required: true, options: [
-                    { value: 'pallomancia', label: 'Pallomancia' }, { value: 'necromancia', label: 'Necromancia' },
-                    { value: 'runomancia', label: 'Runomancia' }, { value: 'sonoromancia', label: 'Sonoromancia' },
-                    { value: 'hemomancia', label: 'Hemomancia' }, { value: 'geomancia', label: 'Geomancia' },
-                    { value: 'cronomancia', label: 'Cronomancia' }, { value: 'piromancia', label: 'Piromancia' },
-                    { value: 'hidromancia', label: 'Hidromancia' }, { value: 'aeromancia', label: 'Aeromancia' },
-                    { value: 'outra', label: 'Outra' }
-                ]
-            },
-            { key: 'nivel', label: 'Nível', type: 'number', required: true, placeholder: '1' },
-            { key: 'custo', label: 'Custo', type: 'text', required: true, placeholder: 'Ex: 1 ENER + Devoção' },
-            { key: 'tempo', label: 'Tempo de Conjuração', type: 'text', required: true, placeholder: 'Ex: 1 ação' },
-            { key: 'alcance', label: 'Alcance', type: 'text', required: true, placeholder: 'Ex: Toque, 9m' },
-            { key: 'duracao', label: 'Duração', type: 'text', required: true, placeholder: 'Ex: Instantâneo, 1 cena' },
-            { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
-            { key: 'mecanicaIds', label: 'Mecânicas', type: 'mechanic_selector', fontePreFilter: 'magia' },
-            { key: 'classeRequerida', label: 'Classe Requerida', type: 'text', placeholder: 'Ex: Pallacerdote' },
-        ]
-    },
     auras: {
         name: 'Aura', namePlural: 'Auras', icon: '🌟',
         collection: 'system/data/auras',
@@ -744,11 +719,6 @@ const MODULE_FILTERS = {
     ],
     knowledge: [
         { key: 'modo', label: 'Liberação', icon: '🔐', type: 'static' },
-    ],
-    spells: [
-        { key: 'escola', label: 'Escola', icon: '🔮', type: 'static' },
-        { key: 'nivel', label: 'Nível', icon: '🔢', type: 'auto' },
-        { key: 'classeRequerida', label: 'Classe', icon: '⚔️', type: 'auto' },
     ],
     runicElements: [
         { key: 'tipoElemento', label: 'Família', icon: 'ᛟ', type: 'static' },
@@ -1841,7 +1811,6 @@ function _buildCardMetaChips(item) {
         case 'classes':
             add(item.usaRunomancia ? 'ᛟ Runomancia' : '', 'chip-accent');
             if (pecCount) add(`✨ ${pecCount} pecul.`);
-            if (Array.isArray(item.manobras) && item.manobras.length) add(`💥 ${item.manobras.length} manobras`);
             if (Array.isArray(item.modulosDaClasse) && item.modulosDaClasse.length) add(`📦 ${item.modulosDaClasse.length} módulos`);
             break;
         case 'tribes':
@@ -1910,12 +1879,6 @@ function _buildCardMetaChips(item) {
             add(item.chaveInterna ? `🔑 ${escapeHtml(item.chaveInterna)}` : '', 'chip-accent');
             if (item.ordem != null) add(`#${escapeHtml(item.ordem)}`);
             if (mechCount) add(`🔧 ${mechCount}`);
-            break;
-        case 'spells':
-            add(item.escola ? `🔮 ${escapeHtml(item.escola)}` : '', 'chip-accent');
-            if (item.nivel != null) add(`Nv ${escapeHtml(item.nivel)}`);
-            add(item.custo ? `⚡ ${escapeHtml(item.custo)}` : '');
-            add(item.alcance ? `📏 ${escapeHtml(item.alcance)}` : '');
             break;
         case 'auras':
             add(item.tipo === 'mortalidade' ? '💀 Mortalidade' : '📊 Propriedade', 'chip-accent');

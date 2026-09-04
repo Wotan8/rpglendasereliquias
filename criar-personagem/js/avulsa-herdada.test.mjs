@@ -1,7 +1,7 @@
 // node criar-personagem/js/avulsa-herdada.test.mjs
 // Peculiaridade que a Raça/Classe/Tribo já concede não pode ficar também como
 // avulsa: na ficha ela aplicaria as mecânicas duas vezes (o Guerreiro com
-// "Domínio de Armas de Braço" e o Teto de Ofício somando [FOR] em dobro).
+// "Mestre em Armas" e o Teto de Arma somando [FOR] em dobro).
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';

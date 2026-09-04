@@ -538,7 +538,7 @@ const ATRIBUTOS_SIGLA = {
     PRE: 'pre', PRESENCA: 'pre', MAN: 'man', MANIPULACAO: 'man', AUT: 'aut', AUTOCONTROLE: 'aut',
 };
 // Siglas legadas do espelho do NPC (valoresDer)
-const VD_ALIAS_NPC = { PERCEPCAO: 'PERC', INICIATIVA: 'INI', DEFESA: 'REA', BLINDAGEM: 'BLD', VITALIDADE: 'VIT', ENERGIA: 'ENER', SANIDADE: 'SAN', DETERMINACAO: 'DET' };
+const VD_ALIAS_NPC = { PERCEPCAO: 'PERC', INICIATIVA: 'INI', BLINDAGEM: 'BLD', VITALIDADE: 'VIT', ENERGIA: 'ENER', SANIDADE: 'SAN' };
 
 /**
  * Valor de UM componente de teste na ficha. Ordem: VD → atributo → perícia.

@@ -230,7 +230,7 @@ export const ehReliquia = (i, tpl) => ehReliquiaSolta(i) || ehReliquiaSolta(tpl)
 
 /** Qualidade que a peça de fato entrega: Q + Aura − 1 se Danificada, nunca negativa. */
 export function qualidadeEfetiva(item, tpl) {
-    const q = Number(item?.qualidade ?? tpl?.qualidade ?? item?.fio ?? tpl?.fio) || 0;
+    const q = Number(item?.qualidade ?? tpl?.qualidade) || 0;
     const aura = Number(item?.aura ?? tpl?.aura) || 0;
     return Math.max(0, q + aura - (item?.danificada ? 1 : 0));
 }

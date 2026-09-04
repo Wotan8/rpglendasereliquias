@@ -62,7 +62,7 @@ assert.equal(degrauDoTitulo('Custo 1 — Abertura'), 1);
 assert.equal(degrauDoTitulo('Custo 5 — Opus Magnum'), 5);
 assert.equal(degrauDoTitulo('Manobras de Guerreiro'), 0);
 assert.equal(recursoDoModulo({ retornoRecurso: 'Harmonia' }), 'Harmonia');
-assert.equal(recursoDoModulo({ custoRecurso: 'Graça', retornoRecurso: 'Harmonia' }), 'Graça',
+assert.equal(recursoDoModulo({ custoRecurso: 'Carga de Sangue', retornoRecurso: 'Harmonia' }), 'Carga de Sangue',
     'custoRecurso explícito vence o recurso de retorno');
 
 /* ===== a habilidade inteira ===== */
@@ -94,7 +94,7 @@ assert.deepEqual(cBardo5[0].partes, [{ alvo: 'Harmonia', qtd: 5 }], 'o degrau 5 
 // SANGRAL/GUERREIRO — duas mecânicas de custo = duas formas de pagar
 const mecs = {
     m_ener: { tipo: 'modificar', nome: '−2 Energia', alvo: 'Energia', qtd: 2 },
-    m_bolha: { tipo: 'modificar', nome: '−1 Bolha de Sangue', alvo: 'Bolha de Sangue', qtd: 1 },
+    m_bolha: { tipo: 'modificar', nome: '−1 Carga de Sangue', alvo: 'Carga de Sangue', qtd: 1 },
 };
 const cDuas = custosDaSkill({
     modulo: {
@@ -109,7 +109,7 @@ const cDuas = custosDaSkill({
 });
 assert.equal(cDuas.length, 2, 'dois botões de custo = duas formas de pagar');
 assert.equal(cDuas[0].rotulo, '−2 Energia');
-assert.equal(cDuas[1].partes[0].alvo, 'Bolha de Sangue');
+assert.equal(cDuas[1].partes[0].alvo, 'Carga de Sangue');
 
 // A instância na ficha vence o pré-definido (o Mestre trocou a moeda daquela cópia)
 const cInstancia = custosDaSkill({
@@ -117,7 +117,7 @@ const cInstancia = custosDaSkill({
     predef: { valores: { a: 'm_ener' } }, item: { a: 'm_bolha' },
     mechPorId: (id) => mecs[id], custoDaMecanica: leitorMec,
 });
-assert.equal(cInstancia[0].partes[0].alvo, 'Bolha de Sangue');
+assert.equal(cInstancia[0].partes[0].alvo, 'Carga de Sangue');
 
 // A mecânica manda: existindo botão de custo, o campo de texto não é lido
 const cPrioridade = custosDaSkill({

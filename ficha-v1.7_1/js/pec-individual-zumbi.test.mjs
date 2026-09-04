@@ -32,9 +32,9 @@ ctx._resolvePeculiaridade = p => ({ id: typeof p === 'object' ? p.id : p, mecani
 
 const render = vm.runInContext('renderIndividualPeculiaridades', ctx);
 
-// "Domínio de Armas de Braço": herdada da classe, catálogo diz fonte 'individual'.
+// "Mestre em Armas": herdada da classe, catálogo diz fonte 'individual'.
 // A classe já rendeu a pill e deixou o dot para trás.
-ctx._systemData = { peculiarities: [{ id: 'dom1', nome: 'Domínio de Armas de Braço', fonte: 'individual' }] };
+ctx._systemData = { peculiarities: [{ id: 'dom1', nome: 'Mestre em Armas', fonte: 'individual' }] };
 ctx.state.dots = { pec_dom1: 1 };
 ctx.state.peculiaridadesIndividuais = [];
 

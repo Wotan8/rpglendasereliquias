@@ -94,7 +94,7 @@
         "node_modules",
         ".git",
         "*firebase-adminsdk*.json",
-        "__*.mjs",
+        "*.mjs",
         "_backup-*.json",
         "avulsos-imagens",
         "*.md"
