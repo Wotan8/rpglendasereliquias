@@ -375,6 +375,23 @@ t('T11b · o Portal do iframe subiu com a versão atual dos módulos', prontoIfr
             cx(d.querySelector('.portal-marca')).width > 100);
         t('T39 · os atalhos de cargo mudam para a faixa de navegação, que rola',
             d.querySelector('.portal-atalhos').parentElement === abas);
+
+        /* T39b é o teste que faltava, e que teria pego o defeito: o desenho
+           dos atalhos vinha de `.portal-topo .toolbar .portal-cargo`, e no
+           celular o grupo SAI da toolbar. O seletor deixava de casar no exato
+           momento da mudança, e os quatro viravam caixa crua do navegador.
+           Estar na faixa certa não basta: tem de continuar desenhado lá. */
+        {
+            const atalho = d.querySelector('#tabBar .portal-atalhos .portal-cargo');
+            const e = atalho && w.getComputedStyle(atalho);
+            t('T39b · e continuam DESENHADOS depois de mudar de faixa',
+                !!e && parseFloat(e.borderRadius) > 0
+                    && Math.round(parseFloat(e.width)) === Math.round(parseFloat(e.height)));
+            t('T39c · sem a moldura crua do navegador',
+                !!e && e.borderTopColor !== 'rgb(0, 0, 0)' && e.backgroundColor === 'rgba(0, 0, 0, 0)');
+            t('T39d · e do mesmo tamanho que tinham na barra da conta',
+                !!e && Math.round(parseFloat(e.width)) >= 32);
+        }
         const ult2 = [...conta.children].filter(e => e.offsetParent).pop();
         t(`T40 · e a faixa da conta cabe em 375px (termina em ${Math.round(cx(ult2).right)})`,
             cx(ult2).right <= 376);

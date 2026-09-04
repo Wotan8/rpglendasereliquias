@@ -93,9 +93,45 @@ export async function ativarPush(app, db, uid) {
         localStorage.setItem(CHAVE_LOCAL, token);
         return { ok: true, motivo: 'Este aparelho vai receber os avisos.' };
     } catch (e) {
+        /* O código do erro VAI para a tela. A primeira versão dizia só "não deu
+           para registrar este aparelho", e isso não diz nada a ninguém: o
+           `messaging/token-subscribe-failed` (o serviço de push recusou) e o
+           `messaging/permission-blocked` pedem coisas opostas de quem lê. */
         console.warn('push indisponível:', e);
-        return { ok: false, motivo: 'Não deu para registrar este aparelho.' };
+        const codigo = e?.code || e?.name || '';
+        return {
+            ok: false,
+            motivo: 'Não deu para registrar este aparelho' + (codigo ? ` (${codigo})` : '') + '.',
+            codigo,
+        };
     }
+}
+
+/**
+ * O que roda sozinho a cada login.
+ *
+ * O jogador aceitou UMA vez, no celular dele. Daí em diante todo login novo
+ * (sessão expirada, outro dia, app reinstalado) precisa registrar o token de
+ * novo — o token é do APARELHO, e some quando o site perde os dados locais.
+ * Sem isto, ele aceitava uma vez e os avisos calavam sozinhos depois.
+ *
+ * Com permissão já concedida, NÃO há janela nenhuma: só pega o token e grava.
+ * Sem permissão ainda, pergunta UMA vez por aparelho e nunca mais — site que
+ * repete o pedido de notificação a cada visita é site que a pessoa bloqueia.
+ */
+const CHAVE_JA_PERGUNTOU = 'lr_push_perguntado';
+
+export async function garantirPush(app, db, uid) {
+    const estado = await estadoPush();
+    if (estado === 'ligado') return { ok: true, motivo: 'já registrado' };
+    if (estado !== 'desligado') return { ok: false, motivo: estado };
+
+    // `desligado` cobre dois casos bem diferentes.
+    if (Notification.permission !== 'granted') {
+        if (localStorage.getItem(CHAVE_JA_PERGUNTOU)) return { ok: false, motivo: 'já perguntamos uma vez' };
+        localStorage.setItem(CHAVE_JA_PERGUNTOU, '1');
+    }
+    return ativarPush(app, db, uid);
 }
 
 /**

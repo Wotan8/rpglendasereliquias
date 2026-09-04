@@ -23,7 +23,7 @@ import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/
 import { somarApoiosDoJogador, somarMetaTotais, progressoDasEtapas, proximaEtapa, valorApoio, parseMetaIds, resolveMetaId } from '../../shared/apoios-calc.js';
 import { ehMesmaLinha, usosRestantes } from '../../shared/repertorio-linha.js?v=2';
 import { confirmar, toast } from '../../shared/dialogo.js?v=2';
-import { estadoPush, ativarPush, desativarPush } from '../../shared/push.js?v=2';
+import { estadoPush, ativarPush, desativarPush, garantirPush } from '../../shared/push.js?v=3';
 
 import { ligarAppCheck } from '../../shared/app-check.js?v=2';
 // ===== CONFIG =====
@@ -145,6 +145,16 @@ onAuthStateChanged(auth, async (user) => {
         // loadNotifications acabou de resolver o userDocRef; daqui em diante
         // o doc do usuário é observado e a página se atualiza sozinha.
         iniciarTempoReal();
+
+        /* Avisos no aparelho, sem depender de o jogador lembrar do botão.
+           O token do FCM é do APARELHO e some quando o site perde os dados
+           locais — quem aceitou uma vez precisava reaceitar sem saber por quê,
+           e no meio tempo os avisos calavam. Com permissão já concedida isto
+           não abre janela nenhuma: só regrava o token.
+           Sem `await`: entrar na conta não espera por push. */
+        garantirPush(app, db, user.uid)
+            .then(() => pintarBotaoPush())
+            .catch(e => console.warn('push automático:', e));
 
         // Check for mestre or criador role and show respective buttons
         try {

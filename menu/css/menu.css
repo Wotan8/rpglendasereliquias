@@ -1386,6 +1386,14 @@ body {
         min-width: 40px;
     }
 
+    /* Pelo mesmo motivo do comentário em `.portal-cargo`: no celular ele sai
+       da `.toolbar` e vai para a faixa de abas. O dedo não encolhe junto. */
+    .portal-topo .toolbar .portal-cargo,
+    .portal-topo .portal-atalhos .portal-cargo {
+        width: 40px;
+        height: 40px;
+    }
+
     .modal-close-btn {
         width: 40px;
         height: 40px;
@@ -2297,9 +2305,31 @@ html:not(.dark) .meta-card {
 /* Botões de cargo: fantasmas de verdade. Com borda, quatro deles viravam uma
    fileira de caixas vazias ao lado da marca — a moldura pesava mais que o
    ícone. A moldura só aparece sob o ponteiro. */
-.portal-topo .toolbar .portal-cargo {
+/* A âncora é o CABEÇALHO, e não `.portal-topo .toolbar .portal-cargo`.
+   No celular o `atalhosNoLugar()` MOVE este grupo para dentro da faixa de abas
+   — e um seletor preso ao ancestral deixa de casar no exato momento em que o
+   elemento muda de casa. Era isso que fazia os atalhos de Mestre, Criador e
+   Worldbuilding virarem caixas cruas do navegador no celular: perdiam o
+   desenho E o alvo de toque de 40px (que vinha de `.toolbar button`) na
+   mesma mudança.
+
+   `.portal-cargo` sozinho não resolve, e `.portal-topo .portal-cargo` também
+   não: `html.dark .toolbar button` pesa (0,2,2) e devolve a moldura branca e
+   o fundo cinza. Precisa de três classes.
+
+   Duas âncoras, e não uma: `.portal-atalhos` viaja junto com os quatro botões
+   de cargo (é o grupo que o JS move), e `.toolbar` cobre a Roleta, que tem a
+   mesma classe mas NUNCA sai da barra da conta. Uma só deixaria uma das duas
+   sem desenho. */
+.portal-topo .toolbar .portal-cargo,
+.portal-topo .portal-atalhos .portal-cargo {
+    /* `place-items` sozinho não basta: dentro da faixa de abas outra regra
+       ganha o `display`, e em flex o `justify-items` é ignorado. As duas
+       linhas abaixo centram o ícone em grid E em flex. */
     display: inline-grid;
     place-items: center;
+    justify-content: center;
+    align-items: center;
     width: 32px;
     height: 32px;
     padding: 0;
@@ -2312,13 +2342,16 @@ html:not(.dark) .meta-card {
 }
 
 .portal-topo .toolbar .portal-cargo:hover,
-.portal-topo .toolbar .portal-cargo:focus-visible {
+.portal-topo .toolbar .portal-cargo:focus-visible,
+.portal-topo .portal-atalhos .portal-cargo:hover,
+.portal-topo .portal-atalhos .portal-cargo:focus-visible {
     border-color: var(--lr-gold);
     color: var(--lr-gold-2);
     background: var(--lr-surface-2);
 }
 
-.portal-topo .toolbar .portal-cargo .lr-ico { width: 17px; height: 17px; }
+.portal-topo .toolbar .portal-cargo .lr-ico,
+.portal-topo .portal-atalhos .portal-cargo .lr-ico { width: 17px; height: 17px; }
 
 .portal-topo .toolbar .portal-sair:hover {
     border-color: var(--lr-blood-2);
@@ -3263,6 +3296,10 @@ html:not(.dark) .meta-card {
         margin-left: auto;
         padding-left: var(--lr-space-3);
         border-left: var(--lr-border-w) solid var(--lr-border-soft);
+        /* Alinhado com as abas, e sem deixar a última colada na borda que rola. */
+        align-self: stretch;
+        align-items: center;
+        padding-right: var(--lr-space-1);
     }
 
     /* A marca é a última: encolhe a fonte e, no pior caso, corta com reticências
