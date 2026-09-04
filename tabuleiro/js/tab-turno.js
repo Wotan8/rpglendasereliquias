@@ -2138,6 +2138,7 @@ window.tbTurnoConfirmarMira = async () => {
             nome: meta.nome || 'ação', icone, efeito: meta.efeito || '', custoAcao: custo,
             dano: meta.golpe?.dano || '', tipos: meta.golpe?.tipos || [],
             arcano: meta.golpe?.arcano || null, essencia: meta.golpe?.essencia || null,
+            distancia: !!meta.golpe?.distancia, magia: !!meta.golpe?.magia,
             alvoAcerto: meta.golpe?.acerto ?? null,
             acertoNome: meta.golpe?.acertoNome || '', acertoIcone: meta.golpe?.acertoIcone || '',
             condicao: meta.condicao || null,

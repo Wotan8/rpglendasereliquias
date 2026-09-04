@@ -27,7 +27,8 @@ import { setDoc, db as _db, doc as _doc, updateDoc as _upd, deleteDoc as _del, g
 import { T, esc, toast, uid, normChave, valorComponente, gridSize, pxParaUnidades, registrarFlutuante, trazerParaFrente } from './tab-state.js';
 import { golpesDe, golpesCacheados, escolherGolpe, golpesCorpoACorpo, alcanceDoGolpe } from './tab-golpes.js';
 import { refCombate } from './tab-main.js';
-import { cenaAtiva, comCenaAtivaPatch, efeitoDasCondicoes, porqueCondicao } from '../../shared/combate-cenas.js';
+import { cenaAtiva, comCenaAtivaPatch, efeitoDasCondicoes, porqueCondicao, condDoParticipante } from '../../shared/combate-cenas.js';
+import { REGRAS_PADRAO } from '../../shared/regras-padrao.js?v=1';
 import { bonusDoAtaque } from '../../shared/marca-de-caca.js';
 import { ritualProibeDefesa } from '../../shared/turno-efeitos.js?v=1';
 import { destinoDoProjetil, gastarUm } from '../../shared/projeteis.js';
@@ -36,7 +37,7 @@ import { participanteDoToken, valorVdDaFonte, fonteDoParticipante, VITAIS } from
 import { aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { logChat } from './tab-chat.js';
 import { confirmar } from '../../shared/dialogo.js?v=2';
-import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal, absorverResolve, ajusteDeTamanho,
+import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal, ajusteDeTamanho,
          defesasLivres, custoDaDefesa, soODado,
          precisaRolarDano,
          podeContraAtacar as regraContraAtaque } from './tab-conflito-calc.js';
@@ -45,6 +46,11 @@ const DADO_DESARMADO = '1d4';   // §6.8: contra-ataque sem arma
 
 let el = null;
 let _sys = null;              // registro do sistema (VDs) — 1 carga por sessão
+let _fwin = null;             // tab-ficha-win, para ler o inventário já carregado
+
+/** As regras de combate do cadastro (config/regras), com o padrão por baixo. */
+const regrasCombate = () => window.REGRAS?.combate || REGRAS_PADRAO.combate;
+const regrasTeste = () => window.REGRAS?.teste || REGRAS_PADRAO.teste;
 const _emVoo = new Set();     // conflitos com aplicação em curso neste cliente
 
 export function initConflito() {
@@ -95,45 +101,102 @@ function enerDe(pid) {
 async function carregarSys() {
     if (_sys) return _sys;
     const m = await import('./tab-ficha-win.js?v=14');
+    _fwin = m;
     _sys = await m.registroSistema();
     render();
     return _sys;
 }
 
-/** As 8 Defesas do bloco "defesa" do registro (Esquiva, Aparar, ...). */
+/** Itens do participante já consultados pelos golpes (vazio até a primeira consulta). */
+function itensDe(p) {
+    if (!p || !_fwin?.itensCarregados) return [];
+    return _fwin.itensCarregados(p.npcId ? 'npc' : 'char', p.npcId || p.characterId) || [];
+}
+const emUso = (i) => i.equipado && i.estadoEquip !== 'armazenado' && !i.parentItemId;
+const categoriaDe = (i) => i.categoriaArma ?? (_sys?.equipment || []).find(t => t.id === i.modeloId)?.categoriaArma ?? '';
+/** Escudo em uso: é o que abre o Bloquear, a 2ª defesa grátis e o Proteger (Livro, p. 5). */
+function temEscudo(p) { return itensDe(p).some(i => emUso(i) && categoriaDe(i) === 'escudo'); }
+/** Arma corpo a corpo na mão: é o que abre o Aparar. Sem golpes carregados, não bloqueia. */
+function temArmaNaMao(p) {
+    const linhas = golpesCacheados(p);
+    if (linhas === null) return true;
+    return linhas.some(l => !l.desarmado && !l.distancia && !l.magia);
+}
+/** Corpo livre: é o que abre a Esquiva. Agarrado/Preso não esquiva. */
+function corpoLivre(p) {
+    return !(p?.condicoes || []).some(c => /^(agarrad[oa]|pres[oa])$/i.test(condDoParticipante(c).nome));
+}
+
+/** As três Defesas do bloco "defesa" do registro (Esquiva, Aparar, Bloquear). */
 function defesasDoSistema() {
     return (_sys?.derivedValues || []).filter(d => d.blocoId === 'defesa');
 }
 
-/** Defesas COM valor para esta ficha: [{ nome, curto, valor }]. */
-function defesasDe(pid) {
+/**
+ * Defesas COM valor para esta ficha E que valem contra este golpe: [{ nome, curto, valor }].
+ * Livro, p. 5: Esquiva pede corpo livre e vale contra tudo; Aparar pede arma na
+ * mão e só vale corpo a corpo; Bloquear pede escudo e não vale contra magia.
+ */
+function defesasDe(pid, acao = null) {
     // 🕯️ Ritual que proíbe defesa (Invocação Abissal): quem está no meio do
     // rito não interrompe para se defender. Nenhuma Defesa fica disponível —
     // é o preço da Invocação, e o número zero na tela é a regra à mostra.
     if (ritualProibeDefesa(part(pid))) return [];
     const fonte = fonteDoParticipante(part(pid));
     if (!fonte) return [];
+    const p = part(pid);
+    const magico = !!(acao?.magia || acao?.essencia);
     const out = [];
     for (const dv of defesasDoSistema()) {
         const v = valorVdDaFonte(fonte, dv);
         if (v == null) continue;
-        out.push({ nome: dv.nome, curto: String(dv.nome).replace(/^Defesa:?\s*/i, ''), icone: dv.icone || '🛡️', valor: Math.max(0, Number(v) || 0) });
+        const curto = String(dv.nome).replace(/^Defesa:?\s*/i, '');
+        if (acao) {
+            if (/esquiva/i.test(curto) && !corpoLivre(p)) continue;
+            if (/aparar/i.test(curto) && (acao.distancia || magico || !temArmaNaMao(p))) continue;
+            if (/bloquear/i.test(curto) && (magico || !temEscudo(p))) continue;
+        }
+        out.push({ nome: dv.nome, curto, icone: dv.icone || '🛡️', valor: Math.max(0, Number(v) || 0) });
     }
     return out;
 }
 
 /**
- * Orçamento de defesas da RODADA: grátis = Reflexo − 1 (mínimo 1); acabou,
- * cada defesa custa 1 Energia. O contador zera sozinho na virada da rodada
- * (fica marcado com a rodada em que foi gasto, igual ao turno guardado).
+ * 🛡️ Proteger (trunfo do Bloquear): quem tem escudo e está ao lado bloqueia por
+ * um aliado; se o golpe passar, o dano é do protetor. Candidatos: outro
+ * participante com escudo a até `evadirMetros` do alvo.
  */
-function orcamentoDefesa(pid) {
+function protetoresDe(c, a) {
+    if (!a?.pid || !a.tokenId || c?.acao?.magia || c?.acao?.essencia) return [];
+    const raio = Number(regrasCombate().evadirMetros) || 2;
+    const out = [];
+    for (const p2 of (cena()?.participantes || [])) {
+        if (p2.id === a.pid || !temEscudo(p2)) continue;
+        const tok = [...(T.objects?.values?.() || [])].find(o => participanteDoToken(o)?.id === p2.id);
+        if (!tok) continue;
+        const d = distanciaEntreTokens(tok.id, a.tokenId);
+        if (d == null || d > raio + 1e-6) continue;
+        const bloq = defesasDe(p2.id).find(x => /bloquear/i.test(x.curto));
+        if (!bloq) continue;
+        out.push({ pid: p2.id, nome: p2.name || '?', valor: bloq.valor });
+    }
+    return out;
+}
+
+/**
+ * Orçamento de defesas da RODADA (Livro, p. 5): a primeira é grátis; com escudo,
+ * a segunda também, se for Bloquear; acabou, cada defesa custa Energia. O
+ * contador zera sozinho na virada da rodada (fica marcado com a rodada em que
+ * foi gasto, igual ao turno guardado).
+ * @param ehBloquear  a defesa que está sendo declarada é Bloquear
+ */
+function orcamentoDefesa(pid, ehBloquear = false) {
     const p = part(pid);
-    const reflexo = valorComponente('Reflexo', fonteDoParticipante(p)) ?? 0;
-    const livres = defesasLivres(reflexo);
+    const R = regrasCombate();
+    const livres = defesasLivres({ gratis: R.defesasGratis, comEscudo: ehBloquear && temEscudo(p), extraEscudo: R.defesaExtraComEscudo });
     const rodada = cena()?.rodada || 1;
     const usadas = (p?.defesas?.rodada === rodada) ? (p.defesas.usadas || 0) : 0;
-    return { livres, usadas, restam: Math.max(0, livres - usadas), custo: custoDaDefesa(usadas, livres), reflexo };
+    return { livres, usadas, restam: Math.max(0, livres - usadas), custo: custoDaDefesa(usadas, livres, R.custoDefesaExtra) };
 }
 
 /** Participantes com +1 defesa gasta por `pid` nesta rodada. */
@@ -194,6 +257,8 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
             tipos: acao.tipos || [], custoAcao: acao.custoAcao || 'padrao',
             // 🔮 Parcela arcana da arma e Essência da magia (Livro, p. 5–6).
             arcano: acao.arcano || null, essencia: acao.essencia || null,
+            // De longe ou de perto, físico ou magia: é o que decide quais Defesas valem.
+            distancia: !!acao.distancia, magia: !!acao.magia,
             alvoAcerto: acao.alvoAcerto ?? null, efeito: acao.efeito || '',
             // De QUE Valor Derivado saiu o Alvo. Sem isto a janela dizia só
             // "Acerto", que não corresponde a VD nenhum da ficha do arqueiro —
@@ -249,7 +314,7 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
             return {
                 tokenId: o.id, pid: p?.id || null, nome: o.nome || p?.name || '?',
                 defesaNome: null, defesa: 0, escolhido: false, defesaPaga: false,
-                passou: null, bruto: null, blindagem: 0, dano: null, meia: false,
+                passou: null, bruto: null, blindagem: 0, dano: null, protetorPid: null, evadir: 0,
             };
         }),
     };
@@ -327,7 +392,7 @@ window.tbConfRolarAcerto = async (naMesa) => {
     } else {
         dado = 1 + Math.floor(Math.random() * 10);
     }
-    const graus = grausDoAtaque(alvo, dado);
+    const graus = grausDoAtaque(alvo, dado, regrasTeste().criticoGrausExtra);
     const rolagem = { dado, alvo, graus, critico: dado === 1, falha: dado === 10, abriu: abriuGuarda(graus, dado), naMesa: !!naMesa };
     // 10 no dado nunca passa: os alvos não gastam defesa nenhuma com isso
     const erroSeco = dado === 10;
@@ -426,28 +491,30 @@ async function resolverProjetil(c, acertou) {
 }
 
 // ---------- 2) defesa ----------
-window.tbConfDefesa = async (i, valor, nome) => {
+window.tbConfDefesa = async (i, valor, nome, protetorPid) => {
     if (valor === '' || valor == null) return;   // voltou ao "— escolha —": não decide nada
     const c = conflito(); if (!c || c.fase !== 'defesa') return;
     const a = c.alvos[i]; if (!a || a.escolhido || !controla(a.pid)) return;
     const semDefesa = String(nome || '') === 'sem defesa';
-    const orc = a.pid ? orcamentoDefesa(a.pid) : { custo: 0 };
+    // 🛡️ Proteger: quem paga a defesa (e o dano, se passar) é o protetor.
+    const protetor = protetorPid ? part(protetorPid) : null;
+    const quemDefende = protetor ? protetor.id : a.pid;
+    const ehBloquear = /bloquear|proteger/i.test(nome || '');
+    const orc = quemDefende ? orcamentoDefesa(quemDefende, ehBloquear) : { custo: 0 };
     const paga = !semDefesa && orc.custo > 0;
     if (paga) {
-        const ener = enerDe(a.pid);
-        if (ener != null && ener < 1) { toast(`⚠️ ${a.nome} não tem Energia para outra defesa nesta rodada`, 'warning'); return; }
+        const ener = enerDe(quemDefende);
+        if (ener != null && ener < orc.custo) { toast(`⚠️ ${protetor?.name || a.nome} não tem Energia para outra defesa nesta rodada`, 'warning'); return; }
     }
-    const ehAbsorver = /absorver/i.test(nome || '');
     const segurou = golpePassa(c.rolagem.graus, Number(valor) || 0, c.rolagem.dado);
-    // 🪨 O Absorver não é binário como as outras Defesas: quem recebe o golpe
-    // no corpo SEMPRE leva alguma coisa. Segurou → metade. Falhou → inteiro.
-    const abs = ehAbsorver ? absorverResolve(segurou, !!c.rolagem?.critico) : null;
+    // 👣 Evadir (trunfo da Esquiva): segurou o golpe, desloca-se de graça.
+    const evadir = !segurou && /esquiva/i.test(nome || '') ? (Number(regrasCombate().evadirMetros) || 0) : 0;
     const alvos = c.alvos.map((x, k) => k !== i ? x : {
         ...x, escolhido: true, defesaNome: semDefesa ? 'sem defesa' : (nome || '—'),
-        defesa: Number(valor) || 0, defesaPaga: paga,
-        absorveu: ehAbsorver,
-        meia: abs ? abs.meia : false,
-        passou: abs ? abs.entra : segurou,
+        defesa: Number(valor) || 0, defesaPaga: paga, custoPago: paga ? orc.custo : 0,
+        protetorPid: protetor ? protetor.id : null, protetorNome: protetor ? (protetor.name || '?') : null,
+        evadir,
+        passou: segurou,
     });
     const todos = alvos.every(x => x.escolhido);
     // Só rola dano quem tem em QUEM causar. Sem fórmula, ou com todo mundo
@@ -455,7 +522,7 @@ window.tbConfDefesa = async (i, valor, nome) => {
     // pedir um 1d12+4 que não vai a lugar nenhum.
     const proxima = !todos ? 'defesa' : (precisaRolarDano(c.acao.dano, alvos) ? 'dano' : 'aplicar');
     // defesa declarada consome o orçamento da rodada (a de graça e a paga)
-    await salvar({ ...c, alvos, fase: proxima }, semDefesa ? null : comDefesaGasta(a.pid));
+    await salvar({ ...c, alvos, fase: proxima }, semDefesa ? null : comDefesaGasta(quemDefende));
 };
 
 // ---------- 3) dano ----------
@@ -473,19 +540,19 @@ window.tbConfRolarDano = async (naMesa) => {
     }
     const alvos = c.alvos.map(a => {
         if (!a.passou) return { ...a, bruto: 0, dano: 0 };
+        // 🛡️ Proteger: o golpe que passou pelo escudo é do protetor — Blindagem dele, Vitalidade dele.
+        const quem = a.protetorPid || a.pid;
         // Dano de Essência (magia, runa) ignora a Blindagem comum: só a Arcana barra.
-        const bl = blindagemDe(a.pid, c.acao.tipos, !!c.acao.essencia);
+        const bl = blindagemDe(quem, c.acao.tipos, !!c.acao.essencia);
         // 🔮 A Afiação arcana da arma é parcela à parte, barrada só pela Arcana.
-        const arc = c.acao.arcano?.valor ? Math.max(0, Number(c.acao.arcano.valor) - blindagemDe(a.pid, [], true)) : 0;
+        const arc = c.acao.arcano?.valor ? Math.max(0, Number(c.acao.arcano.valor) - blindagemDe(quem, [], true)) : 0;
         // 🎯 só a linha da presa leva a marca — o dano é por alvo
         // 📏 Peso entra no braço, não no tiro: só corpo a corpo. O mesmo número
         // que torna o ogro fácil de acertar o faz machucar mais quando acerta.
         const tam = (!c.acao.distancia && c.tamanho) ? (c.tamanho.porPid?.[a.pid]?.danoCaC || 0) : 0;
         const bruto = Math.max(0, total + (Number(c.marca?.danoPorPid?.[a.pid]) || 0) + tam);
-        // ✨ Crítico atravessa o Absorver — a metade não vale contra dado 1.
-        const critico = !!c.rolagem?.critico;
-        return { ...a, bruto, blindagem: bl, blindagemArcana: !!c.acao.essencia, arcano: arc, tamanhoDano: tam, criticoPassou: critico && !!a.meia,
-            dano: danoFinal(bruto, bl, a.meia, critico) + arc };
+        return { ...a, bruto, blindagem: bl, blindagemArcana: !!c.acao.essencia, arcano: arc, tamanhoDano: tam,
+            dano: danoFinal(bruto, bl) + arc };
     });
     const marcados = alvos.filter(a => Number(c.marca?.danoPorPid?.[a.pid]) > 0);
     const bonusDano = marcados.length ? Number(c.marca.danoPorPid[marcados[0].pid]) : 0;
@@ -504,7 +571,6 @@ function contaDoDano(a) {
     const partes = [String(a.bruto ?? 0)];
     if (a.blindagem) partes.push(`− ${a.blindagem} ${a.blindagemArcana ? 'blind. arcana' : 'blind'}`);
     if (a.arcano) partes.push(`+ ${a.arcano} 🔮`);
-    if (a.meia) partes.push('÷2 🪨');
     return partes.join(' ') + ' =';
 }
 
@@ -527,7 +593,7 @@ function distanciaEntreTokens(idA, idB) {
 function podeContra(c, a, linhas) {
     if (!a?.pid) return { ok: false, motivo: 'está fora da cena', linhas: [] };
     const p = part(a.pid);
-    const pericia = valorComponente('Contra-Ataque', fonteDoParticipante(p)) ?? 0;
+    const pericia = valorComponente('Aparar', fonteDoParticipante(p)) ?? 0;
     // o alcance de cada golpe já sai resolvido (arma + 5% do Tamanho)
     const golpes = golpesCorpoACorpo(linhas).map(l => ({ ...l, alcanceM: alcanceDoGolpe(l, p) ?? 0 }));
     const r = regraContraAtaque({
@@ -549,7 +615,7 @@ window.tbConfContra = async (i) => {
     if (!pode.ok) { toast(`⚠️ ${a.nome} não pode contra-atacar: ${pode.motivo}`, 'warning'); return; }
     const escolhido = await escolherGolpe(
         `🔁 Com o que ${esc(a.nome)} contra-ataca?`, pode.linhas,
-        'Só o DADO da arma entra (§6.8): sem o seu Dano e sem os bônus da peça. Custa 1 Energia e uma defesa da rodada.');
+        'Trunfo do Aparar (Livro, p. 5): dado da arma + Aparar − Blindagem. Custa 1 Energia e uma defesa da rodada.');
     if (!escolhido && pode.linhas.length > 1) return;   // cancelou
     const linha = escolhido || pode.linhas[0];
     // §6.8: o contra-ataque usa o DADO cru da arma; sem dado, o desarmado 1d4
@@ -574,10 +640,10 @@ window.tbConfRolarContra = async (k, naMesa) => {
         const r = rolarFormula(ct.formula);
         dadoTotal = r.total; detalhe = r.detalhe;
     }
-    // Dano = dado da arma + Contra-Ataque − Blindagem do agressor (piso 1)
+    // Dano = dado da arma + Aparar − Blindagem do agressor (piso 1)
     const bl = blindagemDe(c.atacante.pid, []);
     const bruto = dadoTotal + (Number(ct.pericia) || 0);
-    const contra = (c.contra || []).map((x, j) => j !== k ? x : { ...x, bruto, blindagem: bl, dano: danoFinal(bruto, bl, false), detalhe });
+    const contra = (c.contra || []).map((x, j) => j !== k ? x : { ...x, bruto, blindagem: bl, dano: danoFinal(bruto, bl), detalhe });
     await salvar({ ...c, contra });
 };
 
@@ -607,8 +673,8 @@ async function aplicar(c) {
         const alvos = c.alvos.map(a => ({ ...a }));
         for (const a of alvos) {
             if (!a.pid) continue;
-            if (a.passou && a.dano > 0 && !a.aplicado) { await window.tbCombStat?.(a.pid, 'VIT', -a.dano); a.aplicado = true; }
-            if (a.defesaPaga && !a.enerPaga) { await window.tbCombStat?.(a.pid, 'ENER', -1); a.enerPaga = true; }
+            if (a.passou && a.dano > 0 && !a.aplicado) { await window.tbCombStat?.(a.protetorPid || a.pid, 'VIT', -a.dano); a.aplicado = true; }
+            if (a.defesaPaga && !a.enerPaga) { await window.tbCombStat?.(a.protetorPid || a.pid, 'ENER', -(a.custoPago || 1)); a.enerPaga = true; }
         }
         let condAplicada = !!c.condAplicada;
         // Lista nova quando existe; senão a condição única do formato antigo.
@@ -636,13 +702,13 @@ async function aplicar(c) {
             if (c.atacante.pid && ct.dano > 0) await window.tbCombStat?.(c.atacante.pid, 'VIT', -ct.dano);
             ct.aplicado = true;
             logChat(`🔁 Contra-ataque de ${ct.nome} em ${c.atacante.nome}: ${ct.detalhe || ct.formula}`
-                + `${ct.pericia ? ` + ${ct.pericia} (Contra-Ataque)` : ''}${ct.blindagem ? ` − ${ct.blindagem} (blindagem)` : ''} = −${ct.dano} VIT · 1 Energia`);
+                + `${ct.pericia ? ` + ${ct.pericia} (Aparar)` : ''}${ct.blindagem ? ` − ${ct.blindagem} (blindagem)` : ''} = −${ct.dano} VIT · 1 Energia`);
         }
         if (c.fase === 'aplicar') {
             const linha = alvos.map(a => a.passou
-                ? `${a.nome}: −${a.dano} VIT${a.blindagem ? ` (${a.blindagemArcana ? 'blind. arcana' : 'blindagem'} ${a.blindagem})` : ''}${a.arcano ? ` +${a.arcano} 🔮` : ''}${a.criticoPassou ? ' ✨ crítico atravessou o Absorver' : a.meia ? ' 🪨 absorvido, não letal' : ''}`
+                ? `${a.nome}: −${a.dano} VIT${a.blindagem ? ` (${a.blindagemArcana ? 'blind. arcana' : 'blindagem'} ${a.blindagem})` : ''}${a.arcano ? ` +${a.arcano} 🔮` : ''}${a.protetorPid ? ` · 🛡️ ${esc(a.protetorNome || 'protetor')} levou por ${esc(a.nome)}` : ''}`
                 : c.rolagem?.falha ? `${a.nome}: o golpe passou longe`
-                : `${a.nome}: defendeu com ${a.defesaNome || '—'}${a.defesa ? ` (${a.defesa})` : ''}${a.defesaPaga ? ' · 1 Energia' : ''}`).join(' · ');
+                : `${a.nome}: defendeu com ${a.defesaNome || '—'}${a.defesa ? ` (${a.defesa})` : ''}${a.defesaPaga ? ` · ${a.custoPago || 1} Energia` : ''}${a.evadir ? ` · 👣 Evadir: até ${a.evadir} m de graça` : ''}`).join(' · ');
             logChat(`⚔️ ${c.acao.nome} → ${linha || 'sem alvos'}`);
             const foraDaCena = alvos.filter(a => a.passou && !a.pid).map(a => a.nome);
             if (foraDaCena.length) toast(`⚠️ Fora da cena (sem participante): ${foraDaCena.join(', ')} — aplique na mão`, 'warning');
@@ -690,8 +756,8 @@ function render() {
         <span class="tb-turno-hint">Sem rolagem: só uma Defesa declarada pode barrar.</span>
         </div>` : r ? `<div class="tb-conflito-rolagem ${r.critico ? 'crit' : r.falha ? 'falha' : ''}">
         🎲 d10 <b>${r.dado}</b>${r.naMesa ? ' <i>(mesa)</i>' : ''} vs Alvo ${r.alvo} → <b>${r.graus > 0 ? '+' : ''}${r.graus} Graus</b>
-        ${r.critico ? ' ✨ crítico (passa por qualquer Defesa, dado cheio no dano)' : ''}
-        ${r.falha ? ' 💀 falha crítica (erro automático)' : ''}
+        ${r.critico ? ` ✨ crítico (Graus = Alvo + ${regrasTeste().criticoGrausExtra}, dado cheio no dano)` : ''}
+        ${r.falha ? ' 💀 desastre (erro automático)' : ''}
         ${!r.critico && !r.falha && r.abriu ? ' 🔁 guarda aberta — cabe contra-ataque' : ''}
     </div>` : '';
 
@@ -752,27 +818,31 @@ function linhaAlvo(c, a, i) {
     const orc = a.pid ? orcamentoDefesa(a.pid) : null;
     let dir;
     if (!a.escolhido) {
-        const defs = a.pid ? defesasDe(a.pid) : [];
+        // as linhas de golpe dizem se há arma na mão (Aparar); carrega uma vez
+        if (a.pid && meu && golpesCacheados(part(a.pid)) === null) golpesDe(part(a.pid)).then(render).catch(() => {});
+        const defs = a.pid ? defesasDe(a.pid, c.acao) : [];
+        const prots = a.pid && meu ? protetoresDe(c, a) : [];
         const custo = orc?.custo || 0;
         // acabaram as grátis e não há Energia: só resta encaixar o golpe
         const semEner = custo > 0 && (enerDe(a.pid) ?? 1) < 1;
         dir = meu
-            ? `<select class="tb-conflito-def" onchange="tbConfDefesa(${i}, this.selectedOptions[0].dataset.v, this.selectedOptions[0].dataset.n)">
+            ? `<select class="tb-conflito-def" onchange="tbConfDefesa(${i}, this.selectedOptions[0].dataset.v, this.selectedOptions[0].dataset.n, this.selectedOptions[0].dataset.p || null)">
                     <option value="" data-v="" data-n="">— escolha a defesa —</option>
                     <option value="0" data-v="0" data-n="sem defesa">🚫 Não defender (0)</option>
                     ${defs.map(d => `<option value="${d.valor}" data-v="${d.valor}" data-n="${esc(d.curto)}" ${semEner ? 'disabled' : ''}>${d.icone} ${esc(d.curto)} — ${d.valor}${custo ? ' · 1 ENER' : ''}</option>`).join('')}
-               </select>${defs.length ? '' : '<span class="tb-muted"> sem Defesa na ficha</span>'}`
+                    ${prots.map(pr => `<option value=\"${pr.valor}\" data-v=\"${pr.valor}\" data-n=\"Proteger: ${esc(pr.nome)}\" data-p=\"${esc(pr.pid)}\">🛡️ ${esc(pr.nome)} protege — Bloquear ${pr.valor}</option>`).join('')}
+               </select>${defs.length || prots.length ? '' : '<span class="tb-muted"> nenhuma Defesa vale contra este golpe</span>'}`
               + (semEner ? '<span class="tb-muted"> sem Energia para outra defesa nesta rodada</span>' : '')
             : '<span class="tb-muted">⏳ escolhendo a defesa…</span>';
     } else if (a.passou) {
         dir = `<b class="tb-conflito-hit">☠️ passou</b> ${a.defesaNome && a.defesaNome !== '—' ? `<span class="tb-muted">(${esc(a.defesaNome)} ${a.defesa}${a.defesaPaga ? ' · 1 ENER' : ''})</span>` : ''}`
             // 🧮 A conta INTEIRA à vista, e o que entra na Vitalidade em destaque.
             // A mesa conferia "−9 VIT" sem saber de onde saíram os 9.
-            + (a.dano != null ? ` <span class="tb-muted">${contaDoDano(a)}</span> <b class="tb-conflito-vit">−${a.dano} VIT</b>${a.criticoPassou ? ' <span class="tb-muted">✨ crítico atravessou o Absorver</span>' : a.meia ? ' <span class="tb-muted">🪨 absorvido</span>' : ''}` : '');
+            + (a.dano != null ? ` <span class="tb-muted">${contaDoDano(a)}</span> <b class="tb-conflito-vit">−${a.dano} VIT</b>` : '');
     } else if (c.rolagem?.falha) {
         dir = '<b class="tb-conflito-miss">💀 passou longe</b>';
     } else {
-        dir = `<b class="tb-conflito-miss">🛡️ defendeu</b> <span class="tb-muted">(${esc(a.defesaNome || '—')}${a.defesa ? ' ' + a.defesa : ''}${a.defesaPaga ? ' · 1 ENER' : ''})</span>`;
+        dir = `<b class="tb-conflito-miss">🛡️ defendeu</b> <span class="tb-muted">(${esc(a.defesaNome || '—')}${a.defesa ? ' ' + a.defesa : ''}${a.defesaPaga ? ` · ${a.custoPago || 1} ENER` : ''})${a.evadir ? ` · 👣 Evadir ${a.evadir} m` : ''}</span>`;
     }
     // 🔁 guarda aberta: quem foi atacado pode contra-atacar (§6.8). As travas
     // (perícia, alcance corpo a corpo, Energia) já aparecem no próprio botão.
@@ -793,7 +863,7 @@ function linhaAlvo(c, a, i) {
         }
     }
     const orcTxt = orc && (meu || souMestre())
-        ? ` <span class="tb-conflito-orc" title="Defesas grátis por rodada = Reflexo − 1 (mínimo 1); as extras custam 1 Energia">🛡️ ${orc.restam}/${orc.livres}${orc.restam ? '' : ' · extra custa 1 ENER'}</span>` : '';
+        ? ` <span class="tb-conflito-orc" title="1 defesa grátis por rodada (2 com escudo, se a segunda for Bloquear); as extras custam Energia">🛡️ ${orc.restam}/${orc.livres}${orc.restam ? '' : ' · extra custa 1 ENER'}</span>` : '';
     return `<div class="tb-conflito-alvo">
         <span class="tb-conflito-nome">🎯 ${esc(a.nome)}${a.pid ? '' : ' <span class="tb-muted">(fora da cena)</span>'}${orcTxt}</span>
         <span class="tb-conflito-dir">${dir}${btnContra}</span>

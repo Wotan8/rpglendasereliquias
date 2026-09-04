@@ -1,16 +1,17 @@
 /**
- * Conta do conflito (combate v3). Roda com:
+ * Conta do conflito (Núcleo v2, Livro p. 5). Roda com:
  *   node tabuleiro/js/tab-conflito-calc.test.mjs
  */
 import assert from 'node:assert/strict';
-import { absorverResolve, ajusteDeTamanho, TAMANHO_POR_PONTO, TAMANHO_TETO } from './tab-conflito-calc.js';
+import { ajusteDeTamanho, TAMANHO_POR_PONTO, TAMANHO_TETO, penalidadeDuasArmas } from './tab-conflito-calc.js';
 import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal,
          defesasLivres, custoDaDefesa, soODado, podeContraAtacar,
          precisaRolarDano } from './tab-conflito-calc.js';
 
 // --- Graus ---
 assert.equal(grausDoAtaque(7, 4), 3, 'Alvo 7, dado 4 → 3 Graus');
-assert.equal(grausDoAtaque(7, 1), 7, 'crítico: Graus máximos = Alvo');
+assert.equal(grausDoAtaque(7, 1), 9, 'crítico: Graus = Alvo + 2');
+assert.equal(grausDoAtaque(7, 1, 3), 10, 'o extra do crítico vem de config/regras');
 assert.equal(grausDoAtaque(7, 10), -3, 'falha crítica: Alvo − 10');
 assert.equal(grausDoAtaque(12, 10), -1, 'Alvo alto no 10 ainda é falha (teto −1)');
 
@@ -18,7 +19,8 @@ assert.equal(grausDoAtaque(12, 10), -1, 'Alvo alto no 10 ainda é falha (teto �
 assert.equal(golpePassa(3, 2, 4), true, '3 Graus contra Aparar 2: passa');
 assert.equal(golpePassa(1, 2, 6), false, '1 Grau contra Aparar 2: aparou');
 assert.equal(golpePassa(2, 2, 5), true, 'empate passa (iguais OU maiores)');
-assert.equal(golpePassa(-1, 9, 1), true, 'crítico passa por qualquer Defesa');
+assert.equal(golpePassa(9, 9, 1), true, 'crítico com Graus 9 passa uma Defesa 9');
+assert.equal(golpePassa(9, 10, 1), false, '🔒 mas uma Defesa MAIOR ainda segura o crítico (Livro, p. 5)');
 assert.equal(golpePassa(99, 0, 10), false, '10 nunca passa');
 assert.equal(golpePassa(1, 0, 5), true, 'sem defesa declarada, qualquer sucesso passa');
 
@@ -39,22 +41,10 @@ assert.equal(rolarFormula('').total, 0, 'sem fórmula, sem dano');
 assert.equal(rolarFormula('1d4', { rng: fixo(1) }).total, 1, 'mínimo do dado');
 assert.equal(rolarFormula('1d6-10', { rng: fixo(2) }).total, 0, 'dano nunca fica negativo');
 
-// --- Blindagem, Absorver e o piso 1 ---
-assert.equal(danoFinal(9, 2, false), 7, 'dano menos Blindagem');
-assert.equal(danoFinal(3, 5, false), 1, 'Blindagem maior que o dano ainda machuca 1');
-assert.equal(danoFinal(9, 2, true), 3.5, 'Absorver recebe metade (meio ponto vale)');
-assert.equal(danoFinal(3, 2, true), 1, 'metade de 1 ainda respeita o piso');
-
-// ✨ CRÍTICO ATRAVESSA O ABSORVER: encaixar o golpe no corpo ampara uma
-// estocada comum, não uma perfeita. A Blindagem continua aparando — ela é a
-// peça de armadura, não a postura de quem se defende.
-assert.equal(danoFinal(9, 2, true, true), 7, '🔒 no crítico o Absorver não parte o dano ao meio');
-assert.equal(danoFinal(9, 2, true, false), 3.5, 'sem crítico, Absorver segue valendo metade');
-assert.equal(danoFinal(9, 2, false, true), 7, 'crítico sem Absorver não muda nada');
-assert.equal(danoFinal(9, 0, true, true), 9, 'sem blindagem, o crítico entra inteiro');
-assert.equal(danoFinal(3, 5, true, true), 1, 'o piso de 1 vale até no crítico');
-// chamada antiga (3 argumentos) não pode mudar de comportamento
-assert.equal(danoFinal(9, 2, true), 3.5, 'sem o 4º argumento, Absorver parte como sempre partiu');
+// --- Blindagem e o piso 1 ---
+assert.equal(danoFinal(9, 2), 7, 'dano menos Blindagem');
+assert.equal(danoFinal(3, 5), 1, 'Blindagem maior que o dano ainda machuca 1');
+assert.equal(danoFinal(9, 2, true, true), 7, 'o Absorver saiu: argumento extra não parte nada ao meio');
 
 // --- Rolar dano só quando há em quem cair ---
 // O machado errou e a janela mesmo assim pedia "💥 Rolar 1d12+4". Dado que não
@@ -68,14 +58,22 @@ assert.equal(precisaRolarDano('  ', [levou]), false, 'fórmula em branco também
 assert.equal(precisaRolarDano('1d6', []), false, 'sem alvo nenhum não rola');
 assert.equal(precisaRolarDano('1d6', null), false, 'lista ausente não explode');
 
-// --- Orçamento de defesas da rodada (§6.2) ---
-assert.equal(defesasLivres(4), 3, 'Reflexo 4 → 3 defesas grátis');
-assert.equal(defesasLivres(1), 1, 'Reflexo 1 → o mínimo de 1');
-assert.equal(defesasLivres(0), 1, 'sem Reflexo ainda sobra 1 defesa');
-assert.equal(custoDaDefesa(0, 3), 0, 'primeira defesa é grátis');
-assert.equal(custoDaDefesa(2, 3), 0, 'a última grátis ainda é grátis');
-assert.equal(custoDaDefesa(3, 3), 1, 'acabaram as grátis: 1 Energia');
-assert.equal(custoDaDefesa(9, 1), 1, 'sempre 1 Energia por defesa extra');
+// --- Orçamento de defesas da rodada (Livro, p. 5) ---
+assert.equal(defesasLivres(), 1, 'a primeira defesa da rodada é grátis');
+assert.equal(defesasLivres({ comEscudo: true }), 2, 'com escudo, a segunda também (se for Bloquear)');
+assert.equal(defesasLivres({ gratis: 2, comEscudo: true, extraEscudo: 1 }), 3, 'os números vêm do cadastro');
+assert.equal(defesasLivres({ gratis: 0 }), 1, 'nunca menos de uma');
+assert.equal(custoDaDefesa(0, 1), 0, 'primeira defesa é grátis');
+assert.equal(custoDaDefesa(1, 2), 0, 'a última grátis ainda é grátis');
+assert.equal(custoDaDefesa(1, 1), 1, 'acabaram as grátis: 1 Energia');
+assert.equal(custoDaDefesa(9, 1, 2), 2, 'o custo da extra também é do cadastro');
+
+// --- Duas armas (Livro, p. 5) ---
+assert.equal(penalidadeDuasArmas(0), -3, 'sem o Dom: −3');
+assert.equal(penalidadeDuasArmas(1), -2, 'Ambidestria 1 tira 1');
+assert.equal(penalidadeDuasArmas(3), 0, 'Ambidestria 3 zera');
+assert.equal(penalidadeDuasArmas(5), 0, 'nunca vira bônus');
+assert.equal(penalidadeDuasArmas(1, -4), -3, 'a base vem de config/regras');
 
 // --- Dado cru da arma (contra-ataque não soma bônus) ---
 assert.equal(soODado('1d8+3'), '1d8', 'o +3 fica de fora do contra-ataque');
@@ -89,8 +87,8 @@ const arco   = { nome: 'Arco',   alcanceM: 30,  distancia: true };
 const base = { pericia: 2, energia: 5, jaContraAtacou: false, distanciaM: 1.5, golpes: [espada] };
 
 assert.equal(podeContraAtacar(base).ok, true, 'perícia, energia e alcance: pode');
-assert.equal(podeContraAtacar({ ...base, pericia: 0 }).ok, false, 'sem a perícia não contra-ataca');
-assert.match(podeContraAtacar({ ...base, pericia: 0 }).motivo, /Contra-Ataque/, 'o motivo diz qual é a trava');
+assert.equal(podeContraAtacar({ ...base, pericia: 0 }).ok, false, 'sem Aparar não contra-ataca');
+assert.match(podeContraAtacar({ ...base, pericia: 0 }).motivo, /Aparar/, 'o motivo diz qual é a trava: é o trunfo do Aparar');
 assert.equal(podeContraAtacar({ ...base, pericia: 1 }).ok, true, 'nível 1 já basta');
 assert.equal(podeContraAtacar({ ...base, energia: 0 }).ok, false, 'sem Energia não contra-ataca');
 assert.equal(podeContraAtacar({ ...base, energia: null }).ok, true, 'Energia desconhecida não bloqueia');
@@ -106,7 +104,7 @@ assert.equal(podeContraAtacar({ ...base, golpes: [] }).ok, false, 'sem golpe fí
 assert.equal(podeContraAtacar({ ...base, distanciaM: null }).ok, false, 'sem distância medida não libera');
 
 // o motivo CURTO é o que aparece na tela ao lado do botão apagado
-assert.equal(podeContraAtacar({ ...base, pericia: 0 }).curto, 'sem a perícia');
+assert.equal(podeContraAtacar({ ...base, pericia: 0 }).curto, 'sem Aparar');
 assert.equal(podeContraAtacar({ ...base, energia: 0 }).curto, 'sem Energia');
 assert.equal(podeContraAtacar({ ...base, jaContraAtacou: true }).curto, 'já contra-atacou');
 assert.equal(podeContraAtacar({ ...base, distanciaM: 4 }).curto, 'fora de alcance (4 m)',
@@ -142,21 +140,6 @@ assert.match(podeContraAtacar({ ...base, distanciaM: 4 }).motivo, /maior alcance
     assert.equal(podeContraAtacar({ ...colado, distanciaM: 30, golpes: [punho, espada] }).ok, false,
         'magia de longe não abre guarda nenhuma: ninguém alcança o conjurador');
 }
-
-/* ===================== 🪨 ABSORVER: o contrato invertido =====================
-   Toda outra Defesa é binária: segurou, o golpe não entra. O Absorver troca
-   isso — quem recebe no corpo SEMPRE leva alguma coisa, e em troca não depende
-   de sorte para não levar tudo. É a única Defesa que nunca zera e nunca
-   protege inteiro. */
-assert.deepEqual(absorverResolve(false, false), { entra: true, meia: true },
-    '🔒 defesa SEGUROU → metade, não zero');
-assert.deepEqual(absorverResolve(true, false), { entra: true, meia: false },
-    '🔒 defesa FALHOU → dano inteiro, sem a metade de consolação');
-assert.deepEqual(absorverResolve(false, true), { entra: true, meia: false },
-    '✨ crítico atravessa: nem a metade sobra');
-// a conta final continua respeitando o piso e a blindagem
-assert.equal(danoFinal(10, 2, absorverResolve(false, false).meia), 4, 'segurou: (10−2)÷2');
-assert.equal(danoFinal(10, 2, absorverResolve(true, false).meia), 8, 'falhou: 10−2 inteiro');
 
 /* ===================== 📏 TAMANHO =====================
    O VD é o TRIPLO da Altura, então 3 pontos ≈ 1 metro. Alvo maior é mais fácil
@@ -209,4 +192,4 @@ assert.equal(ajusteDeTamanho(HUMANO, HUMANO + 1.1).acerto, 1, 'passou da metade,
 assert.deepEqual(ajusteDeTamanho(null, null), { pontos: 0, acerto: 0, danoCaC: 0 });
 assert.equal(ajusteDeTamanho(undefined, HUMANO).acerto, 3, 'quem não tem Tamanho conta como 0');
 
-console.log('✅ conta do conflito OK — graus, defesa, crítico, blindagem, orçamento, piso e contra-ataque');
+console.log('✅ conta do conflito OK — graus, três defesas, crítico, blindagem, orçamento, duas armas e contra-ataque');

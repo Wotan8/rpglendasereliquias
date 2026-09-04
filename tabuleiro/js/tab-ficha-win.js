@@ -25,6 +25,8 @@ import { VITAIS, dvsVinculadosChar, dvAplicaChar, espelhosDoVitalNpc, atualDoVd 
 import { limparCacheGolpes } from './tab-golpes.js';
 import { addObj } from './tab-objects.js';
 import { redutorDoDominio, nivelDoDominio, podeUsar, redutorDaLinha, chaveDaPericiaPorId } from '../../shared/dominio-redutor.js';
+import { penalidadeDuasArmas } from './tab-conflito-calc.js';
+import { REGRAS_PADRAO } from '../../shared/regras-padrao.js?v=1';
 import { screenToWorld } from './tab-render.js';
 import { pontoVisivelAgora } from './tab-fog.js';
 import { criarFilaDeEscrita } from './tab-write-queue.js';
@@ -1277,6 +1279,11 @@ export async function linhasDeAtaque(tipo, id) {
     } catch (e) { console.warn('itens do turno', e); }
     _itensPorChave.set(`${tipo}:${id}`, itens);
     const win = { tipo, id, itens };
+    // 🤹 Duas armas de uma mão empunhadas (Livro, p. 5): −3 no Alvo dos dois
+    // golpes, −1 a menos por nível do Dom Ambidestria (dots['pec_pec_dom_ambidestria']).
+    const naMao = itens.filter(i => i.equipado && i.estadoEquip === 'empunhado' && !i.parentItemId
+        && (i.tipo ?? tplDoItem(i)?.tipo) === 'Arma' && ['uma_mao', 'versatil'].includes(i.categoriaArma ?? tplDoItem(i)?.categoriaArma));
+    const duasArmas = naMao.length >= 2;
     const linhas = tipo === 'npc'
         ? (() => { const n = dadosNpc(id); return n ? linhasAtaqueNpc(win, n) : []; })()
         : (() => { const ch = dadosChar(id); return ch ? linhasAtaqueChar(win, ch) : []; })();
@@ -1332,6 +1339,11 @@ export async function linhasDeAtaque(tipo, id) {
             l.redutorDominio = redutorDoDominio(l.qualidade, l.dominioNivel);
             l.semDominio = !podeUsar(chavePorta, dots);
             if (l.redutorDominio && l.acerto != null) l.acerto -= l.redutorDominio;
+        }
+        if (tipo !== 'npc' && duasArmas && !l.distancia && l.acerto != null) {
+            const dom = Number(dadosChar(id)?.dots?.['pec_pec_dom_ambidestria']) || 0;
+            l.penalidadeDuasArmas = penalidadeDuasArmas(dom, (window.REGRAS?.combate || REGRAS_PADRAO.combate).duasArmasPenalidade);
+            l.acerto += l.penalidadeDuasArmas;
         }
         // 🏹 Munição que esta arma gasta — vazio quer dizer "não gasta".
         l.tipoProjetil = i?.tipoProjetil?.length ? i.tipoProjetil : (tpl?.tipoProjetil || []);

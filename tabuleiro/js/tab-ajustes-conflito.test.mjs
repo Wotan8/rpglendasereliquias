@@ -1,10 +1,10 @@
 /**
- * 🧩 Os quatro ajustes do conflito: Absorver invertido, condição do
+ * 🧩 Os quatro ajustes do conflito: as três defesas do Núcleo v2, condição do
  * equipamento, a conta do dano à vista e a diferença de tamanho.
  *
  * A lógica pura já está trancada em tab-conflito-calc.test.mjs. O que este
  * arquivo cobra é a FIAÇÃO — cada um dos quatro tem um elo que, se cair, não
- * dá erro nenhum: o Absorver volta a zerar, a flecha envenenada não envenena,
+ * dá erro nenhum: o Absorver volta, a flecha envenenada não envenena,
  * a conta some da tela e o Tamanho não entra no Alvo.
  */
 import assert from 'node:assert/strict';
@@ -16,13 +16,15 @@ const fwin = readFileSync(new URL('./tab-ficha-win.js', import.meta.url), 'utf8'
 const proj = readFileSync(new URL('../../shared/projeteis.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../css/tabuleiro.css', import.meta.url), 'utf8');
 
-/* ===== 1) Absorver ===== */
-assert.match(conf, /const abs = ehAbsorver \? absorverResolve\(segurou, !!c\.rolagem\?\.critico\) : null;/,
-    'a decisão do Absorver sai do módulo puro');
-assert.match(conf, /passou: abs \? abs\.entra : segurou/,
-    '🔒 com Absorver o dano SEMPRE entra — é isso que o torna diferente das outras Defesas');
-assert.match(conf, /meia: abs \? abs\.meia : false/);
-assert.doesNotMatch(conf, /meia: \/absorver\/i\.test/, 'a regra velha (metade só ao falhar) não pode voltar');
+/* ===== 1) as três defesas (Núcleo v2) ===== */
+assert.doesNotMatch(conf, /absorverResolve|ehAbsorver/, 'o Absorver saiu: só Esquiva, Aparar e Bloquear');
+assert.match(conf, /const segurou = golpePassa\(c\.rolagem\.graus, Number\(valor\) \|\| 0, c\.rolagem\.dado\);/,
+    'a decisão da defesa sai do módulo puro');
+assert.match(conf, /const evadir = !segurou && \/esquiva\/i\.test\(nome \|\| ''\)/,
+    '🔒 Evadir é o trunfo da Esquiva: só quando ela segura o golpe');
+assert.match(conf, /const quem = a\.protetorPid \|\| a\.pid;/, '🔒 Proteger: o golpe que passa é do protetor');
+assert.match(conf, /orcamentoDefesa\(quemDefende, ehBloquear\)/, 'a 2ª defesa grátis só com escudo E Bloquear');
+assert.match(conf, /valorComponente\('Aparar', fonteDoParticipante\(p\)\)/, 'o contra-ataque é o trunfo do Aparar');
 
 /* ===== 2) condição do equipamento ===== */
 assert.match(fwin, /l\.condicaoIds = i\?\.condicaoIds\?\.length/, 'a arma carrega o que aplica');
@@ -54,4 +56,4 @@ assert.match(conf, /const tam = \(!c\.acao\.distancia && c\.tamanho\)/,
 assert.match(conf, /Math\.max\(0, total \+ \(Number\(c\.marca\?\.danoPorPid\?\.\[a\.pid\]\) \|\| 0\) \+ tam\)/,
     'e o bruto nunca fica negativo por causa do tamanho');
 
-console.log('✅ os quatro ajustes OK — Absorver entra sempre, a peça marca, a conta aparece e o tamanho pesa');
+console.log('✅ os quatro ajustes OK — três defesas, a peça marca, a conta aparece e o tamanho pesa');

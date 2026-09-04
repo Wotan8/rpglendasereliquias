@@ -1,31 +1,35 @@
 // =============================================
-// TABULEIRO — Conta do CONFLITO (combate v3, Livro §6.1–6.8)
+// TABULEIRO — Conta do CONFLITO (Núcleo v2, Livro de 12 Páginas, p. 5)
 //
 // Módulo puro (nenhum import, nenhum DOM, nenhuma escrita): só a matemática da
 // troca de golpes, para poder ser testada sem Firestore nem canvas.
 //
 //   1. ATAQUE  — o atacante rola 1d10. Graus = Alvo − dado.
-//   2. DEFESA  — o alvo escolhe uma Defesa (número pronto na ficha).
-//                Passa quando Graus >= Defesa.
+//   2. DEFESA  — o alvo escolhe UMA das três Defesas da ficha (Esquiva, Aparar,
+//                Bloquear — o número é o nível da perícia). Passa quando Graus >= Defesa.
 //   3. DANO    — rola a fórmula da arma e subtrai a Blindagem do alvo.
 //
-// Só o atacante rola. 1 no d10 é acerto automático com Graus máximos e DADO
-// CHEIO no dano (1d8 vira 8, sem rolar). 10 é erro automático.
+// Só o atacante rola. 1 no d10 é crítico: Graus = Alvo + 2 e DADO CHEIO no dano
+// (1d8 vira 8, sem rolar) — mas uma Defesa maior que isso ainda segura. 10 é
+// desastre: erro automático.
 // =============================================
 
-/** Graus de Sucesso de um d10 contra o Alvo (mesma régua dos testes da cena). */
-export function grausDoAtaque(alvo, dado) {
-    if (dado === 1) return Math.max(alvo, 0);        // crítico: Graus máximos = Alvo
-    if (dado === 10) return Math.min(alvo - 10, -1); // falha automática
+/**
+ * Graus de Sucesso de um d10 contra o Alvo (mesma régua dos testes da cena).
+ * @param extraCritico  Graus além do Alvo no 1 (config/regras: teste.criticoGrausExtra)
+ */
+export function grausDoAtaque(alvo, dado, extraCritico = 2) {
+    if (dado === 1) return Math.max(alvo, 0) + (Number(extraCritico) || 0);   // crítico: Alvo + 2
+    if (dado === 10) return Math.min(alvo - 10, -1); // desastre
     return alvo - dado;
 }
 
 /**
  * O golpe passa? `defesa` é o número da Defesa declarada (0 = não defendeu).
- * Crítico passa por qualquer Defesa; 10 nunca passa.
+ * O crítico já chega com Graus = Alvo + 2; se a Defesa ainda for maior, não
+ * passa (Livro, p. 5). 10 nunca passa.
  */
 export function golpePassa(graus, defesa, dado) {
-    if (dado === 1) return true;
     if (dado === 10) return false;
     return graus >= (Number(defesa) || 0);
 }
@@ -74,39 +78,14 @@ export function rolarFormula(formula, opts = {}) {
 /**
  * Dano que realmente entra na Vitalidade.
  * PISO 1: golpe que passou sempre machuca — a Blindagem apara, não anula
- * (mesma régua do contra-ataque no §6.8).
- * @param bruto      resultado da fórmula
- * @param blindagem  Blindagem do alvo (do tipo do golpe, quando houver)
- * @param meia       true = Absorver (recebe no corpo: metade, não letal)
- * @param critico    true = 1 no d10 — o Absorver não vale (ver abaixo)
- * @returns número >= 1, com meio ponto preservado (a ficha aceita 21,5)
+ * (mesma régua do contra-ataque).
+ * @param bruto      resultado da fórmula (dado + atributo + Qualidade + Afiação)
+ * @param blindagem  Blindagem do alvo (a comum, ou a Arcana para dano de Essência)
+ * @returns número >= 1
  */
-export function danoFinal(bruto, blindagem, meia, critico) {
+export function danoFinal(bruto, blindagem) {
     const base = (Number(bruto) || 0) - (Number(blindagem) || 0);
-    // ✨ Crítico atravessa o Absorver: encaixar o golpe no corpo ampara uma
-    // estocada comum, não uma perfeita. A Blindagem continua aparando — ela é
-    // a peça de armadura, não a postura de quem se defende.
-    const partiu = !!meia && !critico;
-    const v = Math.round((partiu ? base / 2 : base) * 100) / 100;
-    return Math.max(1, v);
-}
-
-/**
- * 🪨 ABSORVER é a defesa que nunca zera e nunca protege inteiro.
- *
- * Todas as outras defesas são binárias: seguraram, o golpe não entra. O
- * Absorver troca isso por um contrato diferente — quem recebe o golpe no
- * corpo SEMPRE leva alguma coisa, e em troca não depende de sorte para não
- * levar tudo:
- *
- *   defesa segurou  → METADE do dano (não zero)
- *   defesa falhou   → dano INTEIRO (sem a metade de consolação)
- *
- * @returns { entra, meia } — `entra` diz se há dano; `meia` se ele parte ao meio
- */
-export function absorverResolve(passou, critico) {
-    if (critico) return { entra: true, meia: false };   // crítico atravessa
-    return passou ? { entra: true, meia: false } : { entra: true, meia: true };
+    return Math.max(1, Math.round(base * 100) / 100);
 }
 
 /* ===================== 📏 TAMANHO ===================== */
@@ -165,16 +144,25 @@ export function precisaRolarDano(formulaDano, alvos) {
 }
 
 /**
- * Defesas GRÁTIS por rodada (§6.2): Reflexo − 1, mínimo 1. Cada defesa além
- * dessas custa 1 Energia — e o contra-ataque custa 1 Energia sempre.
+ * Defesas GRÁTIS por rodada (Livro, p. 5): a primeira é grátis; com escudo, a
+ * segunda também, se for Bloquear. Cada defesa além dessas custa Energia — e o
+ * contra-ataque custa 1 Energia sempre. Os números vêm de config/regras.
  */
-export function defesasLivres(reflexo) {
-    return Math.max(1, Math.floor(Number(reflexo) || 0) - 1);
+export function defesasLivres({ gratis = 1, comEscudo = false, extraEscudo = 1 } = {}) {
+    return Math.max(1, (Number(gratis) || 0) + (comEscudo ? (Number(extraEscudo) || 0) : 0));
 }
 
 /** Custo em Energia da PRÓXIMA defesa: 0 enquanto sobra defesa grátis. */
-export function custoDaDefesa(usadas, livres) {
-    return (Number(usadas) || 0) < (Number(livres) || 1) ? 0 : 1;
+export function custoDaDefesa(usadas, livres, custo = 1) {
+    return (Number(usadas) || 0) < (Number(livres) || 1) ? 0 : (Number(custo) || 1);
+}
+
+/**
+ * 🤹 Duas armas (Livro, p. 5): −3 no Alvo dos dois golpes, e cada nível do Dom
+ * Ambidestria (1 a 3) tira 1. Nunca vira bônus.
+ */
+export function penalidadeDuasArmas(nivelDom, base = -3) {
+    return Math.min(0, (Number(base) || 0) + Math.max(0, Number(nivelDom) || 0));
 }
 
 /**
@@ -188,9 +176,11 @@ export function soODado(formula) {
 }
 
 /**
- * 🔁 Este defensor pode contra-atacar? (§6.8) — regra pura, sem canvas.
+ * 🔁 Este defensor pode contra-atacar? — regra pura, sem canvas.
  *
- * O contra-ataque é uma estocada na abertura da guarda: é CORPO A CORPO. Não
+ * É o trunfo do Aparar (Livro, p. 5): quem tira acima do Alvo contra você leva
+ * golpe automático por 1 Energia. O contra-ataque é uma estocada na abertura
+ * da guarda: é CORPO A CORPO. Não
  * existe contra-atacar quem atirou de longe, nem quem está fora do alcance do
  * seu braço — por isso a conta é "algum golpe físico meu alcança o agressor?".
  *
@@ -201,7 +191,7 @@ export function soODado(formula) {
  * entram na lista `golpes` do mesmo jeito (parte do corpo alcança 1 m no
  * mínimo, ver alcanceGolpe).
  *
- * @param pericia        nível da perícia Contra-Ataque
+ * @param pericia        nível da perícia Aparar (arma na mão)
  * @param energia        Energia atual (null = desconhecida, não bloqueia)
  * @param jaContraAtacou já respondeu neste conflito
  * @param distanciaM     distância BORDA a BORDA até o agressor
@@ -214,7 +204,7 @@ export function soODado(formula) {
 export function podeContraAtacar({ pericia, energia, jaContraAtacou, distanciaM, golpes }) {
     const nao = (motivo, curto) => ({ ok: false, motivo, curto, linhas: [] });
     if (jaContraAtacou) return nao('já contra-atacou neste golpe', 'já contra-atacou');
-    if (!(Number(pericia) >= 1)) return nao('não tem a perícia Contra-Ataque (nível 1+)', 'sem a perícia');
+    if (!(Number(pericia) >= 1)) return nao('não tem Aparar (nível 1+) — o contra-ataque é o trunfo dele', 'sem Aparar');
     if (energia != null && Number(energia) < 1) return nao('sem Energia (custa 1)', 'sem Energia');
     if (distanciaM == null) return nao('não dá para medir a distância até o agressor', 'sem token no mapa');
     const cac = (golpes || []).filter(g => !g.distancia && (Number(g.alcanceM) || 0) >= distanciaM - 1e-6);

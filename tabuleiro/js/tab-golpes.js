@@ -76,6 +76,7 @@ export function metaDoGolpe(l) {
         // dano inteiro é de Essência e ignora a Blindagem comum.
         arcano: l.arcano || null,
         essencia: l.essencia || null,
+        magia: !!l.magia,
     };
 }
 
