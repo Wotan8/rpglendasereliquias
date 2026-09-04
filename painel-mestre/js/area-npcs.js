@@ -5,7 +5,7 @@ import { showAlert, escapeHtml } from './ui-utils.js';
 import { addLog } from './logs.js';
 import { ensureNpcSystemData, pecsDaOrigem, modulosDaClasseNpc, resolveNpcClassModule } from './npc-system-data.js?v=1.5';
 import { calcularNpc, ATTR_SIGLAS, ATTR_NOMES } from './npc-calc-engine.js?v=1.11';
-import { calcularPoderNpc, resumoPoderNpc } from './npc-poder.js?v=1';
+import { calcularPoderNpc, resumoPoderNpc } from './npc-poder.js?v=2';
 import './npc-inventario.js?v=9'; // Aba Inventário da Ficha de NPC (itens + partes do corpo)
 import { npcNaMesa, mesasDoNpc, espelhoMesaId } from '../../shared/npc-mesas.js';
 import { melhorDisparo, bracoDeArremesso, METROS_POR_FOR } from '../../shared/alcance-disparo.js';

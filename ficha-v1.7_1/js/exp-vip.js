@@ -26,7 +26,8 @@
             (expVip > 0
                 ? `\n\nAo encerrar o personagem — entregando ao mestre ou apagando —, ` +
                   `${Math.round(expVip * 0.6)} EXP (60% do VIP) voltam para o seu Repertório.`
-                : '');
+                : '') +
+            (rotulo.dataset.poderTexto ? '\n\n' + rotulo.dataset.poderTexto : '');   // poder-ficha.js
     }
 
     function ligar() {

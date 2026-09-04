@@ -13,7 +13,7 @@ Resumo por página do site: o que ela faz agora, o que mudou nesta refatoração
 ## Ficha (`ficha-v1.7_1/`)
 
 **Faz:** a ficha do jogador. **Mudou:**
-- **⚡ Poder · Patamar** ao lado da Experiência (tudo que a ficha tem, em EXP; Livro cap. 3). Não trava nada.
+- **⚡ Poder · Patamar** ao lado da Experiência: tudo que a ficha tem, em EXP (Livro cap. 3) — atributos desde o nível 1 (concedido), perícias, Dons pelo preço do cadastro (desvantagem conta 0), habilidades de ramo e itens. O detalhe abre no mesmo tooltip da Experiência. Não trava nada, e não soma o EXP Restante (ainda não virou ficha): Poder ≈ EXP gasto, e passa dele quando a ficha tem item ou habilidade paga a preço antigo.
 - **Três defesas** na aba Combate: Esquiva, Aparar e Bloquear = nível da perícia (Bloquear + Qualidade do escudo, teto VIG). Desviar, Evadir, Proteger, Cobertura e Absorver saíram como VDs.
 - **Energia** = PRS + AUT + melhor Perícia de Arte. **Graça de Palla saiu**; as preces pagam Energia.
 - **Contadores de cena**: Carga de Sangue (ex-Bolha de Sangue, teto VIG + Hemomancia) e Harmonia (teto Sonoromancia). Começam em 0 e zeram no fim da cena (no Tabuleiro).

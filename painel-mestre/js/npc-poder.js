@@ -11,7 +11,7 @@
 // e race-peculiarities.js). Se o custo mudar lá, muda aqui.
 // =============================================
 
-import { poderDeItem } from '../../shared/poder.js?v=1';
+import { poderDeItem, custoDeDom } from '../../shared/poder.js?v=2';
 
 /** Custo do degrau `nivel` (não acumulado). Atributo: 5×N. Perícia: custoEvolucao×N. */
 function custoDoDegrau(nivel, porNivel) {
@@ -26,45 +26,9 @@ function custoAcumulado(nivel, porNivel) {
     return total;
 }
 
-/**
- * Custo em EXP de uma peculiaridade do registro até o nível `nivel`.
- * Evolutiva: soma `progressao[i].custoExp` das mecânicas evoluíveis, degrau a
- * degrau. Mecânica com `progressaoTipoExp: 'ganho'` é desvantagem — RENDE EXP e
- * entra negativa, igual à ficha de personagem.
- * Não evolutiva com `niveis` cadastrado à mão: lê o número do texto do custo.
- */
+/** Custo em EXP de uma peculiaridade até o nível `nivel` — a conta mora em shared/poder.js (custoDeDom). */
 function custoPeculiaridade(reg, nivel, sys) {
-    if (!reg) return 0;
-    const n = Math.max(1, Math.floor(Number(nivel) || 1));
-
-    const mecs = (reg.mecanicaIds || []).map(id => sys.mechsById?.[id]).filter(Boolean);
-    const evoluiveis = mecs.filter(m => m.evoluivel === true);
-
-    if (evoluiveis.length) {
-        const ganho = evoluiveis.some(m => m.progressaoTipoExp === 'ganho');
-        let total = 0;
-        for (let i = 1; i <= n; i++) {
-            for (const m of evoluiveis) {
-                const prog = m.progressao?.[String(i)];
-                if (prog) total += Number(prog.custoExp) || 0;
-            }
-        }
-        return ganho ? -total : total;
-    }
-
-    // Peculiaridade não evoluível: só custa se o registro trouxer `niveis`.
-    if (reg.niveis && typeof reg.niveis === 'object') {
-        let total = 0;
-        for (let i = 1; i <= n; i++) {
-            const nv = reg.niveis[i] || reg.niveis[String(i)];
-            if (!nv) continue;
-            const m = String(nv.custo ?? nv.custoExp ?? '').match(/(\d+)/);
-            const c = m ? parseInt(m[1], 10) : (Number(nv.custoExp) || 0);
-            total += nv.tipoExp === 'ganho' ? -c : c;
-        }
-        return total;
-    }
-    return 0;
+    return custoDeDom(reg, nivel, sys.mechsById || {});
 }
 
 /** Custo de um item de Módulo de Classe: o do pré-cadastro, se ele tiver o seu. */
