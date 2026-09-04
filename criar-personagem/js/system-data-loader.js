@@ -6,7 +6,7 @@
 
 window._systemData = {
     races: [], classes: [], tribes: [], peculiarities: [], mechanics: [],
-    skills: [], conditions: [], equipment: [], maneuvers: [], spells: [],
+    skills: [], conditions: [], equipment: [],
     derivedValues: [], vitalStats: [], auras: [], classModules: [],
     loaded: false, error: null
 };
@@ -98,7 +98,7 @@ window.loadSystemData = async function () {
 
     const collections = [
         'races', 'classes', 'tribes', 'peculiarities', 'mechanics',
-        'skills', 'conditions', 'equipment', 'maneuvers', 'spells',
+        'skills', 'conditions', 'equipment',
         'derivedValues', 'vitalStats', 'auras', 'bodyParts', 'classModules', 'escolas'
     ];
 

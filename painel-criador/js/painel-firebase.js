@@ -3,7 +3,7 @@
 // Lendas e Relíquias (ficha-v1.7_1 style)
 // =============================================
 
-import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS, _renderEquationTerm, _collectEquacaoFromContainer, _restoreEquacaoRefs, _formatEquation } from './painel-mechanics.js?v=16';
+import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS, _renderEquationTerm, _collectEquacaoFromContainer, _restoreEquacaoRefs, _formatEquation } from './painel-mechanics.js?v=16';
 import {
     CAMPOS_EQUIPAMENTO, camposDoCatalogo, normalizaFormaEquipar,
     SECOES_EQUIPAMENTO, htmlBarraFerramentas, ligarFormulario, agruparEmSecoesDOM, atualizarResumo,
@@ -72,7 +72,6 @@ let conditionsCache = [];
 let bodyPartsCache = [];
 
 let aurasCache = [];
-let maneuversCache = [];
 let equipmentCache = [];
 let classModulesCache = [];
 // 📚 Livros e capítulos escritos no Worldbuilding (Escritório do Cronista).
@@ -132,7 +131,6 @@ const MODULE_DEFS = {
             },
             { key: 'pericClasse', label: 'Perícias de Classe', type: 'mechanic_selector', selectorTarget: 'skills' },
             { key: 'peculiaridadeIds', label: '✨ Peculiaridades da Classe', type: 'mechanic_selector', selectorTarget: 'peculiarities', fontePreFilter: 'classe' },
-            { key: 'manobras', label: '💥 Manobras da Classe', type: 'mechanic_selector', selectorTarget: 'maneuvers' },
             { key: 'mecanicaIds', label: 'Mecânicas da Classe', type: 'mechanic_selector', fontePreFilter: 'classe' },
             { key: 'derivedValueIds', label: 'Valores Derivados da Classe', type: 'mechanic_selector', selectorTarget: 'derivedValues' },
             { key: 'kitsIniciais', label: '🎒 Kits Iniciais', type: 'class_kits_editor' },
@@ -546,19 +544,6 @@ const MODULE_DEFS = {
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas (definem a fórmula)', type: 'mechanic_selector', fontePreFilter: '' },
         ]
     },
-    maneuvers: {
-        name: 'Manobra', namePlural: 'Manobras', icon: '💥',
-        collection: 'system/data/maneuvers',
-        fields: [
-            { key: 'nome', label: 'Nome', type: 'text', required: true, placeholder: 'Ex: Postura Ofensiva, Investida' },
-            { key: 'classe', label: 'Classe', type: 'text', required: true, placeholder: 'Ex: Guerreiro' },
-            { key: 'custo', label: 'Custo (Energia)', type: 'text', required: true, placeholder: 'Ex: 1 ENER' },
-            { key: 'efeito', label: 'Efeito', type: 'textarea', required: true },
-            { key: 'requisitos', label: 'Requisitos', type: 'tags', placeholder: 'Ex: RAC 3, Performance 3' },
-            { key: 'mecanicaIds', label: 'Mecânicas', type: 'mechanic_selector', fontePreFilter: 'manobra' },
-            { key: 'falhaCritica', label: 'Falha Crítica', type: 'text', placeholder: 'O que acontece em Falha Crítica' },
-        ]
-    },
     spells: {
         name: 'Magia', namePlural: 'Magias', icon: '🔮',
         collection: 'system/data/spells',
@@ -759,9 +744,6 @@ const MODULE_FILTERS = {
     ],
     knowledge: [
         { key: 'modo', label: 'Liberação', icon: '🔐', type: 'static' },
-    ],
-    maneuvers: [
-        { key: 'classe', label: 'Classe', icon: '⚔️', type: 'auto' },
     ],
     spells: [
         { key: 'escola', label: 'Escola', icon: '🔮', type: 'static' },
@@ -1640,7 +1622,6 @@ async function loadModule(moduleName) {
     // Module-specific caches
     if (moduleName === 'races' || moduleName === 'classes' || moduleName === 'tribes') await refreshPeculiaritiesCache();
     if (moduleName === 'classes' || moduleName === 'classModules') {
-        await refreshManeuversCache();
         await refreshEquipmentCache();
     }
     if (moduleName === 'classes' || moduleName === 'classModules') {
@@ -1756,15 +1737,6 @@ async function refreshAurasCache() {
     } catch (e) { console.error('Erro cache auras:', e); }
 }
 
-async function refreshManeuversCache() {
-    try {
-        const snap = await getDocs(collection(db, 'system/data/maneuvers'));
-        maneuversCache = [];
-        snap.forEach(d => maneuversCache.push({ ...d.data(), id: d.id }));
-        maneuversCache.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-        window._maneuversCache = maneuversCache;
-    } catch (e) { console.error('Erro cache maneuvers:', e); }
-}
 
 async function refreshEquipmentCache() {
     try {
@@ -1937,11 +1909,6 @@ function _buildCardMetaChips(item) {
         case 'vitalStats':
             add(item.chaveInterna ? `🔑 ${escapeHtml(item.chaveInterna)}` : '', 'chip-accent');
             if (item.ordem != null) add(`#${escapeHtml(item.ordem)}`);
-            if (mechCount) add(`🔧 ${mechCount}`);
-            break;
-        case 'maneuvers':
-            add(item.classe ? `⚔️ ${escapeHtml(item.classe)}` : '', 'chip-accent');
-            add(item.custo ? `⚡ ${escapeHtml(item.custo)}` : '');
             if (mechCount) add(`🔧 ${mechCount}`);
             break;
         case 'spells':
@@ -2917,8 +2884,6 @@ function buildField(field, value, existingData) {
             wrap.innerHTML = buildEquipmentDerivedValueSelectorHTML(field.key, field.label, ids, periciaOptions(skillsCache), 'Perícia');
         } else if (field.selectorTarget === 'conditions') {
             wrap.innerHTML = buildConditionSelectorHTML(field.key, field.label, ids, conditionsCache);
-        } else if (field.selectorTarget === 'maneuvers') {
-            wrap.innerHTML = buildManeuverSelectorHTML(field.key, field.label, ids, maneuversCache);
         } else {
             wrap.innerHTML = buildMechanicSelectorHTML(field.key, field.label, ids, mechanicsCache, field.fontePreFilter);
         }
@@ -4203,6 +4168,49 @@ function _buildEquipCostRow(req) {
     `;
 }
 
+/** 💀 Uma linha de "Condições que a habilidade aplica" (condicoesAplicadas do predef). */
+function _buildCondAplicadaRow(c) {
+    c = c || {};
+    const reg = (conditionsCache || []).find(x => x.nome === c.condicao) || null;
+    const sel = (v, atual) => v === (atual || '') ? 'selected' : '';
+    return `
+        <div class="cm-equip-cost-row cm-cond-aplicada-row" data-nome="${escapeHtml(c.condicao || '')}">
+            <div class="cm-equip-cost-head">
+                <span>${escapeHtml((reg?.icone ? reg.icone + ' ' : '') + (c.condicao || '?'))}${reg ? ` <small class="cm-hint" style="display:inline">portão: ${escapeHtml(reg.portao || 'direto')}</small>` : ' <small class="cm-hint" style="display:inline">⚠️ não está no cadastro</small>'}</span>
+                <label>Nível <input type="number" min="1" data-ca-key="nivel" value="${c.nivel ?? 1}" style="width:56px"></label>
+                <label>Rodadas <input type="number" min="0" data-ca-key="rodadas" value="${c.rodadas ?? 0}" style="width:56px" title="0 = até sair"></label>
+                <label>Alvos <input type="number" min="0" data-ca-key="alvos" value="${c.alvos ?? 0}" style="width:56px" title="0 = todos os atingidos"></label>
+                <label>Em <select data-ca-key="faccao"><option value="" ${sel('', c.faccao)}>quem levou</option><option value="aliados" ${sel('aliados', c.faccao)}>só aliados</option><option value="inimigos" ${sel('inimigos', c.faccao)}>só inimigos</option></select></label>
+                <label title="Postura: a condição cai quando quem a tem usa uma Ação Padrão"><input type="checkbox" data-ca-key="saiComAcaoPadrao" ${c.saiComAcaoPadrao ? 'checked' : ''}> sai ao agir</label>
+            </div>
+            <button type="button" class="cm-chip-remove" onclick="this.closest('.cm-cond-aplicada-row').remove()">✕</button>
+        </div>`;
+}
+window.cmAddCondAplicada = function (select) {
+    const reg = (conditionsCache || []).find(x => x.id === select.value);
+    select.value = '';
+    if (!reg) return;
+    const lista = select.closest('.cm-bloco').querySelector('.cm-cond-aplicadas-list');
+    lista.insertAdjacentHTML('beforeend', _buildCondAplicadaRow({ condicao: reg.nome, nivel: 1, rodadas: 0, alvos: 0 }));
+};
+function _collectCondAplicadas(pd) {
+    return Array.from(pd.querySelectorAll('.cm-cond-aplicada-row')).map(r => {
+        const g = (k) => r.querySelector(`[data-ca-key="${k}"]`);
+        const nome = r.dataset.nome || '';
+        const reg = (conditionsCache || []).find(x => x.nome === nome);
+        return {
+            condicao: nome,
+            nivel: Math.max(1, parseInt(g('nivel')?.value, 10) || 1),
+            rodadas: Math.max(0, parseInt(g('rodadas')?.value, 10) || 0),
+            alvos: Math.max(0, parseInt(g('alvos')?.value, 10) || 0),
+            faccao: g('faccao')?.value || '',
+            saiComAcaoPadrao: !!g('saiComAcaoPadrao')?.checked,
+            // 'nenhum' marca a habilidade que não é golpe (a Presa): o portão em si é da condição
+            portao: reg?.portao === 'nenhum' ? 'nenhum' : null,
+        };
+    }).filter(c => c.condicao);
+}
+
 window.cmEquipCostModoChanged = function (select) {
     const row = select.closest('.cm-equip-cost-row');
     const consumir = select.value === 'consumir';
@@ -4881,6 +4889,29 @@ function _buildPredefItemRow(moduleIdx, itemIdx, data, schema) {
             <div class="cm-predef-custo-eq" style="display:${usaCustoEq ? '' : 'none'}">
                 ${_buildEquipCostArea(usaCustoEq ? data.custoEquipamentos : [], 'cm-custo-eq-predef')}
             </div>
+            <div class="cm-bloco">
+                <div class="cm-mini-title">💀 Condições que a habilidade aplica</div>
+                <div class="cm-hint">O portão (direto / corpo / mente) é da condição, no cadastro dela (Livro, p. 9). Aqui só quem leva, em que nível e por quanto tempo.</div>
+                <div class="cm-cond-aplicadas-list">${(Array.isArray(data.condicoesAplicadas) ? data.condicoesAplicadas : []).map(c => _buildCondAplicadaRow(c)).join('')}</div>
+                <select class="aura-mech-select" onchange="cmAddCondAplicada(this)">
+                    <option value="">+ Condição...</option>
+                    ${(conditionsCache || []).filter(c => c.publicado !== false).map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml((c.icone ? c.icone + ' ' : '') + c.nome)}</option>`).join('')}
+                </select>
+                <label class="cm-toggle-row" style="margin-top:6px">
+                    <input type="checkbox" data-pd-key="condicoesExclusivas" ${data.condicoesExclusivas ? 'checked' : ''}>
+                    <span>⚖️ Escolha na conjuração: UMA das condições, não todas</span>
+                </label>
+                <div class="form-row" style="margin-top:6px">
+                    <div class="form-group">
+                        <label>🩸 Enche um contador de cena (nome do VD)</label>
+                        <input type="text" data-pd-key="ganhoRecursoNome" value="${escapeHtml(data.ganhoRecurso?.nome || '')}" placeholder="Ex: Carga de Sangue — vazio = não enche">
+                    </div>
+                    <div class="form-group">
+                        <label>Quanto</label>
+                        <input type="number" min="1" data-pd-key="ganhoRecursoQtd" value="${data.ganhoRecurso?.qtd ?? ''}" placeholder="1">
+                    </div>
+                </div>
+            </div>
             <label class="cm-toggle-row">
                 <input type="checkbox" data-pd-key="usarMecanicaPropria" ${Array.isArray(data.custoCriacaoMecanicaIds) ? 'checked' : ''} onchange="cmPredefToggleMecanica(this)">
                 <span>⚙️ Definir Mecânica de Custo própria (substitui a do módulo)</span>
@@ -5386,6 +5417,10 @@ function _collectSingleModuleData(item) {
             custoCriacaoMecanicaIds: usarMecanica ? Array.from(pd.querySelectorAll('.cm-predef-custo-criacao-mechs .mech-tag')).map(t => t.dataset.id).filter(Boolean) : null,
             custoAcao: pdv('custoAcao') || 'padrao',
             mira,
+            // 💀 condições e 🩸 contador (Livro, p. 9 e p. 8)
+            condicoesAplicadas: _collectCondAplicadas(pd),
+            condicoesExclusivas: !!pd.querySelector('[data-pd-key="condicoesExclusivas"]')?.checked,
+            ganhoRecurso: (pdv('ganhoRecursoNome') || '').trim() ? { nome: pdv('ganhoRecursoNome').trim(), qtd: Math.max(1, parseInt(pdv('ganhoRecursoQtd'), 10) || 1) } : null,
             valores
         });
     });

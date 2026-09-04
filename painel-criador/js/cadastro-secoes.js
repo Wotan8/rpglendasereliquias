@@ -80,7 +80,7 @@ export const SECOES_CLASSE = [
     {
         id: 'concede', icone: '🎯', titulo: 'O que a classe concede',
         dica: 'Perícias, peculiaridades, manobras e vínculos que vêm junto.',
-        campos: ['pericClasse', 'peculiaridadeIds', 'manobras', 'mecanicaIds', 'derivedValueIds'],
+        campos: ['pericClasse', 'peculiaridadeIds', 'mecanicaIds', 'derivedValueIds'],
     },
     {
         id: 'progressao', icone: '📦', titulo: 'Progressão',

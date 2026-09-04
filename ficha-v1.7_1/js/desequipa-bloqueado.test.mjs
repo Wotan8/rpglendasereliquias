@@ -37,6 +37,7 @@ async function roda(items, bloqueia, { reentra = false, bloqueiaEfeitos = [] } =
   const sandbox = {
     console: { warn() {}, log() {} },
     alert: msg => alertas.push(msg),
+    LRDialogo: { toast: msg => alertas.push(msg), confirmar: async () => true },
     setTimeout,
     // Item marcado com _efeitos está com Efeitos Ativos agora.
     itemTemEfeitosAtivos: item => item._efeitos === true,

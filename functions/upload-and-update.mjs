@@ -23,12 +23,25 @@ async function main() {
     }
     
     // 1. Procurar o documento pelo campo 'nome'
-    const snap = await db.collection(collectionPath).where('nome', '==', docName).limit(1).get();
+    let snap = await db.collection(collectionPath).where('nome', '==', docName).limit(1).get();
+    let docId = null;
     if (snap.empty) {
-        console.error(`Erro: Documento com nome "${docName}" não encontrado na coleção "${collectionPath}".`);
-        process.exit(1);
+        // Fallback case-insensitive
+        const allDocs = await db.collection(collectionPath).get();
+        for (const doc of allDocs.docs) {
+            const dName = doc.data().nome;
+            if (dName && dName.toLowerCase() === docName.toLowerCase()) {
+                docId = doc.id;
+                break;
+            }
+        }
+        if (!docId) {
+            console.error(`Erro: Documento com nome "${docName}" não encontrado na coleção "${collectionPath}".`);
+            process.exit(1);
+        }
+    } else {
+        docId = snap.docs[0].id;
     }
-    const docId = snap.docs[0].id;
     
     // 2. Definir o caminho no Storage
     const fileName = localPath.split('\\').pop().split('/').pop();

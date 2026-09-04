@@ -226,7 +226,7 @@ const form = $('#npcItemFormModal');
 const campo = (k) => $(`#field_${k}`, form);
 
 teste('T16 · o formulário traz os campos do cadastro que faltavam',
-    ['liga','qualidade','afiacao','reforco','blindagemQ0','preco','tags','pressaoBase','capacidadeContainer','tipoGolpe']
+    ['qualidade','aura','afiacao','afiacaoArcana','reforco','encantamento','preco','tags','pressaoBase','capacidadeContainer','tipoGolpe']
         .every(k => !!campo(k)));
 
 teste('T17 · os seletores do Criador vieram junto (VD com equação, vitais, atributos, perícias, condições, mecânicas)',
@@ -309,7 +309,7 @@ teste('T24d · o que vai para o banco carrega os vínculos e a equação do VD',
     JSON.stringify(paraSalvar.valoresDerivadosVinculados)
         === JSON.stringify([{ id: 'dv1', equacao: [{ tipo: 'ficha', ref: 'DES' }] }])
     && JSON.stringify(paraSalvar.condicaoIds) === JSON.stringify([{ id: 'cd1' }])
-    && paraSalvar.liga === '3' && paraSalvar.preco === 90);
+    && paraSalvar.preco === 90);
 
 teste('T24c · o aviso diz que é cópia e que o catálogo não alcança mais a peça',
     $('.inv-form-nota', novo)?.textContent.includes('só para este item')

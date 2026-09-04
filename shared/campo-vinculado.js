@@ -72,7 +72,6 @@ export const FONTES_CAMPO = {
        inexistente, e deixá-la de fora obrigaria a mexer aqui de novo no dia
        em que a primeira manobra for cadastrada. Vazia, ela só não devolve
        resultado — nada quebra. */
-    maneuvers:  { col: 'system/data/maneuvers',    icone: '🤺', rotulo: 'Manobra', grupo: 'Sistema' },
     auras:      { col: 'system/data/auras',        icone: '🌟', rotulo: 'Aura', grupo: 'Sistema' },
     castingForms: { col: 'system/data/castingForms', icone: '🗣️', rotulo: 'Forma de Conjuração', grupo: 'Sistema' },
     runicElements: { col: 'system/data/runicElements', icone: '🔯', rotulo: 'Elemento Rúnico', grupo: 'Sistema' },

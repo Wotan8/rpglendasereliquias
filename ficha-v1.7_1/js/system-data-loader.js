@@ -83,11 +83,8 @@ window._systemData = {
     skills: [],
     conditions: [],
     equipment: [],
-    maneuvers: [],
-    spells: [],
     derivedValues: [],
     vitalStats: [],
-    specializations: [],  // kept for backward compat but no longer loaded
     auras: [],
     itemRules: [],
     runicElements: [],
@@ -111,7 +108,7 @@ window._classModules = {};
  */
 async function loadSystemData(db, collectionFn, getDocsFn) {
     const collections = ['races', 'classes', 'tribes', 'peculiarities', 'mechanics',
-        'skills', 'conditions', 'equipment', 'maneuvers', 'spells', 'derivedValues', 'vitalStats', 'auras', 'itemRules', 'bodyParts', 'runicElements', 'classModules', 'escolas'];
+        'skills', 'conditions', 'equipment', 'derivedValues', 'vitalStats', 'auras', 'itemRules', 'bodyParts', 'runicElements', 'classModules', 'escolas'];
 
     try {
         await Promise.all(collections.map(async (col) => {

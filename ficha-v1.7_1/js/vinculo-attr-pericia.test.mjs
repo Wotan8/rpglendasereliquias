@@ -28,7 +28,7 @@ const CODIGO = [
   pega('function _campoDoItem(item, key)', "return (tpl && Array.isArray(tpl[key])) ? tpl[key] : [];\n}"),
   pega('const _SK_PREFIXO = {', "exclusivo: 'sk_exclusivo_',\n};"),
   pega('function _periciaDotKey(skillId)', 'return null;\n}'),
-  pega('function _aplicarAtributosEPericias(item)', 'bag[chave] = (bag[chave] || 0) + mod;\n    }\n}'),
+  pega('function _aplicarAtributosEPericias(item)', 'trilha(chave, doItem, temEq ? p.equacao : null, mod);\n    }\n}'),
 ].join('\n');
 
 /** SKILLS no formato que buildSkillsFromFirebase monta na ficha. */

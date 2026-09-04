@@ -9,7 +9,7 @@
 // todos os clientes abertos recarregam automaticamente.
 // =============================================
 
-const VERSION = 'v387';
+const VERSION = 'v388';
 const STATIC_CACHE = `lr-static-${VERSION}`;
 const RUNTIME_CACHE = `lr-runtime-${VERSION}`;
 
@@ -69,6 +69,7 @@ const PRECACHE_URLS = [
   '/ficha-v1.7_1/js/drag-drop.js',
   '/ficha-v1.7_1/js/equipment.js',
   '/ficha-v1.7_1/js/exp-upgrade.js',
+  '/ficha-v1.7_1/js/poder-ficha.js',
   '/ficha-v1.7_1/js/firebase.js',
   '/ficha-v1.7_1/js/inventory.js',
   '/ficha-v1.7_1/js/mechanics-engine.js',
@@ -190,6 +191,10 @@ const PRECACHE_URLS = [
   '/tabuleiro/js/tab-ficha-win.js',
   '/shared/campo-imagem.js',
   '/shared/combate-cenas.js',
+  '/shared/poder.js',
+  '/shared/regras-padrao.js',
+  '/shared/campos-cadastro.js',
+  '/shared/dominio-redutor.js',
   '/shared/restaurar-item.js',
   '/shared/moral.js',
   '/shared/runa-em-jogo.js',

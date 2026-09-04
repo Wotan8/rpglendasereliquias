@@ -12,8 +12,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const exp = readFileSync(new URL('./exp-upgrade.js', import.meta.url), 'utf8');
-const pec = readFileSync(new URL('./race-peculiarities.js', import.meta.url), 'utf8');
+const exp = readFileSync(new URL('./exp-upgrade.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const pec = readFileSync(new URL('./race-peculiarities.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
 // A ficha inteira não roda no node; recorta-se só o que se quer medir.
 const recorta = (src, assinatura) => {

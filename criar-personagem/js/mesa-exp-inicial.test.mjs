@@ -23,6 +23,7 @@ const ctx = vm.createContext({
     URLSearchParams: URLSearchParams,
     confirm: () => ctx.RESPOSTA_DO_JOGADOR,
     alert() {},
+    LRDialogo: { confirmar: async () => ctx.RESPOSTA_DO_JOGADOR, toast() {} },
     FASES_WIZARD: [],   // vazio: buildProgressBar/goToPhase saem na primeira linha
     RESPOSTA_DO_JOGADOR: true
 });
@@ -37,23 +38,23 @@ const st = ctx.wizardState;
 const expTotal = () => vm.runInContext('ExpTracker.getTotal()', ctx);
 
 /** Simula o que o firebase.js entrega antes do initWizard + reinicia o guard. */
-function abrirCriador(mesa, saveAntigo) {
+async function abrirCriador(mesa, saveAntigo) {
     store = saveAntigo ? { lr_wizard_state: JSON.stringify(saveAntigo) } : {};
     vm.runInContext('_wizardInitialized = false;', ctx);
     ctx.resetWizardState();
     st.mesaVinculada = mesa;
-    ctx.initWizard();
+    await ctx.initWizard();
 }
 
 const MESA = { id: 'm1', nome: 'Reliera', expInicial: 120, sessaoAtual: 46 };
 
 // --- Criação nova ---
-abrirCriador(MESA, null);
+await abrirCriador(MESA, null);
 assert.equal(expTotal(), 166, '120 da mesa + sessão 46');
 assert.equal(st.expInicial, 120, 'expInicial gravado na ficha é só o valor da mesa');
 
 // --- Retomando criação salva: mesa mudou o EXP e rolou sessão nova ---
-abrirCriador(
+await abrirCriador(
     { ...MESA, expInicial: 150, sessaoAtual: 47 },
     { mesaVinculada: { ...MESA }, expInicial: 120, wizardFasesV2: true, faseAtual: 3,
       expSources: { exp_inicial: { amount: 120 }, exp_sessao: { amount: 46 } } }
@@ -63,14 +64,14 @@ assert.equal(expTotal(), 197, 'valores do servidor vencem os do localStorage');
 assert.equal(st.mesaVinculada.sessaoAtual, 47);
 
 // --- Criação salva de OUTRA mesa, agora numa mesa sem sessão registrada ---
-abrirCriador(
+await abrirCriador(
     { id: 'm2', nome: 'Mesa nova', expInicial: 100 },
     { mesaVinculada: { ...MESA }, expSources: { exp_inicial: { amount: 120 }, exp_sessao: { amount: 46 } } }
 );
 assert.equal(expTotal(), 100, 'sem sessão registrada não sobra bônus da mesa anterior');
 
 // --- Sem mesa: EXP manual, ninguém mexe ---
-abrirCriador(null, null);
+await abrirCriador(null, null);
 ctx.setExpInicial(80);
 assert.equal(expTotal(), 80);
 
