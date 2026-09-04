@@ -39,7 +39,8 @@ import { templateAtingeCirculo } from './tab-templates.js';
 import { updObj } from './tab-objects.js';
 import { tokenAtivoDoCombate, participanteDoToken, VITAIS, vdsCombateDaFonte, fonteDoParticipante } from './tab-hud.js';
 import { carregarCondicoesSistema, aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
-import { grausDoAtaque } from './tab-conflito-calc.js';
+import { grausDoAtaque, rolarD10 } from './tab-conflito-calc.js';
+import { efeitoDasCondicoes as efeitoCond } from '../../shared/combate-cenas.js';
 import { calcularDadiva, rotuloDoGanho, tetoDoAtributo, mesaDeSorteio } from '../../shared/dadiva.js?v=3';
 import { janelaDeSorteio, sorteioDoMestre, janelaDoVeu } from './tab-dadiva-sorteio.js?v=2';
 import { bonusDosGanhos } from '../../shared/bonus-temporario.js?v=1';
@@ -1089,8 +1090,11 @@ async function alvosPelosGraus(p, s, cfg, custo) {
         return false;
     }
 
-    const dado = 1 + Math.floor(Math.random() * 10);
+    const r10 = rolarD10({ desvantagem: !!efeitoCond(p?.condicoes || [], T.condicoesSistema).desvantagem });
+    const dado = r10.dado;
     const graus = grausDoAtaque(acerto, dado);
+    // 🚪 Os Graus da conjuração são o que o portão da condição compara com VIG/PRS.
+    cfg.grausConjuracao = { graus, critico: dado === 1 };
     const passou = dado !== 10 && graus >= 0;
     const teto = Number(cfg.maxAlvos) || 99;
     const quantos = passou ? Math.max(1, Math.min(graus || 1, teto)) : 0;
@@ -2123,7 +2127,7 @@ window.tbTurnoConfirmarMira = async () => {
                 toast(`☠️ ${cd.nome} limitada a ${cd.maxAlvos} alvo(s) pelo cadastro — valem os primeiros`, 'warning');
             }
             aplicarCondicaoEmVarios(pids, cd.nome, cd.rodadas || 0, p?.id, cd.nivel || 1,
-                cd.saiComAcaoPadrao ? { saiComAcaoPadrao: true } : null)
+                { ...(cd.saiComAcaoPadrao ? { saiComAcaoPadrao: true } : {}), gate: m.grausConjuracao || null })
                 .catch(e => console.warn('condição da skill', e));
         }
         // "aliado(s)" só quando forem mesmo aliados — A Presa marca inimigo.

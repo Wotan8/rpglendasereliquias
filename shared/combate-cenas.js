@@ -302,6 +302,7 @@ export function efeitoDasCondicoes(condicoes, registro) {
         naoPodeSerAlvo: false, atraiAlvo: false, faccaoForcada: null,
         porRodada: [], testes: [], niveis: [],
         modAlvo: 0,    // soma dos modificadores no Alvo de QUALQUER teste (§2)
+        desvantagem: false, // 🎲 rola dois d10 e fica com o pior (Livro, p. 9–10); flag, nunca soma
         modVd: {},     // VD normalizado -> quanto as condições somam nele
         modVdNome: {}, // o mesmo VD com o nome como está no cadastro
         motivos: {},   // campo -> [nomes das condições] — para dizer POR QUE travou
@@ -346,6 +347,10 @@ export function efeitoDasCondicoes(condicoes, registro) {
             out.modVdNome[chave] = reg.modVd;
             marca('modVd');
         }
+        // 🎲 DESVANTAGEM (Livro, p. 9–10): Prostrado, Cego, o nível 3 das trilhas.
+        // Nunca soma com outra Desvantagem — é uma flag, não um número.
+        if (reg.desvantagem) { out.desvantagem = true; marca('desvantagem'); }
+
         if (reg.testeParaSair && reg.testeNome) {
             out.testes.push({
                 condicao: c.nome, icone: c.icone, nome: reg.testeNome,
@@ -382,7 +387,9 @@ export function efeitoDasCondicoes(condicoes, registro) {
         if (reg.faccaoForcada) { out.faccaoForcada = reg.faccaoForcada; marca('faccaoForcada'); }
 
         if (reg.porRodadaEfeito) {
-            out.porRodada.push({ condicao: c.nome, icone: c.icone, efeito: reg.porRodadaEfeito, valor: reg.porRodadaValor || '' });
+            // Sangrando N = N por rodada: o valor multiplica pelo nível quando o cadastro pede.
+            const valor = reg.porRodadaPorNivel ? String((parseFloat(reg.porRodadaValor) || 1) * c.nivel) : (reg.porRodadaValor || '');
+            out.porRodada.push({ condicao: c.nome, icone: c.icone, efeito: reg.porRodadaEfeito, valor });
         }
     }
     return out;
@@ -425,4 +432,51 @@ export function tirarCondicoesExpiradas(participantes, rodada) {
         return { ...p, condicoes: ficam };
     });
     return { participantes: parts, expiradas };
+}
+
+// =============================================
+// 🚪 O PORTÃO DA CONDIÇÃO (Livro de 12 Páginas, p. 9)
+// É a condição que diz como pega, não a habilidade:
+//   direto  — o golpe entrou, a condição entra junto
+//   corpo   — só se os Graus do golpe ≥ VIG do alvo (+ a Resistência da cena)
+//   mente   — só se os Graus ≥ PRS do alvo (+ a Resistência da cena)
+//   nenhum  — só em quem quer (buff, marca)
+// Ninguém rola um segundo dado: a Resistência é um número do alvo, como a
+// Defesa. Crítico sempre pega.
+// =============================================
+export const PORTOES = ['direto', 'corpo', 'mente', 'nenhum'];
+
+/**
+ * A condição pega?
+ * @param portao       o portão da condição (cadastro)
+ * @param graus        Graus do golpe ou da habilidade
+ * @param critico      dado 1: sempre pega
+ * @param resistencia  VIG ou PRS do alvo já somado ao +1 por vez que a mesma
+ *                     condição pegou nele nesta cena
+ */
+export function condicaoPega({ portao = 'direto', graus = 0, critico = false, resistencia = 0 } = {}) {
+    if (portao !== 'corpo' && portao !== 'mente') return true;
+    if (critico) return true;
+    return (Number(graus) || 0) >= (Number(resistencia) || 0);
+}
+
+/**
+ * 💊 Cura por potência: tira toda Aflição de nível ≤ potência. Condição comum
+ * não é Aflição e não entra aqui — sai por descanso, teste ou cura comum.
+ * @returns { condicoes, curadas: [nomes] }
+ */
+export function curarAflicoes(condicoes, registro, potencia) {
+    const pot = Number(potencia) || 0;
+    if (pot <= 0) return { condicoes: condicoes || [], curadas: [] };
+    const mapa = new Map();
+    for (const r of registro || []) mapa.set(_normCond(r.nome), r);
+    const curadas = [];
+    const resto = (condicoes || []).filter(cd => {
+        const c = condDoParticipante(cd);
+        const reg = mapa.get(_normCond(c.nome));
+        if (!reg?.aflicao || c.nivel > pot) return true;
+        curadas.push(c.nome);
+        return false;
+    });
+    return { condicoes: resto, curadas };
 }

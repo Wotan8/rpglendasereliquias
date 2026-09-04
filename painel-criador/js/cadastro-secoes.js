@@ -25,7 +25,7 @@ export const SECOES_CONDICAO = [
     {
         id: 'identidade', icone: '📜', titulo: 'Identidade', aberta: true,
         dica: 'O que a condição é e quanto tempo dura.',
-        campos: ['nome', 'icone', 'descricao', 'duracao', 'removivel'],
+        campos: ['nome', 'icone', 'descricao', 'duracao', 'removivel', 'portao', 'desvantagem'],
     },
     {
         id: 'efeito', icone: '⚡', titulo: 'Efeito na ficha', aberta: true,
@@ -51,7 +51,12 @@ export const SECOES_CONDICAO = [
         dica: 'Movimento, visão, alvo e sangramento por rodada no mapa. Ligue o interruptor para o resto aparecer.',
         campos: ['afetaTabuleiro', 'bloqueiaAcoes', 'perdeTurno', 'multiplicadorDeslocamento',
             'deslocamentosBloqueados', 'multiplicadorVisao', 'enxergaNoEscuro', 'deixaInvisivel',
-            'naoPodeSerAlvo', 'atraiAlvo', 'faccaoForcada', 'porRodadaEfeito', 'porRodadaValor'],
+            'naoPodeSerAlvo', 'atraiAlvo', 'faccaoForcada', 'porRodadaEfeito', 'porRodadaValor', 'porRodadaPorNivel'],
+    },
+    {
+        id: 'aflicao', icone: '🔒', titulo: 'Aflição',
+        dica: 'Condição com cadeado: piora com o tempo e só sai com cura da potência certa (Livro, p. 9).',
+        campos: ['aflicao', 'aflicaoPiora', 'aflicaoCura', 'aflicaoDesfecho'],
     },
 ];
 

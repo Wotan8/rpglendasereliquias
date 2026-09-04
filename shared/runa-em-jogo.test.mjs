@@ -73,8 +73,8 @@ const sublimada = bloco([no('artus_criar', 2), no('asp_fogo', 2), no('sig_projet
 assert.equal(sublimada.formaEssencia, true);
 assert.equal(sublimada.canal, 'Dano Ígneo', 'com Sublimador o canal é o da essência');
 assert.equal(sublimada.condicoesAplicadas[0].condicao, 'Queimadura');
-assert.equal(sublimada.condicoesAplicadas[0].chance, 40, 'essência = Nv × 20%');
-assert.equal(lanca.condicoesAplicadas[0].chance, 20, 'física = Nv × 10%');
+assert.equal(sublimada.condicoesAplicadas[0].chance, null, 'Núcleo v2: não existe chance — o portão é da condição');
+assert.equal(lanca.condicoesAplicadas[0].portao, null, 'sem marca de crítico, o portão é o do cadastro da condição');
 
 /* ===== 4) dois Aspectus: VALE O MAIOR, nunca a soma ===== */
 const dois = bloco([no('artus_criar', 2), no('asp_fogo', 1), no('asp_terra', 3), no('sig_projetor', 1)]);
@@ -96,7 +96,7 @@ assert.match(bloco([no('artus_criar', 1), no('asp_fogo', 1), no('sig_projetor', 
 // a crítica só existe a partir do Nv3, e continua exigindo crítico
 const imp3 = bloco([no('artus_criar', 2), no('asp_fogo', 2), no('sig_projetor', 1), no('sig_impressor', 3)],
     { condicoesEscolhidas: ['Chaga'] });
-assert.equal(imp3.condicoesAplicadas[0].portao, 'critico', 'a marca de crítico não vira chance');
+assert.equal(imp3.condicoesAplicadas[0].portao, 'automatico', 'a marca de crítico ignora o portão da condição');
 assert.equal(imp3.condicoesAplicadas[0].chance, null);
 assert.match(bloco([no('artus_criar', 2), no('asp_fogo', 2), no('sig_projetor', 1), no('sig_impressor', 2)],
     { condicoesEscolhidas: ['Chaga'] }).problemas.join(''), /Fora do repertório/, 'Nv2 não alcança a de crítico');

@@ -46,6 +46,18 @@ export function abriuGuarda(graus, dado) {
 const rngPadrao = (faces) => 1 + Math.floor(Math.random() * faces);
 
 /**
+ * 🎲 O d10 do teste, com Vantagem/Desvantagem (Livro, p. 9–10): rola dois e fica
+ * com o melhor (Vantagem: o menor, que é roll-under) ou com o pior (Desvantagem:
+ * o maior). As duas juntas se anulam. `dados` traz os dois para a mesa ver.
+ */
+export function rolarD10({ desvantagem = false, vantagem = false, rng = rngPadrao } = {}) {
+    const a = rng(10);
+    if (!!desvantagem === !!vantagem) return { dado: a, dados: [a] };
+    const b = rng(10);
+    return { dado: desvantagem ? Math.max(a, b) : Math.min(a, b), dados: [a, b] };
+}
+
+/**
  * Rola uma fórmula de dano da ficha: "1d8+3", "2d6 - 1", "1d10", "4".
  * @param formula  texto da linha de ataque
  * @param opts.critico  true = dado CHEIO (valor máximo), sem rolar (§6.6)

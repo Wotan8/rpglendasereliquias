@@ -37,7 +37,7 @@ import { participanteDoToken, valorVdDaFonte, fonteDoParticipante, VITAIS } from
 import { aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { logChat } from './tab-chat.js';
 import { confirmar } from '../../shared/dialogo.js?v=2';
-import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal, ajusteDeTamanho,
+import { grausDoAtaque, golpePassa, abriuGuarda, rolarFormula, danoFinal, ajusteDeTamanho, rolarD10,
          defesasLivres, custoDaDefesa, soODado,
          precisaRolarDano,
          podeContraAtacar as regraContraAtaque } from './tab-conflito-calc.js';
@@ -384,16 +384,18 @@ window.tbConfRolarAcerto = async (naMesa) => {
     const bonusMarca = Number(c.marca?.acerto) || 0;
     const alvo = manual('cfAlvoAcerto') ?? alvoComMarca(c);
     if (alvo == null || isNaN(alvo)) { toast('⚠️ Informe o Alvo do ataque (Acerto + modificadores)', 'warning'); return; }
-    let dado;
+    let dado, dadosD10 = null;
     if (naMesa) {
         dado = manual('cfManualAcerto');
         if (dado == null || dado < 1 || dado > 10) { toast('⚠️ Digite o d10 rolado na mesa (1 a 10)', 'warning'); return; }
         dado = Math.round(dado);
     } else {
-        dado = 1 + Math.floor(Math.random() * 10);
+        // 🎲 Desvantagem (Prostrado, Cego, trilha nível 3): dois d10, fica o pior.
+        const r10 = rolarD10({ desvantagem: !!efeitoDasCondicoes(part(c.atacante.pid)?.condicoes || [], T.condicoesSistema).desvantagem });
+        dado = r10.dado; dadosD10 = r10.dados;
     }
     const graus = grausDoAtaque(alvo, dado, regrasTeste().criticoGrausExtra);
-    const rolagem = { dado, alvo, graus, critico: dado === 1, falha: dado === 10, abriu: abriuGuarda(graus, dado), naMesa: !!naMesa };
+    const rolagem = { dado, alvo, graus, critico: dado === 1, falha: dado === 10, abriu: abriuGuarda(graus, dado), naMesa: !!naMesa, dados: dadosD10 };
     // 10 no dado nunca passa: os alvos não gastam defesa nenhuma com isso
     const erroSeco = dado === 10;
     const alvos = c.alvos.map(a => erroSeco ? { ...a, escolhido: true, passou: false, defesaNome: '—', defesa: 0 } : a);
@@ -691,7 +693,9 @@ async function aplicar(c) {
             for (const cd of conds) {
                 let pids = passaram;
                 if (cd.maxAlvos > 0 && pids.length > cd.maxAlvos) pids = pids.slice(0, cd.maxAlvos);
-                if (pids.length) await aplicarCondicaoEmVarios(pids, cd.nome, cd.rodadas || 0, c.atacante?.pid).catch(e => console.warn('condição do conflito', e));
+                // 🚪 O portão da condição compara os Graus do golpe com VIG/PRS do alvo (Livro, p. 9).
+                if (pids.length) await aplicarCondicaoEmVarios(pids, cd.nome, cd.rodadas || 0, c.atacante?.pid, cd.nivel || 1,
+                    { gate: { graus: c.rolagem?.graus ?? 0, critico: !!c.rolagem?.critico } }).catch(e => console.warn('condição do conflito', e));
             }
             condAplicada = true;
         }
@@ -755,7 +759,7 @@ function render() {
         ᛟ <b>Alvo da Runa ${r.alvo}</b> — o mecanismo entrega como foi projetado.
         <span class="tb-turno-hint">Sem rolagem: só uma Defesa declarada pode barrar.</span>
         </div>` : r ? `<div class="tb-conflito-rolagem ${r.critico ? 'crit' : r.falha ? 'falha' : ''}">
-        🎲 d10 <b>${r.dado}</b>${r.naMesa ? ' <i>(mesa)</i>' : ''} vs Alvo ${r.alvo} → <b>${r.graus > 0 ? '+' : ''}${r.graus} Graus</b>
+        🎲 d10 <b>${r.dado}</b>${r.naMesa ? ' <i>(mesa)</i>' : ''}${r.dados?.length > 1 ? ` <i>[${r.dados.join(', ')} · Desvantagem]</i>` : ''} vs Alvo ${r.alvo} → <b>${r.graus > 0 ? '+' : ''}${r.graus} Graus</b>
         ${r.critico ? ` ✨ crítico (Graus = Alvo + ${regrasTeste().criticoGrausExtra}, dado cheio no dano)` : ''}
         ${r.falha ? ' 💀 desastre (erro automático)' : ''}
         ${!r.critico && !r.falha && r.abriu ? ' 🔁 guarda aberta — cabe contra-ataque' : ''}

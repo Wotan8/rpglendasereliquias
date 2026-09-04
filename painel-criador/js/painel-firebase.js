@@ -271,6 +271,21 @@ const MODULE_DEFS = {
             { key: 'removivel', label: 'Removível?', type: 'boolean' },
             { key: 'icone', label: 'Ícone / Emoji', type: 'text', placeholder: 'Ex: 💫' },
 
+            // ===== 🚪 PORTÃO (Livro, p. 9): é a condição que diz como pega =====
+            { key: 'portao', label: '🚪 Portão — como a condição pega', type: 'select', options: [
+                { value: 'direto', label: 'Direto — o golpe entrou, a condição entra junto' },
+                { value: 'corpo', label: 'Resistido pelo corpo — só se Graus ≥ VIG do alvo' },
+                { value: 'mente', label: 'Resistido pela mente — só se Graus ≥ PRS do alvo' },
+                { value: 'nenhum', label: 'Sem portão — só em quem quer (buff, marca)' },
+            ] },
+            { key: 'desvantagem', label: '🎲 Dá Desvantagem (rola dois d10 e fica o pior)', type: 'boolean' },
+
+            // ===== 🔒 AFLIÇÃO: condição com cadeado (Livro, p. 9) =====
+            { key: 'aflicao', label: '🔒 É Aflição (veneno de bicho, doença, maldição — não sai com cura comum)', type: 'boolean' },
+            { key: 'aflicaoPiora', label: 'Piora', type: 'textarea', placeholder: 'Ex: mordida nova no mesmo alvo sobe +1 nível, até 5', showWhenBoolean: 'aflicao' },
+            { key: 'aflicaoCura', label: 'Cura (o nível N é a potência que ela exige)', type: 'textarea', placeholder: 'Ex: só Caltra de potência ≥ N', showWhenBoolean: 'aflicao' },
+            { key: 'aflicaoDesfecho', label: 'Desfecho (se ninguém curar)', type: 'textarea', showWhenBoolean: 'aflicao' },
+
             // ===== 📈 ACÚMULO EM NÍVEIS =====
             // Condição que empilha em vez de repetir: aplicar de novo sobe o
             // nível (Exaustão 1→6). Fica FORA do interruptor do Tabuleiro de
@@ -412,6 +427,7 @@ const MODULE_DEFS = {
                 placeholder: 'Ex: 1d4, 2, 1d6+1 — sempre positivo; quem diz dano ou cura é o campo acima',
                 showWhenNotNull: 'porRodadaEfeito'
             },
+            { key: 'porRodadaPorNivel', label: '📈 O valor por rodada multiplica pelo nível (Sangrando N = N por rodada)', type: 'boolean', showWhenBoolean: 'afetaTabuleiro' },
         ]
     },
     castingForms: {

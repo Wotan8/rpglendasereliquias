@@ -8,7 +8,9 @@ import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, vitalTela
 import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
 import { VITAIS, vdsCombateDaFonte, espelhosDoVitalNpc, fonteDoParticipante } from './tab-hud.js';
 import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas, FACCOES, faccaoDoParticipante, acoesNovas, participanteDaVez, efeitoDasCondicoes, alvoDoTickRodada } from '../../shared/combate-cenas.js';
-import { rolarFormula } from './tab-conflito-calc.js';
+import { rolarFormula, rolarD10 } from './tab-conflito-calc.js';
+import { valorComponente as componenteDe } from './tab-state.js';
+import { condicaoPega } from '../../shared/combate-cenas.js';
 import { tirarRetrato, avancarRitual } from '../../shared/turno-efeitos.js?v=1';
 import { logChat } from './tab-chat.js';
 import { CONDICAO_TRANSE } from '../../shared/incorporacao.js?v=1';
@@ -926,8 +928,9 @@ window.tbCombCondAdd = (pid) => escolherCondicao((cond, tpl) => aplicarCondicaoC
  */
 /**
  * 📈 Põe a condição no participante respeitando o cadastro.
- * Condição que ACUMULA e já está lá sobe de nível (até o teto) em vez de virar
- * uma segunda linha igual; qualquer outra entra como sempre entrou.
+ * Condição que ACUMULA e já está lá fica com o MAIOR nível (Aflição soma, até o
+ * teto) em vez de virar uma segunda linha igual; qualquer outra entra como
+ * sempre entrou.
  * @returns { condicoes, nivel, subiu, noTeto }
  */
 function empilharCondicao(condicoesAtuais, cond, tpl, niveis = 1) {
@@ -946,7 +949,9 @@ function empilharCondicao(condicoesAtuais, cond, tpl, niveis = 1) {
     }
 
     const atual = condDoParticipante(lista[i]);
-    const novo = Math.min(atual.nivel + passo, teto);
+    // Livro, p. 9: mesma condição de duas fontes vale o MAIOR N. Só a Aflição
+    // piora por acúmulo (mordida nova sobe +1) — é o cadeado dela.
+    const novo = Math.min(tpl?.aflicao ? atual.nivel + passo : Math.max(atual.nivel, passo), teto);
     return {
         condicoes: lista.map((cd, idx) => idx === i ? { ...condDoParticipante(cd), nivel: novo } : cd),
         nivel: novo, subiu: novo > atual.nivel, noTeto: novo === atual.nivel,
@@ -1007,6 +1012,20 @@ async function sincAdicaoFicha(p, cond, tpl) {
  * uma vez (1 write no doc + espelho nas fichas). O nome resolve contra o
  * registro do sistema (ícone/descrição); sem registro vira personalizada.
  */
+let _fwinCond = null;
+/** Itens já consultados pelos golpes (tab-ficha-win) — para a imunidade da peça vestida. */
+async function _itensDosParticipantes() {
+    try { _fwinCond = _fwinCond || await import('./tab-ficha-win.js?v=14'); } catch (e) { return () => []; }
+    return (p) => _fwinCond.itensCarregados?.(p.npcId ? 'npc' : 'char', p.npcId || p.characterId) || [];
+}
+/** Encantamento de imunidade numa peça vestida (Livro, p. 6): a condição não entra. */
+function _imune(itens, condId) {
+    const cat = window._npcSys?.equipment || window._systemData?.equipment || [];
+    return (itens || []).some(i => i.equipado && i.estadoEquip !== 'armazenado' && !i.parentItemId
+        && ((i.imunidadeCondicaoIds?.length ? i.imunidadeCondicaoIds : cat.find(t => t.id === i.modeloId)?.imunidadeCondicaoIds) || [])
+            .some(x => (x?.id || x) === condId));
+}
+
 export async function aplicarCondicaoEmVarios(pids, nome, rodadas, porPid, nivel = 1, extra = null) {
     if (!pids?.length || !nome) return;
     const tpl = (await carregarCondicoesSistema()).find(c => (c.nome || '').toLowerCase() === nome.toLowerCase()) || null;
@@ -1021,7 +1040,7 @@ export async function aplicarCondicaoEmVarios(pids, nome, rodadas, porPid, nivel
         // 🛡️ Marcas que o CADASTRO pendura na aplicação (não na condição em si):
         // `saiComAcaoPadrao` é a Postura Defensiva — a guarda cai quando quem
         // está de guarda parte para cima.
-        ...(extra || {}),
+        ...Object.fromEntries(Object.entries(extra || {}).filter(([k]) => !['gate', 'portao'].includes(k))),
     };
     // 🛡️ POSTURA é uma só: "até trocar de postura" está no texto das duas
     // (Defensiva e Ofensiva). Entrar numa larga a outra — senão dava para
@@ -1042,14 +1061,30 @@ export async function aplicarCondicaoEmVarios(pids, nome, rodadas, porPid, nivel
                   && String(cd.nome || '').toLowerCase() === String(cond.nome).toLowerCase())),
         }));
     }
-    const alvos = [];
-    const subiram = [];
+    // 🚪 O PORTÃO é da condição (Livro, p. 9): direto entra com o golpe; corpo e
+    // mente comparam os Graus com VIG/PRS do alvo, mais 1 por vez que a mesma
+    // condição já pegou nele nesta cena; crítico sempre pega. Sem Graus
+    // (habilidade sem rolagem), a régua é o Narrador: entra.
+    const gate = extra?.gate || null;
+    const portao = extra?.portao === 'automatico' ? 'nenhum' : (tpl?.portao || 'direto');
+    const itensDe = await _itensDosParticipantes();
+    const alvos = [], subiram = [], resistiram = [], imunes = [];
     for (const pid of pids) {
         const p = parts.find(x => x.id === pid); if (!p) continue;
+        if (tpl && _imune(itensDe(p), tpl.id)) { imunes.push(p); continue; }
+        if ((portao === 'corpo' || portao === 'mente') && gate) {
+            const atr = Number(componenteDe(portao === 'corpo' ? 'VIG' : 'PRS', fonteDoParticipante(p))) || 0;
+            const chave = String(cond.nome).toLowerCase();
+            const jaPegou = Number(p.resistencias?.[chave]) || 0;
+            if (!condicaoPega({ portao, graus: gate.graus, critico: gate.critico, resistencia: atr + jaPegou })) { resistiram.push({ p, alvo: atr + jaPegou }); continue; }
+            p.resistencias = { ...(p.resistencias || {}), [chave]: jaPegou + 1 };
+        }
         const emp = empilharCondicao(p.condicoes, { ...cond }, tpl, nivel);
         p.condicoes = emp.condicoes;
         (emp.subiu || emp.noTeto ? subiram : alvos).push(p);
     }
+    if (resistiram.length) logChat(`🛡️ ${cond.icone} ${cond.nome} — resistiu (${portao === 'corpo' ? 'VIG' : 'PRS'} + Resistência): ${resistiram.map(r => `${r.p.name || '?'} (${r.alvo})`).join(', ')}`);
+    if (imunes.length) logChat(`✨ ${cond.nome}: imune — ${imunes.map(p => p.name || '?').join(', ')}`);
     if (!alvos.length && !subiram.length) return;
     await salvar(parts);
     const prazo = rodadas > 0 ? ` (${rodadas} rodada${rodadas > 1 ? 's' : ''})` : '';
@@ -1168,11 +1203,12 @@ window.tbTesteRolar = async function(tid, pid) {
         alvo = parseFloat(s);
         if (isNaN(alvo)) { toast('⚠️ Alvo inválido', 'warning'); return; }
     }
-    const dado = 1 + Math.floor(Math.random() * 10);
+    const r10 = rolarD10({ desvantagem: !!efeitoDoParticipante(p).desvantagem });
+    const dado = r10.dado;
     const graus = grausDoDado(alvo, dado);
-    t.resultados[pid] = { graus, dado, alvo };
+    t.resultados[pid] = { graus, dado, alvo, dados: r10.dados };
     await salvar(partsDaCena(), { testes });
-    toast(`🎲 ${esc(p.name)} — ${esc(t.nome)}: d10 ${dado} vs Alvo ${alvo} → ${fmtGraus(graus)}` +
+    toast(`🎲 ${esc(p.name)} — ${esc(t.nome)}: d10 ${dado}${r10.dados.length > 1 ? ` [${r10.dados.join(', ')} · Desvantagem]` : ''} vs Alvo ${alvo} → ${fmtGraus(graus)}` +
         (dado === 1 ? ' ✨ crítico!' : dado === 10 ? ' 💀 falha crítica!' : ''));
     logChat(`🎯 ${p.name} — ${t.nome}: d10 ${dado} vs Alvo ${alvo} → ${fmtGraus(graus)}` +
         (dado === 1 ? ' ✨ crítico' : dado === 10 ? ' 💀 falha crítica' : ''));

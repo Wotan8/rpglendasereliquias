@@ -2102,6 +2102,19 @@ window.usarItem = async function(itemId) {
         }
     }
 
+    // 2a) 💊 Cura por potência (Livro, p. 9): tira toda Aflição de nível ≤ N.
+    const tplItem = item.modeloId ? (window._inventoryState.catalog || []).find(t => t.id === item.modeloId) : null;
+    const potencia = Number(item.potenciaCura ?? tplItem?.potenciaCura) || 0;
+    if (potencia > 0 && Array.isArray(state.conditions)) {
+        const reg = window._systemData?.conditions || [];
+        const antes = state.conditions.length;
+        state.conditions = state.conditions.filter(c => {
+            const t = reg.find(x => x.id === c.modeloId) || reg.find(x => String(x.nome).toLowerCase() === String(c.nome).toLowerCase());
+            return !(t?.aflicao && (Number(c.nivel) || 1) <= potencia);
+        });
+        if (state.conditions.length !== antes) efeitos.push(`curou ${antes - state.conditions.length} Aflição(ões) (potência ${potencia})`);
+    }
+
     // 2) Condições vinculadas — não duplica o que já está ativo
     for (const condId of _campoDoItem(item, 'condicaoIds')) {
         const tpl = (window._systemData?.conditions || []).find(c => c.id === condId);

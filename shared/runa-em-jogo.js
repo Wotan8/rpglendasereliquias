@@ -176,14 +176,14 @@ export function blocoDeCombate({ nodes, elementsById, ...opts } = {}) {
         const foraDoRepertorio = escolhidas.filter(e => !disponiveis.some(c => norm(c.condicao) === e));
         if (foraDoRepertorio.length) problemas.push(`Fora do repertório de ${asp?.nome}: ${foraDoRepertorio.join(', ')}.`);
     }
-    // chance = nível do Aspectus × 10% na forma física, × 20% na de essência
-    const chanceBase = nvAsp * (formaEssencia ? 20 : 10);
     const ehCritica = (c) => criticas.some(k => norm(k.condicao) === norm(c.condicao));
     const condicoesAplicadas = condicoes.map(c => ({
         condicao: c.condicao,
         nivel: Math.max(1, nvAsp),
-        chance: ehCritica(c) ? null : chanceBase,
-        portao: ehCritica(c) ? 'critico' : 'chance',
+        // Núcleo v2: o portão é da CONDIÇÃO (Livro, p. 9). A runa entrega sem rolar,
+        // então os Graus são o Alvo gravado nela; a marca de crítico ignora o portão.
+        chance: null,
+        portao: ehCritica(c) ? 'automatico' : null,
         rodadas: 5,
     }));
 

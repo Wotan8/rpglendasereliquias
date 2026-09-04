@@ -182,6 +182,8 @@ export const CAMPOS_EQUIPAMENTO = [
     { key: 'atributosVinculados', label: '🎲 Atributos Vinculados (modificador ao equipar)', type: 'mechanic_selector', selectorTarget: 'attributes' },
     { key: 'periciasVinculadas', label: '🎯 Perícias Vinculadas (modificador ao equipar)', type: 'mechanic_selector', selectorTarget: 'skillsModificador' },
     { key: 'condicaoIds', label: '💀 Condições Aplicadas ao Usar', type: 'mechanic_selector', selectorTarget: 'conditions' },
+    // 💊 Cura por potência (Livro, p. 9): ao usar, tira toda Aflição de nível ≤ N.
+    { key: 'potenciaCura', label: '💊 Potência de cura (tira Aflição de nível ≤ N ao usar)', type: 'number', placeholder: '0', showWhen: { field: 'tipo', value: 'Consumível' } },
 ];
 
 // ===== TRAVA DA FORMA DE EQUIPAR =====
@@ -240,7 +242,7 @@ const HERDA_DO_MODELO = new Set([
     'valoresDerivadosVinculados', 'statusVitaisVinculados', 'atributosVinculados',
     'periciasVinculadas', 'condicaoIds', 'slotsAdicionais', 'tags', 'tipoGolpe',
     'equipavelEmGuardado', 'periciaId', 'afiacaoArcana', 'essenciaArcana', 'encantamento',
-    'imunidadeCondicaoIds', 'vantagemPericiaId', 'aura',
+    'imunidadeCondicaoIds', 'vantagemPericiaId', 'aura', 'potenciaCura',
 ]);
 export const herdaDoModelo = (key) => HERDA_DO_MODELO.has(key);
 
@@ -474,7 +476,7 @@ export const SECOES_EQUIPAMENTO = [
         id: 'efeitos', icone: '✨', titulo: 'Efeitos e vínculos',
         dica: 'O que a peça faz em quem a usa. Preencher qualquer um aqui obriga a forma Empunhar.',
         campos: ['mecanicaIds', 'valoresDerivadosVinculados', 'statusVitaisVinculados',
-            'atributosVinculados', 'periciasVinculadas', 'condicaoIds'],
+            'atributosVinculados', 'periciasVinculadas', 'condicaoIds', 'potenciaCura'],
     },
 ];
 

@@ -45,16 +45,19 @@ assert.equal(r.subiu, false, 'primeira aplicação não é "subiu de nível"');
 /* ===== o comportamento antigo continua igual (nível ausente = 1) ===== */
 assert.equal(emp([], { nome: 'Fortalecido' }, FORTALECIDO).nivel, 1, 'sem nível pedido, entra em 1');
 assert.equal(emp([], { nome: 'Fortalecido' }, FORTALECIDO, 1).nivel, 1);
-assert.equal(emp([{ nome: 'Fortalecido', nivel: 1 }], { nome: 'Fortalecido' }, FORTALECIDO).nivel, 2,
-    'aplicar de novo sobe um degrau, como sempre subiu');
+assert.equal(emp([{ nome: 'Fortalecido', nivel: 1 }], { nome: 'Fortalecido' }, FORTALECIDO).nivel, 1,
+    '🔒 Livro p. 9: mesma condição de duas fontes vale o MAIOR N — 1 sobre 1 fica 1');
+assert.equal(emp([{ nome: 'Fortalecido', nivel: 1 }], { nome: 'Fortalecido' }, FORTALECIDO, 2).nivel, 2, 'o maior N vence');
+const PECONHA = { nome: 'Peçonha', acumulaNiveis: true, nivelMaximo: 5, aflicao: true };
+assert.equal(emp([{ nome: 'Peçonha', nivel: 1 }], { nome: 'Peçonha' }, PECONHA).nivel, 2, '🔒 Aflição PIORA: mordida nova sobe +1');
 
 /* ===== acumular respeita o teto ===== */
-r = emp([{ nome: 'Fortalecido', nivel: 2 }], { nome: 'Fortalecido' }, FORTALECIDO, 2);
-assert.equal(r.nivel, 3, 'teto 3: 2 + 2 para em 3');
+r = emp([{ nome: 'Peçonha', nivel: 2 }], { nome: 'Peçonha' }, { ...PECONHA, nivelMaximo: 3 }, 2);
+assert.equal(r.nivel, 3, 'teto 3: Aflição 2 + 2 para em 3');
 assert.equal(r.noTeto, false, 'ainda subiu — só não foi tudo');
 r = emp([{ nome: 'Fortalecido', nivel: 3 }], { nome: 'Fortalecido' }, FORTALECIDO, 2);
 assert.equal(r.nivel, 3);
-assert.equal(r.noTeto, true, 'já estava no teto: a tela avisa em vez de fingir que aplicou');
+assert.equal(r.noTeto, true, 'não subiu: a tela avisa em vez de fingir que aplicou');
 
 // entrar direto acima do teto também para nele
 assert.equal(emp([], { nome: 'Fortalecido' }, FORTALECIDO, 9).nivel, 3, 'nível pedido não fura o teto');
