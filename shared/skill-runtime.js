@@ -117,6 +117,8 @@ export function miraDeCadastro(pd) {
         condicaoMaxAlvos: Number(cond?.alvos) || 0,
         condicaoPortao: cond?.portao || null,
         exigeVinculo: pd.exigeVinculo || null,
+        // 🩸 Habilidade que enche um contador de cena: { nome, qtd }
+        ganhoRecurso: pd.ganhoRecurso?.nome ? { nome: pd.ganhoRecurso.nome, qtd: Number(pd.ganhoRecurso.qtd) || 1 } : null,
         incorporacao: pd.incorporacao || null,
         alcanceVisao: !!pd.alcanceVisao,
         alcanceDoDisparo: !!pd.alcanceDoDisparo,

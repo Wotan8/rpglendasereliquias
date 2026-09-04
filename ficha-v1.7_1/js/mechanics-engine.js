@@ -119,6 +119,8 @@ const TARGET_MAP = {
     // registra o nome automaticamente e a mecânica volta a funcionar, agora
     // com Escopo por Item se você quiser um valor por arma equipada.
     "Ações por turno": "INFO:acoes_turno",
+    // ⚡ Entra na Energia Máxima (Livro, p. 4). Resolvida em _resolveSheetRef a partir de `arte: true` nas perícias.
+    "Melhor Perícia de Arte": "INFO:melhor_arte",
 
     // === EXPERIÊNCIA ===
     "EXP": "EXP_MODIFIER",
@@ -1170,6 +1172,22 @@ function _rollSortTerm(term) {
     return Math.floor(Math.random() * (hi - lo + 1)) + lo;
 }
 
+/** O maior nível entre as Perícias de Arte da ficha (skills com `arte: true`). */
+function _meMelhorArte() {
+    const chave = window.LR_DOMINIO?.chaveDaPericia;
+    let melhor = 0;
+    for (const s of (window._systemData?.skills || [])) {
+        if (!s.arte || s.publicado === false) continue;
+        const k = chave ? chave(s) : null;
+        if (!k) continue;
+        const v = typeof getEffectiveDotValue === 'function'
+            ? getEffectiveDotValue(k)
+            : ((state.dots?.[k] || 0) + (state.mechanicBonuses?.[k] || 0));
+        melhor = Math.max(melhor, Number(v) || 0);
+    }
+    return melhor;
+}
+
 function _resolveSheetRef(ref, mult) {
     if (!ref) return 0;
     mult = mult || 1;
@@ -1181,7 +1199,11 @@ function _resolveSheetRef(ref, mult) {
         return pressure * mult;
     }
 
-    // Propriedades do item em escopo (peso, tamanho, preço, liga...)
+    // ⚡ A melhor Perícia de Arte (Livro, p. 4): armas e escolas de magia, o que o
+    // cadastro marca com `arte: true`. Entra na Energia Máxima.
+    if (ref === 'Melhor Perícia de Arte') return _meMelhorArte() * mult;
+
+    // Propriedades do item em escopo (peso, tamanho, preço...)
     if (ref.startsWith('Item: ')) return _meItemProp(ref.slice(6)) * mult;
     if (ref.startsWith('Projétil: ')) return _meProjetilProp(ref.slice(10)) * mult;
 

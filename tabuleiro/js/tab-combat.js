@@ -6,7 +6,8 @@ import { db, doc, setDoc, updateDoc, getDoc } from '../../painel-mestre/js/fireb
 import { T, esc, toast, uid, alvoDoTeste, grausDoDado, fmtGraus, vNum, vitalTela, patchVitalAtualNpc, markDirty,
          registrarFlutuante, trazerParaFrente } from './tab-state.js';
 import { refCombate, refEstado, abrirModal, fecharModal } from './tab-main.js';
-import { VITAIS, vdsCombateDaFonte, espelhosDoVitalNpc, fonteDoParticipante } from './tab-hud.js';
+import { VITAIS, VDS_COMBATE, vdsCombateDaFonte, espelhosDoVitalNpc, fonteDoParticipante } from './tab-hud.js';
+import { temDoRecurso, creditarRecurso } from './tab-turno.js';
 import { cenasDoDoc, cenaAtiva, comCenaAtivaPatch, comCenaNova, semCena, comTrocaDeCena, condDoParticipante, tirarCondicoesExpiradas, FACCOES, faccaoDoParticipante, acoesNovas, participanteDaVez, efeitoDasCondicoes, alvoDoTickRodada } from '../../shared/combate-cenas.js';
 import { rolarFormula, rolarD10 } from './tab-conflito-calc.js';
 import { valorComponente as componenteDe } from './tab-state.js';
@@ -346,8 +347,28 @@ window.tbCombIniciarCena = async function() {
     const vez = participanteDaVez({ ...c, turnoAtual: 0 });
     toast('⚔️ Combate iniciado!');
     logChat(`⚔️ Combate iniciado — Rodada 1, vez de ${vez?.name || '?'}`);
+    await zerarContadoresDeCena(parts);
     await aplicarRunasPassivas(parts);
 };
+
+/**
+ * ⏱️ Contador de cena (Livro, p. 4): Carga, Harmonia. Começa em 0 quando a cena
+ * começa e some quando ela acaba — não se guarda, não recarrega dormindo.
+ */
+async function zerarContadoresDeCena(parts) {
+    const contadores = (VDS_COMBATE || []).filter(d => d.contadorDeCena && d.campoAtual);
+    if (!contadores.length) return;
+    const zerados = [];
+    for (const p of parts) {
+        for (const dv of contadores) {
+            const r = temDoRecurso(p, dv.nome);
+            if (r?.tem == null || !(r.tem > 0)) continue;
+            await creditarRecurso(p, dv.nome, 0);
+            zerados.push(`${p.name || '?'}: ${dv.nome} ${r.tem} → 0`);
+        }
+    }
+    if (zerados.length) logChat(`⏱️ Contadores de cena zerados — ${zerados.join(' · ')}`);
+}
 
 /**
  * 🪡 Tatuagem PASSIVA: runa sem lógica de gatilho está sempre ligada, então
@@ -390,6 +411,8 @@ window.tbCombEncerrarCena = async function() {
     // 🧱 Nada manifestado por runa sobrevive à cena: o fluxo que sustentava a
     // parede acabou junto com o combate.
     await limparManifestacoes({ tudo: true });
+    // ⏱️ E os contadores de cena somem com ela (Livro, p. 4).
+    await zerarContadoresDeCena(partsDaCena());
     // 🌀 E ninguém sai do combate preso dentro de outro corpo.
     await desfazerIncorporacoes();
 };

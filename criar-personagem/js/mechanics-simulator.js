@@ -104,6 +104,14 @@ export function simulateDerivedValues() {
         // Perícia com prefixo explícito ("Perícia: X") — resolve ANTES dos VDs,
         // porque o prefixo existe justamente para desambiguar nomes que existem
         // nos dois lados (Exorcismo, Transcendência, Dosagem, Contracanto...).
+        // ⚡ A melhor Perícia de Arte (Livro, p. 4): entra na Energia Máxima.
+        if (ref === 'Melhor Perícia de Arte') {
+            let melhor = 0;
+            for (const skills of Object.values(window.SKILLS || {}))
+                for (const s of skills) if (s.arte) melhor = Math.max(melhor, Number(nivelPericia(`sk_${s.key}`)) || 0);
+            return melhor;
+        }
+
         if (ref.startsWith('Perícia: ')) {
             const nome = ref.slice('Perícia: '.length);
             for (const skills of Object.values(window.SKILLS || {})) {

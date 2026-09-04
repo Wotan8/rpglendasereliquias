@@ -244,6 +244,7 @@ const MODULE_DEFS = {
             { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
             { key: 'custoEvolucao', label: 'Custo de Evolução (EXP por nível)', type: 'number', placeholder: '4' },
             { key: 'todoPersonagem', label: 'Todo personagem tem esta perícia?', type: 'boolean' },
+            { key: 'arte', label: '⚡ Perícia de Arte (armas e escolas — a melhor entra na Energia, Livro p. 4)', type: 'boolean' },
             { key: 'mecanicaIds', label: 'Mecânicas Vinculadas', type: 'mechanic_selector', fontePreFilter: '' },
         ]
     },
@@ -511,6 +512,8 @@ const MODULE_DEFS = {
             },
             { key: 'arredondaMesa', label: '🎲 Arredonda na mesa? (exibe o inteiro — p/ baixo, mín. 1 se > 0 — e mostra a fração exata no tooltip do nome. Ex.: Blindagem)', type: 'boolean' },
             { key: 'campoAtual', label: 'Tem campo "Atual" (editável)?', type: 'boolean' },
+            { key: 'contadorDeCena', label: '⏱️ Contador de cena (começa em 0 e some no fim da cena — Livro p. 4)', type: 'boolean', showWhenBoolean: 'campoAtual' },
+            { key: 'climax', label: '🎼 Tem Clímax (gastar tudo antes de rolar; passou, cada ponto é 1 Grau)', type: 'boolean', showWhenBoolean: 'contadorDeCena' },
             { key: 'campoEditavel', label: 'Campo editável pelo jogador?', type: 'boolean' },
             { key: 'statusCombate', label: '⚔️ Status de Combate? (fixa no topo da aba Combate da ficha)', type: 'boolean' },
             { key: 'characterCreationRule', label: 'Regra de Criação de Personagem', type: 'boolean' },
@@ -4562,7 +4565,12 @@ function _buildClassModuleEditorRow(idx, data) {
                     <div class="form-group">
                         <label>Recurso que volta</label>
                         <input type="text" data-cm-key="retornoRecurso" value="${escapeHtml(data.retornoRecurso || '')}" placeholder="Ex: Harmonia">
-                        <div style="font-size:.6rem;color:var(--muted)">Volta o MESMO valor que foi gasto dele na conjuração.</div>
+                        <div style="font-size:.6rem;color:var(--muted)">Sem retorno fixo, volta o MESMO valor que foi gasto dele na conjuração.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Retorno fixo por conjuração que passa</label>
+                        <input type="number" step="1" min="0" data-cm-key="retornoFixo" value="${data.retornoFixo ?? 0}" placeholder="0">
+                        <div style="font-size:.6rem;color:var(--muted)">Ex.: 1 — a Harmonia constrói Harmonia, seja qual for a moeda paga (Livro, p. 8).</div>
                     </div>
                     <div class="form-group">
                         <label>Bônus se não gastou a Ação de Movimento</label>
@@ -5256,6 +5264,7 @@ function _collectSingleModuleData(item) {
 
     // 🔁 Retorno de recurso no fim do turno (ver shared/retorno-recurso.js)
     mod.retornoRecurso = (g('retornoRecurso') || '').trim();
+    mod.retornoFixo = parseInt(g('retornoFixo'), 10) || 0;
     mod.retornoBonusParado = parseInt(g('retornoBonusParado'), 10) || 0;
     mod.retornoExigeSucesso = !!item.querySelector('[data-cm-key="retornoExigeSucesso"]')?.checked;
     mod.retornoZeraSeFalhar = !!item.querySelector('[data-cm-key="retornoZeraSeFalhar"]')?.checked;

@@ -53,4 +53,11 @@ assert.equal(retornoDoTurno(BARDO, {}).ganho, 0, 'turno vazio não inventa ganho
 assert.equal(retornoDoTurno(BARDO, { gastou: -5, parado: true }).ganho, 0, 'gasto negativo não vira crédito');
 assert.equal(retornoDoTurno(BARDO, { gastou: '3', parado: true }).ganho, 4, 'aceita número vindo como texto');
 
-console.log('✅ retorno-recurso: Bardo parado/andando/falhando, +1 fixo, turno sem conjurar e classe sem cadastro OK');
+// 🎶 Núcleo v2: a Harmonia constrói Harmonia — +1 por canção que passa, paga com Energia OU Harmonia.
+const V2 = { retornoRecurso: 'Harmonia', retornoFixo: 1, retornoExigeSucesso: true, retornoZeraSeFalhar: true };
+assert.equal(retornoDoTurno(V2, { gastou: 0, conjurou: true, falhou: false }).ganho, 1, 'pagou com Energia: +1 mesmo assim');
+assert.equal(retornoDoTurno(V2, { gastou: 3, conjurou: true, falhou: false }).ganho, 1, 'pagou com Harmonia: +1, não devolve o gasto');
+assert.equal(retornoDoTurno(V2, { gastou: 0, conjurou: false }).ganho, 0, 'não conjurou: nada');
+assert.deepEqual([retornoDoTurno(V2, { gastou: 2, conjurou: true, falhou: true }).ganho, retornoDoTurno(V2, { gastou: 2, conjurou: true, falhou: true }).zera], [0, true], 'errou: zera');
+
+console.log('✅ retorno-recurso: Bardo parado/andando/falhando, +1 fixo, turno sem conjurar, classe sem cadastro e retorno fixo v2 OK');

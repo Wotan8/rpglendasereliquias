@@ -143,7 +143,7 @@ export const SECOES_VALOR_DERIVADO = [
     {
         id: 'campos', icone: '✍️', titulo: 'Campos editáveis',
         dica: 'Se tem "Atual" ao lado do máximo e quem pode mexer nele.',
-        campos: ['campoAtual', 'campoEditavel', 'statusCombate'],
+        campos: ['campoAtual', 'contadorDeCena', 'climax', 'campoEditavel', 'statusCombate'],
     },
     {
         id: 'criacao', icone: '🧬', titulo: 'Criação de personagem',

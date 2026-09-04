@@ -33,7 +33,7 @@ import { bonusDoAtaque } from '../../shared/marca-de-caca.js';
 import { ritualProibeDefesa } from '../../shared/turno-efeitos.js?v=1';
 import { destinoDoProjetil, gastarUm } from '../../shared/projeteis.js';
 import { addObj } from './tab-objects.js';
-import { participanteDoToken, valorVdDaFonte, fonteDoParticipante, VITAIS } from './tab-hud.js';
+import { participanteDoToken, valorVdDaFonte, fonteDoParticipante, VITAIS, vdsCombateDaFonte } from './tab-hud.js';
 import { aplicarCondicaoEmVarios, marcarFalhaDeConjuracao } from './tab-combat.js';
 import { logChat } from './tab-chat.js';
 import { confirmar } from '../../shared/dialogo.js?v=2';
@@ -369,6 +369,17 @@ function porqueModAlvo(c) {
     return ef.modAlvo ? porqueCondicao(ef, 'modAlvo') : '';
 }
 
+/**
+ * 🎼 Clímax (Livro, p. 8): antes de rolar, o Bardo pode gastar toda a Harmonia;
+ * se passar, cada ponto vira 1 Grau automático. Vale para qualquer contador de
+ * cena marcado com `climax` no cadastro do VD.
+ */
+function climaxDe(pid) {
+    const p = part(pid); if (!p) return null;
+    const dv = vdsCombateDaFonte(fonteDoParticipante(p)).find(d => d.climax && d.contadorDeCena && Number(d.atual) > 0);
+    return dv ? { nome: dv.nome, key: dv.key, atual: Number(dv.atual) || 0 } : null;
+}
+
 function manual(id) {
     const v = document.getElementById(id)?.value;
     if (v == null || String(v).trim() === '') return null;
@@ -394,8 +405,16 @@ window.tbConfRolarAcerto = async (naMesa) => {
         const r10 = rolarD10({ desvantagem: !!efeitoDasCondicoes(part(c.atacante.pid)?.condicoes || [], T.condicoesSistema).desvantagem });
         dado = r10.dado; dadosD10 = r10.dados;
     }
-    const graus = grausDoAtaque(alvo, dado, regrasTeste().criticoGrausExtra);
-    const rolagem = { dado, alvo, graus, critico: dado === 1, falha: dado === 10, abriu: abriuGuarda(graus, dado), naMesa: !!naMesa, dados: dadosD10 };
+    let graus = grausDoAtaque(alvo, dado, regrasTeste().criticoGrausExtra);
+    // 🎼 Clímax: gastou toda a Harmonia antes de rolar; passou, cada ponto é 1 Grau.
+    const clim = climaxDe(c.atacante.pid);
+    const climax = clim && document.getElementById('cfClimax')?.checked ? clim.atual : 0;
+    if (climax) {
+        if (dado !== 10 && graus >= 0) graus += climax;
+        await window.tbCombSetVd?.(c.atacante.pid, clim.key, 0);
+        logChat(`🎼 Clímax: ${c.atacante.nome} gasta ${climax} de ${clim.nome}${dado !== 10 && graus >= climax ? ` — +${climax} Graus` : ' — e a canção falhou'}`);
+    }
+    const rolagem = { dado, alvo, graus, critico: dado === 1, falha: dado === 10, abriu: abriuGuarda(graus, dado), naMesa: !!naMesa, dados: dadosD10, climax };
     // 10 no dado nunca passa: os alvos não gastam defesa nenhuma com isso
     const erroSeco = dado === 10;
     const alvos = c.alvos.map(a => erroSeco ? { ...a, escolhido: true, passou: false, defesaNome: '—', defesa: 0 } : a);
@@ -759,7 +778,7 @@ function render() {
         ᛟ <b>Alvo da Runa ${r.alvo}</b> — o mecanismo entrega como foi projetado.
         <span class="tb-turno-hint">Sem rolagem: só uma Defesa declarada pode barrar.</span>
         </div>` : r ? `<div class="tb-conflito-rolagem ${r.critico ? 'crit' : r.falha ? 'falha' : ''}">
-        🎲 d10 <b>${r.dado}</b>${r.naMesa ? ' <i>(mesa)</i>' : ''}${r.dados?.length > 1 ? ` <i>[${r.dados.join(', ')} · Desvantagem]</i>` : ''} vs Alvo ${r.alvo} → <b>${r.graus > 0 ? '+' : ''}${r.graus} Graus</b>
+        🎲 d10 <b>${r.dado}</b>${r.naMesa ? ' <i>(mesa)</i>' : ''}${r.dados?.length > 1 ? ` <i>[${r.dados.join(', ')} · Desvantagem]</i>` : ''}${r.climax ? ` 🎼 +${r.climax}` : ''} vs Alvo ${r.alvo} → <b>${r.graus > 0 ? '+' : ''}${r.graus} Graus</b>
         ${r.critico ? ` ✨ crítico (Graus = Alvo + ${regrasTeste().criticoGrausExtra}, dado cheio no dano)` : ''}
         ${r.falha ? ' 💀 desastre (erro automático)' : ''}
         ${!r.critico && !r.falha && r.abriu ? ' 🔁 guarda aberta — cabe contra-ataque' : ''}
@@ -772,6 +791,7 @@ function render() {
                 rotulo: `${c.acao.acertoIcone || '🎯'} ${esc(c.acao.acertoNome || 'Acerto')}`,
                 fn: 'tbConfRolarAcerto', idManual: 'cfManualAcerto', dica: 'd10 da mesa',
                 extra: `<label class="tb-conflito-alvoin">Alvo <input type="number" id="cfAlvoAcerto" value="${alvoComMarca(c) ?? ''}" step="any" placeholder="?"></label>`
+                    + (climaxDe(c.atacante.pid) ? `<label class="tb-conflito-marca" title="Livro, p. 8: gaste toda a Harmonia antes de rolar; se passar, cada ponto vira 1 Grau"><input type="checkbox" id="cfClimax"> 🎼 Clímax: ${climaxDe(c.atacante.pid).atual} ${esc(climaxDe(c.atacante.pid).nome)}</label>` : '')
                     + (c.marca?.acerto ? `<span class="tb-conflito-marca" title="A presa está marcada por este caçador">🎯 +${c.marca.acerto} Marca de Caça (base ${c.acao.alvoAcerto})</span>` : '')
                     // 😟 De onde saiu o desconto: sem isto o Alvo aparece menor
                     // e ninguém sabe por quê — o mestre desconfia do sistema.

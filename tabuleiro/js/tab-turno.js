@@ -114,7 +114,7 @@ const _norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').to
  * (VD com campo Atual — recurso de classe). null = desconhecido (não bloqueia).
  * @returns { tem, nome } ou null
  */
-function temDoRecurso(p, alvo) {
+export function temDoRecurso(p, alvo) {
     const a = _norm(alvo);
     const vitais = recursosDe(p) || {};
     // `max` só interessa a quem DEVOLVE recurso (retorno de fim de turno); quem
@@ -282,6 +282,7 @@ function cfgRetorno(mod) {
     if (!String(mod?.retornoRecurso || '').trim()) return null;
     return {
         retornoRecurso: String(mod.retornoRecurso).trim(),
+        retornoFixo: Number(mod.retornoFixo) || 0,
         retornoBonusParado: Number(mod.retornoBonusParado) || 0,
         retornoExigeSucesso: !!mod.retornoExigeSucesso,
         retornoZeraSeFalhar: !!mod.retornoZeraSeFalhar,
@@ -1257,10 +1258,12 @@ async function acumularRetorno(p, cfg, custosPagos) {
     const gasto = (custosPagos || [])
         .filter(c => _norm(c.alvo) === alvo)
         .reduce((t, c) => t + (Number(c.qtd) || 0), 0);
-    if (!gasto) return;   // conjurou pagando outra moeda: não gera retorno
+    // Retorno FIXO (Harmonia: +1 por canção que passa, Livro p. 8) conta a conjuração
+    // seja qual for a moeda; o retorno "devolve o gasto" continua exigindo gasto.
+    if (!gasto && !cfg.retornoFixo) return;   // conjurou pagando outra moeda: não gera retorno
     const c = cena();
     const parts = (c.participantes || []).map(x => x.id !== p.id ? x : {
-        ...x, retornoTurno: { ...cfg, gastou: ((x.retornoTurno?.gastou) || 0) + gasto, falhou: !!x.retornoTurno?.falhou },
+        ...x, retornoTurno: { ...cfg, gastou: ((x.retornoTurno?.gastou) || 0) + gasto, conjurou: true, falhou: !!x.retornoTurno?.falhou },
     });
     await salvarCena({ participantes: parts });
 }
@@ -1295,7 +1298,7 @@ window.tbFecharTurnoRetorno = async function (pid, parado) {
 };
 
 /** Escreve um recurso (vital ou VD de classe) num valor absoluto. */
-async function creditarRecurso(p, nome, novo) {
+export async function creditarRecurso(p, nome, novo) {
     const a = _norm(nome);
     const vital = /^(energia|ener)/.test(a) ? 'ENER' : /^(vitalidade|vit)/.test(a) ? 'VIT' : /^(sanidade|san)/.test(a) ? 'SAN' : null;
     try {
@@ -1303,6 +1306,16 @@ async function creditarRecurso(p, nome, novo) {
         const dv = vdsCombateDaFonte(fonteDoParticipante(p)).find(d => _norm(d.nome) === a);
         if (dv) await window.tbCombSetVd?.(p.id, dv.key, novo);
     } catch (e) { console.warn('creditar recurso', e); }
+}
+
+/** 🩸 Enche um recurso/contador até o teto da ficha (Sangria da Veia → +1 Carga de Sangue). */
+async function ganharRecurso(p, ganho) {
+    const r = temDoRecurso(p, ganho.nome);
+    const qtd = Number(ganho.qtd) || 1;
+    if (!r || r.tem == null) { toast(`${ganho.nome}: ajuste o contador à mão (+${qtd})`); return; }
+    const novo = r.max != null ? Math.min(r.max, r.tem + qtd) : r.tem + qtd;
+    await creditarRecurso(p, ganho.nome, novo);
+    logChat(`🩸 ${p.name || '?'}: ${r.nome} ${r.tem} → ${novo}${novo < r.tem + qtd ? ' (teto)' : ''}`);
 }
 
 async function pagarCusto(p, custo) {
@@ -1654,6 +1667,8 @@ function miraDoCadastro(m, s, custo, p) {
             condicoes: m.condicoes || [],
             condicoesExclusivas: !!m.condicoesExclusivas,
             portao: m.condicaoPortao || null,
+            // 🩸 Habilidade que ENCHE um contador (Sangria da Veia: +1 Carga de Sangue)
+            ganhoRecurso: m.ganhoRecurso || null,
         },
     };
 }
@@ -2095,6 +2110,7 @@ window.tbTurnoConfirmarMira = async () => {
     if (meta.manifestacao) await manifestarNoMapa(m, meta, p);
     if (meta.runaItemId) await gastarUsoDaRuna(meta.runaItemId);
     await pagarCustos(p);   // 💰 debita o recurso (mecânica ou texto do cadastro)
+    if (meta.ganhoRecurso?.nome) await ganharRecurso(p, meta.ganhoRecurso);   // 🩸 enche o contador
     if (custo === 'livre') render();
     // 🤝 Aplica direto, SEM janela de conflito, quando não há o que rolar:
     //   · buff em aliado — ninguém se defende de um buff;

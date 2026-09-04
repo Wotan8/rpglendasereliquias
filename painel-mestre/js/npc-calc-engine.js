@@ -51,6 +51,8 @@ function buildTargetMap(sys) {
         // (o furo "perícia vale 0"): a ref não casava e caía no aviso.
         map['Perícia: ' + s.nome] = 'SKILL:' + s.id;
     });
+    // ⚡ As Perícias de Arte (skills com `arte: true`): a melhor entra na Energia Máxima.
+    map.__artes = (sys.skills || []).filter(s => s.arte && s.publicado !== false).map(s => 'Perícia: ' + s.nome);
 
     Object.entries(VITAL_ALIASES).forEach(([nome, key]) => {
         if (!map[nome]) map[nome] = 'DV:' + key;
@@ -148,6 +150,7 @@ function rollSortTerm(term) {
 function resolveRef(ref, ctx) {
     if (!ref) return 0;
     if (ref === 'Nível') return ctx.nivel;
+    if (ref === 'Melhor Perícia de Arte') return Math.max(0, ...(ctx.targetMap.__artes || []).map(r => Number(resolveRef(r, ctx)) || 0));
 
     // Propriedades do item que concedeu a op (ctx.itemEscopo) e do maço que
     // ele aponta. Espelha _ME_ITEM_PROPS/_meProjetilProp da ficha — sem isto,

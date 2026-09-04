@@ -70,7 +70,7 @@ export const ALVOS_FIXOS = [
     'Hemomancia', 'Abismancia', 'Abismo', 'Necromancia', 'Pallomancia', 'Sonoromancia',
     'Totemancia', 'Runomancia', 'Alquimancia', 'Alquimia',
     // avulsos
-    'Ações por turno', 'EXP',
+    'Ações por turno', 'Melhor Perícia de Arte', 'EXP',
 ];
 
 /** Refs que o resolvedor trata ANTES de olhar o TARGET_MAP. */

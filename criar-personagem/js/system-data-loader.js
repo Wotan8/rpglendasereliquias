@@ -395,6 +395,7 @@ function buildSkillsFromFirebase() {
             descricao: sk.descricao || '',
             // Exclusiva sem o flag pertence a uma classe, não a todo personagem —
             // mesma leitura da ficha, para as duas telas mostrarem a mesma lista.
+            arte: sk.arte === true,   // ⚡ Perícia de Arte: a melhor entra na Energia (Livro, p. 4)
             todoPersonagem: cat === 'exclusivo' ? sk.todoPersonagem === true : sk.todoPersonagem !== false
         });
     }

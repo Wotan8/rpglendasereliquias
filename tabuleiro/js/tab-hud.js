@@ -191,6 +191,8 @@ export function initHud() {
                     id: d.id, key: d.key, nome: d.nome, icone: d.icone || '📊',
                     prefixo: d.prefixo || '', sufixo: d.sufixo || '',
                     campoAtual: d.campoAtual === true, todoPersonagem: d.todoPersonagem === true,
+                    // ⏱️ Contador de cena (Livro, p. 4): começa em 0 e some quando a cena acaba; Clímax gasta tudo por Graus.
+                    contadorDeCena: d.contadorDeCena === true, climax: d.climax === true,
                 }));
             markDirty();
             window._renderCombate?.();
