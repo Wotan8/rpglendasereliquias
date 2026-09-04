@@ -1,6 +1,6 @@
 ---
 name: bestiario
-description: Fisiologista, biólogo e catalogador de criaturas de Lendas e Relíquias. Use para criar, balancear, catalogar ou auditar criatura, fera, monstro, invocação, companheiro animal ou NPC bestial — do conceito folclórico à ficha gravada em `npcs` e ao verbete no Bestiário. Cobre anatomia e partes do corpo, Vitalidade e Blindagem natural, força em × guerreiro pela Régua v3, ⚡ Poder (EXP Total da ficha) e a faixa de Grau que ele abre, doma e vínculo, habitat, dieta e nicho ecológico.
+description: Fisiologista, biólogo e catalogador de criaturas de Lendas e Relíquias. Use para criar, balancear, catalogar ou auditar criatura, fera, monstro, invocação, companheiro animal ou NPC bestial — do conceito folclórico à ficha gravada em `npcs` e ao verbete no Bestiário. Cobre anatomia e partes do corpo, Vitalidade e Blindagem natural, força em × guerreiro pela Régua v3, ⚡ Poder (EXP Total da ficha) e o Patamar que ele abre, doma e vínculo, habitat, dieta e nicho ecológico.
 ---
 
 # Bestiário — Lendas e Relíquias
@@ -21,7 +21,7 @@ Falhou uma das três, ela é ficha de bicho genérico. Diga isso e conserte ante
 perícia, condição, valor derivado — tudo se confere antes. Se o nome pedido não existe,
 pare e pergunte; não crie o registro faltante por conta própria.
 
-## 1. A conta de força — Régua v3, unidade 3,90
+## 1. A conta de força — Régua v3 no combate v2, unidade 3,25
 
 **Combate v3: só o atacante rola** (Livro §6.1). A Defesa do alvo é um número, não um teste.
 
@@ -32,15 +32,15 @@ DPR            = P × líquido
 força          = DPR ÷ unidade
 ```
 
-**O par de referência (§0.2).** Guerreiro FOR 4 + Perícia: Arma 3, Espada Longa Q0 →
-Alvo 7. Defensor com Perícia: Esquiva 2 → **Defesa 1** (Defesa raiz 0 + 2 − 1) e
-**Blindagem 2**.
+**O par de referência (§0.2, Núcleo v2).** Guerreiro FOR 4 + Perícia: Arma 3, Espada Longa
+Q0 → Alvo 7. Defensor com Perícia: Esquiva 2 → **Defesa 2** (a defesa É o nível da perícia)
+e **Blindagem 2** (armadura Média Q0).
 
 | Grandeza | Valor |
 |---|---|
-| P(golpe passa) | 0,60 |
+| P(golpe passa) | 0,50 |
 | Dano líquido | 6,5 |
-| **DPR — 1 unidade** | **3,90** |
+| **DPR — 1 unidade** | **3,25** |
 | Vitalidade `(VIG + Tamanho) × 3` | 18 |
 | Duração do combate | 4,6 rodadas |
 
@@ -49,15 +49,16 @@ de Qualidade — na Q5 a unidade encolhe (era 2,385 na base velha). **Meça a cr
 faixa de Qualidade da mesa que vai enfrentá-la.** Medir um chefe contra defesa Q0 produz
 falso "quebrado".
 
-**Base declarada.** A unidade saiu de 3,445 para 3,90 em 16/08/2026 (§0.2b). Carimbo sem
-o campo `base` é pré-v3 e não é comparável. Sempre diga em que base você mediu.
+**Base declarada.** A unidade foi 3,445, depois 3,90 (16/08/2026) e é **3,25 no Núcleo v2**
+(04/09/2026: Defesa = perícia, Blindagem única). Carimbo em outra base não é comparável —
+os carimbos gravados em 3,90 ainda não foram recompostos. Sempre diga em que base você mediu.
 
 **Alvo acima de 9.** O excedente não vira chance de acerto — vira **Graus de Transbordo**
 (Livro §6.3). Uma criatura de Alvo 11 tem o P de Alvo 9 e +2 de Transbordo; a régua acima
 subestima essas, e você deve dizer isso ao entregar.
 
-**Piso de dano 1, do golpe inteiro, nunca por canal.** Com dano tipado cada canal é
-clampado em 0, os canais somam, e só então o piso incide.
+**Piso de dano 1, do golpe inteiro.** A Blindagem é uma só; dano de Essência (peçonha
+arcana, sopro, magia) só a Blindagem Arcana barra. Não existe dano tipado.
 
 ### O invariante que tudo protege
 
@@ -119,7 +120,8 @@ escada existente (5 → 4 → 4 → 3 → 2) e não invente número fora dela.
 
 ### Carimbo v3 da escada que já está no banco
 
-Recomputado com a fórmula desta seção (defensor Defesa 1, Blindagem 2, unidade 3,90):
+Recomputado com a fórmula desta seção na base 3,90 (defensor Defesa 1, Blindagem 2); na base
+v2 (3,25) cada força sobe ~20% — recomponha antes de comparar com criatura nova:
 
 | Criatura | Alvo | Dano | Vit | P | líq | DPR | força | alvo do projeto |
 |---|---|---|---|---|---|---|---|---|
@@ -178,24 +180,26 @@ entra negativa. É a alavanca legítima para uma fera poderosa custar menos Pode
 lentidão, dependência, fraqueza a um canal. Use isso em vez de simplesmente não cadastrar
 o que ela tem.
 
-### Poder → Grau → teto de Fio
+### Poder → Patamar → Qualidade
 
-A faixa de Poder é a mesma escada do equipamento (ver o skill **balancear-item**), e vale
-para criatura igual vale para personagem:
+A faixa de Poder é a mesma escada do equipamento (Livro, Página 12; `config/regras` →
+`poder.patamares`), e vale para criatura igual vale para personagem:
 
-| Grau | Poder (EXP Total) | Fio | Teto de Fio equipado |
-|---|---|---|---|
-| 1 — Inicial | até 500 | 0 | 0 |
-| 2 — Veterano | 500–850 | +1 | 1 |
-| 3 — Mestre | 850–1300 | +2 | 2 |
-| 4 — Lendário | 1300–1800 | +3 | 3 |
-| 5 — Relíquia | 1800+ | +4 | 4 |
+| Patamar | Poder (EXP Total) | Qualidade "de casa" |
+|---|---|---|
+| 0 Inicial | até 500 | Q0 |
+| 1 Veterano | 500–850 | Q1 |
+| 2 Especialista | 850–1.300 | Q2 |
+| 3 Mestre | 1.300–1.800 | Q3 |
+| 4 Obra-Prima | 1.800–2.500 | Q4 |
+| 5 Graal | acima de 2.500 | Q5 |
 
-> **A soma de TODO Fio de dano da criatura — todos os canais, arma natural, peçonha, sopro
-> — não pode passar do Fio da faixa de Poder dela.**
+> **A Qualidade do que a criatura carrega ou é — arma natural, peçonha, sopro, couro — não
+> passa do Patamar dela.** Q soma no dano (arma) ou na Blindagem (couro), igual ao item.
 
-Uma fera de Poder 400 que respira fogo por +2 e morde por +2 está gastando 4 Fios numa
-faixa que só comporta 0. Ou a ficha sobe de Poder, ou os canais descem.
+Uma fera de Poder 400 que morde com Q2 e respira fogo com Q2 está dois Patamares acima do
+que pagou. Ou a ficha sobe de Poder, ou a Qualidade desce. NPC no Patamar do grupo é luta
+justa; dois Patamares acima é chefe.
 
 ### Calibração — Poder das criaturas de cânone
 
@@ -204,19 +208,19 @@ Calculado com as fórmulas acima sobre os atributos gravados em
 fichas foram cadastradas em modo rápido, **sem perícia, peculiaridade ou módulo** — logo o
 Poder delas é só atributo, e é o piso. Ficha equivalente com perícias sobe bastante.
 
-| Criatura | força | Poder | Grau | força por 100 de Poder |
+| Criatura | força | Poder | Patamar | força por 100 de Poder |
 |---|---|---|---|---|
-| Fantoche | 0,10× | 50 | 1 | 0,20 |
-| Corvo | 0,10× | 160 | 1 | 0,06 |
-| Serpente | 0,19× | 170 | 1 | 0,11 |
-| Servo Reanimado | 0,58× | 165 | 1 | 0,35 |
-| Lobo | 0,58× | 195 | 1 | 0,30 |
-| Urso | 0,67× | 265 | 1 | 0,25 |
-| Cria Menor do Véu | 1,00× | 190 | 1 | **0,53** |
-| Cria da Fenda | 1,53× | 290 | 1 | **0,53** |
-| Horror Rastejante | 1,95× | 435 | 1 | 0,45 |
-| Horror Maior | 2,15× | 625 | 2 | 0,34 |
-| Entidade da Oitava | 2,56× | 935 | 3 | 0,27 |
+| Fantoche | 0,10× | 50 | 0 | 0,20 |
+| Corvo | 0,10× | 160 | 0 | 0,06 |
+| Serpente | 0,19× | 170 | 0 | 0,11 |
+| Servo Reanimado | 0,58× | 165 | 0 | 0,35 |
+| Lobo | 0,58× | 195 | 0 | 0,30 |
+| Urso | 0,67× | 265 | 0 | 0,25 |
+| Cria Menor do Véu | 1,00× | 190 | 0 | **0,53** |
+| Cria da Fenda | 1,53× | 290 | 0 | **0,53** |
+| Horror Rastejante | 1,95× | 435 | 0 | 0,45 |
+| Horror Maior | 2,15× | 625 | 1 | 0,34 |
+| Entidade da Oitava | 2,56× | 935 | 2 | 0,27 |
 
 **O que essa coluna ensina.** A eficiência **cai** conforme a criatura sobe — 0,53 na base
 da escada abissal, 0,27 no topo. Não é desequilíbrio: atributo custa quadrático e o DPR
@@ -267,21 +271,22 @@ Criatura Enorme ou Colossal precisa de resposta explícita: osso oco, membro-col
 flutuação, sustentação mágica, ou vida aquática. Sem isso ela não é biologia — é escala de
 miniatura, e a mesa percebe.
 
-**Blindagem natural.** Segue a mesma régua da armadura: **por slot coberto, nunca por
-item**. Taxas do Grau 1 — Leve 0,20 · Média 0,22 · Pesada 0,30 por slot; ×1,35 a cada Grau.
-Blindagem é fracionária de ponta a ponta, 2 casas, sem arredondar. Couro de fera raramente
-passa de Média; quitina e placa óssea entram como Pesada e devem custar mobilidade em algum
-lugar (Deslocamento menor, DES baixa, ponto cego). Para a régua completa de proteção, use
-o skill **balancear-item**.
+**Blindagem natural.** Segue a régua da armadura (Livro, Página 6): **Leve 1 · Média 2 ·
+Pesada 3, mais a Qualidade do couro**, uma vez, do corpo inteiro — não é por slot. Dano de
+Essência só a Blindagem Arcana barra. Couro de fera raramente passa de Média; quitina e placa
+óssea entram como Pesada e devem custar mobilidade em algum lugar (Deslocamento menor, DES
+baixa, ponto cego). Para a régua completa de proteção, use o skill **balancear-item**.
 
 **Anatomia customizada.** Criatura não precisa da anatomia humanoide. Monte `partesDoCorpo`
 com o que o corpo tem — Cauda, Asa, Tentáculo, Carapaça — usando ids do catálogo
-`bodyParts` quando existirem. Referência humana: 11 partes, 21 slots, **15 protegíveis**.
+`bodyParts` quando existirem. Referência humana: 11 partes, 21 slots. Os slots dizem onde a
+peça encaixa e o que o corpo consegue fazer; a Blindagem não depende deles.
 Cada parte declara `slots`, `podeSegurar`, `podeEmpunhar`, `podeVestir`, `podeFixar`. Um
 bicho sem mão não empunha nada, e é isso que o campo diz.
 
 **Fórmulas de apoio no modo rápido.** O padrão gravado pelos scripts de cânone:
-`INI = DES + RAC` · `REA = min(DES, RAC) + 1` · `PERC` conforme o sentido dominante. No modo
+`INI = DES + RAC` · `PERC` conforme o sentido dominante (a Defesa é a perícia: Esquiva,
+Aparar ou Bloquear). No modo
 mecânico o motor calcula sozinho — **não grave override sem motivo**, porque override
 congela o número e cala o motor.
 
@@ -428,8 +433,8 @@ prefixo, o motor casa com o VD homônimo e lê o número errado **em silêncio**
 
 Ao entregar uma criatura, mostre:
 
-1. **A conta** — P, líquido, DPR, força em × guerreiro, e a base declarada (3,90).
-2. **O Poder** — EXP Total, a faixa de Grau em que ele cai, o teto de Fio que essa faixa
+1. **A conta** — P, líquido, DPR, força em × guerreiro, e a base declarada (3,25 no v2).
+2. **O Poder** — EXP Total, o Patamar em que ele cai, a Qualidade que esse Patamar
    permite, e a força por 100 de Poder contra as faixas do §2b. Se o número depender de
    override, de item de inventário ou de peculiaridade sem registro, diga — nesses três
    casos o Poder mente para baixo.

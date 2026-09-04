@@ -1,263 +1,147 @@
 ---
 name: balancear-item
-description: Balanceia armas, armaduras e escudos de Lendas e Relíquias pelo modelo de combate do sistema. Use ao criar item novo com potência-alvo ("cria uma espada que começa com +4 de Dano", "uma armadura que aguente arma de +4"), ao auditar item já cadastrado ("balanceia a Armadura X, o arnês completo dela deve dar +4 de Blindagem"), ou ao decidir Blindagem, dado de dano, cobertura de slots e classe de material de qualquer equipamento.
+description: Balanceia armas, armaduras e escudos de Lendas e Relíquias pelo modelo de combate do Núcleo v2. Use ao criar item novo com potência-alvo ("cria uma espada Q2 com Afiação 1", "uma armadura que aguente uma arma Q3"), ao auditar item já cadastrado ("balanceia a Armadura X"), ou ao decidir Qualidade, dado de dano, classe de armadura (Leve/Média/Pesada), Afiação, Encantamento ou Aura de qualquer equipamento.
 ---
 
-# Balancear item — Lendas e Relíquias
+# Balancear item — Lendas e Relíquias (Núcleo v2)
 
-Modelo fechado em 29/07/2026. Ele existe para uma coisa: manter a **janela letal**
-estável enquanto o catálogo cresce, usando só subtração (nunca porcentagem — a
-mesa precisa resolver de cabeça em um turno).
+A régua é o **Livro de Regras do Jogador 2.0x**, Capítulos 5 (Equipamento) e 6 (Combate),
+e os números vivem em `config/regras` (aba Regras do Painel do Criador). Confirme lá antes
+de calcular: o texto abaixo é de 04/09/2026.
 
-## 1. As constantes do sistema
+## 1. O modelo do item
 
-**Sempre confirme no Firestore antes de calcular** — os números abaixo são de
-29/07/2026 e o catálogo muda. Use o padrão de leitura da seção 7.
+Toda peça tem **Qualidade (Q), de 0 a 5** — 5 é o limite da forja mortal.
 
-```
-Vitalidade Máxima = (VIG + Tamanho) × 3          Tamanho = Altura × 3
-Dano (VD base)    = FOR
-Acerto            = (FOR max DES) + Perícia: Arma
-Blindagem         = subtrai direto do dano recebido
-```
-
-| | Valor na criação |
+| Peça | O que a Qualidade faz |
 |---|---|
-| Teto de atributo | **3** (1 base + 2 distribuídos) |
-| Teto de perícia | **3** |
-| Vitalidade — Picxi / Humano / Yotun | **19 / 24 / 56** |
-| Dados de arma no catálogo | 1d4 a 1d12 |
-| **Golpe médio de personagem novo** | **1d8 + FOR 3 = 7,5** |
+| Arma | +Q no dano |
+| Armadura (o conjunto tem uma Q) | Blindagem = **Leve 1 / Média 2 / Pesada 3**, + Q |
+| Escudo | +Q no Bloquear |
+| Foco mágico | conjura magia até Q sem redutor |
+| Arco e besta | a Qualidade vive no maço de projéteis |
 
-**Referência de corpo (Humano):** 11 partes, 21 slots.
-Cabeça 1 · Pescoço 1 · Torso 1 · Costas 1 · Ombro 2 · Braço 2 · Cintura 1 ·
-Pernas 2 · Pé 2 · Mão 2 · Dedos 6.
+**A perícia é a porta.** Qualidade acima da Perícia de Arte do usuário dá **redutor no Alvo
+igual à diferença** (Arma 3 com um montante Q5: −2). A peça não bate mais fraco; quem a
+usa acerta menos. Não existe Domínio, Especialização nem Liga.
 
-**Slots protegíveis = 15** (os 13 de armadura + as 2 Mãos). Dedos não contam.
+Por cima da Qualidade:
 
-## 2. Melhorias: as duas oficinas
+| | O que é | Limite |
+|---|---|---|
+| **Afiação** (na armadura: Reforço) | +1 por ponto. Comum (ferreiro): dano físico ou Blindagem. Arcano (forjarcanista): +1 de dano de **uma** Essência, ou +1 de Blindagem Arcana | até Q pontos, comum e arcano somados |
+| **Encantamento** | um efeito com nome: na arma, condição direta de nível 1 ao acertar (Sangrando, Queimando, Lento); na peça vestida, imunidade a uma condição ou Vantagem numa perícia que não seja de Arte nem de defesa. Nunca mexe em número | 1 por peça (2 no Graal) |
+| **Aura da peça** | Qualidade 6 a 10, um degrau por ponto; pede portador com perícia igual | 0 a 5 |
 
-| Quem | Arma | Armadura | Taxa |
-|---|---|---|---|
-| **Ferreiro** | Afiação | Reforço | +5 por tier |
-| **Forjarcanista** | Afiação mágica | Resistência mágica | +5 por tier |
+**Danificada.** Desastre no dado come 1 ponto de Afiação (comum antes do arcano); sem
+ponto, a peça fica Danificada: −1 Q até um ferreiro. Não existe Integridade.
 
-Empilham. Tier = `liga` do item, 0 a 5. Então cada lado chega a **+10 por tier**.
+**Penalidade** é da peça e mora no catálogo (`atributosVinculados`, `periciasVinculadas`):
+pesada desconta DES (e por isso a Esquiva), Furtividade e às vezes Deslocamento; escudo
+grande desconta Acerto. Não crie mecânica só para somar penalidade.
 
-- **Arma:** `+10T` no item. Uma arma, um bônus.
-- **Proteção:** `+0,67 por slot coberto por tier` (0,33 ferreiro + 0,33 forjarcanista).
-  Vem de `10 ÷ 15 slots protegíveis`.
+**Slots do corpo** (`equipavelEm`, `slotsAdicionais`) só dizem **onde** a peça encaixa e o
+que ela exclui. A Blindagem não é mais por slot: é a classe + Q, uma vez, do conjunto.
 
-**Por que o 0,67 e não +10 por peça:** a melhoria é por slot coberto, igual à
-Blindagem base. Reforçar um arnês de 13 slots rende o mesmo que reforçar 13 peças
-avulsas de 1 slot. É o que torna a montagem irrelevante e o total impossível de
-explorar.
-
-## 3. As quatro invariantes — nunca quebre
-
-1. **Blindagem é sempre por slot coberto, nunca por item.** Base e melhoria, a
-   mesma regra. Um peitoral que cobre 4 slots vale 4 slots, não "um peitoral".
-2. **O denominador da melhoria inclui TODO slot protegível, mãos inclusive.**
-   Deixar um de fora torna preenchê-lo escalada de graça — foi o que fazia
-   arnês+escudo voltar a zero no tier 5.
-3. **Nenhuma combinação pode chegar a zero.** Piso de dano **1** por golpe que
-   acerta — **do golpe inteiro, nunca de cada canal**. Com dano tipado, cada canal
-   é clampado em 0, os canais somam, e só então o piso incide. Aplicar o piso por
-   canal deixava fatiar o Fio render 5× o dano contra armadura alta.
-4. **As melhorias se cancelam entre tiers.** `(dado+FOR+10T) − (base+10T)` = o
-   `10T` sai da conta. Logo **a progressão real mora nos valores naturais** —
-   dado maior, cobertura maior, material melhor. Afiação é manutenção para não
-   ficar atrás, não fonte de poder.
-
-## 4. Blindagem base — a taxa por classe
-
-As tags `Leve` / `Média` / `Pesada` já existem no catálogo e definem a taxa:
-
-| Classe | Blindagem por slot coberto |
-|---|---|
-| Leve | **0,20** |
-| Média | **0,22** |
-| Pesada | **0,30** |
-
-A Leve subiu de 0,15 para 0,20 em 30/07/2026, e a Armadura Leve caiu de 5 para 4
-slots junto (0,80 · 1.200), senão ela dominava o Couro Cravejado e o Couro
-Reforçado (4 slots, 0,88, Furt −1) — mais Blindagem, mais barata e sem penalidade.
-
-**O teto por classe — a regra que resolveu a colisão Leve/Média.** As taxas Leve e
-Média estão a 10% uma da outra (0,20 vs 0,22): um conjunto Leve de 13 slots daria
-2,60 contra 2,86 do Médio, diferença que não paga a penalidade que a Média cobra.
-A solução foi **limitar a cobertura alcançável de cada classe** em vez de mexer
-nas taxas — é a cobertura, não a taxa, que separa as classes:
-
-| Classe | Maior cobertura possível | Bl | vs. classe abaixo |
-|---|---|---|---|
-| Leve | 9 slots (Armadura Leve + as 4 avulsas) | 1,80 | — |
-| Média | 13 slots | 2,86 | +59% |
-| Pesada | 13 slots | 3,90 | +36% |
-
-A linha Leve avulsa cobre só Cabeça, Pescoço, Braço e Cintura de propósito.
-**Pernas e Pé não têm peça Leve, e é isso que segura o teto** — criar uma greva
-ou bota Leve leva a faixa a 2,60 e reabre o problema. Antes de acrescentar
-qualquer peça Leve nova, confira em quanto fica o máximo da faixa.
-
-`Blindagem base = taxa × slots cobertos`
-
-Escudos ficam fora da taxa — são defesa ativa num slot de Mão que competiria com
-arma, então levam valor cheio: **Torre 1,2 · Grande 0,9 · Médio 0,6 · Broquel 0,3**.
-
-**Nada de arredondar. Blindagem é fracionária de ponta a ponta**, com 2 casas —
-no cadastro, na ficha e na mesa. A ficha exibe 2 casas e o motor guarda o valor
-cheio; arredondar destruía a resolução (com 3 valores inteiros no Grau 1, as três
-classes colapsavam numa só em cobertura parcial). O único arredondamento que
-existe é no **dano final do golpe**, depois de somar todos os canais:
-`⌊ dano − Blindagem ⌋`, piso 1 (Cap. 6.5).
-
-## 4b. Grau e Fio — a escada de progressão
-
-**Fio é a moeda de poder de um equipamento. 1 Fio = +1 de dano.** A âncora é
-`Dano = FOR`: um Fio vale um nível de atributo que o item dá de graça, em vez de
-o jogador comprar com EXP. **Grau = Fio + 1.**
-
-| Grau | Fio | Nome | Poder (EXP Total) | FOR/VIG típico |
-|---|---|---|---|---|
-| 0 | −1 | Improvisado | — | — |
-| **1** | **0** | **Inicial** | até 500 | 3 |
-| 2 | +1 | Veterano | 500–850 | 5 |
-| 3 | +2 | Mestre | 850–1300 | 7 |
-| 4 | +3 | Lendário | 1300–1800 | 9 |
-| 5 | +4 | Relíquia | 1800+ | 11 |
-
-Os cortes saem da economia de EXP (subir um atributo do nível N custa `5×N`):
-cada faixa é o Poder em que o personagem já pagou o corpo daquele Grau. Regra de
-bolso: **cada Grau custa ~400 de Poder**. Todo o catálogo de hoje é Grau 1.
-
-**O Grau é calculado, nunca digitado.** Item mal marcado mente; número não.
-
-| Tipo | Onde está o Grau |
-|---|---|
-| Arma / projétil | o `+N` de Dano nos `valoresDerivadosVinculados` → Grau = N+1 |
-| Proteção | `Blindagem ÷ slots cobertos`, contra a tabela abaixo |
-| Foco mágico | o `+N` que dá no Acerto Mágico |
-
-**Arma soma; proteção multiplica.** Blindagem é subtrativa e o dano cresce junto
-com o personagem, então somar +1 por Grau deixaria a armadura para trás. A taxa
-por slot vai a **×1,35 por Grau**:
-
-| Grau | Leve | Média | Pesada | Pesada 13 slots |
-|---|---|---|---|---|
-| 1 | 0,20 | 0,22 | 0,30 | 3,90 |
-| 2 | 0,27 | 0,30 | 0,41 | 5,33 |
-| 3 | 0,36 | 0,40 | 0,55 | 7,15 |
-| 4 | 0,49 | 0,54 | 0,74 | 9,62 |
-| 5 | 0,66 | 0,73 | 1,00 | 13,00 |
-
-Janela resultante com arma e proteção no mesmo Grau: **6,7 · 5,8 · 5,7 · 6,1 ·
-7,4 golpes**. Estável de ponta a ponta — é isso que a escada protege.
-
-**O dado não é Grau.** 1d4 a 1d12 diz mãos e alcance. Montante 1d12 e Adaga 1d4
-são ambos Grau 1. **A `liga` também não é Grau** — ela alimenta Afiação/Reforço,
-sobe dos dois lados e se cancela (invariante 4).
-
-**Escudos não escalam por Grau.** Pesada + Escudo Torre já dá 10,0 golpes no
-Grau 1, o teto da faixa. Escudo progride em Acerto, cobertura de aliado ou anular
-penalidade — nunca em Blindagem.
-
-**Resistência tipada** (Blindagem Cinza, Verde, …) segue a mesma curva ×1,35:
-**1,80 no Grau 1 → 5,64 no Grau 5**. É o valor que compra um golpe inteiro de
-sobrevivência naquele canal. Negativa = fraqueza.
-
-### O teto de Fio — a regra que o mestre confere
-
-> **A soma de TODO Fio de dano equipado — todos os canais, todos os itens — não
-> pode passar do Fio da faixa de Poder do personagem.**
-
-Personagem com 900 de Poder está no Grau 3 = teto **2 Fios**: uma espada de 2, ou
-uma espada de 1 + uma flecha de 1, ou 1 de fogo + 1 de vento na mesma lâmina.
-
-Contar por canal em vez de somar era escalada de graça: um Grau 5 chegaria a 12
-Fios (4 físico + 4 fogo + 4 vento), dano 27,5 contra Blindagem 13,0 → 3,3 golpes
-onde o alvo era 7,4. **2,2× mais letal que o previsto.**
-
-Projétil tem teto próprio de **+2**, senão o atirador compra a escada em
-consumível e pula a faixa de Poder.
-
-## 5. A janela letal — o alvo de todo cálculo
+## 2. O dano e a Blindagem na mesa (Cap. 6)
 
 ```
-passa(T)  = (dado_médio + FOR + dano_natural + 10T) − (Bl_base + 0,67 × slots × T)
-golpes    = Vitalidade ÷ max(1, passa)
+Acerto     = atributo + Perícia de Arte, contra a Defesa do alvo (Esquiva, Aparar ou Bloquear = nível da perícia)
+Dano bruto = dado + FOR (ou DES) + Q + Afiação comum
+Dano final = ⌊ bruto − Blindagem ⌋, piso 1 por golpe que acerta
+Essência   = a parcela arcana (Afiação arcana, magia, runa) só a Blindagem Arcana barra
+Crítico    = Alvo + 2 Graus e dado cheio; Defesa maior segura
 ```
 
-Referência contra Vitalidade 24, arma e proteção **no mesmo tier**. Cobertura
-completa = 13 slots; Bl base sai da taxa da seção 4 (`taxa × 13`):
+Uma Blindagem só — não existe dano tipado nem 17 Blindagens. Piso de 1 é do golpe inteiro.
 
-| Proteção | Bl base | tier 0 | tier 3 | tier 5 |
+## 3. A janela letal — o alvo de todo cálculo
+
+```
+passa  = (dado_médio + FOR + Q_arma + Afiação) − (Blindagem_classe + Q_armadura + Reforço)
+golpes = Vitalidade ÷ max(1, passa)
+```
+
+Referência: Vitalidade `(VIG + Tamanho) × 3` do humano de criação (VIG 2, Tamanho 5 →
+21; use o valor real da ficha quando houver). Par de referência do Livro: Guerreiro FOR 4
++ Arma 3, Espada Longa 1d8 Q0 contra Média Q0.
+
+| Alvo veste | Blindagem | Q0 contra Q0 | Q2 contra Q2 | Q5 contra Q5 |
 |---|---|---|---|---|
-| nu | 0 | **3,2** | 0,6 | 0,4 |
-| Leve completa | 2,60 | 4,9 | 2,7 | 2,1 |
-| Média completa | 2,86 | 5,2 | 2,8 | 2,1 |
-| Pesada completa | 3,90 | **6,7** | 3,2 | 2,3 |
-| Pesada + Escudo Torre | 5,10 | 10,0 | 5,5 | 4,2 |
+| nada | 0 | 21 ÷ 8,5 = 2,5 | 21 ÷ 10,5 = 2,0 | 21 ÷ 13,5 = 1,6 |
+| Leve | 1 + Q | 2,8 | 2,8 | 2,8 |
+| Média | 2 + Q | 3,2 | 3,2 | 3,2 |
+| Pesada | 3 + Q | 3,8 | 3,8 | 3,8 |
 
-**Calibre sempre no tier 0** — é onde os valores naturais mandam. A deriva para
-os tiers altos é esperada e intencional: o combate fica mais mortal conforme o
-equipamento sobe, porque o `+10T` da arma é ligeiramente maior que o
-`0,67 × 13 = 8,7T` da armadura de corpo. Só o escudo (que adiciona slot sem
-adicionar dano) segura essa deriva.
+Leia a tabela: **arma e armadura da mesma Qualidade se cancelam** — a progressão real está
+na classe da armadura, no dado da arma e no atributo. Quem está mal equipado morre;
+descasamento de Qualidade é desejado (arma Q3 contra pele nua: 1,8 golpes; arma Q0 contra
+Pesada Q3: 21 ÷ 1 = 21).
 
-**Faixa aceitável no tier 0: 3 a 10 golpes.** Abaixo de 3 é morte sem decisão;
-acima de 10 o combate não resolve. Fora dessa faixa, avise e ajuste.
+**Faixa aceitável pareada: 3 a 10 golpes** (o Livro pede 4 a 5 no par de referência com
+perícias de criação). Abaixo de 3 é morte sem decisão; acima de 10 o combate não resolve.
+Fora da faixa, avise e ajuste.
 
-Descasamento de tier é onde mora o perigo, **e isso é desejado**: arma 3 contra
-proteção 0 mata em 0,7 golpe; arma 0 contra proteção 3 leva 24. Quem está mal
-equipado morre — não a rolagem.
+## 4. Poder do item e Patamar (Cap. 3 / Página 12)
 
-## 6. Os três pedidos e como resolver cada um
+```
+Poder da peça = (Q + Afiação comum + Afiação arcana) × 5 + 10 por Encantamento + 25 por ponto de Aura
+```
 
-### A) "Cria uma arma que começa com +N de Dano natural"
+| Patamar | Poder do personagem | Qualidade "de casa" |
+|---|---|---|
+| 0 Inicial | até 500 | Q0 |
+| 1 Veterano | 500 a 850 | Q1 |
+| 2 Especialista | 850 a 1.300 | Q2 |
+| 3 Mestre | 1.300 a 1.800 | Q3 |
+| 4 Obra-Prima | 1.800 a 2.500 | Q4 |
+| 5 Graal | acima de 2.500 | Q5 |
 
-1. `dano_natural = N`. Escolha o dado pela categoria (uma mão 1d6–1d8, duas mãos
-   1d10–1d12, distância 1d4–1d10).
-2. Rode a janela contra **Pesada completa (3,9)** e contra **nu (0)**, no tier 0.
-3. Confira a faixa de 2 a 10.
+A tabela (`config/regras` → `poder.patamares`) é régua para o Narrador, nunca trava: uma
+peça acima do Patamar do grupo é tesouro, não erro. Mas **avise** quando o item que você
+cadastra está dois Patamares acima da mesa que vai recebê-lo.
 
-Exemplo — espada de uma mão, 1d8, +4 natural:
-`passa = 4,5 + 3 + 4 − 3,9 = 7,6` → `24 ÷ 7,6 = 3,2 golpes` contra armadura
-pesada completa. Ou seja: **um +4 natural faz armadura pesada valer o mesmo que
-pele nua contra uma arma comum.** É arma de nível alto — sinalize isso, e
-confirme que é a intenção antes de cadastrar.
+## 5. Os três pedidos e como resolver cada um
 
-### B) "Cria uma armadura que aguenta arma de +N de dano natural"
+### A) "Cria uma arma Q N (com Afiação, Encantamento…)"
 
-Resolva para trás, escolhendo quantos golpes quer aguentar (use 4 se o usuário
-não disser):
+1. Escolha o dado pela categoria (uma mão 1d6–1d8, duas mãos 1d10–1d12, distância 1d4–1d10).
+   O dado diz mãos e alcance, não força: Montante 1d12 e Adaga 1d4 são ambos Q0.
+2. `Q` = o que foi pedido; Afiação ≤ Q; 1 Encantamento (condição direta de nível 1).
+3. Rode a janela contra **nada**, **Média Q0** e **Pesada Q igual**. Confira a faixa 3 a 10.
+4. Diga a porta: quem tem Perícia de Arte abaixo de Q acerta com redutor.
+
+### B) "Cria uma armadura que aguenta arma Q N"
+
+Resolva para trás, escolhendo quantos golpes quer aguentar (4 se o usuário não disser):
 
 ```
 passa_desejado = Vitalidade ÷ golpes_desejados
-Bl_base        = dado_médio + FOR + N − passa_desejado
-taxa_por_slot  = Bl_base ÷ slots_cobertos
+Blindagem      = dado_médio + FOR + N − passa_desejado
 ```
 
-Compare a `taxa_por_slot` com a tabela da seção 4:
-- ≤ 0,30 → cabe em `Pesada`, cadastre normal.
-- \> 0,30 → **excede a melhor classe existente**. Avise: ou é material novo (crie
-  uma classe acima de Pesada e diga qual taxa), ou é peça única/mágica, ou a
-  cobertura precisa ser maior. Não invente classe sem avisar.
+Compare com `classe + Q`: Leve 1–6, Média 2–7, Pesada 3–8 (Reforço soma até Q). Se não
+couber em Pesada Q5 + Reforço 5 (13), é peça de Aura: diga isso e não invente classe nova.
 
-### C) "Balanceia a armadura X do site, o arnês completo dela deve dar +N"
+### C) "Balanceia a armadura X do site"
 
-1. Leia o item no Firestore (seção 7): `tags`, `equipavelEm`, `slotsAdicionais`,
-   `valoresDerivadosVinculados`.
-2. Descubra a cobertura: `slots = 1 (principal) + soma das quantidades de slotsAdicionais`.
-   Se `slotsAdicionais` estiver vazio mas o item for armadura de corpo, **é isso
-   que está faltando** — proponha a cobertura antes de mexer na Blindagem.
-3. `taxa = N ÷ slots`. Confira contra a seção 4 e reporte a classe implícita.
-4. Rode a janela e mostre os golpes antes e depois.
-5. Só grave depois de aprovação, com dry-run primeiro.
+1. Leia o item (seção 7): `tags` (Leve/Média/Pesada), `qualidade`, `reforco`,
+   `valoresDerivadosVinculados` (o modificador de Blindagem), `equipavelEm`, `slotsAdicionais`.
+2. Confira que a Blindagem gravada = classe + Q + Reforço. Diferença é erro de cadastro,
+   não escolha de design — reporte antes de mexer.
+3. Rode a janela e mostre os golpes antes e depois.
+4. Só grave depois de aprovação, com dry-run primeiro.
+
+## 6. Escudo
+
+Escudo não dá Blindagem: dá **+Q no Bloquear** e uma segunda defesa grátis por rodada
+(`config/regras` → `combate`). Bloquear não vale contra magia. Ao balancear, olhe o Bloquear
+resultante (perícia + Q, teto VIG) contra o Acerto da mesa, não a Blindagem.
 
 ## 7. Como ler e gravar
 
-Padrão de acesso ao Firestore (copie de `functions/audit-tribos.mjs`):
+Padrão de acesso ao Firestore (copie de `functions/v2-limpeza.mjs`: dry-run por padrão,
+`--apply` grava, backup do "antes" em `D:\…\scripts-backups`):
 
 ```js
 import { createRequire } from 'node:module';
@@ -270,39 +154,36 @@ const grab = async c => (await db.collection(`system/data/${c}`).get())
   .docs.map(d => ({ id: d.id, ...d.data() }));
 ```
 
-**Sempre `--dry-run` primeiro, imprimindo o que vai mudar. Só grave com aprovação
-explícita.** Scripts vivem em `functions/`.
+**Sempre dry-run primeiro, imprimindo o que vai mudar. Só grave com aprovação explícita.**
+Cadastro editado sobe a versão (`versao`, escada de 0.01).
 
-Campos de `system/data/equipment` que importam:
+Campos de `system/data/equipment` que importam (o schema é `shared/equip-campos.js`):
 
 | Campo | Uso |
 |---|---|
 | `formulaDano` | string do dado: `"1d8"`, `"1d8 / 1d10"` (versátil) |
-| `valoresDerivadosVinculados` | `[{id: <id do VD Blindagem>, modificador: N}]` — **busque o id por nome**, não hardcode |
-| `equipavelEm` | slots principais válidos (`bodyParts`) |
-| `slotsAdicionais` | `[{id: parteId, quantidade: N}]` — cobertura além do principal |
-| `tags` | inclua `Leve` \| `Média` \| `Pesada` (+ graduada `Média II` etc.) ou `Escudo` |
-| `liga` | 0 a 5 — o tier |
-| `atributosVinculados` | modificadores de atributo ao equipar (ex. −3 Destreza) |
-| `periciasVinculadas` | modificadores de perícia ao equipar (ex. −5 Furtividade) |
-
-A lógica de ocupação de slot é compartilhada em `shared/equip-slots.js` (reserva
-tudo-ou-nada). Penalidade de armadura pode morar na própria peça via
-`atributosVinculados`/`periciasVinculadas` — não crie mecânica só para somar.
+| `qualidade` | 0 a 5 |
+| `afiacao` / `reforco` | pontos comuns (≤ Q) |
+| `afiacaoArcana` + `essenciaArcana` | ponto arcano e a Essência dele |
+| `encantamento` | o efeito com nome (condição, imunidade ou Vantagem) |
+| `aura` | 0 a 5, o que passa do 5 |
+| `periciaId` | **a porta** — a Perícia de Arte que a peça exige |
+| `valoresDerivadosVinculados` | `[{id: <id do VD Blindagem>, modificador: N}]` — busque o id por nome |
+| `tags` | `Leve` \| `Média` \| `Pesada`, `Escudo`, `Livro` |
+| `equipavelEm`, `slotsAdicionais` | onde encaixa (`bodyParts`) e o que exclui |
+| `atributosVinculados`, `periciasVinculadas` | a penalidade da peça |
 
 ## 8. Refs em mecânica: o prefixo é obrigatório
 
-Ao escrever qualquer mecânica que leia perícia, use **`"Perícia: X"`**, nunca o
-nome puro. Existem 8 nomes que são perícia **e** valor derivado ao mesmo tempo
-(`Abismancia`, `Alquimancia`, `Contracanto`, `Dosagem`, `Ecos do Vazio`,
-`Empatia Sanguínea`, `Exorcismo`, `Vozes do Túmulo`). Sem o prefixo, o motor casa
-com o VD homônimo e lê o número errado **em silêncio**.
+Ao escrever qualquer mecânica que leia perícia, use **`"Perícia: X"`**, nunca o nome puro.
+Há perícias homônimas de VD (Abismancia, Alquimancia…); sem o prefixo o motor lê o VD em
+silêncio. Refs de item: `Item: Qualidade`, `Item: Afiação`, `Item: Afiação Arcana`,
+`Item: Reforço`, `Item: Aura`. Nomes antigos (`Item: Liga`, `Fio`, `Grau`) não resolvem.
 
 ## 9. Sempre reporte junto
 
-Ao entregar um item, mostre:
-
-1. A conta da janela — golpes contra nu, Média completa e Pesada completa.
-2. A classe de material implícita pela taxa por slot, e se ela excede o catálogo.
-3. Se cair fora da faixa de 2 a 10 golpes, diga e proponha o ajuste.
-4. O que ficou de fora (cobertura não declarada, penalidade não cadastrada).
+1. A conta da janela — golpes contra nada, Média Q0 e Pesada da mesma Q.
+2. A porta (periciaId) e o redutor que um usuário de criação teria.
+3. O Poder da peça e o Patamar em que ela cai.
+4. Se cair fora da faixa de 3 a 10 golpes, diga e proponha o ajuste.
+5. O que ficou de fora (Afiação acima de Q, Encantamento sem condição cadastrada, penalidade não cadastrada).

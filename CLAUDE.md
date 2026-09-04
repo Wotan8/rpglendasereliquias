@@ -69,3 +69,19 @@ Regras:
 - O formato é texto livre no banco (`versao`), normalizado na exibição por
   `versaoDoLivro()` em `shared/livros-pub.js` — que prefixa `v` quando o autor
   não escreveu letra. Grave `"1.03"`, não `"v1.03"`.
+
+# Memória e skills em outro computador
+
+A memória automática do Claude Code fica fora do repositório (`~/.claude/projects/<pasta>/memory/`).
+Uma cópia dela viaja com o projeto em `.claude/memoria/` (índice: `.claude/memoria/MEMORY.md`).
+
+- Sessão nova em máquina nova: **leia `.claude/memoria/MEMORY.md` antes de qualquer tarefa** e abra os
+  arquivos que a tarefa tocar. Se a memória automática desta máquina estiver vazia, copie a pasta
+  `.claude/memoria/` para `~/.claude/projects/<pasta-deste-projeto>/memory/` e siga usando as duas.
+- Ao gravar memória nova, grave também em `.claude/memoria/` (mesmo nome de arquivo) para ela viajar.
+- As skills do projeto estão em `.claude/skills/` (inclui `reliera-canone` e `reliera-voz`, que antes
+  eram só do usuário). A skill `graphify` é instalada por máquina (`~/.claude/skills/graphify`); sem ela,
+  ignore a seção "Mapeamento de código" e use Grep/Read.
+- O sistema em vigor é o **Núcleo v2** (Livro de Regras do Jogador 2.01; `LIVRO-DE-12-PAGINAS.md`).
+  Domínio, Liga, Integridade, Grau/Fio, Graça, Determinação, Manobras como coleção e Blindagem tipada
+  não existem mais — nem no banco. O que ainda falta está em `PENDENTE-NUCLEO-V2.md`.

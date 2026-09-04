@@ -162,7 +162,7 @@ O dado é sempre do equipamento, e o equipamento diz qual atributo soma: espada 
 | Agarrar | ataque com Briga; passando a Defesa e com Graus ≥ VIG do alvo, ele fica Preso |
 | Recuperar Fôlego | o turno inteiro parado: +1 Energia |
 
-Manobras de classe (posturas, golpes com nome) estão no módulo da sua classe, com custo em Energia próprio.
+Habilidades de classe (posturas, golpes com nome) estão no módulo da sua classe, com custo em Energia próprio.
 
 **Situações.** Cobertura parcial: +1 na Defesa; três quartos: +2; total: não pode ser alvo. Alcance médio de disparo: Difícil; longo: Muito difícil; arco contra alguém colado: −2. Escuro: Desvantagem; escuro total: você está Cego. Surpresa: quem foi surpreendido tem Defesa 0 na primeira rodada; emboscar é Furtividade contra a Percepção de quem vigia. Duas armas: −3 no Alvo nos dois golpes, menos 1 por nível do Dom Ambidestria (1 a 3); o segundo golpe usa o seu Movimento.
 
@@ -180,7 +180,7 @@ Toda peça tem **Qualidade (Q), de 0 a 5**: é o que ela é, e 5 é o limite da 
 | Foco mágico | conjura magia até Q sem redutor |
 | Arco e besta | a Qualidade vive no maço de projéteis |
 
-**Quem pode usar.** Qualidade acima da sua Perícia de Arte dá **redutor no Alvo igual à diferença**. Arma 3 com um montante Q5: −2. A peça não bate mais fraco; você é que acerta menos. Não existe Domínio à parte: a perícia é a porta.
+**Quem pode usar.** Qualidade acima da sua Perícia de Arte dá **redutor no Alvo igual à diferença**. Arma 3 com um montante Q5: −2. A peça não bate mais fraco; você é que acerta menos. A perícia é a porta; não existe outra licença para usar a peça.
 
 Por cima da Qualidade existem três coisas, cada uma de uma natureza:
 

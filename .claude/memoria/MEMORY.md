@@ -1,0 +1,70 @@
+- [Limitação: dano não estruturado](limitacao-dano-nao-estruturado.md) — dano é texto manual; efeitos de "modificar dano" só podem ser informativos.
+- [NUNCA inventar lore](nunca-inventar-lore.md) — campo narrativo vazio é pergunta, não convite; nome de unidade/instituição só vem do usuário.
+- [Fontes da campanha Reliera](fontes-da-campanha-reliera.md) — onde está o material de mesa (pasta Reliera + coleção `npcs`) e como ler cada formato.
+- [Padrão de peculiaridades avulsas](padrao-peculiaridades-avulsas.md) — como cadastrar traços individuais da criação com níveis e EXP correta.
+- [Compêndios de magia no Worldbuilding](compendios-magia-worldbuilding.md) — 1 livro por escola; Laboratorium lê o rúnico do Firestore.
+- [Cascata de Altura nos Derivados](cascata-de-altura-nos-derivados.md) — mexer na Altura move Tamanho, Peso, Vitalidade, Carga, Deslocamento e Iniciativa sozinha; cuidado com contagem dupla.
+- [Prefixo "Perícia:" em refs](prefixo-pericia-em-refs.md) — nunca tirar; é o que separa perícia de VD homônimo, e o erro é silencioso.
+- [Mapa de mesa de uma página](mapa-de-mesa-uma-pagina.md) — toda sessão precisa de um resumo panorâmico em 1 página A4 paisagem, além do guia longo.
+- [Cura de item via statusVitais](cura-de-item-via-statusvitais.md) — consumíveis curam via `statusVitaisVinculados`, não mais mecânica; as duas juntas duplicam o efeito.
+- [Livro de Regras do Jogador](livro-de-regras-do-jogador.md) — livro público no Cronista descreve o sistema como está no site; mudou mecânica, atualiza o capítulo.
+- ["Reforçado" é termo de ferreiro](reforcado-e-termo-de-ferreiro.md) — não usar em nome de item novo; é a melhoria, não a peça.
+- [Medição de perf do Tabuleiro](medicao-perf-tabuleiro.md) — ?perf=1 liga HUD por etapa; __check-perf-arrasto.html reproduz a carga da mesa cheia.
+- [Frentes e página de Sessão](frentes-e-pagina-de-sessao.md) — novo ciclo de mesa no Painel; etapa 3 (Tabuleiro) pendente até validar 2–3 sessões.
+- [NPC em várias mesas](npc-em-varias-mesas.md) — `vinculos` é canônico e `mesaId` é espelho; ler sempre com `npcNaMesa()`.
+- [Skill gerar-arte](skill-gerar-arte.md) — gera imagem via Gemini com os 4 prompts-master do usuário (Personagem/Item/Local/Terror); nunca resumir os templates.
+- [WhatsApp não é registro de sessão](whatsapp-nao-e-registro-de-sessao.md) — checar se a mensagem foi desmentida depois; a mesa prega peça em quem faltou.
+- [Escada do item no v2](progressao-grau-e-fio.md) — Qualidade 0–5, Afiação até Q, Encantamento, Aura; Grau/Fio/Liga/Integridade saíram.
+- [Evitar mecânica vinculada a item](evitar-mecanica-vinculada-a-item.md) — bônus de item entra por dados (valoresDerivadosVinculados), nunca mecânica por item.
+- [Totemancia em três ramos](totemancia-tres-ramos.md) — Espiritismo/Patuísmo/Ferinismo, Lealdade como eixo comum; JÁ cadastrada e rodando no Tabuleiro.
+- [Ler mapas .dd2vtt](ler-mapas-dd2vtt.md) — dá pra enxergar os mapas do Dungeon Alchemist: extrair o PNG embutido e recortar a região.
+- [Mapa guarda cópia do item](mapa-guarda-copia-do-item.md) — mexer no item do catálogo não atualiza os mapas; como refrescar sem re-subir a imagem.
+- [Economia de EXP da mesa](economia-de-exp-da-mesa.md) — régua para precificar qualquer coisa que custe EXP: 5N/atributo, 4N/perícia, 3,5 por sessão, teto do Alvo 9.
+- [Peculiaridades Avulsas rebalanceadas](peculiaridades-avulsas-rebalanceadas.md) — passe de 02/08/2026 nas avulsas + teto de 30 EXP de desvantagens no wizard.
+- [Limite de avulsas por mesa](limite-avulsas-por-mesa.md) — contagem (config da mesa, padrão 3) e orçamento (teto de 30 EXP) são limites diferentes que valem juntos.
+- [Soquete mágico v2](soquete-magico-v2.md) — régua de dado por barreira, Transbordo de Dano e Blindagem Arcana; IMPLEMENTADO (passos 1–8 + livro técnico §2.1/§2.2).
+- [Livro: Régua de Balanceamento](livro-regua-balanceamento.md) — especificação técnica no banco; ler ANTES de mexer em número.
+- [Economia de ação](economia-de-acao.md) — turno = 2 ações; TODA habilidade custa 1 Ação Padrão. Nunca escrever "sem gastar ação".
+- [Sangue é a 14ª Essência](sangue-e-a-14a-essencia.md) — Carmesim-Escura fixa na matéria; sangue morto é moldável mas sem vida (buff ao Sangral não precificado).
+- [Verificar a fonte, não o histórico](verificar-fonte-nao-historico.md) — várias frentes no mesmo Firestore; reler antes de afirmar.
+- [Redesign do frontend (Portal)](redesign-portal-frontend.md) — protótipo em pasta separada; Portal = login+menu+wiki; nada no repo real até aprovar.
+- [Motor de NPC: o que é bug e o que não é](npc-calc-engine-dois-furos.md) — ordenar sys.derivedValues antes de chamar calcularNpc; Reação 0 é de propósito.
+- ["Segurar" não aciona efeito](segurar-nao-aciona-efeito.md) — item de mão que faz algo é sempre `empunhar`; Segurar é só para peça inerte.
+- [NUNCA hardcodear regra de jogo](nunca-hardcodear-regra-de-jogo.md) — toda régua vem do cadastro em nuvem; se falta campo, cria o campo e migra o dado.
+- [Condições de participante: formato duplo](condicoes-de-participante-formato.md) — string legada e objeto com expiraNaRodada; ler por condDoParticipante().
+- [Combate por turno: formato](combate-por-turno-formato.md) — cena.iniciado/acoesTurno/faccao, mira nos predefs, alcanceM nas armas; motor puro em combate-cenas.
+- [Numerador de "ataque extra" não confere](numerador-ataque-extra.md) — Corte de Passagem e Golpe Cruzado: não mexer.
+- [Carimbo sem a ação no denominador](audit-custo-carimbado.md) — razão inflada; audit + parser testado em functions/.
+- [Economia do predef (§3.3)](economia-do-predef.md) — combate/cena/invocacao/receita; só `combate` usa a régua de dano.
+- [Nível de condição exige acumulaNiveis](condicao-nivel-acumulaniveis.md) — sem a flag o nível vira 1, em silêncio; audit pronta.
+- [Arremesso: alcanceFator](arremesso-alcance-fator.md) — alcance = (FOR+Atletismo+Arremessar)×N; N = 0,75/1/1,5.
+- [Régua: dano vale 0,154 ou 0,290?](regua-dano-0154-vs-0290.md) — RESOLVIDO: 0,154 no golpe, e o EXP entra a 0,10/ponto (§0.6b).
+- [Responsivo sempre](responsivo-sempre.md) — toda mudança visual nasce funcionando no celular; em tela pequena tudo encolhe junto.
+- [Playtest 18/08: decisões Xamã/Energia](playtest-18-08-decisoes-xama-energia.md) — nerf magia verde, Dádivas com sorteio e teto de Aura, Espiritismo×Voduísmo, descansos 3 níveis; MDs na pasta do export.
+- [Fechar sessão exige log](fechar-sessao-exige-log.md) — `fase: fechada` não registra nada; o histórico vive em `session-logs`.
+- [Custo em EXP de habilidade de classe](custo-exp-skill-de-classe.md) — Q × 4 (config/regras); Dom 10; ramo opcional 10.
+- [Aba Sanidade do Criador](aba-sanidade-do-criador.md) — regra que depende só do `sys` vai em shared/sanidade.js, não em functions/.
+- [Sanfona: recolher/expandir](sanfona-recolher-expandir.md) — uma gramática só; nunca desenhar seta ou botão de recolher próprios.
+- [Peso/Tamanho: unidade adaptativa](peso-tamanho-unidade-adaptativa.md) — kg/m no banco, g/cm na tela; Integridade round((Liga+m×3)×3) no motor e Livro; catálogo 253/253 + instâncias/mapas migrados + Livro varrido — FRENTE ENCERRADA, incluindo pressão/conforto (peso sentido = peso × 0,5–1,5, campo vazio = ×1).
+- [Paleta do menu inverte](paleta-do-menu-inverte.md) — no Portal, `--ink` é claro nos dois temas; escolher o token pela superfície, não pelo tema.
+- [Dadivas: sorteio por dado](dadiva-sorteio-por-dado.md) — as nove sempre, 1 dado cada com face de nenhum; Receptor paga pela entrega, Projetor por Poder+Véu.
+- [Pagamento pelo Mercado Pago](pagamento-mercado-pago.md) — cliente paga a taxa; meio escolhido no carrinho e taxas em `config/pagamento`.
+- [Roleta dos Apoiadores](roleta-dos-apoiadores.md) — sorteio no servidor, `users.giros` e prêmios como itens ocultos da Loja.
+- [Avisos do mestre](avisos-do-mestre.md) — canal jogador→mestre; e a armadilha dos dois jeitos de ser mestre.
+- [Fila de pendentes](fila-de-pendentes.md) — backlog acordado: PWA push primeiro; e a armadilha do evento close de <dialog>.
+- [Régua v3 de criatura e Grau de Ameaça](bestiario-regua-v3-e-grau.md) — força em × guerreiro, os 6 Graus, os dois testes de encontro e a doma.
+- [Bestiário: o que ficou aberto](bestiario-pendencias.md) — FRENTE ENCERRADA em 31/08; os 8 itens do handoff fechados.
+- [Versionamento de cânone](versionamento-de-canone.md) — escada decimal 1.02→1.03; vale para IA editando direto, e está no CLAUDE.md.
+- [Varredura de segurança 31/08/2026](varredura-seguranca-2026-08-31.md) — 14 de 14 fechados; App Check em monitoramento; e a regra de provar rules no emulador antes/depois.
+- [Campo vinculado: 3 estados](campo-vinculado-tres-estados.md) — offline NUNCA acusa "objeto não encontrado"; a reserva cobre.
+- [Task: sentidos e tags no Tabuleiro](task-sentidos-tags-tabuleiro.md) — visão especial por tag com potência; SENSORES está hardcoded.
+- [Escada do veneno: Toxis, Caltra, Peçonha](escada-do-veneno-toxis-peconha.md) — Toxis/Caltra são propriedades de loção, não condições; Peçonha vale o dobro e só sai com Caltra.
+- [Habitat: só o que a fonte diz](habitat-so-o-que-a-fonte-diz.md) — habitat genérico fica genérico; existir no banco não é estar na fonte.
+- [Cronista: frente encerrada](cronista-fila-de-diagramacao.md) — 7 frentes + 2 blocos entregues, travas resolvidas; pasta `audio/` serve Cronista E Tabuleiro.
+- [Azire: guardiões do espaço](azire-guardioes-do-espaco.md) — Azire é convenção de nome: dourado, Índigo+Âmbar, come Abismo; o Abismo é ferida no espaço.
+- [As Essências são 14](essencias-sao-catorze.md) — lista fechada; som é Eólico, não existe 15ª.
+- [Eu não defino tarefa](eu-nao-defino-tarefa.md) — o que depende do usuário não vira item de backlog; a lista é dele.
+- [Núcleo v2 — o que foi feito e o que resta](redesenho-nucleo-v2.md) — banco limpo, código sem v1, livros 2.01; pendências em PENDENTE-NUCLEO-V2.md.
+- [Emulador sem janela](emulador-sem-janela.md) — nunca `emulators:exec`; javaw oculto, `--websocket_port`, e fechar no fim.
+- [Estilo preso a ancestral](estilo-preso-a-ancestral.md) — no Portal, elemento movido por JS perde o CSS; ancorar no que viaja junto e OLHAR a tela.
+- [Régua: base v2 é 3,25](regua-base-v2.md) — Defesa = perícia e Blindagem única mudaram a unidade; carimbos em 3,90 ainda não recompostos.

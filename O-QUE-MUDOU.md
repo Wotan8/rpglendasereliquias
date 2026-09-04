@@ -73,3 +73,7 @@ Resumo por página do site: o que ela faz agora, o que mudou nesta refatoração
 - Tabela de Colapso: está no Livro (cap. 7); `knowledge` é regra de desbloqueio de capítulo, não tabela.
 - Poder não soma aliados ainda (metade do Poder deles) — precisa das fichas de NPC carregadas na ficha.
 - Cópias de item em mapas e NPCs mantêm campos velhos (`dominioId`, `liga`) que caem no modelo do catálogo; nada quebra, mas não foram migradas.
+
+## 04/09/2026 (tarde) — limpeza final
+
+O banco não guarda mais nada da versão antiga: elementos rúnicos, classes, VDs, mecânicas, catálogo, NPCs, fichas (com o EXP devolvido pela regra "custou, devolve; rendeu, desconta") e itens foram limpos por `functions/v2-limpeza.mjs`, os 214 cadastros despublicados foram apagados de vez e as coleções sem código também. O código perdeu os shims de compatibilidade (apelido de perícia antiga, `fio`, `liga`, espelho REA/DET, campos da ficha v1.6), o Laboratorium passou a usar a perícia Runomancia como porta, e a regra Pressão → Carga voltou a valer. Livro do Jogador 2.01, Régua 1.04, compêndios sem Graça/Domínio. Skills e memória do Claude na régua nova. O que resta e o que precisa da sua mão: `PENDENTE-NUCLEO-V2.md`.
