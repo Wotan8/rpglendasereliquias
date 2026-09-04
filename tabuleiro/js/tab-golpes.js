@@ -71,6 +71,11 @@ export function metaDoGolpe(l) {
         desarmado: !!l.desarmado,
         // 🧱 A peca que paga a Falha Critica (§5.5). Desarmado nao tem peca.
         itemId: l.itemId || null,
+        // 🔮 Afiação arcana da peça: parcela de dano de UMA Essência, barrada só
+        // pela Blindagem Arcana (Livro, p. 6). E a Essência da magia/runa: aí o
+        // dano inteiro é de Essência e ignora a Blindagem comum.
+        arcano: l.arcano || null,
+        essencia: l.essencia || null,
     };
 }
 

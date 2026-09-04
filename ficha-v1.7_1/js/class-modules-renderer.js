@@ -1153,7 +1153,7 @@ function _cmReguaDoItem(mod, data) {
 }
 
 /**
- * 🎓 O redutor desta linha (Livro, p. 8 e p. 10: a perícia é a porta).
+ * 🎓 O redutor desta linha (Livro, p. 6 e p. 7: a perícia é a porta).
  *
  * A conta inteira mora em shared/dominio-redutor.js, chamada também pelo
  * Tabuleiro. Aqui só se junta o que a ficha sabe: os níveis em `state.dots` e o
@@ -1214,7 +1214,7 @@ function _cmAplicarRedutorNoChip(chip, valSpan, valor, info) {
     conta.textContent = `${valor} ${info.partes.map(p => `− ${p.valor}`).join(' ')} =`;
     conta.title = [
         info.partes.map(p => `− ${p.valor} (${p.nome})`).join('\n'),
-        info.semDominio ? '\n⚠️ Sem a Perícia desta Arte ela não abre (Livro, p. 8).' : '',
+        info.semDominio ? '\n⚠️ Sem a Perícia desta Arte ela não abre (Livro, p. 6).' : '',
     ].filter(Boolean).join('');
     valSpan.parentNode.insertBefore(conta, valSpan);
 }

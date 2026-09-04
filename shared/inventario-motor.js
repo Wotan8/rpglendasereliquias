@@ -169,12 +169,6 @@ export function cabeNoConteiner(item, cont, itens, tpl) {
     }
     if (item.parentItemId === cont.id) return { ok: false, motivo: '' };   // já está lá, sem alarde
 
-    // Rompido não recebe mais nada: sem isto o jogador re-enche o saco furado no
-    // turno seguinte e a regra vira decoração.
-    if (integridadeZerada(cont, tpl)) {
-        return { ok: false, motivo: `${cont.nome || 'O contêiner'} está rompido` };
-    }
-
     const cap = capacidadeDe(cont, tpl);
     if (cap > 0) {
         const dentro = (itens || []).filter(x => x.parentItemId === cont.id && x.id !== item.id).length;
@@ -183,8 +177,8 @@ export function cabeNoConteiner(item, cont, itens, tpl) {
         }
     }
 
-    // A boca do contêiner. Item sem tamanho lê 1 m, o mesmo padrão da régua de
-    // Integridade — peça sem medida é presumida grande, não minúscula.
+    // A boca do contêiner. Item sem tamanho lê 1 m — peça sem medida é
+    // presumida grande, não minúscula.
     const tamMax = tamMaxItemDe(cont, tpl);
     if (tamMax > 0) {
         const tam = Number(item.tamanho) || 1;
@@ -215,46 +209,11 @@ export function avisoDePeso(item, cont, itens, tpl, qtd) {
     return `${cont.nome || 'O contêiner'} passa do peso: ${_pesoKg(total)} de ${_pesoKg(pmax)}`;
 }
 
-/* ===== INTEGRIDADE =====
-   Quanto a peça aguenta antes de parar de servir. O Livro §7.6 já publicou o
-   termo e a forma para objetos de cenário — "Integridade (Dureza + Tamanho)" —
-   e §5.5 já converte Liga em Dureza. Aqui é a mesma ideia na escala de
-   Vitalidade do §2.8, `(VIG + Tamanho) × 3`, com a MESMA régua de Tamanho:
-   o campo `tamanho` da peça é METROS (a maior dimensão), e o porte é o triplo
-   disso — exatamente a cascata do personagem (Tamanho = Altura × 3):
-
-       integridadeMax = round((Liga + Tamanho×3) × 3), nunca menos que 3
-
-   Uma escala só para pessoa, peça e cenário (decisão de 25/08/2026 — antes o
-   dado era bimodal: arma em metros, armadura em porte). Âncoras: adaga 9,
-   espada longa 20, armadura completa 24, mochila média 11 — contra a
-   Vitalidade humana de referência, 24.
-
-   Liga vazia lê 1 e não 0 porque §5.5 define Liga 0 como "improvisada — pedra,
-   galho, garrafa quebrada". Peça de catálogo, com preço, não é improvisada:
-   Liga 0 tem de ser declarada. Isso cobre 143 modelos sem escrever um byte.
-
-   ⚠️ O que se GRAVA é `avaria`, o dano acumulado — nunca "quanto resta".
-   Dois motivos:
-     · `increment(perda)` é aplicado pelo servidor. Guardar o que resta é
-       ler-modificar-escrever sobre o cache persistente multi-aba, e mestre no
-       Tabuleiro com jogador na ficha perderiam escrita em silêncio.
-     · Subir a Liga da peça sobe o máximo sozinha, e o estrago continua sendo o
-       mesmo estrago.
-   O nome `integridade` está ocupado: 143 docs vivos de `items` carregam o campo
-   com dado de v1.6 (valores 1 a 10 e um 999999, e em 62 deles nem bate com a
-   fórmula do Livro). `desgaste` também está, como CHANCE, no Laboratorium. */
-
-/* 💎 RELÍQUIA NÃO TEM INTEGRIDADE (§5.8). Não é peça de ferreiro: não se
-   desgasta, não rompe e não se conserta na bancada — o que a limita é a
-   história dela, não o aço. `integridadeMax`/`integridadeDe` devolvem `null`
-   (não zero!) para dizer "esta régua não se aplica"; quem for pintar número
-   na tela precisa tratar o null como "—".
-
-   Vale pelo TIPO **ou** pela TAG. A tag existe porque peça que também é arma
-   precisa ficar no tipo Arma para ter dano, categoria e slot de mão — "O
-   Sussurro Final" é adaga E relíquia. Relíquia não quebra, esteja ela em que
-   gaveta do cadastro estiver. */
+/* 💎 RELÍQUIA NÃO SE DANIFICA. Não é peça de ferreiro: não lasca no desastre,
+   não fica Danificada e não se conserta na bancada — o que a limita é a
+   história dela, não o aço. Vale pela marca `ehReliquia`, e ACEITA O LEGADO
+   (tipo Relíquia ou tag Relíquia) para não precisar migrar dado vivo: peça
+   que também é arma fica no tipo Arma para ter dano, categoria e slot de mão. */
 const ehReliquiaSolta = (x) => x?.ehReliquia === true
     // LEGADO: antes da marca existir, relíquia era o TIPO (Especulum Fatu) ou
     // uma tag (O Sussurro Final). Dado antigo segue isento sem precisar migrar.
@@ -262,93 +221,35 @@ const ehReliquiaSolta = (x) => x?.ehReliquia === true
     || (Array.isArray(x?.tags) && x.tags.some(t => String(t).trim().toLowerCase() === 'relíquia'));
 export const ehReliquia = (i, tpl) => ehReliquiaSolta(i) || ehReliquiaSolta(tpl);
 
-/** Máximo da peça, ou `null` quando a régua não se aplica (Relíquia). */
-export function integridadeMax(item, tpl) {
+/* ===== QUALIDADE, AURA E DANIFICADA (Livro de 12 Páginas, p. 6) =====
+   Toda peça tem Qualidade 0–5, e 5 é o limite da forja mortal. A Aura da peça
+   é o que passa desse limite: Qualidade 6 a 10, um degrau por ponto. Danificada
+   tira 1 até um ferreiro. A Integridade (barra que descia por Liga e Tamanho)
+   saiu no Núcleo v2: o desgaste agora é o desastre no dado, que come Afiação e
+   depois marca a peça. */
+
+/** Qualidade que a peça de fato entrega: Q + Aura − 1 se Danificada, nunca negativa. */
+export function qualidadeEfetiva(item, tpl) {
+    const q = Number(item?.qualidade ?? tpl?.qualidade ?? item?.fio ?? tpl?.fio) || 0;
+    const aura = Number(item?.aura ?? tpl?.aura) || 0;
+    return Math.max(0, q + aura - (item?.danificada ? 1 : 0));
+}
+
+/**
+ * O desastre (dado 10) come a peça: 1 ponto de Afiação — o comum antes do
+ * arcano — e, sem ponto sobrando, a peça fica Danificada. Devolve o patch a
+ * gravar na instância (mais um `texto` para o log), ou null quando não há o
+ * que cobrar: Relíquia, o próprio corpo, peça já Danificada.
+ */
+export function desastreNaPeca(item, tpl) {
+    if (!item || item.desarmado) return null;
     if (ehReliquia(item, tpl)) return null;
-    const base = Number(item?.integridadeBase ?? tpl?.integridadeBase) || 0;
-    if (base > 0) return base;
-    const liga = Number(item?.liga ?? tpl?.liga);
-    const tam = Number(item?.tamanho ?? tpl?.tamanho) || 1;
-    // Liga ausente lê 1 (Bruta); Liga 0 declarada é improvisada e vale 0 mesmo.
-    const dureza = Number.isFinite(liga) ? liga : 1;
-    return Math.max(3, Math.round((dureza + tam * 3) * 3));
-}
-
-/** Quanto resta. Nunca negativo. `null` = Relíquia, sem régua. */
-export function integridadeDe(item, tpl) {
-    const max = integridadeMax(item, tpl);
-    if (max == null) return null;
-    return Math.max(0, max - (Number(item?.avaria) || 0));
-}
-
-/** A peça está arruinada? Item arruinado não aplica efeito nenhum.
- *  Relíquia nunca está: sem régua, sem ruína. */
-export function integridadeZerada(item, tpl) {
-    const resta = integridadeDe(item, tpl);
-    return resta != null && resta <= 0;
-}
-
-/**
- * Perda por SOBRECARGA. Razão, nunca quilo absoluto: o teto varia 300× no
- * catálogo (aljava 1 kg, bolsa 300 kg), e excedente em kg esmagaria a aljava e
- * faria cócegas na bolsa.
- *
- *     excesso = min(max(0, pesoDentro ÷ teto − 1), 2)
- *     perda   = peso do gatilho × excesso
- *
- * Sem arredondar para baixo: `floor` tornaria o gatilho de movimento
- * inalcançável para os contêineres de pool pequeno em QUALQUER carga, e
- * inverteria o começo do estrago — a mochila cara apodreceria antes do saco
- * barato. Teto de excesso em 2 (3× o limite): acima disso a bolsa já arrebentou
- * na ficção, e é o que impede o lixo do banco de virar Infinity.
- *
- * Sem `pesoMaximoContainer` cadastrado a regra não existe — mesma doutrina de
- * cabeNoConteiner, que se recusou a inventar um padrão.
- *
- * @param gatilho GATILHO.conteudo (1) ou GATILHO.movimento (0,333)
- */
-export const GATILHO = { conteudo: 1, movimento: 1 / 3 };
-
-export function perdaSobrecarga(cont, itens, tpl, gatilho) {
-    const pmax = pesoMaxDe(cont, tpl);
-    if (!pmax || !ehContainer(cont)) return 0;
-    if (ehReliquia(cont, tpl)) return 0;         // §5.8: Relíquia não se desgasta
-    const r = pesoDentro(cont.id, itens) / pmax;
-    const excesso = Math.min(Math.max(0, r - 1), 2);
-    if (!excesso) return 0;
-    return (Number(gatilho) || 0) * excesso;
-}
-
-/**
- * Perda por FALHA CRÍTICA (§5.5). O acabamento continua sendo escolha do
- * Narrador (§6.7); isto é a consequência que o Tabuleiro aplica sozinho.
- *
- * 1 ponto, sempre. A escada já está na faixa: 1 é um nono de uma adaga e um
- * vigésimo nono de um montante, porque o máximo escala com Liga e Tamanho.
- *
- * Liga 0 é o caso que o Livro já resolvia: "armas improvisadas tendem a
- * quebrar: numa Falha Crítica, a arma é destruída".
- */
-/**
- * O veredito de um gatilho de sobrecarga, para o host so traduzir em escrita.
- * @returns {{perda:number, rompeu:boolean, filhos:string[]}} `filhos` sao os
- *   ids que vao para Itens Soltos quando o conteiner rompe.
- */
-export function desgastarConteiner(cont, itens, tpl, gatilho) {
-    const perda = perdaSobrecarga(cont, itens, tpl, gatilho);
-    if (!perda) return { perda: 0, rompeu: false, filhos: [] };
-    const max = integridadeMax(cont, tpl);
-    const rompeu = max != null && ((Number(cont.avaria) || 0) + perda) >= max;
-    const filhos = rompeu ? (itens || []).filter(x => x.parentItemId === cont.id).map(x => x.id) : [];
-    return { perda, rompeu, filhos };
-}
-
-export function perdaFalhaCritica(item, tpl) {
-    if (!item || item.desarmado) return 0;
-    if (ehReliquia(item, tpl)) return 0;         // §5.8: Relíquia não lasca
-    const liga = Number(item.liga ?? tpl?.liga);
-    if (liga === 0) return integridadeMax(item, tpl);   // improvisada: acaba ali
-    return 1;
+    const comum = Number(item.afiacao ?? tpl?.afiacao) || 0;
+    if (comum > 0) return { afiacao: comum - 1, texto: `perdeu 1 de Afiação (${comum - 1} restante)` };
+    const arcana = Number(item.afiacaoArcana ?? tpl?.afiacaoArcana) || 0;
+    if (arcana > 0) return { afiacaoArcana: arcana - 1, texto: `perdeu 1 de Afiação arcana (${arcana - 1} restante)` };
+    if (item.danificada) return null;
+    return { danificada: true, texto: 'ficou Danificada — −1 Qualidade até um ferreiro' };
 }
 
 /** Detalhe expandido: TODAS as informações do item (instância + modelo do catálogo). */
@@ -357,7 +258,16 @@ function detalheItem(ctx, i) {
     const l = [];
     const tpl = tplDoItem(i, sys);
     l.push(`<b>Tipo:</b> ${esc(i.tipo || 'Objeto')}${i.categoriaArma ? ' · ' + (CAT_ARMA[i.categoriaArma] || esc(i.categoriaArma)) : ''}`
-        + (ehReliquia(i, tpl) ? ' · <b>✨ Relíquia</b> <i>(não desgasta)</i>' : ''));
+        + (ehReliquia(i, tpl) ? ' · <b>✨ Relíquia</b> <i>(não se danifica)</i>' : ''));
+    {
+        const qe = qualidadeEfetiva(i, tpl), aura = Number(i.aura ?? tpl?.aura) || 0;
+        const afi = Number(i.afiacao ?? tpl?.afiacao) || 0, afiA = Number(i.afiacaoArcana ?? tpl?.afiacaoArcana) || 0;
+        const ess = afiA ? (sys?.runicElements || []).find(r => r.id === (i.essenciaArcana ?? tpl?.essenciaArcana))?.nome : '';
+        const enc = i.encantamento || tpl?.encantamento;
+        l.push(`<b>⭐ Qualidade:</b> ${qe}${aura ? ` <i>(Aura ${aura})</i>` : ''}${i.danificada ? ' · <b>🔧 Danificada</b> <i>(−1 até um ferreiro)</i>' : ''}`
+            + (afi || afiA ? ` · <b>Afiação:</b> ${afi}${afiA ? ` + ${esc(ess || 'arcana')} ${afiA}` : ''}` : '')
+            + (enc ? ` · <b>✨ ${esc(enc)}</b>` : ''));
+    }
     l.push(`<b>Peso:</b> ${_pesoKg(i.peso)} · <b>Tamanho:</b> ${_tamanhoM(i.tamanho ?? 1)} · <b>Qtd:</b> ${qtdDe(i)} · <b>Pressão:</b> ${fmtN(pressaoItem(i, ctx.itens))}`);
     const f = formulaDanoDoItem(i, sys);
     if (f) l.push(`<b>💥 Dano:</b> ${esc(f)}${!i.formulaDano && tpl ? ' <i>(do modelo)</i>' : ''}`);

@@ -16,8 +16,7 @@ import { ensureNpcSystemData } from './npc-system-data.js';
 import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
     pressaoItem, htmlInventario, tratarClique, iniciarArrasto, cabeNoConteiner, tplDoItem,
-    desgastarConteiner, GATILHO,
-} from '../../shared/inventario-motor.js?v=13';
+    } from '../../shared/inventario-motor.js?v=14';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML, modeloDoItem } from '../../shared/restaurar-item.js?v=1';
 import { confirmar } from '../../shared/dialogo.js?v=2';
 
@@ -389,7 +388,6 @@ async function _moverItemMestre(ownerId, itemId, alvo) {
             await lote.commit();
         }
         _estadoDe(ownerId).contAbertos.add(contId);
-        await _desgastarPorConteudo(ownerId, c);
         _logMesaItem(ownerId, `📦 ${plano.qtd}× "${i.nome || 'Item'}" guardado em "${c.nome || 'contêiner'}"`, [
             { label: 'Item', from: i.nome || itemId, to: i.nome || itemId },
             { label: 'Contêiner', from: '—', to: c.nome || contId },
@@ -468,28 +466,6 @@ function _filhosDe(ownerId, contId) {
     return saida;
 }
 
-/**
- * 🧱 Sobrecarga cobra Integridade quando o conteudo muda. So cobra de conteiner
- * que passou do teto cadastrado. Zerou, rompe: os filhos perdem o parentItemId
- * e reaparecem em Itens Soltos. Nada e apagado.
- */
-async function _desgastarPorConteudo(ownerId, cont) {
-    const itens = _donos.get(ownerId)?.itens || [];
-    const tpl = tplDoItem(cont, window._npcSys || window._systemData || {});
-    const r = desgastarConteiner(cont, itens, tpl, GATILHO.conteudo);
-    if (!r.perda) return;
-    try {
-        await updateDoc(doc(db, 'items', cont.id), { avaria: increment(r.perda) });
-        if (r.rompeu) {
-            const lote = writeBatch(db);
-            for (const id of r.filhos) lote.update(doc(db, 'items', id), { parentItemId: null });
-            await lote.commit();
-            _logMesaItem(ownerId, `🎒 "${cont.nome || 'Contêiner'}" rompeu — ${r.filhos.length} item(ns) para Itens Soltos`,
-                [{ label: 'Integridade', from: 'sobrecarregado', to: '0' }]);
-            showAlert(`🎒 ${cont.nome || 'O contêiner'} rompeu — ${r.filhos.length} item(ns) foram para Itens Soltos`, 'warning');
-        }
-    } catch (e) { console.error('desgaste', e); }
-}
 
 /** Tirar do corpo. */
 async function _desequiparMestre(ownerId, itemId) {
@@ -640,6 +616,7 @@ function _cachesDoForm() {
         derivedValues: sys.derivedValues || [],
         vitalStats: sys.vitalStats || [],
         skills: sys.skills || [],
+        essencias: (sys.runicElements || window._systemData?.runicElements || []).filter(r => r.tipoElemento === 'aspectus' && r.publicado !== false),
         mechanics: sys.mechanics || window._systemData?.mechanics || [],
         conditions: sys.conditions || window._systemData?.conditions || [],
         bodyParts: sys.bodyParts || window._systemData?.bodyParts || [],
@@ -771,7 +748,7 @@ window._mestreFiltrarCatalogo = function() {
 
     lista.innerHTML = achados.length
         ? achados.slice(0, 200).map(t => {
-            const det = [t.tipo, t.liga != null ? 'Liga ' + t.liga : '', t.formulaDano].filter(Boolean).join(' · ');
+            const det = [t.tipo, t.qualidade != null && t.qualidade !== '' ? 'Q' + t.qualidade : '', t.formulaDano].filter(Boolean).join(' · ');
             return `<option value="${escapeHtml(t.id)}">${escapeHtml(t.nome || 'Sem nome')}${det ? ' — ' + escapeHtml(det) : ''}</option>`;
         }).join('')
         : '<option value="" disabled>Nenhum equipamento encontrado</option>';

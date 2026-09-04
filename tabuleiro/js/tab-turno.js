@@ -984,7 +984,9 @@ window.tbTurnoSkill = async (custo, i, formaPaga) => {
                 nome: s.nome, dano: s._runa.bloco.dano || '',
                 acerto: s._runa.bloco.alvo || 0,
                 acertoNome: 'Alvo da Runa', acertoIcone: 'ᛟ',
-                tipos: s._runa.bloco.canal && s._runa.bloco.canal !== 'Dano' ? [s._runa.bloco.canal] : [],
+                tipos: [],
+                // ᛟ Runa com canal de Essência: dano de Essência, barrado só pela Blindagem Arcana.
+                essencia: s._runa.bloco.canal && s._runa.bloco.canal !== 'Dano' ? String(s._runa.bloco.canal).replace(/^Dano /, '') : null,
                 distancia: true, desarmado: false,
             };
         }
@@ -2135,6 +2137,7 @@ window.tbTurnoConfirmarMira = async () => {
         await abrirConflito(p, tok, {
             nome: meta.nome || 'ação', icone, efeito: meta.efeito || '', custoAcao: custo,
             dano: meta.golpe?.dano || '', tipos: meta.golpe?.tipos || [],
+            arcano: meta.golpe?.arcano || null, essencia: meta.golpe?.essencia || null,
             alvoAcerto: meta.golpe?.acerto ?? null,
             acertoNome: meta.golpe?.acertoNome || '', acertoIcone: meta.golpe?.acertoIcone || '',
             condicao: meta.condicao || null,

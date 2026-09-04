@@ -10,7 +10,7 @@ import { mesclarCampos } from '../../shared/campos-cadastro.js?v=1';
 const COLLECTIONS = [
     'races', 'classes', 'tribes', 'peculiarities',
     'mechanics', 'derivedValues', 'vitalStats', 'skills', 'classModules',
-    'equipment', 'bodyParts', 'escolas'
+    'equipment', 'bodyParts', 'escolas', 'runicElements'
 ];
 
 let _loading = null;

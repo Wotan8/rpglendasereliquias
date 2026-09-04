@@ -93,11 +93,11 @@ assert.match(txt, /NÃO mudam/, 'o Mestre precisa ler que a posse não muda ante
 assert.match(botaoRestaurarHTML('window.x()'), /onclick="window\.x\(\)"/);
 
 
-// 🧱 Restaurar CONSERTA: sem isto a Integridade seria uma barra que só desce.
+// 🔧 Restaurar CONSERTA: a peça deixa de estar Danificada.
 {
     const tpl = { id: 'tpl9', nome: 'Mochila', tipo: 'Container', ehContainer: true, peso: 1, tamanho: 4, liga: 2 };
     const p = patchRestauracao(tpl);
-    assert.equal(p.avaria, 0, 'a peça volta inteira');
+    assert.equal(p.danificada, false, 'a peça volta inteira');
 }
 
 console.log('✅ restaurar-item OK — o cadastro volta inteiro e a posse fica intacta');

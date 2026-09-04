@@ -69,19 +69,9 @@ export const CAMPOS_EQUIPAMENTO = [
         ], showWhen: { field: 'tipo', value: 'Arma' }
     },
     {
-        key: 'liga', label: '⚒️ Liga (qualidade da peça)', type: 'select', options: [
-            { value: '0', label: '0 — Sem Liga (improvisado)' },
-            { value: '1', label: '1 — Liga Bruta (baixa)' },
-            { value: '2', label: '2 — Liga Justa (comum)' },
-            { value: '3', label: '3 — Liga Nobre (boa)' },
-            { value: '4', label: '4 — Liga Pura (alta)' },
-            { value: '5', label: '5 — Liga Superior' }
-        ]
-    },
-    {
-        // A Qualidade é o poder da peça e o nome da faixa vai junto no rótulo.
-        // Trava do Livro (5.5): a Qualidade nunca passa da Liga.
-        key: 'qualidade', label: '⭐ Qualidade (poder da peça — nunca passa da Liga)', type: 'select', options: [
+        // A Qualidade é o que a peça é (Livro, p. 6): 0 a 5, e 5 é o limite da
+        // forja mortal. Acima disso é Aura da peça, campo próprio.
+        key: 'qualidade', label: '⭐ Qualidade (0 a 5 — o que a peça é)', type: 'select', options: [
             { value: '0', label: '0 — Inicial' },
             { value: '1', label: '1 — Veterano' },
             { value: '2', label: '2 — Especialista' },
@@ -90,25 +80,33 @@ export const CAMPOS_EQUIPAMENTO = [
             { value: '5', label: '5 — Graal' }
         ]
     },
-    // Afiação comum (ferreiro, dano físico). A Arcana é tipada e entra
-    // pelos Valores Derivados de Dano por Essência, um vínculo por canal.
-    { key: 'afiacao', label: '⚔️ Afiação (acabamento — teto é a Qualidade da peça)', type: 'number', placeholder: '0 a 5' },
-    // Reforço é a Afiação da proteção. Como a Qualidade, soma na Blindagem
-    // GRAVADA da peça — o campo é o registro do que foi pago, e o audit
-    // cobra que a Blindagem tenha subido junto.
-    { key: 'reforco', label: '🛡️ Reforço (acabamento de proteção — teto é a Qualidade)', type: 'number', placeholder: '0 a 5' },
-    { key: 'blindagemQ0', label: '⚓ Blindagem quando nova (âncora do audit — não editar à toa)', type: 'number', placeholder: '0' },
-    /* Quanto a peça aguenta. Vazio = derivar de round((Liga + Tamanho×3) × 3):
-       Tamanho em METROS e o ×3 é a cascata do §2.8 (Altura → Tamanho), a forma
-       do §7.6 numa escala só — ver integridadeMax em shared/inventario-motor.js.
-       Este campo é a manopla de calibração, como pressaoBase: só preencha para
-       fugir da régua. */
-    { key: 'integridadeBase', label: '🧱 Integridade máxima (vazio = derivar de Liga + Tamanho)', type: 'number', placeholder: '0 = derivar' },
+    /* Por cima da Qualidade existem três coisas (Livro, p. 6). AFIAÇÃO: +1 por
+       ponto, até Q pontos somando comum e arcano. O ponto COMUM (ferreiro) é dano
+       físico — na proteção chama-se Reforço e soma na Blindagem. O ponto ARCANO
+       (forjarcanista) é +1 de dano de UMA Essência (ignora a Blindagem comum; só
+       a Arcana barra) ou, na proteção, +1 de Blindagem Arcana. */
+    { key: 'afiacao', label: '⚔️ Afiação comum (ferreiro — teto: Qualidade, somada à arcana)', type: 'number', placeholder: '0 a 5' },
+    { key: 'reforco', label: '🛡️ Reforço (Afiação da proteção — soma na Blindagem)', type: 'number', placeholder: '0 a 5' },
+    { key: 'afiacaoArcana', label: '🔮 Afiação arcana (forjarcanista — +1 de dano de UMA Essência; na proteção, Blindagem Arcana)', type: 'number', placeholder: '0 a 5' },
+    { key: 'essenciaArcana', label: '🌈 Essência da Afiação arcana', type: 'select_cadastro', fonte: 'essencias' },
+    /* ENCANTAMENTO: um efeito com nome, 1 por peça (2 no Graal). Nunca mexe em
+       número. Na arma, a condição que aplica ao acertar vai em "Condições
+       Aplicadas ao Usar"; na peça vestida, imunidade a uma condição ou Vantagem
+       numa perícia que não seja de Arte nem de defesa. */
+    { key: 'encantamento', label: '✨ Encantamento (nome do efeito — 1 por peça, 2 no Graal)', type: 'text', placeholder: 'Ex: Sangrando · Manto do Silêncio' },
+    { key: 'imunidadeCondicaoIds', label: '🛡️ Encantamento: imunidade a condição (peça vestida)', type: 'mechanic_selector', selectorTarget: 'conditions' },
+    { key: 'vantagemPericiaId', label: '🎲 Encantamento: Vantagem numa perícia (peça vestida)', type: 'select_cadastro', fonte: 'skills' },
+    /* AURA DA PEÇA: o que passa do limite mortal — Qualidade 6 a 10, um degrau
+       por ponto. Não se compra: Relíquia, forjarcanista de lenda, ritual. Peça de
+       Aura pede portador de Aura: a perícia tem de acompanhar. */
+    { key: 'aura', label: '🌟 Aura da peça (0 a 5 — Qualidade 6 a 10)', type: 'number', placeholder: '0' },
+    /* DANIFICADA: −1 Qualidade até um ferreiro. É estado da INSTÂNCIA — o
+       desastre no dado come Afiação e depois marca isto; o catálogo não tem. */
+    { key: 'danificada', label: '🔧 Danificada (−1 Qualidade até um ferreiro)', type: 'boolean', soInstancia: true },
     /* ✨ A MARCA de relíquia. Qualquer tipo pode ter: a adaga que é relíquia
-       segue sendo adaga no combate — dano, categoria, slot de mão — e não
-       quebra. Marcada, a peça não tem Integridade nenhuma (§5.8): não lasca na
-       Falha Crítica, não cede sob peso, não se conserta na bancada. */
-    { key: 'ehReliquia', label: '✨ É Relíquia? (não desgasta, não quebra — sem Integridade)', type: 'boolean' },
+       segue sendo adaga no combate — dano, categoria, slot de mão. Marcada, a
+       peça não se danifica: não lasca no desastre, não se conserta na bancada. */
+    { key: 'ehReliquia', label: '✨ É Relíquia? (não se danifica)', type: 'boolean' },
     { key: 'preco', label: '💰 Preço base (L$)', type: 'number', placeholder: 'Ex: 1100' },
     { key: 'descricao', label: 'Descrição', type: 'textarea', required: true },
     { key: 'imagemUrl', label: 'Imagem (URL)', type: 'text', placeholder: 'https://...' },
@@ -124,7 +122,7 @@ export const CAMPOS_EQUIPAMENTO = [
     { key: 'quantidade', label: 'Quantidade (Padrão ao instanciar)', type: 'number', placeholder: '1', soCatalogo: true },
     { key: 'ehContainer', label: '📦 É Container?', type: 'boolean' },
     { key: 'multiplicadorPressao', label: 'Multiplicador de Pressão (conteúdo)', type: 'number', placeholder: '1', showWhenBoolean: 'ehContainer' },
-    { key: 'pesoMaximoContainer', label: '⚖️ Peso Máximo Suportado (kg) — AVISO: passar disso desgasta, não trava', type: 'number', placeholder: 'kg — ex: 20', showWhenBoolean: 'ehContainer' },
+    { key: 'pesoMaximoContainer', label: '⚖️ Peso Máximo Suportado (kg) — AVISO: passar disso avisa, não trava', type: 'number', placeholder: 'kg — ex: 20', showWhenBoolean: 'ehContainer' },
     { key: 'capacidadeContainer', label: '🔢 Capacidade (nº de pilhas) — TRAVA', type: 'number', placeholder: '10', showWhenBoolean: 'ehContainer' },
     /* A boca do contêiner e o que ele foi feito para levar — as duas TRAVAM,
        como a capacidade. Vazio = sem restrição (ver cabeNoConteiner). */
@@ -154,7 +152,7 @@ export const CAMPOS_EQUIPAMENTO = [
     // 🏹 Munição: a arma gasta projétil, e SÓ do tipo certo. As tags são as que
     // o próprio projétil já carrega (Flecha, Virote, Zarabatana), então nada
     // precisa ser recadastrado do lado dele. Vazio = arma que não gasta munição.
-    /* A porta da peça (Livro, p. 8): arma aponta para Arma/Precisão/Disparo/Briga/
+    /* A porta da peça (Livro, p. 6): arma aponta para Arma/Precisão/Disparo/Briga/
        Arremesso; foco de magia, para a Perícia da Escola. Qualidade acima do nível
        da perícia vira redutor no Alvo; perícia 0 não usa. Vazio = sem porta. */
     { key: 'periciaId', label: '🎓 Perícia de Arte (a porta da peça)', type: 'select_cadastro', fonte: 'skills' },
@@ -218,6 +216,8 @@ export function normalizaFormaEquipar(dados) {
 
 /** Os campos que a edição de UMA instância mostra (tira os de catálogo). */
 export const camposDaInstancia = () => CAMPOS_EQUIPAMENTO.filter(f => !f.soCatalogo);
+/** O que o Criador edita no catálogo: tudo menos o estado da instância (Danificada). */
+export const camposDoCatalogo = () => CAMPOS_EQUIPAMENTO.filter(f => !f.soInstancia);
 
 /** Chave onde a instância guarda o valor — a instância renomeia duas: `imagem`
  *  (o modelo diz `imagemUrl`) e `mecanicaIdsProprias` (o modelo diz `mecanicaIds`).
@@ -239,7 +239,8 @@ const HERDA_DO_MODELO = new Set([
     'liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'preco', 'formulaDano', 'formulaDano2Maos',
     'valoresDerivadosVinculados', 'statusVitaisVinculados', 'atributosVinculados',
     'periciasVinculadas', 'condicaoIds', 'slotsAdicionais', 'tags', 'tipoGolpe',
-    'equipavelEmGuardado', 'integridadeBase', 'periciaId',
+    'equipavelEmGuardado', 'periciaId', 'afiacaoArcana', 'essenciaArcana', 'encantamento',
+    'imunidadeCondicaoIds', 'vantagemPericiaId', 'aura',
 ]);
 export const herdaDoModelo = (key) => HERDA_DO_MODELO.has(key);
 
@@ -447,9 +448,10 @@ export const SECOES_EQUIPAMENTO = [
         campos: ['peso', 'tamanho', 'pressaoBase', 'preco', 'quantidade'],
     },
     {
-        id: 'qualidade', icone: '⚒️', titulo: 'Qualidade e durabilidade',
+        id: 'qualidade', icone: '⚒️', titulo: 'Qualidade, acabamento e encantamento',
         dica: 'A Liga é o teto e a Qualidade nunca passa dela. Afiação e Reforço são o acabamento pago.',
-        campos: ['liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'integridadeBase', 'ehReliquia'],
+        campos: ['qualidade', 'aura', 'afiacao', 'afiacaoArcana', 'essenciaArcana', 'reforco',
+            'encantamento', 'imunidadeCondicaoIds', 'vantagemPericiaId', 'danificada', 'ehReliquia'],
     },
     {
         id: 'equipar', icone: '🧍', titulo: 'Como se veste',

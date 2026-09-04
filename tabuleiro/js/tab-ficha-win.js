@@ -30,12 +30,11 @@ import { pontoVisivelAgora } from './tab-fog.js';
 import { criarFilaDeEscrita } from './tab-write-queue.js';
 import { escolherCondicao } from './tab-combat.js';
 import { cenaAtiva, comCenaAtivaPatch } from '../../shared/combate-cenas.js';
-import {
+import { qualidadeEfetiva,
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, itensIdenticos, escolherQtd,
     tplDoItem as tplDoItemMotor, formulaDanoDoItem as formulaDanoMotor, fmtN,
     htmlInventario as htmlInvMotor, tratarClique as tratarCliqueInv, iniciarArrasto, cabeNoConteiner,
-    integridadeZerada, integridadeDe, integridadeMax, perdaSobrecarga, perdaFalhaCritica, GATILHO,
-} from '../../shared/inventario-motor.js?v=13';
+} from '../../shared/inventario-motor.js?v=14';
 
 // Mesmo ritmo do painel de combate (ver CUSTOS-FIRESTORE.md): cliques rápidos
 // em ± não viram um write por clique.
@@ -925,12 +924,6 @@ const formulaDanoDoItem = (i) => formulaDanoMotor(i, _sys);
  *  e itemFormasAtuais (ficha): equipado, fora de contêiner, no estado que a
  *  forma de equipar pede; segurar/fixado não ligam os efeitos. */
 function temEfeitosAtivos(i) {
-    /* Integridade zerada silencia a peca: continua equipada, continua pesando,
-       nao faz mais nada. O predicado esta duplicado em tres arquivos (ficha,
-       Tabuleiro, motor de NPC) e o corte tem de ser nos tres — senao item
-       arruinado segue dando bonus em duas telas. */
-    if (integridadeZerada(i, tplDoItemMotor(i, _sys))) return false;
-
     if (!i.equipado || i.parentItemId || i.estadoEquip === 'armazenado') return false;
     if (i.estadoEquip === 'fixado' || i.estadoEquip === 'segurar') return false;
     if (i.formaEquipar) {
@@ -949,16 +942,19 @@ const PROP_ITEM = {
     'Multiplicador de Pressão': (it, tpl) => it.multiplicadorPressao ?? tpl?.multiplicadorPressao ?? 1,
     'Capacidade do Container': (it, tpl) => it.capacidadeContainer ?? tpl?.capacidadeContainer,
     'Preço': (it, tpl) => it.preco ?? tpl?.preco,
-    'Liga': (it, tpl) => it.liga ?? tpl?.liga,
-    'Qualidade': (it, tpl) => it.qualidade ?? tpl?.qualidade ?? it.fio ?? tpl?.fio ?? 0,
-    'Fio': (it, tpl) => it.qualidade ?? tpl?.qualidade ?? it.fio ?? tpl?.fio ?? 0,
+    // Qualidade EFETIVA (Livro, p. 6): Q + Aura da peça − 1 se Danificada, nunca negativa.
+    'Qualidade': (it, tpl) => Math.max(0, (Number(it.qualidade ?? tpl?.qualidade ?? it.fio ?? tpl?.fio) || 0) + (Number(it.aura ?? tpl?.aura) || 0) - (it.danificada ? 1 : 0)),
+    'Fio': (it, tpl) => Math.max(0, (Number(it.qualidade ?? tpl?.qualidade ?? it.fio ?? tpl?.fio) || 0) + (Number(it.aura ?? tpl?.aura) || 0) - (it.danificada ? 1 : 0)),
+    'Aura': (it, tpl) => it.aura ?? tpl?.aura ?? 0,
+    'Afiação Arcana': (it, tpl) => it.afiacaoArcana ?? tpl?.afiacaoArcana ?? 0,
+    'Reforço': (it, tpl) => it.reforco ?? tpl?.reforco ?? 0,
     'Afiação': (it, tpl) => it.afiacao ?? tpl?.afiacao ?? 0,
     'Quantidade': (it) => it.quantidade ?? 1,
 };
 function propDoItem(i, prop) {
     const fn = PROP_ITEM[prop];
     if (!fn || !i) return 0;
-    const n = parseFloat(fn(i, tplDoItem(i)));   // Liga vem como string ('0'..'5')
+    const n = parseFloat(fn(i, tplDoItem(i)));   // Qualidade vem como string ('0'..'5')
     return isNaN(n) ? 0 : n;
 }
 
@@ -1191,6 +1187,8 @@ function linhasAtaqueMagia(win, ch, dt) {
                 magia: true, estadoEquip: def.icone || '✨',
                 dano: dado,
                 canais: dvEss ? [{ icone: dvEss.icone, nome: dvEss.nome, total: 0 }] : [],
+                // Dano de Essência: ignora a Blindagem comum, só a Arcana barra (Livro, p. 5).
+                essencia: dvEss ? String(dvEss.nome).replace(/^Dano /, '') : null,
                 colunas: [],
                 acerto: Number.isFinite(alvoBase) ? alvoBase - (red?.redutor || 0) : null,
                 acertoNome: dvTeste?.nome || '', acertoIcone: dvTeste?.icone || '✨',
@@ -1304,7 +1302,11 @@ export async function linhasDeAtaque(tipo, id) {
         l.tags = [...new Set([...(i?.tags || []), ...(tpl?.tags || [])])];
         // 🎼 A Qualidade da peça dá o TAMANHO da área de um instrumento
         // (shared/instrumento-area.js). A instância manda; o modelo é o padrão.
-        l.qualidade = Number(i?.qualidade ?? tpl?.qualidade) || 0;
+        l.qualidade = qualidadeEfetiva(i, tpl);
+        // 🔮 Afiação arcana: +N de dano de UMA Essência, fora da Blindagem comum.
+        const afiA = Number(i?.afiacaoArcana ?? tpl?.afiacaoArcana) || 0;
+        const essA = afiA ? (_sys?.runicElements || []).find(r => r.id === (i?.essenciaArcana ?? tpl?.essenciaArcana)) : null;
+        l.arcano = afiA ? { valor: afiA, essencia: essA?.nome || 'arcana' } : null;
         // 🏹 Besta e afins: o alcance delas não passa pelo braço (ver
         // shared/alcance-disparo.js).
         l.ignoraLimiteForDisparo = !!(i?.ignoraLimiteForDisparo ?? tpl?.ignoraLimiteForDisparo);
@@ -1318,7 +1320,7 @@ export async function linhasDeAtaque(tipo, id) {
         // Corpo" para um arco, que é 0. Agora escolhe pelo tipo da linha, e
         // por isso precisa de `l.distancia` já resolvido.
         l.acerto = acertoDaLinha(l);
-        // 🎓 A perícia é a porta (Livro, p. 8): a peça pertence a uma Perícia de
+        // 🎓 A perícia é a porta (Livro, p. 6): a peça pertence a uma Perícia de
         // Arte, e quem não a treinou erra mais. Qualidade acima do nível vira
         // redutor no Alvo — nunca no dado, que 1d12 mal empunhado ainda é um 1d12.
         // NPC não tem porta: a régua de criatura é outra (Régua v3).
@@ -1379,7 +1381,7 @@ function htmlAtaques(win, fonte) {
             ${rotulo ? `<i class="tb-fwin-atk-est">${esc(rotulo)}</i>` : ''}
             <span class="tb-fwin-atk-fim">
                 ${l.dano ? `<b class="tb-fwin-atk-dano" title="Fórmula de dano">💥 ${esc(l.dano)}</b>` : ''}
-                ${tgs.map(tg => `<i class="tb-fwin-tg" title="Barrado pela Blindagem ${esc(tg.nome)} do alvo">${esc(tg.icone)} <span class="tb-fwin-tg-nome">${esc(tg.nome)}</span></i>`).join('')}
+                ${tgs.map(tg => `<i class="tb-fwin-tg" title="Golpe ${esc(tg.nome)}">${esc(tg.icone)} <span class="tb-fwin-tg-nome">${esc(tg.nome)}</span></i>`).join('')}
                 ${(l.canais || []).map(c => `<span class="tb-fwin-canal" title="${esc(c.nome)}">${esc(c.icone || '💥')}${fmtN(c.total)}</span>`).join('')}
             </span>
         </div>

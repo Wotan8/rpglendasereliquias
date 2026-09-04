@@ -167,7 +167,9 @@ export function getMechanicTargetsHTML() {
 <option value="Item: Peso/Pressão">⚖️ Peso / Pressão do Item</option>
 <option value="Item: Tamanho">📐 Tamanho do Item</option>
 <option value="Item: Preço">💰 Preço do Item (L$)</option>
-<option value="Item: Liga">⚒️ Liga do Item (0–5)</option>
+<option value="Item: Aura">🌟 Aura da peça (0–5)</option>
+<option value="Item: Afiação Arcana">🔮 Afiação arcana do Item</option>
+<option value="Item: Reforço">🛡️ Reforço do Item (proteção)</option>
 <option value="Item: Qualidade">⭐ Qualidade do Item (0–5)</option>
 <option value="Item: Afiação">🗡️ Afiação do Item</option>
 <option value="Projétil: Qualidade">🎯 Qualidade do Projétil apontado</option>
@@ -262,7 +264,7 @@ function _formatCalcValue(calc) {
     return calc.valor ?? '?';
 }
 
-function _formatEquation(equacao) {
+export function _formatEquation(equacao) {
     if (!Array.isArray(equacao) || equacao.length === 0) return '?';
     // Só usa a forma menor(A, B, …) quando a equação INTEIRA é um min/max.
     // Equação mista (fold sequencial) mostraria a conta errada nessa forma.
@@ -655,7 +657,9 @@ function getValueSourceHTML(refSelecionada) {
 <option value="Item: Peso/Pressão">⚖️ Peso / Pressão do Item</option>
 <option value="Item: Tamanho">📐 Tamanho do Item</option>
 <option value="Item: Preço">💰 Preço do Item (L$)</option>
-<option value="Item: Liga">⚒️ Liga do Item (0–5)</option>
+<option value="Item: Aura">🌟 Aura da peça (0–5)</option>
+<option value="Item: Afiação Arcana">🔮 Afiação arcana do Item</option>
+<option value="Item: Reforço">🛡️ Reforço do Item (proteção)</option>
 <option value="Item: Qualidade">⭐ Qualidade do Item (0–5)</option>
 <option value="Item: Afiação">🗡️ Afiação do Item</option>
 <option value="Projétil: Qualidade">🎯 Qualidade do Projétil apontado</option>
@@ -689,7 +693,7 @@ function _migrateCalcToEquacao(c) {
 }
 
 // ===== RENDER A SINGLE EQUATION TERM =====
-function _renderEquationTerm(term, calcIndex, termIndex) {
+export function _renderEquationTerm(term, calcIndex, termIndex) {
     const t = term || { tipo: 'fixo', valor: '' };
     const showOp = termIndex > 0;
     const opHtml = showOp ? `
@@ -2810,7 +2814,7 @@ function _collectEquacaoFromRow(row) {
     return _collectEquacaoFromContainer(container);
 }
 
-function _collectEquacaoFromContainer(container) {
+export function _collectEquacaoFromContainer(container) {
     const terms = container.querySelectorAll('.eq-term');
     return Array.from(terms).map((term, i) => {
         const tipo = term.querySelector('.eq-term-tipo')?.value || 'fixo';
@@ -2842,7 +2846,7 @@ window._setSelectValueWithFallback = function(selectEl, value) {
     }
 };
 
-function _restoreEquacaoRefs(container, equacao) {
+export function _restoreEquacaoRefs(container, equacao) {
     const terms = container.querySelectorAll('.eq-term');
     terms.forEach((term, i) => {
         const t = equacao[i];

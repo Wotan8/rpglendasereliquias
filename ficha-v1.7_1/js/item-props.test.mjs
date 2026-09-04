@@ -20,7 +20,7 @@ const ini = src.indexOf('const _ME_ITEM_PROPS = {');
 const fim = src.indexOf('\n}\n', src.indexOf('function _meItemProp(prop)')) + 3;
 assert.ok(ini > 0 && fim > ini, '_ME_ITEM_PROPS / _meItemProp não encontrados');
 
-const ADAGA_TPL = { id: 'tplAdaga', nome: 'Adaga', preco: 300, liga: '3', capacidadeContainer: 0, multiplicadorPressao: 1 };
+const ADAGA_TPL = { id: 'tplAdaga', nome: 'Adaga', preco: 300, aura: '3', capacidadeContainer: 0, multiplicadorPressao: 1 };
 const MOCHILA_TPL = { id: 'tplMochila', nome: 'Mochila', capacidadeContainer: 12, multiplicadorPressao: 0.5 };
 const SEM_PRECO_TPL = { id: 'tplSimples', nome: 'Roupas Simples' };   // como 92/155 do catálogo
 
@@ -46,7 +46,7 @@ assert.equal(prop('Quantidade', inv), 2);
 
 // --- campos que só existem no catálogo ---
 assert.equal(prop('Preço', inv), 300, 'preço deve vir do modelo');
-assert.equal(prop('Liga', inv), 3, 'liga é string no cadastro e sai numérica');
+assert.equal(prop('Aura', inv), 3, 'aura é string no cadastro e sai numérica');
 
 // --- pressão: override > base > peso ---
 assert.equal(prop('Peso/Pressão', { items: [{ ...adaga, pressaoBase: 4 }], catalog: inv.catalog }), 4);
@@ -55,11 +55,11 @@ assert.equal(prop('Peso/Pressão', { items: [{ ...adaga, pressaoBase: 4, pressao
 // --- ausência vale 0, nunca NaN ---
 const simples = { id: 'i1', nome: 'Roupas', modeloId: 'tplSimples', peso: 1 };
 assert.equal(prop('Preço', { items: [simples], catalog: inv.catalog }), 0);
-assert.equal(prop('Liga', { items: [simples], catalog: inv.catalog }), 0);
+assert.equal(prop('Aura', { items: [simples], catalog: inv.catalog }), 0);
 assert.equal(prop('Tamanho', { items: [simples], catalog: inv.catalog }), 0);
 
 // --- Qualidade e Afiação: entram na Equação de Dano (`FOR + Item: Qualidade + Item: Afiação`) ---
-const GRAAL_TPL = { id: 'tplGraal', nome: 'Espada Longa', liga: '5', qualidade: '5', afiacao: 5 };
+const GRAAL_TPL = { id: 'tplGraal', nome: 'Espada Longa', qualidade: '5', afiacao: 5 };
 const espada = { id: 'i1', nome: 'Espada Longa', modeloId: 'tplGraal', peso: 2 };
 const invGraal = { items: [espada], catalog: [GRAAL_TPL] };
 assert.equal(prop('Qualidade', invGraal), 5, 'Qualidade vem do modelo e sai numérica');
@@ -71,11 +71,14 @@ assert.equal(prop('Afiação', { items: [simples], catalog: inv.catalog }), 0, '
 assert.equal(prop('Qualidade', { items: [{ ...espada, qualidade: 2 }], catalog: [GRAAL_TPL] }), 2, 'instância sobrepõe o modelo');
 // Migração: o campo antigo `fio` e a ref antiga 'Fio' seguem valendo enquanto
 // houver instância antiga em ficha — item não migrado não pode virar 0.
-const LEGADO_TPL = { id: 'tplLegado', nome: 'Machado', liga: '4', fio: '3' };
+const LEGADO_TPL = { id: 'tplLegado', nome: 'Machado', fio: '3' };
 assert.equal(prop('Qualidade', { items: [{ id: 'i1', nome: 'Machado', modeloId: 'tplLegado', peso: 2 }], catalog: [LEGADO_TPL] }), 3, 'campo antigo fio alimenta a Qualidade');
 assert.equal(prop('Fio', invGraal), 5, "ref antiga 'Fio' é alias da Qualidade");
-// Trava do Livro (5.5): Qualidade ≤ Liga, não estrito. Aqui só o dado; quem valida é o audit.
-assert.ok(prop('Qualidade', invGraal) <= prop('Liga', invGraal), 'Qualidade 5 cabe na Liga 5');
+// Aura da peça (Livro, p. 6): Q6 a Q10. Danificada tira 1 até um ferreiro.
+assert.equal(prop('Qualidade', { items: [{ ...espada, aura: 2 }], catalog: [GRAAL_TPL] }), 7, 'Q5 + Aura 2 = Qualidade 7');
+assert.equal(prop('Qualidade', { items: [{ ...espada, danificada: true }], catalog: [GRAAL_TPL] }), 4, 'Danificada: −1');
+assert.equal(prop('Qualidade', { items: [{ ...espada, qualidade: 0, danificada: true }], catalog: [GRAAL_TPL] }), 0, 'nunca negativa');
+assert.equal(prop('Afiação Arcana', { items: [{ ...espada, afiacaoArcana: 2 }], catalog: [GRAAL_TPL] }), 2);
 
 // --- container: multiplicador cai no modelo, com default 1 ---
 const mochila = { id: 'i1', nome: 'Mochila', modeloId: 'tplMochila', peso: 2, ehContainer: true };
@@ -95,7 +98,7 @@ assert.equal(prop('Cor', inv), 0, 'propriedade inexistente vale 0');
 // --- o prefixo cortado em _resolveSheetRef bate com as chaves do mapa ---
 assert.equal('Item: Peso/Pressão'.slice(6), 'Peso/Pressão');
 assert.ok(src.includes("ref.startsWith('Item: ')"), 'branch de Item: some do _resolveSheetRef');
-for (const chave of ['Peso/Pressão', 'Tamanho', 'Preço', 'Liga', 'Qualidade', 'Fio', 'Afiação', 'Quantidade', 'Multiplicador de Pressão', 'Capacidade do Container']) {
+for (const chave of ['Peso/Pressão', 'Tamanho', 'Preço', 'Aura', 'Qualidade', 'Fio', 'Afiação', 'Afiação Arcana', 'Quantidade', 'Multiplicador de Pressão', 'Capacidade do Container']) {
   assert.equal(prop(chave, inv) === 0 || typeof prop(chave, inv) === 'number', true);
 }
 

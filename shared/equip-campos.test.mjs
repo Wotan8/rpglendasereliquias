@@ -4,7 +4,7 @@
 // vivo em painel-mestre/__check-npc-inventario.html.
 import assert from 'node:assert/strict';
 import {
-    CAMPOS_EQUIPAMENTO, camposDaInstancia, valorDoItem, herdaDoModelo, htmlCampo,
+    CAMPOS_EQUIPAMENTO, camposDaInstancia, camposDoCatalogo, valorDoItem, herdaDoModelo, htmlCampo,
     instanciarDoModelo, itemAplicaEfeito, normalizaFormaEquipar,
     modeloDaInstancia,
 } from './equip-campos.js';
@@ -21,7 +21,7 @@ for (const f of CAMPOS_EQUIPAMENTO) {
     }
 }
 // os campos que o Mestre precisa ter (o pedido: mesmas configurações do Criador)
-for (const k of ['liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'preco', 'tags',
+for (const k of ['qualidade', 'afiacao', 'afiacaoArcana', 'essenciaArcana', 'reforco', 'encantamento', 'aura', 'danificada', 'preco', 'tags',
                  'slotsAdicionais', 'valoresDerivadosVinculados', 'statusVitaisVinculados',
                  'atributosVinculados', 'periciasVinculadas', 'condicaoIds', 'capacidadeContainer']) {
     assert.ok(chaves.includes(k), `spec tem ${k}`);
@@ -31,10 +31,13 @@ for (const k of ['liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'prec
 const inst = camposDaInstancia().map(f => f.key);
 assert.ok(!inst.includes('quantidade'), 'a instância tem quantidade real, não a "padrão ao instanciar"');
 assert.equal(inst.length, CAMPOS_EQUIPAMENTO.length - 1, 'só quantidade é de catálogo');
-assert.ok(inst.includes('nome') && inst.includes('liga'), 'o resto todo aparece na instância');
+assert.ok(inst.includes('nome') && inst.includes('qualidade') && inst.includes('danificada'), 'o resto todo aparece na instância');
+assert.ok(!camposDoCatalogo().some(f => f.key === 'danificada'), 'Danificada é estado da instância: o catálogo não edita');
 
 // ===== herança =====
-assert.equal(herdaDoModelo('liga'), true);
+assert.equal(herdaDoModelo('qualidade'), true);
+assert.equal(herdaDoModelo('aura'), true);
+assert.equal(herdaDoModelo('danificada'), false, 'Danificada é da instância');
 assert.equal(herdaDoModelo('valoresDerivadosVinculados'), true);
 assert.equal(herdaDoModelo('nome'), false, 'nome é sempre da instância');
 assert.equal(herdaDoModelo('peso'), false, 'peso é sempre da instância');
@@ -54,9 +57,9 @@ assert.match(hNome, /value="Punhal"/);
 assert.match(hNome, /<span class="required">\*<\/span>/, 'obrigatório sai marcado');
 
 // placeholder mostra o que seria herdado quando a instância está vazia
-const hLiga = htmlCampo(campo('liga'), null, { modelo: { liga: '3' } });
+const hLiga = htmlCampo(campo('qualidade'), null, { modelo: { qualidade: '3' } });
 assert.match(hLiga, /herda do modelo: 3/, 'vazio anuncia o valor do modelo');
-const hLigaPropria = htmlCampo(campo('liga'), '5', { modelo: { liga: '3' } });
+const hLigaPropria = htmlCampo(campo('qualidade'), '5', { modelo: { qualidade: '3' } });
 assert.match(hLigaPropria, /value="5" selected/, 'valor próprio da instância vence');
 assert.equal(/herda do modelo/.test(hLigaPropria), false, 'e some o aviso de herança');
 
@@ -108,7 +111,7 @@ const tpl = {
     formaEquipar: 'empunhar', categoriaArma: 'uma_mao', equipavelEm: ['bp-mao'],
     ehContainer: false, pressaoBase: 1,
     // tudo abaixo HERDA — não pode ser copiado para a instância
-    liga: '3', qualidade: '2', afiacao: 1, reforco: 0, blindagemQ0: 0, preco: 90,
+    qualidade: '2', afiacao: 1, reforco: 0, aura: 1, preco: 90,
     formulaDano: '1d4', tags: ['metálico'], tipoGolpe: ['perfurante', 'cortante'],
     valoresDerivadosVinculados: [{ id: 'dv1', modificador: 2 }],
     statusVitaisVinculados: [{ id: 'vs1', modificador: 1 }],
@@ -140,7 +143,7 @@ assert.deepEqual(semente.periciasVinculadas, [{ id: 'sk1', modificador: 1 }]);
 assert.deepEqual(semente.condicaoIds, [{ id: 'cd1' }]);
 assert.deepEqual(semente.slotsAdicionais, [{ id: 'bp-mao', quantidade: 1 }]);
 assert.deepEqual(semente.tags, ['metálico']);
-assert.equal(semente.liga, '3');
+assert.equal(semente.aura, 1);
 assert.equal(semente.qualidade, '2');
 assert.equal(semente.preco, 90);
 assert.equal(semente.formulaDano, '1d4');
@@ -162,8 +165,8 @@ assert.equal(orig.valoresDerivadosVinculados[0].equacao[0].valor, 1,
     'editar o item não pode alterar o modelo do catálogo em memória');
 
 // esvaziar um campo à mão ainda derruba para o modelo (rede de segurança)
-const hVazio = htmlCampo(CAMPOS_EQUIPAMENTO.find(f => f.key === 'liga'), null, { modelo: tpl });
-assert.match(hVazio, /herda do modelo: 3/);
+const hVazio = htmlCampo(CAMPOS_EQUIPAMENTO.find(f => f.key === 'qualidade'), null, { modelo: tpl });
+assert.match(hVazio, /herda do modelo: 2/);
 assert.deepEqual(instanciarDoModelo(null), {}, 'sem modelo, sem semente');
 
 // ===== trava do "Segurar" =====
@@ -228,10 +231,10 @@ assert.deepEqual(modeloDaInstancia(comSombra).mecanicaIds, ['me9']);
 
 // Ida e volta: o que sai do catálogo e volta para ele não perde campo.
 const tplRedondo = { id: 'tpl9', nome: 'Adaga', tipo: 'Arma', categoriaArma: 'uma_mao',
-    liga: '3', qualidade: '2', peso: 0.5, tamanho: 0.3, formulaDano: '1d4',
+    qualidade: '2', aura: 1, peso: 0.5, tamanho: 0.3, formulaDano: '1d4',
     tags: ['metálico'], tipoGolpe: ['perfurante'], alcanceFator: 1, quantidade: 1 };
 const volta = modeloDaInstancia(instanciarDoModelo(tplRedondo));
-for (const k of ['nome', 'tipo', 'categoriaArma', 'liga', 'qualidade', 'peso', 'tamanho',
+for (const k of ['nome', 'tipo', 'categoriaArma', 'aura', 'qualidade', 'peso', 'tamanho',
                  'formulaDano', 'alcanceFator', 'quantidade']) {
     assert.deepEqual(volta[k], tplRedondo[k], `ida e volta preservou ${k}`);
 }

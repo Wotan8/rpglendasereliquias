@@ -1,6 +1,6 @@
 /**
  * O redutor da Arte — a perícia é a porta.
- * Livro de 12 Páginas, p. 8 ("Quem pode usar") e p. 10 ("Conjurar").
+ * Livro de 12 Páginas, p. 6 ("Quem pode usar") e p. 7 ("Conjurar").
  *
  *   perícia 0 ................ não usa a Arte (arma, foco ou escola)
  *   Qualidade ≤ perícia ...... usa normal
@@ -55,8 +55,8 @@ export function nivelDoDominio(dots, chave) {
 
 /**
  * O redutor que a perícia baixa põe no Alvo.
- * Qualidade e nível fora da escala 0–5 são presos nela: peça sem Qualidade
- * cadastrada vale 0, e 0 nunca gera redutor.
+ * Qualidade e nível fora da escala 0–10 (Q5 + Aura 5) são presos nela: peça
+ * sem Qualidade cadastrada vale 0, e 0 nunca gera redutor.
  *
  * COM FOCO, a perícia responde à MAIOR exigência posta sobre ela — a da magia
  * ou a do foco, o que for maior. Nunca as duas somadas: é uma perícia só, e
@@ -72,7 +72,7 @@ export function nivelDoDominio(dots, chave) {
  * **o foco rende até o nível da perícia, e nem um ponto além.**
  */
 export function redutorDoDominio(qualidade, nivel, qualidadeFoco = 0) {
-    const presa = v => Math.min(5, Math.max(0, Number(v) || 0));
+    const presa = v => Math.min(10, Math.max(0, Number(v) || 0));
     return Math.max(0, Math.max(presa(qualidade), presa(qualidadeFoco)) - presa(nivel));
 }
 
@@ -81,7 +81,7 @@ export function redutorDoDominio(qualidade, nivel, qualidadeFoco = 0) {
  * mesmo provoca. Serve para a ficha explicar o número em vez de só mostrá-lo.
  */
 export function focoLiquido(qualidadeFoco, nivel) {
-    const presa = v => Math.min(5, Math.max(0, Number(v) || 0));
+    const presa = v => Math.min(10, Math.max(0, Number(v) || 0));
     return Math.min(presa(qualidadeFoco), presa(nivel));
 }
 
@@ -212,7 +212,7 @@ if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('dominio-redut
     assert.equal(redutorDoDominio(5, 5), 0);
     assert.equal(redutorDoDominio(1, 3), 0, 'perícia acima da Qualidade não vira bônus');
     assert.equal(redutorDoDominio(null, 0), 0, 'peça sem Qualidade não gera redutor');
-    assert.equal(redutorDoDominio(9, 0), 5, 'Qualidade fora da escala é presa em 5');
+    assert.equal(redutorDoDominio(12, 0), 10, 'Qualidade fora da escala é presa em 10 (Q5 + Aura 5)');
 
     // soma com o Redutor próprio, e o sinal não importa
     assert.equal(redutorTotal({ redutorProprio: -2, qualidade: 3, nivel: 1 }), 4);

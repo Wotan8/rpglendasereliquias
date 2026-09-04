@@ -16,8 +16,7 @@ import * as SEL from '../../painel-criador/js/painel-mechanics.js';
 import {
     ESTADO_EQUIP, FORMA_EQUIP, qtdDe, ehContainer, escolherQtd, dividirPilha,
     htmlInventario, tratarClique, iniciarArrasto, tplDoItem, cabeNoConteiner,
-    desgastarConteiner, GATILHO,
-} from '../../shared/inventario-motor.js?v=13';
+    } from '../../shared/inventario-motor.js?v=14';
 import {
     camposDaInstancia, valorDoItem, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo, htmlFormulario, htmlBarraFerramentas, ligarFormulario,
@@ -363,7 +362,6 @@ async function moverItemNpc(itemId, alvo) {
             await lote.commit();
         }
         NI.contAbertos.add(contId);
-        await _desgastarPorConteudo(c);
         _logItem(`📦 ${plano.qtd}× "${i.nome || 'Item'}" guardado em "${c.nome || 'contêiner'}"`, [
             { label: 'Item', from: i.nome || itemId, to: i.nome || itemId },
             { label: 'Contêiner', from: '—', to: c.nome || contId },
@@ -373,28 +371,6 @@ async function moverItemNpc(itemId, alvo) {
     } catch (e) { console.error(e); showAlert('❌ Erro: ' + e.message, 'danger'); }
 }
 
-/**
- * 🧱 Sobrecarga cobra Integridade quando o conteudo muda. So cobra de conteiner
- * que passou do teto cadastrado. Zerou, rompe: os filhos perdem o parentItemId
- * e reaparecem em Itens Soltos. Nada e apagado.
- */
-async function _desgastarPorConteudo(cont) {
-    const tpl = tplDoItem(cont, window._npcSys || window._systemData || {});
-    const r = desgastarConteiner(cont, NI.items, tpl, GATILHO.conteudo);
-    if (!r.perda) return;
-    try {
-        await updateDoc(doc(db, 'items', cont.id), { avaria: increment(r.perda) });
-        if (r.rompeu) {
-            const lote = writeBatch(db);
-            for (const id of r.filhos) lote.update(doc(db, 'items', id), { parentItemId: null });
-            await lote.commit();
-            _logItem(`🎒 "${cont.nome || 'Contêiner'}" rompeu — ${r.filhos.length} item(ns) para Itens Soltos`,
-                [{ label: 'Integridade', from: 'sobrecarregado', to: '0' }]);
-            showAlert(`🎒 ${cont.nome || 'O contêiner'} rompeu — ${r.filhos.length} item(ns) foram para Itens Soltos`, 'warning');
-        }
-        await loadNpcInventory();
-    } catch (e) { console.error('desgaste', e); }
-}
 
 /** Log de inventário no padrão do painel (mesmos campos dos demais). */
 function _logItem(acao, changes) {
@@ -416,6 +392,7 @@ function _cachesDoForm() {
         derivedValues: sys.derivedValues || [],
         vitalStats: sys.vitalStats || [],
         skills: sys.skills || [],
+        essencias: (sys.runicElements || window._systemData?.runicElements || []).filter(r => r.tipoElemento === 'aspectus' && r.publicado !== false),
         mechanics: sys.mechanics || window._systemData?.mechanics || [],
         conditions: sys.conditions || window._systemData?.conditions || [],
         // Partes do NPC mandam no "Equipável em": a anatomia é dele, não do catálogo
@@ -535,7 +512,7 @@ window._npcFiltrarCatalogo = function() {
 
     lista.innerHTML = achados.length
         ? achados.slice(0, 200).map(t => {
-            const det = [t.tipo, t.liga != null ? 'Liga ' + t.liga : '', t.formulaDano].filter(Boolean).join(' · ');
+            const det = [t.tipo, t.qualidade != null && t.qualidade !== '' ? 'Q' + t.qualidade : '', t.formulaDano].filter(Boolean).join(' · ');
             return `<option value="${escapeHtml(t.id)}">${escapeHtml(t.nome || 'Sem nome')}${det ? ' — ' + escapeHtml(det) : ''}</option>`;
         }).join('')
         : '<option value="" disabled>Nenhum equipamento encontrado</option>';

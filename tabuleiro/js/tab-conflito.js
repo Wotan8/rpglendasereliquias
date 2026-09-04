@@ -147,25 +147,19 @@ function comDefesaGasta(pid) {
 }
 
 /**
- * Blindagem do alvo contra ESTE golpe. Golpe tipado (cortante/perfurante/
- * contundente) bate na Blindagem daquele tipo; um golpe que é dos dois usa a
- * MENOR (o atacante escolhe o ângulo). Sem tipo, vale a Blindagem geral.
+ * Blindagem do alvo contra este golpe (Livro, p. 5). Só existem duas: a comum,
+ * contra dano físico, e a Arcana, contra dano de Essência. O golpe tipado por
+ * Cortante/Perfurante/Contundente saiu no Núcleo v2 — `tipos` fica só como
+ * rótulo da peça.
  */
-function blindagemDe(pid, tipos) {
+function blindagemDe(pid, tipos, arcana = false) {
     const fonte = fonteDoParticipante(part(pid));
     if (!fonte) return 0;
     const vds = _sys?.derivedValues || [];
-    const acha = (nome) => vds.find(d => normChave(d.nome) === normChave(nome));
-    const vals = [];
-    for (const t of (tipos || [])) {
-        const dv = acha(`Blindagem ${t}`);
-        const v = dv ? valorVdDaFonte(fonte, dv) : null;
-        if (v != null) vals.push(Number(v) || 0);
-    }
-    if (vals.length) return Math.max(0, Math.min(...vals) + bonusDeCondicaoNoVd(pid, 'Blindagem'));
-    const geral = acha('Blindagem');
-    const v = geral ? valorVdDaFonte(fonte, geral) : null;
-    return Math.max(0, (Number(v) || 0) + bonusDeCondicaoNoVd(pid, 'Blindagem'));
+    const nome = arcana ? 'Blindagem Arcana' : 'Blindagem';
+    const dv = vds.find(d => normChave(d.nome) === normChave(nome));
+    const v = dv ? valorVdDaFonte(fonte, dv) : null;
+    return Math.max(0, (Number(v) || 0) + bonusDeCondicaoNoVd(pid, nome));
 }
 
 /**
@@ -198,6 +192,8 @@ export async function abrirConflito(atacante, tokAtacante, acao, alvos) {
         acao: {
             nome: acao.nome || 'Ação', icone: acao.icone || '⚔️', dano: acao.dano || '',
             tipos: acao.tipos || [], custoAcao: acao.custoAcao || 'padrao',
+            // 🔮 Parcela arcana da arma e Essência da magia (Livro, p. 5–6).
+            arcano: acao.arcano || null, essencia: acao.essencia || null,
             alvoAcerto: acao.alvoAcerto ?? null, efeito: acao.efeito || '',
             // De QUE Valor Derivado saiu o Alvo. Sem isto a janela dizia só
             // "Acerto", que não corresponde a VD nenhum da ficha do arqueiro —
@@ -342,47 +338,38 @@ window.tbConfRolarAcerto = async (naMesa) => {
     if (graus <= 0) await marcarFalhaDeConjuracao(c.atacante?.pid);
     // 🏹 A flecha saiu: gasta do maço e decide se sobrou inteira.
     if (c.acao?.projetil) await resolverProjetil(c, graus > 0);
-    // 💀 Falha Crítica come Integridade da peça usada (§5.5).
+    // 💀 Desastre (10) come a peça: Afiação, depois Danificada (Livro, p. 6).
     if (dado === 10) await desgastarPorFalhaCritica(c);
     logChat(`🎯 ${c.atacante.nome} ataca com ${c.acao.nome}: d10 ${dado}${naMesa ? ' (mesa)' : ''} vs Alvo ${alvo}${bonusMarca ? ` (${c.acao.alvoAcerto} +${bonusMarca} da Marca de Caça)` : ''} → ${graus > 0 ? '+' : ''}${graus} Graus`
         + (dado === 1 ? ' ✨ crítico!' : dado === 10 ? ' 💀 falha crítica!' : ''));
 };
 
 /**
- * 💀 FALHA CRÍTICA COME A PEÇA
+ * 💀 O DESASTRE COME A PEÇA (Livro, p. 6)
  *
- * §5.5 já dizia que arma improvisada (Liga 0) é DESTRUÍDA numa Falha Crítica;
- * aqui a régua vira contínua: a peça perde 1 de Integridade, e Liga 0 continua
- * acabando ali. A escada mora na própria faixa — 1 ponto é um sétimo de uma
- * adaga e um vigésimo de um espadão, porque o máximo escala com Liga e Tamanho.
- *
- * O acabamento (Afiação/Reforço) continua sendo escolha do Narrador pelo §6.7:
- * isto é a consequência que o Tabuleiro aplica sozinho, sem perguntar.
- *
- * Só o dono do ataque executa — dois clientes com a aba aberta cobrariam duas.
+ * Dado 10 com a arma: 1 ponto de Afiação — o comum antes do arcano. Sem ponto
+ * sobrando, a peça fica Danificada: −1 Qualidade até um ferreiro. Relíquia não
+ * lasca. Só o dono do ataque executa — dois clientes com a aba aberta cobrariam
+ * duas vezes.
  */
 async function desgastarPorFalhaCritica(c) {
     const itemId = c.acao?.golpe?.itemId;
     if (!itemId || c.acao?.golpe?.desarmado) return;      // o corpo não é peça
     if (!controla(c.atacante?.pid)) return;
     try {
-        const M = await import('../../shared/inventario-motor.js?v=13');
+        const M = await import('../../shared/inventario-motor.js?v=14');
         const ref = _doc(_db, 'items', itemId);
         const snap = await _get(ref);
         if (!snap.exists()) return;
         const item = { id: snap.id, ...snap.data() };
         const sys = window._npcSys || window._systemData || {};
-        const tpl = M.tplDoItem(item, sys);
-        const perda = M.perdaFalhaCritica(item, tpl);
-        if (!perda) return;
-
-        await _upd(ref, { avaria: _inc(perda) });
-        const restou = Math.max(0, M.integridadeDe(item, tpl) - perda);
-        logChat(restou <= 0
-            ? `💀 Falha crítica: ${c.atacante.nome} arruinou ${item.nome || 'a peça'} — sem efeito até consertar`
-            : `💀 Falha crítica: ${item.nome || 'a peça'} perdeu ${perda} de Integridade (${restou.toFixed(0)}/${M.integridadeMax(item, tpl).toFixed(0)})`);
-        if (restou <= 0) toast(`🧱 ${item.nome || 'A peça'} arruinou — não aplica mais efeito`, 'warning');
-    } catch (e) { console.warn('falha crítica/integridade', e); }
+        const patch = M.desastreNaPeca(item, M.tplDoItem(item, sys));
+        if (!patch) return;
+        const { texto, ...campos } = patch;
+        await _upd(ref, campos);
+        logChat(`💀 Desastre: ${item.nome || 'a peça'} de ${c.atacante.nome} ${texto}`);
+        if (campos.danificada) toast(`🔧 ${item.nome || 'A peça'} ficou Danificada — −1 Qualidade até um ferreiro`, 'warning');
+    } catch (e) { console.warn('desastre/peça', e); }
 }
 
 /**
@@ -486,7 +473,10 @@ window.tbConfRolarDano = async (naMesa) => {
     }
     const alvos = c.alvos.map(a => {
         if (!a.passou) return { ...a, bruto: 0, dano: 0 };
-        const bl = blindagemDe(a.pid, c.acao.tipos);
+        // Dano de Essência (magia, runa) ignora a Blindagem comum: só a Arcana barra.
+        const bl = blindagemDe(a.pid, c.acao.tipos, !!c.acao.essencia);
+        // 🔮 A Afiação arcana da arma é parcela à parte, barrada só pela Arcana.
+        const arc = c.acao.arcano?.valor ? Math.max(0, Number(c.acao.arcano.valor) - blindagemDe(a.pid, [], true)) : 0;
         // 🎯 só a linha da presa leva a marca — o dano é por alvo
         // 📏 Peso entra no braço, não no tiro: só corpo a corpo. O mesmo número
         // que torna o ogro fácil de acertar o faz machucar mais quando acerta.
@@ -494,8 +484,8 @@ window.tbConfRolarDano = async (naMesa) => {
         const bruto = Math.max(0, total + (Number(c.marca?.danoPorPid?.[a.pid]) || 0) + tam);
         // ✨ Crítico atravessa o Absorver — a metade não vale contra dado 1.
         const critico = !!c.rolagem?.critico;
-        return { ...a, bruto, blindagem: bl, tamanhoDano: tam, criticoPassou: critico && !!a.meia,
-            dano: danoFinal(bruto, bl, a.meia, critico) };
+        return { ...a, bruto, blindagem: bl, blindagemArcana: !!c.acao.essencia, arcano: arc, tamanhoDano: tam, criticoPassou: critico && !!a.meia,
+            dano: danoFinal(bruto, bl, a.meia, critico) + arc };
     });
     const marcados = alvos.filter(a => Number(c.marca?.danoPorPid?.[a.pid]) > 0);
     const bonusDano = marcados.length ? Number(c.marca.danoPorPid[marcados[0].pid]) : 0;
@@ -512,7 +502,8 @@ window.tbConfRolarDano = async (naMesa) => {
  */
 function contaDoDano(a) {
     const partes = [String(a.bruto ?? 0)];
-    if (a.blindagem) partes.push(`− ${a.blindagem} blind`);
+    if (a.blindagem) partes.push(`− ${a.blindagem} ${a.blindagemArcana ? 'blind. arcana' : 'blind'}`);
+    if (a.arcano) partes.push(`+ ${a.arcano} 🔮`);
     if (a.meia) partes.push('÷2 🪨');
     return partes.join(' ') + ' =';
 }
@@ -649,7 +640,7 @@ async function aplicar(c) {
         }
         if (c.fase === 'aplicar') {
             const linha = alvos.map(a => a.passou
-                ? `${a.nome}: −${a.dano} VIT${a.blindagem ? ` (blindagem ${a.blindagem})` : ''}${a.criticoPassou ? ' ✨ crítico atravessou o Absorver' : a.meia ? ' 🪨 absorvido, não letal' : ''}`
+                ? `${a.nome}: −${a.dano} VIT${a.blindagem ? ` (${a.blindagemArcana ? 'blind. arcana' : 'blindagem'} ${a.blindagem})` : ''}${a.arcano ? ` +${a.arcano} 🔮` : ''}${a.criticoPassou ? ' ✨ crítico atravessou o Absorver' : a.meia ? ' 🪨 absorvido, não letal' : ''}`
                 : c.rolagem?.falha ? `${a.nome}: o golpe passou longe`
                 : `${a.nome}: defendeu com ${a.defesaNome || '—'}${a.defesa ? ` (${a.defesa})` : ''}${a.defesaPaga ? ' · 1 Energia' : ''}`).join(' · ');
             logChat(`⚔️ ${c.acao.nome} → ${linha || 'sem alvos'}`);

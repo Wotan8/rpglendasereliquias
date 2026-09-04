@@ -5,7 +5,7 @@
 
 import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMechanicSelectorHTML, buildPecSelectorHTML, buildSkillSelectorHTML, buildDerivedValueSelectorHTML, buildEquipmentDerivedValueSelectorHTML, buildConditionSelectorHTML, vitalStatusOptions, ATRIBUTOS_VINCULAVEIS, periciaOptions, buildManeuverSelectorHTML, getMechanicTargetsHTML, FONTE_LABELS, TIPO_ICONS, TIPO_LABELS, _renderEquationTerm, _collectEquacaoFromContainer, _restoreEquacaoRefs, _formatEquation } from './painel-mechanics.js?v=16';
 import {
-    CAMPOS_EQUIPAMENTO, normalizaFormaEquipar,
+    CAMPOS_EQUIPAMENTO, camposDoCatalogo, normalizaFormaEquipar,
     SECOES_EQUIPAMENTO, htmlBarraFerramentas, ligarFormulario, agruparEmSecoesDOM, atualizarResumo,
 } from '../../shared/equip-campos.js?v=19';
 import {
@@ -252,7 +252,7 @@ const MODULE_DEFS = {
         collection: 'system/data/equipment',
         // Mesma lista que a Ficha de NPC usa para editar UMA instância
         // (shared/equip-campos.js). Campo novo aqui aparece nos dois.
-        fields: CAMPOS_EQUIPAMENTO,
+        fields: camposDoCatalogo(),
         // ...e as mesmas gavetas do formulário de item da Ficha: 39 campos
         // numa coluna só ninguém varre. Único módulo que declara seções.
         sections: SECOES_EQUIPAMENTO,
@@ -707,7 +707,6 @@ const MODULE_FILTERS = {
     equipment: [
         { key: 'tipo', label: 'Tipo', icon: '📦', type: 'static' },
         { key: 'categoriaArma', label: 'Cat. Arma', icon: '⚔️', type: 'static' },
-        { key: 'liga', label: 'Liga', icon: '⚒️', type: 'static' },
         { key: 'formulaDano', label: 'Dano', icon: '💥', type: 'static' },
         { key: 'ehContainer', label: 'Container', icon: '🎒', type: 'boolean' },
     ],
@@ -3115,7 +3114,7 @@ function buildField(field, value, existingData) {
 
     if (field.type === 'select_cadastro') {
         // Opções de um cadastro do sistema (shared/equip-campos.js usa o mesmo tipo com `caches`).
-        const fontes = { skills: skillsCache };
+        const fontes = { skills: skillsCache, essencias: (window._runicElementsCache || []).filter(r => r.tipoElemento === 'aspectus' && r.publicado !== false) };
         const lista = (fontes[field.fonte] || []).filter(x => x.publicado !== false).slice()
             .sort((a, b) => String(a.categoria || '').localeCompare(String(b.categoria || '')) || String(a.nome || '').localeCompare(String(b.nome || '')));
         const opts = lista.map(x =>
@@ -5206,7 +5205,7 @@ function _collectSingleModuleData(item) {
         custoExpPorItem: parseInt(item.querySelector('[data-cm-key="custoExpPorItem"]')?.value || '0', 10) || 0,
         custoExpLabel: (item.querySelector('[data-cm-key="custoExpLabel"]')?.value || '').trim(),
         escolaId: (item.querySelector('[data-cm-key="escolaId"]')?.value || '') || null,
-        // A perícia do ramo é a da Escola: a porta e o teto (Livro, p. 10).
+        // A perícia do ramo é a da Escola: a porta e o teto (Livro, p. 7).
         periciaId: (_escolasCache.find(e => e.id === (item.querySelector('[data-cm-key="escolaId"]')?.value || ''))?.periciaIds || [])[0] || null,
         cadastrarBloqueio: cadastrarBloqueio,
         bloqueioMecanicaIds: bloqueioMecanicaIds,

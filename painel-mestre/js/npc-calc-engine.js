@@ -10,7 +10,6 @@
 // =============================================
 
 // O motor e puro: importa em vez de olhar `window` como o resto do painel faz.
-import { integridadeZerada } from '../../shared/inventario-motor.js?v=13';
 
 const ATTR_SIGLAS = ['INT', 'RAC', 'PRS', 'FOR', 'DES', 'VIG', 'PRE', 'MAN', 'AUT'];
 
@@ -90,9 +89,12 @@ const _NPC_ITEM_PROPS = {
     'Multiplicador de Pressão': (it, tpl) => it.multiplicadorPressao ?? tpl?.multiplicadorPressao ?? 1,
     'Capacidade do Container': (it, tpl) => it.capacidadeContainer ?? tpl?.capacidadeContainer,
     'Preço': (it, tpl) => it.preco ?? tpl?.preco,
-    'Liga': (it, tpl) => it.liga ?? tpl?.liga,
-    'Qualidade': (it, tpl) => it.qualidade ?? tpl?.qualidade ?? it.fio ?? tpl?.fio ?? 0,
-    'Fio': (it, tpl) => it.qualidade ?? tpl?.qualidade ?? it.fio ?? tpl?.fio ?? 0,
+    // Qualidade EFETIVA (Livro, p. 6): Q + Aura da peça − 1 se Danificada, nunca negativa.
+    'Qualidade': (it, tpl) => Math.max(0, (Number(it.qualidade ?? tpl?.qualidade ?? it.fio ?? tpl?.fio) || 0) + (Number(it.aura ?? tpl?.aura) || 0) - (it.danificada ? 1 : 0)),
+    'Fio': (it, tpl) => Math.max(0, (Number(it.qualidade ?? tpl?.qualidade ?? it.fio ?? tpl?.fio) || 0) + (Number(it.aura ?? tpl?.aura) || 0) - (it.danificada ? 1 : 0)),
+    'Aura': (it, tpl) => it.aura ?? tpl?.aura ?? 0,
+    'Afiação Arcana': (it, tpl) => it.afiacaoArcana ?? tpl?.afiacaoArcana ?? 0,
+    'Reforço': (it, tpl) => it.reforco ?? tpl?.reforco ?? 0,
     'Afiação': (it, tpl) => it.afiacao ?? tpl?.afiacao ?? 0,
     'Quantidade': it => it.quantidade ?? 1
 };
@@ -101,7 +103,7 @@ function _npcPropDe(item, prop, ctx) {
     const fn = _NPC_ITEM_PROPS[prop];
     if (!fn || !item) return 0;
     const tpl = item.modeloId ? (ctx.equipCatalog || []).find(t => t.id === item.modeloId) : null;
-    const num = parseFloat(fn(item, tpl));   // Liga vem como string ('0'..'5')
+    const num = parseFloat(fn(item, tpl));   // Qualidade vem como string ('0'..'5')
     return isNaN(num) ? 0 : num;
 }
 
@@ -214,12 +216,6 @@ function _npcTplDoItem(item, catalogo) {
 
 function _npcItemFormas(item, catalogo) {
     const formas = [];
-    /* Integridade zerada silencia a peca: continua equipada, continua pesando,
-       nao faz mais nada. O predicado esta duplicado em tres arquivos (ficha,
-       Tabuleiro, motor de NPC) e o corte tem de ser nos tres — senao item
-       arruinado segue dando bonus em duas telas. */
-    if (integridadeZerada(item, _npcTplDoItem(item, catalogo))) return formas;
-
     if (!item.equipado || item.parentItemId || item.estadoEquip === 'armazenado') return formas;
     if (item.estadoEquip === 'fixado') { formas.push('fixado'); return formas; }
     if (item.estadoEquip === 'segurar') { formas.push('segurando'); return formas; }
