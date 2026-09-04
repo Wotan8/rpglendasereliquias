@@ -21,7 +21,7 @@
 <script type="module">import '/shared/detalhe.js?v=6';</script>
 <link rel="stylesheet" href="/shared/dialogo.css?v=3">
 <script type="module">import '/shared/dialogo.js?v=2';</script>
-    <link rel="stylesheet" href="/menu/css/menu.css?v=50">
+    <link rel="stylesheet" href="/menu/css/menu.css?v=51">
     <link rel="stylesheet" href="/shared/tokens.css?v=11">
     <script src="/shared/theme.js"></script>
     <!-- reCAPTCHA v3 (invisível) — protege a criação de checkout Mercado Pago contra bots/abuso. -->
@@ -421,12 +421,14 @@
             <div class="tab-content" id="tab-notificacoes">
                 <div class="rep-topo">
                     <p class="rep-explica">As 100 mais recentes. As antigas saem sozinhas.</p>
-                    <!-- Push: por APARELHO, nao por conta. O texto diz isso porque
-                         "ativado" numa maquina e "desativado" na outra e a duvida
-                         que a pessoa leva para o suporte. -->
-                    <button class="btn btn-secondary btn-sm" id="btnPush" hidden
-                            onclick="portalAlternarPush()"></button>
-                    <span class="rep-explica" id="pushDica" hidden></span>
+                    <!-- Push: preferência DESTE aparelho, não da conta — celular e
+                         computador são dois cadastros. Uma peça só, encostada à
+                         direita: a primeira versão usava `btn btn-secondary`, que
+                         não existe em nenhuma folha que o Portal carrega, e ainda
+                         soltava a explicação como frase avulsa no meio da linha. -->
+                    <button type="button" class="rep-avisos" id="btnPush" hidden
+                            aria-pressed="false" onclick="portalAlternarPush()"></button>
+                    <p class="rep-explica rep-avisos-bloqueado" id="pushDica" hidden></p>
                 </div>
 
                 <div id="notificationsList"></div>
@@ -693,7 +695,7 @@
     </div>
 
     <!-- Firebase Module -->
-    <script type="module" src="/menu/js/menu-firebase.js?v=42"></script>
+    <script type="module" src="/menu/js/menu-firebase.js?v=43"></script>
     <!-- A janela da Roleta. Depois do menu-firebase.js: ela usa window.db e
          window.lrFunctions, que nascem lá. -->
     <script type="module" src="/menu/js/menu-roleta.js?v=12"></script>

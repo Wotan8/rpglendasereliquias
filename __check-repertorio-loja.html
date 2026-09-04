@@ -48,7 +48,24 @@
     <p class="rep-explica">O que você recebeu por apoiar Vasteluna. Cada peça diz como chega às
        suas mãos.</p>
   </div>
+
   <div class="inventory-grid" id="grid-rep"></div>
+</div>
+<h2>Notificações — o controle de avisos deste aparelho</h2>
+<div class="palco">
+  <div class="rep-topo" id="topo-avisos-off">
+    <p class="rep-explica">As 100 mais recentes. As antigas saem sozinhas.</p>
+    <button type="button" class="rep-avisos" aria-pressed="false"
+       title="Chega no celular mesmo com o site fechado."><span aria-hidden="true">🔔</span> Receber avisos neste aparelho</button>
+  </div>
+  <div class="rep-topo" id="topo-avisos-on">
+    <p class="rep-explica">As 100 mais recentes. As antigas saem sozinhas.</p>
+    <button type="button" class="rep-avisos" aria-pressed="true"><span aria-hidden="true">🔔</span> Avisos ligados neste aparelho</button>
+  </div>
+  <div class="rep-topo" id="topo-avisos-bloq">
+    <p class="rep-explica">As 100 mais recentes. As antigas saem sozinhas.</p>
+    <p class="rep-explica rep-avisos-bloqueado">🔕 Você bloqueou as notificações deste site no navegador — dá para liberar nas configurações dele.</p>
+  </div>
 </div>
 
 <h2>Loja</h2>
@@ -285,6 +302,36 @@ document.getElementById('grid-loja').innerHTML = `
     const acoes = [...document.querySelectorAll('.rep-acoes')];
     t('T5j · as ações do card ficam lado a lado, não empilhadas por acidente',
         acoes.length > 0 && acoes.every(a => cs(a).display !== 'block' || a.children.length === 1));
+}
+
+/* ===== o controle de avisos =====
+   A primeira versão usava `btn btn-secondary btn-sm` — classes que NÃO existem
+   em nenhuma folha que o Portal carrega. O botão saía com a borda crua do
+   navegador, parecendo aviso de erro no meio do cabeçalho. */
+{
+    const off = document.querySelector('#topo-avisos-off .rep-avisos');
+    const on  = document.querySelector('#topo-avisos-on .rep-avisos');
+
+    t('T5k · o botão de avisos tem estilo de verdade, não o do navegador',
+        parseFloat(cs(off).borderRadius) > 20 && cs(off).backgroundColor !== 'rgba(0, 0, 0, 0)');
+    // Encostado à direita: é preferência, não a manchete da aba.
+    const linha = document.querySelector('#topo-avisos-off');
+    t('T5l · ele encosta na direita, sem disputar a linha com o texto',
+        Math.abs(cx(off).right - (cx(linha).right - parseFloat(cs(linha).paddingRight || 0))) < 2);
+    t('T5m · e cabe numa linha só',
+        cx(off).height < 40);
+
+    // Desligado é discreto; ligado é dourado. O estado é a COR, não o ícone.
+    t('T5n · desligado não grita', cs(off).color === cs(document.querySelector('#topo-avisos-off .rep-explica')).color);
+    t('T5o · ligado acende em dourado', cs(on).borderTopColor !== cs(off).borderTopColor);
+    t('T5p · o sino é o mesmo nos dois estados — quem muda é a cor',
+        off.textContent.includes('🔔') && on.textContent.includes('🔔'));
+
+    // Bloqueado no navegador vira FRASE, não botão: o clique não resolve.
+    t('T5q · bloqueado no navegador não oferece botão',
+        !document.querySelector('#topo-avisos-bloq .rep-avisos'));
+    t('T5r · e explica onde resolver',
+        /configurações/.test(document.querySelector('.rep-avisos-bloqueado').textContent));
 }
 
 /* ===== a quantidade ===== */

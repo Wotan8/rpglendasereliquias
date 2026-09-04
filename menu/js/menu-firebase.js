@@ -1190,17 +1190,32 @@ async function pintarBotaoPush() {
     if (!b || !currentUser) return;
 
     const estado = await estadoPush();
-    const textos = {
-        'ligado': ['🔔 Avisos ligados neste aparelho', 'Clique para desligar só aqui.'],
-        'desligado': ['🔕 Receber avisos neste aparelho', 'Chega no celular mesmo com o site fechado.'],
-        'negado': [null, 'Você bloqueou as notificações deste site no navegador — dá para liberar nas configurações dele.'],
-    };
-    const [rotulo, ajuda] = textos[estado] || [null, ''];
 
-    b.hidden = !rotulo;
-    if (rotulo) b.textContent = rotulo;
-    dica.hidden = !ajuda;
-    dica.textContent = ajuda;
+    /* Bloqueado é o único caso que vira frase: o clique não resolve nada, a
+       pessoa tem de ir nas configurações do navegador. Botão que promete e
+       não entrega é pior do que botão nenhum. */
+    if (estado === 'negado') {
+        b.hidden = true;
+        dica.hidden = false;
+        dica.textContent = '🔕 Você bloqueou as notificações deste site no navegador — dá para liberar nas configurações dele.';
+        return;
+    }
+    dica.hidden = true;
+
+    // 'sem-suporte' e 'sem-chave': nada a oferecer, nada na tela.
+    b.hidden = estado !== 'ligado' && estado !== 'desligado';
+    if (b.hidden) return;
+
+    const ligado = estado === 'ligado';
+    b.setAttribute('aria-pressed', String(ligado));
+    /* Sempre 🔔. A primeira versão usava 🔕 para LIGAR, que lê como
+       "notificações desligadas" — quem é o estado aqui é a cor. */
+    b.innerHTML = ligado
+        ? '<span aria-hidden="true">🔔</span> Avisos ligados neste aparelho'
+        : '<span aria-hidden="true">🔔</span> Receber avisos neste aparelho';
+    b.title = ligado
+        ? 'Clique para desligar só neste aparelho. Celular e computador são cadastros separados.'
+        : 'Chega no celular mesmo com o site fechado. Vale só para este aparelho.';
 }
 
 window.portalAlternarPush = async function () {

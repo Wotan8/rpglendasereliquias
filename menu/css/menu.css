@@ -1550,12 +1550,50 @@ html:not(.dark) .loja-card {
     font-variant-numeric: tabular-nums;
 }
 
-/* Forma de recebimento: era um bloco com rótulo em caixa-alta de 9px sobre o
-   valor. Virou uma linha — o rótulo diz do que é, o valor é o dado. */
 /* O que o benefício narrativo DÁ e QUANDO vale — os dois textos que o mestre
    escreve no cadastro. Vinham sendo gravados e lidos por ninguém; agora moram
    no card, entre as etiquetas e os botões, com a mesma marca lateral da nota
    de leitura: é texto de regra, não descrição de peça. */
+/* 🔔 Avisos neste aparelho — preferência, não ação.
+   A primeira versão usava `btn btn-secondary btn-sm`: classes que existem em
+   criar-personagem, ficha e painel-mestre, e em NENHUMA folha que o Portal
+   carrega. O botão saía sem estilo, com a borda do navegador, parecendo aviso
+   de erro no meio do cabeçalho.
+
+   Agora é uma pílula encostada à direita, discreta quando desligada e dourada
+   quando ligada — o mesmo `is-on` que a barra do Cronista usa. Estado se
+   mostra pela cor; o texto diz o que o clique faz. */
+.rep-avisos {
+    margin-left: auto;
+    align-self: center;          /* o .rep-topo alinha por baseline */
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-2);
+    padding: 5px var(--lr-space-3);
+    border: var(--lr-border-w) solid var(--lr-border);
+    border-radius: 999px;
+    background: var(--lr-surface);
+    color: var(--muted);
+    font: inherit;
+    font-size: var(--lr-fs-xs);
+    font-weight: 700;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.rep-avisos:hover { color: var(--lr-text-1); border-color: var(--lr-text-2); }
+.rep-avisos[aria-pressed="true"] {
+    color: var(--lr-gold);
+    border-color: var(--lr-gold);
+    background: var(--lr-gold-soft);
+}
+.rep-avisos:disabled { opacity: .55; cursor: progress; }
+
+/* Bloqueado no navegador é o único estado que precisa de frase: o clique não
+   resolve, a pessoa tem de ir nas configurações do próprio navegador. */
+.rep-avisos-bloqueado { flex: 1 1 100%; margin: 0; font-size: var(--lr-fs-xs); }
+
 .rep-narrativo {
     margin: var(--lr-space-2) 0 0;
     padding: var(--lr-space-2) var(--lr-space-3);
@@ -1569,6 +1607,8 @@ html:not(.dark) .loja-card {
 .rep-narrativo p + p { margin-top: 4px; }
 .rep-narrativo b { color: var(--lr-text-1); }
 
+/* Forma de recebimento: era um bloco com rótulo em caixa-alta de 9px sobre o
+   valor. Virou uma linha — o rótulo diz do que é, o valor é o dado. */
 .rep-recebimento {
     display: flex;
     align-items: baseline;
