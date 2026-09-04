@@ -106,6 +106,16 @@ function renderAliados(aliados) {
         return;
     }
 
+    // 🤝 Limiar (Livro, p. 7): máx(6, 10 − Perícia da Escola). A perícia é a da classe.
+    const limiar = (() => {
+        const R = window.REGRAS?.lealdade || {};
+        const clsNome = window.state?.fields?.classe || document.querySelector('[data-key="classe"]')?.value || '';
+        const cls = (window._systemData?.classes || []).find(c => c.nome === clsNome);
+        const sid = cls?.pericClasse?.[0];
+        const chave = sid && window.LR_DOMINIO?.chaveDaPericiaPorId ? window.LR_DOMINIO.chaveDaPericiaPorId(sid, window._systemData?.skills) : null;
+        const nv = chave ? (Number(window.state?.dots?.[chave]) || 0) : 0;
+        return Math.max(Number(R.limiarBase) || 6, (Number(R.max) || 10) - nv);
+    })();
     grid.innerHTML = aliados.map(n => {
         const hasImg = !!n.imagem;
         const leal = lealdadeDe(n, _charIdAtual);
@@ -130,6 +140,7 @@ function renderAliados(aliados) {
                 <button type="button" class="aliado-card-leal-btn" onclick="event.stopPropagation(); window.ajustarLealdade('${n.id}', 1)"
                     ${leal >= LEALDADE_MAX ? 'disabled' : ''}>+</button>
                 <span>/ ${LEALDADE_MAX}</span>
+                <span class="aliado-card-limiar" title="Limiar (Livro, p. 7): máx(6, 10 − Perícia da Escola). No limiar, o vínculo está selado — é o que destranca o que cada ramo diz.">${leal >= limiar ? '🔗 selado' : `limiar ${limiar}`}</span>
             </div>
             <div class="aliado-card-hint">
                 <em>Clique para visualizar a ficha</em>

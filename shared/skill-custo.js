@@ -47,6 +47,18 @@ const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').tri
  * O recurso que um rótulo de campo sugere: "Custo em Energia" → "Energia",
  * "Custo Sanidade:" → "Sanidade", "Custo:" → '' (não diz qual).
  */
+/**
+ * ⭐ Quanto custa comprar uma habilidade (Livro, p. 7): habilidade de ramo com
+ * Qualidade custa Qualidade × `exp.habilidadePorQualidade` (config/regras); o
+ * predef pode fixar `custoExpProprio` e o módulo sem Escola cobra `custoExpPorItem`.
+ */
+export function custoExpDaHabilidade(mod, pd, regras = null) {
+    if (pd && pd.custoExpProprio !== null && pd.custoExpProprio !== undefined) return Number(pd.custoExpProprio) || 0;
+    const q = Number(pd?.qualidade ?? pd?.valores?.qualidade) || 0;
+    if (mod?.escolaId && q >= 1) return q * (Number(regras?.exp?.habilidadePorQualidade) || 4);
+    return Number(mod?.custoExpPorItem) || 0;
+}
+
 export function recursoDoRotulo(label) {
     const limpo = String(label || '')
         .replace(/custo/gi, ' ')

@@ -4423,6 +4423,7 @@ function _buildClassModuleEditorRow(idx, data) {
                             <option value="">— Nenhuma (módulo marcial ou geral)</option>
                             ${_escolasCache.map(e => `<option value="${escapeHtml(e.id)}" ${data.escolaId === e.id ? 'selected' : ''}>${escapeHtml((e.icone ? e.icone + ' ' : '') + e.nome)}</option>`).join('')}
                         </select>
+                        <label class="npcv2-check" style="display:flex;align-items:center;gap:6px;margin:6px 0"><input type="checkbox" data-cm-key="ramoOpcional" ${data.ramoOpcional ? 'checked' : ''}> 🔮 Ramo opcional: a classe dá um de graça na criação e o outro custa EXP (config/regras: segundoRamo)</label>
                         <div class="cm-hint">Ramo é um módulo com Escola. A perícia que conjura, a Forma, o Tributo e o Desastre vêm da Escola; o módulo traz só as habilidades (com Qualidade) e, no máximo, uma regra própria.</div>
                     </div>
                 </div>
@@ -5229,6 +5230,7 @@ function _collectSingleModuleData(item) {
         custoExpPorItem: parseInt(item.querySelector('[data-cm-key="custoExpPorItem"]')?.value || '0', 10) || 0,
         custoExpLabel: (item.querySelector('[data-cm-key="custoExpLabel"]')?.value || '').trim(),
         escolaId: (item.querySelector('[data-cm-key="escolaId"]')?.value || '') || null,
+        ramoOpcional: !!item.querySelector('[data-cm-key="ramoOpcional"]')?.checked,
         // A perícia do ramo é a da Escola: a porta e o teto (Livro, p. 7).
         periciaId: (_escolasCache.find(e => e.id === (item.querySelector('[data-cm-key="escolaId"]')?.value || ''))?.periciaIds || [])[0] || null,
         cadastrarBloqueio: cadastrarBloqueio,

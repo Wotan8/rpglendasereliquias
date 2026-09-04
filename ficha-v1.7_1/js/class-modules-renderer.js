@@ -496,12 +496,53 @@ function renderClassModules(classeNome) {
     modules.forEach(mod => window.PredefCampos?.sincronizarItens(mod, state.classModuleData?.[mod.id]));
 
     modules.forEach(mod => {
-        const section = _buildModuleSection(mod);
+        // 🔮 Ramo opcional (Livro, p. 7): a classe dá um na criação; o outro se compra.
+        const fechado = mod.ramoOpcional && !(state.ramosComprados && state.ramosComprados[mod.id]);
+        const section = fechado ? _buildRamoFechado(mod) : _buildModuleSection(mod);
         container.appendChild(section);
     });
     // O botão "Expandir/Recolher tudo" precisa reencontrar os módulos novos.
     window.LRSanfona?.ligarSanfona(document.getElementById('classModulesSection'));
 }
+
+/**
+ * 🔒 Ramo que a classe não deu de graça: aparece fechado, com o preço do Livro
+ * (p. 7): 10 EXP e Perícia da Escola 2 — os números vêm de config/regras.
+ */
+function _buildRamoFechado(mod) {
+    const R = window.REGRAS?.exp || {};
+    const custo = Number(R.segundoRamo) || 10, minimo = Number(R.segundoRamoPericiaMinima) || 2;
+    const chave = window.LR_DOMINIO?.chaveDaPericiaPorId?.(mod.periciaId, window._systemData?.skills) || null;
+    const nivel = chave ? (typeof getEffectiveDotValue === 'function' ? getEffectiveDotValue(chave) : (state.dots?.[chave] || 0)) : 0;
+    const escola = (window._systemData?.escolas || []).find(e => e.id === mod.escolaId);
+    const pode = nivel >= minimo;
+    const section = document.createElement('div');
+    section.className = 'class-module-section cm-ramo-fechado';
+    section.dataset.moduleId = mod.id;
+    section.innerHTML = `<div class="class-module-header">
+        <h4 style="margin-right:auto">🔒 ${_cmEsc(mod.icone || '📦')} ${_cmEsc(mod.titulo || mod.id)} <small style="opacity:.7">ramo não comprado</small></h4>
+        <button type="button" class="cm-btn" ${pode ? '' : 'disabled'} onclick="cmComprarRamo('${_cmEsc(mod.id)}')"
+            title="${pode ? `Comprar este ramo por ${custo} EXP` : `Exige ${_cmEsc(escola?.periciaNome || 'a Perícia da Escola')} ${minimo} (você tem ${nivel})`}">🔓 Comprar ramo — ${custo} EXP</button>
+    </div>
+    <div class="cm-hint" style="padding:6px 10px;opacity:.8">Segundo ramo da mesma Escola: ${custo} EXP e ${_cmEsc(escola?.periciaNome || 'Perícia da Escola')} ${minimo} (Livro, p. 7).${pode ? '' : ` Você tem ${nivel}.`}</div>`;
+    return section;
+}
+function _cmEsc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
+window.cmComprarRamo = async function (modId) {
+    const mod = Object.values(window._classModules || {}).flat().find(m => m.id === modId);
+    if (!mod) return;
+    const custo = Number(window.REGRAS?.exp?.segundoRamo) || 10;
+    const atual = typeof getCurrentExp === 'function' ? getCurrentExp() : 0;
+    if (atual < custo) { (typeof showUpgradeBlocked === 'function' ? showUpgradeBlocked : alert)(`EXP insuficiente! Custo: ${custo} EXP, disponível: ${atual} EXP`); return; }
+    const ok = window.LRDialogo?.confirmar ? await window.LRDialogo.confirmar(`Comprar o ramo ${mod.titulo} por ${custo} EXP?`, { titulo: 'Segundo ramo', ok: 'Comprar' }) : confirm(`Comprar o ramo ${mod.titulo} por ${custo} EXP?`);
+    if (!ok) return;
+    if (typeof spendExp === 'function') spendExp(custo);
+    state.ramosComprados = { ...(state.ramosComprados || {}), [modId]: { exp: custo, em: new Date().toISOString() } };
+    const cl = document.querySelector('[data-key="classe"]')?.value || state.fields?.classe || '';
+    renderClassModules(cl);
+    if (typeof scheduleAutosave === 'function') scheduleAutosave();
+};
 
 /**
  * Constrói a seção DOM de um módulo.
@@ -985,8 +1026,7 @@ function _cmAbrirSelecaoPredef(mod, predefs, podeCriar) {
     list.className = 'cm-predef-box-list';
 
     predefs.forEach(pd => {
-        const custoExp = (pd.custoExpProprio !== null && pd.custoExpProprio !== undefined)
-            ? pd.custoExpProprio : (mod.custoExpPorItem || 0);
+        const custoExp = _cmCustoExpDoItem(mod, pd);
         const reqs = Array.isArray(pd.custoEquipamentos) ? pd.custoEquipamentos : (mod.custoEquipamentos || []);
         const custos = _cmFormatarCustos(custoExp, reqs);
         
@@ -1046,10 +1086,22 @@ function _cmAbrirSelecaoPredef(mod, predefs, podeCriar) {
     document.body.appendChild(overlay);
 }
 
+/**
+ * ⭐ Quanto custa comprar a habilidade (Livro, p. 7): ramo com Qualidade custa
+ * Qualidade × exp.habilidadePorQualidade (config/regras); predef com custo fixo
+ * ou módulo sem Escola seguem o cadastro. Espelho de custoExpDaHabilidade em
+ * shared/skill-custo.js — este arquivo é script clássico, sem import.
+ */
+function _cmCustoExpDoItem(mod, pd) {
+    if (pd && pd.custoExpProprio !== null && pd.custoExpProprio !== undefined) return Number(pd.custoExpProprio) || 0;
+    const q = Number(pd?.qualidade ?? pd?.valores?.qualidade) || 0;
+    if (mod?.escolaId && q >= 1) return q * (Number(window.REGRAS?.exp?.habilidadePorQualidade) || 4);
+    return Number(mod?.custoExpPorItem) || 0;
+}
+
 /** Valida EXP + equipamentos + mecânicas, confirma, cobra e adiciona o item. */
 async function _cmValidarECobrar(mod, predef) {
-    const custoExp = predef && predef.custoExpProprio !== null && predef.custoExpProprio !== undefined
-        ? predef.custoExpProprio : (mod.custoExpPorItem || 0);
+    const custoExp = _cmCustoExpDoItem(mod, predef);
     const reqs = predef && Array.isArray(predef.custoEquipamentos)
         ? predef.custoEquipamentos : (mod.custoEquipamentos || []);
 

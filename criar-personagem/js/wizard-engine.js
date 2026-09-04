@@ -16,6 +16,7 @@ window.wizardState = {
     // Fase 1
     racaSelecionada: null,   // nome da raça
     classeSelecionada: null, // nome da classe
+    ramoInicial: null,       // id do módulo (ramo opcional) escolhido na criação
 
     // Fase 2
     triboSelecionada: null,  // nome da tribo
@@ -134,9 +135,15 @@ function validatePhase(phaseIndex) {
             if (!wizardState.racaSelecionada) return { valid: false, reason: 'Selecione uma raça.' };
             return { valid: true };
 
-        case 'classes':
+        case 'classes': {
             if (!wizardState.classeSelecionada) return { valid: false, reason: 'Selecione uma classe.' };
+            // 🔮 Classe com mais de um ramo opcional (Xamã): um vem de graça, escolhido aqui.
+            const cls = (window._systemData?.classes || []).find(c => c.nome === wizardState.classeSelecionada);
+            const opcionais = (cls?.modulosDaClasse || []).map(id => (window._systemData?.classModules || []).find(m => m.id === id)).filter(m => m?.ramoOpcional);
+            if (opcionais.length > 1 && !opcionais.some(m => m.id === wizardState.ramoInicial))
+                return { valid: false, reason: 'Escolha o ramo inicial da classe (abra os detalhes da classe).' };
             return { valid: true };
+        }
 
         case 'origens':
             if (!wizardState.triboSelecionada) return { valid: false, reason: 'Selecione uma tribo.' };

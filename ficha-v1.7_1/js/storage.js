@@ -133,6 +133,8 @@ function gatherData() {
     d.classModuleData = typeof gatherClassModuleData === 'function'
         ? gatherClassModuleData()
         : (state.classModuleData || {});
+    // 🔮 Ramos opcionais comprados (o da criação entra com exp 0)
+    d.ramosComprados = state.ramosComprados || {};
     // ᛟ Runomancia (Lista de Estudo, elementos aprendidos e Grimório)
     d.runomancia = typeof gatherRunomanciaData === 'function'
         ? gatherRunomanciaData()
@@ -190,6 +192,7 @@ function loadFromData(d) {
         else state.auras = {};
         if (d.classModuleData) state.classModuleData = d.classModuleData;
         else state.classModuleData = {};
+        state.ramosComprados = d.ramosComprados || {};
         if (d.expApplied) state.expApplied = d.expApplied;
         else state.expApplied = {};
         if (d.dvAtual) state.dvAtual = d.dvAtual;

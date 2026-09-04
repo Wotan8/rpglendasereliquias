@@ -733,6 +733,8 @@ async function createCharacter() {
         equipamento,
         inventoryItems,
         peculiaridadesIndividuais: ws.peculiaridadesIndividuais || [],
+        // 🔮 O ramo opcional escolhido na criação vem de graça (Livro, p. 7)
+        ramosComprados: ws.ramoInicial ? { [ws.ramoInicial]: { exp: 0, em: 'criacao' } } : {},
         partesDoCorpo, // <== Injetado no momento da criação
         // Distribuições que o jogador já resolveu na criação (opcional). O que
         // ficou vazio chega na ficha como pendente, como sempre foi.

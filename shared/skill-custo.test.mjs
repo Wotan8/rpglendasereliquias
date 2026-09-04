@@ -14,8 +14,7 @@
 import assert from 'node:assert/strict';
 import {
     custosDaSkill, custoDoTexto, degrauDoTitulo, recursoDoRotulo, recursoDoModulo, rotuloDosCustos,
-    bolsaFecha, reparticaoValida, partesDaReparticao,
-} from './skill-custo.js';
+    bolsaFecha, reparticaoValida, partesDaReparticao, custoExpDaHabilidade } from './skill-custo.js';
 
 /* ===== texto livre ===== */
 assert.deepEqual(custoDoTexto('1 Energia')[0].partes, [{ alvo: 'Energia', qtd: 1 }]);
@@ -193,3 +192,14 @@ assert.deepEqual(custosDaSkill({
 }
 
 console.log('✅ custo das skills OK — mecânica, texto com "ou"/"e", degrau do Bardo e o que não é moeda');
+
+// ⭐ Livro, p. 7: comprar uma habilidade de ramo custa Qualidade × 4 EXP
+{
+    const ramo = { escolaId: 'escola_hemomancia', custoExpPorItem: 1 };
+    assert.equal(custoExpDaHabilidade(ramo, { qualidade: 3 }), 12, 'Q3 = 12 EXP');
+    assert.equal(custoExpDaHabilidade(ramo, { qualidade: 3 }, { exp: { habilidadePorQualidade: 5 } }), 15, 'o multiplicador vem de config/regras');
+    assert.equal(custoExpDaHabilidade(ramo, { qualidade: 3, custoExpProprio: 2 }), 2, 'custo fixo do predef vence');
+    assert.equal(custoExpDaHabilidade(ramo, { qualidade: 0 }), 1, 'sem Qualidade cai no custo do módulo');
+    assert.equal(custoExpDaHabilidade({ custoExpPorItem: 1 }, { qualidade: 3 }), 1, 'módulo sem Escola não é ramo: custo do módulo');
+}
+console.log('✅ custo da habilidade de ramo: Qualidade × 4 OK');

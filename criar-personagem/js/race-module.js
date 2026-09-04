@@ -159,9 +159,17 @@ function openRaceModal(raceName, event) {
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
+/** 🔮 O ramo que vem de graça com a classe (Livro, p. 7). */
+window.selectRamoInicial = function (modId) {
+    wizardState.ramoInicial = modId;
+    saveWizardToStorage();
+    document.querySelectorAll('input[name="ramoInicial"]').forEach(r => { r.checked = r.value === modId; });
+};
+
 function selectClass(className) {
     wizardState.classeSelecionada = className;
     wizardState.kitInicialSelecionado = null; // Reseta o kit ao trocar de classe
+    wizardState.ramoInicial = null;           // e o ramo inicial
 
     document.querySelectorAll('#classGrid .selection-card').forEach(c => {
         c.classList.toggle('selected', c.dataset.class === className);
@@ -272,11 +280,14 @@ function openClassModal(className, event) {
             const meta = [`${itens.length} ${itens.length === 1 ? 'opção' : 'opções'}`];
             const lim = mod.limiteFixo;
             if (lim !== null && lim !== undefined && lim !== '') meta.push(`${lim} ${Number(lim) === 1 ? 'slot' : 'slots'}`);
+            // 🔮 Ramo opcional (Livro, p. 7): um de graça na criação, o outro por EXP depois.
+            const ramoOpc = !!mod.ramoOpcional;
+            if (ramoOpc) meta.push(wizardState.ramoInicial === mod.id ? '✅ ramo inicial' : 'ramo opcional — marque um');
             if (mod.custoExpLabel) meta.push(mod.custoExpLabel);
             else if (mod.custoExpPorItem) meta.push(`${mod.custoExpPorItem} EXP/item`);
             html += `<details class="detail-collapse lr-sanfona">
                 <summary class="detail-collapse-summary">
-                    <span class="detail-collapse-title">${escHtml(mod.icone || '📦')} ${escHtml(mod.titulo || mod.id)}</span>
+                    <span class="detail-collapse-title">${ramoOpc ? `<input type="radio" name="ramoInicial" value="${escHtml(mod.id)}" ${wizardState.ramoInicial === mod.id ? 'checked' : ''} onclick="event.stopPropagation(); selectRamoInicial(this.value)" title="Ramo inicial (de graça)"> ` : ''}${escHtml(mod.icone || '📦')} ${escHtml(mod.titulo || mod.id)}</span>
                     <span class="detail-collapse-meta">${escHtml(meta.join(' · '))}</span>
                 </summary>`;
             if (itens.length) {
@@ -519,8 +530,10 @@ function renderDerivedValue(dv, valorInicial) {
    campo que repete o nome do item ficam de fora. */
 function renderModuleItem(mod, it) {
     const valores = it.valores || {};
-    const custoIt = (it.custoExpProprio !== null && it.custoExpProprio !== undefined)
-        ? it.custoExpProprio : mod.custoExpPorItem;
+    // ⭐ Livro, p. 7: ramo com Qualidade custa Qualidade × 4 (config/regras); espelho de shared/skill-custo.js
+    const qIt = Number(it.qualidade ?? valores.qualidade) || 0;
+    const custoIt = (it.custoExpProprio !== null && it.custoExpProprio !== undefined) ? it.custoExpProprio
+        : (mod.escolaId && qIt >= 1) ? qIt * (Number(window.REGRAS?.exp?.habilidadePorQualidade) || 4) : mod.custoExpPorItem;
 
     const chips = [], blocos = [];
     for (const campo of (mod.schema || [])) {
