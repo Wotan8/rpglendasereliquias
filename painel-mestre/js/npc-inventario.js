@@ -21,7 +21,7 @@ import {
 import {
     camposDaInstancia, valorDoItem, coletarCampos, aplicarVisibilidade,
     instanciarDoModelo, htmlFormulario, htmlBarraFerramentas, ligarFormulario,
-} from '../../shared/equip-campos.js?v=18';
+} from '../../shared/equip-campos.js?v=19';
 import { patchRestauracao, textoConfirmacao, botaoRestaurarHTML } from '../../shared/restaurar-item.js?v=1';
 import { confirmar, perguntar } from '../../shared/dialogo.js?v=2';
 

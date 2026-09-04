@@ -1152,6 +1152,73 @@ function _cmReguaDoItem(mod, data) {
     return (r && typeof r.razao === 'number') ? r : null;
 }
 
+/**
+ * 🎓 O redutor desta linha (Livro, p. 8 e p. 10: a perícia é a porta).
+ *
+ * A conta inteira mora em shared/dominio-redutor.js, chamada também pelo
+ * Tabuleiro. Aqui só se junta o que a ficha sabe: os níveis em `state.dots` e o
+ * avaliador de equação que o motor de mecânicas já expõe.
+ */
+function _cmRedutorDoDominio(mod, data, alvoKey) {
+    const M = window.LR_DOMINIO;
+    if (!M?.redutorDaLinha) return null;
+    return M.redutorDaLinha({
+        mod, item: data, alvoKey,
+        predef: data?._predefId ? (mod?.itensPredefinidos || []).find(p => p.id === data._predefId) : null,
+        dots: state.dots || {},
+        resolveEq: typeof resolveEquation === 'function' ? resolveEquation : null,
+        focos: _cmFocosEquipados(),
+        chave: M.chaveDaPericiaPorId(mod?.periciaId, window._systemData?.skills),
+    });
+}
+
+/**
+ * 🔮 Os focos equipados, para o redutor saber o que o Domínio está sustentando.
+ *
+ * O foco soma a própria Qualidade no Alvo (25 mecânicas fazem isso). Sem olhar
+ * para ele, um talismã caro compraria Alvo com dinheiro no lugar de EXP — por
+ * isso a perícia responde ao MAIOR entre a Qualidade da magia e a do foco.
+ *
+ * `periciaId` diz de que Perícia de Arte a peça é; a instância manda, o modelo
+ * é o padrão, como em todo lugar que lê item. Peça armazenada ou dentro de container não
+ * conta: só o que está de fato em uso.
+ */
+function _cmFocosEquipados() {
+    const inv = window._inventoryState;
+    const M = window.LR_DOMINIO;
+    if (!inv?.items || !M?.chaveDaPericiaPorId) return [];
+    const catalog = inv.catalog || [];
+    return inv.items
+        .filter(i => i.equipado && i.estadoEquip !== 'armazenado' && !i.parentItemId)
+        .map(i => {
+            const tpl = i.templateId ? catalog.find(x => x.id === i.templateId) : null;
+            return {
+                chave: M.chaveDaPericiaPorId(i.periciaId ?? tpl?.periciaId ?? null, window._systemData?.skills),
+                qualidade: Number(i.qualidade ?? tpl?.qualidade) || 0,
+            };
+        })
+        .filter(f => f.chave);
+}
+
+/**
+ * Põe o redutor no chip do VD: o valor mostrado passa a ser o Alvo JÁ reduzido,
+ * e a conta ao lado é o rastro de como se chegou nele. Cada parcela vem nomeada
+ * no tooltip — o jogador precisa saber de onde saiu cada ponto perdido.
+ */
+function _cmAplicarRedutorNoChip(chip, valSpan, valor, info) {
+    if (!info || typeof valor !== 'number') return;
+    valSpan.textContent = String(valor - info.redutor);
+    chip.classList.add('cm-dv-reduzido');
+    const conta = document.createElement('span');
+    conta.className = 'cm-dv-formula';
+    conta.textContent = `${valor} ${info.partes.map(p => `− ${p.valor}`).join(' ')} =`;
+    conta.title = [
+        info.partes.map(p => `− ${p.valor} (${p.nome})`).join('\n'),
+        info.semDominio ? '\n⚠️ Sem a Perícia desta Arte ela não abre (Livro, p. 8).' : '',
+    ].filter(Boolean).join('');
+    valSpan.parentNode.insertBefore(conta, valSpan);
+}
+
 function _doAddModuleItem(mod, predef) {
     if (!state.classModuleData) state.classModuleData = {};
     if (!state.classModuleData[mod.id]) state.classModuleData[mod.id] = [];
@@ -1896,6 +1963,7 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
                     preview.appendChild(iconSp);
                     preview.appendChild(nameSp);
                     preview.appendChild(valSp);
+                    _cmAplicarRedutorNoChip(preview, valSp, valor, _cmRedutorDoDominio(mod, data, field.key));
                     preview.classList.add('visible');
                 } else {
                     preview.classList.remove('visible');
@@ -1916,6 +1984,21 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
 
             // Inicializar preview se já houver valor
             _updatePreview();
+        } else if (field.tipo === 'redutor') {
+            // Campo de conta, não de digitação: o valor dele já saiu subtraído no
+            // chip do Alvo a que se vincula. Desenhar um input aqui mostraria o
+            // mesmo número duas vezes, uma delas editável — e o jogador editaria
+            // um número que a equação recalcula por cima.
+            const M = window.LR_DOMINIO;
+            const val = Array.isArray(field.equacao) && field.equacao.length && typeof resolveEquation === 'function'
+                ? Math.abs(Number(resolveEquation(field.equacao)) || 0) : 0;
+            if (!field.vinculadoA && val) {
+                const chip = document.createElement('div');
+                chip.className = 'cm-dv-chip cm-dv-reduzido';
+                chip.innerHTML = `<span class="cm-dv-icon">➖</span><span class="cm-dv-name">${field.label || 'Redutor'}</span><span class="cm-dv-value">−${val}</span>`;
+                fieldWrap.appendChild(chip);
+            }
+            void M;
         } else if (field.tipo === 'valor_derivado') {
             // Exibe o valor derivado resolvido (chip + valor calculado)
             const dvId = field.derivedValueId || '';
@@ -1938,6 +2021,7 @@ function _buildModuleItem(mod, idx, data, isCustomNew = false, isUnlocked = fals
                 chipDiv.appendChild(iconSpan);
                 chipDiv.appendChild(nameSpan);
                 chipDiv.appendChild(valSpan);
+                _cmAplicarRedutorNoChip(chipDiv, valSpan, valor, _cmRedutorDoDominio(mod, data, field.key));
                 fieldWrap.appendChild(chipDiv);
             } else {
                 const warn = document.createElement('span');

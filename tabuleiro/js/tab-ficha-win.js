@@ -20,10 +20,11 @@ import {
     T, esc, toast, markDirty, vitalTela, dvMesa, normChave, patchVitalAtualNpc, valorComponente, dividirPilha
 } from './tab-state.js';
 import { refCombate } from './tab-main.js';
-import { VITAIS, dvsVinculadosChar, dvAplicaChar, espelhosDoVitalNpc } from './tab-hud.js';
+import { VITAIS, dvsVinculadosChar, dvAplicaChar, espelhosDoVitalNpc, atualDoVd } from './tab-hud.js';
 // tab-golpes importa ESTE arquivo só dinamicamente, então não fecha ciclo.
 import { limparCacheGolpes } from './tab-golpes.js';
 import { addObj } from './tab-objects.js';
+import { redutorDoDominio, nivelDoDominio, podeUsar, redutorDaLinha, chaveDaPericiaPorId } from '../../shared/dominio-redutor.js';
 import { screenToWorld } from './tab-render.js';
 import { pontoVisivelAgora } from './tab-fog.js';
 import { criarFilaDeEscrita } from './tab-write-queue.js';
@@ -1115,6 +1116,89 @@ function linhasAtaqueChar(win, ch) {
     }
     const dvsCtx = _sys.derivedValues.map(d => ({ ...d, key: normChave(d.nome) }));
     linhas.push(...linhasDesarmado(win, ch, dvsCtx, dt));
+    linhas.push(...linhasAtaqueMagia(win, ch, dt));
+    return linhas;
+}
+
+/**
+ * Troca `[Nome do VD]` na fórmula de dano pelo valor que o VD tem AGORA.
+ *
+ * A Explosão Hemática é `1d8 + [Bolha de Sangue]`: o Sangral joga fora a bolha
+ * inteira, e o que ela carregava vira dano. Sem isto a ficha mostraria o nome do
+ * recurso e o mestre somaria na mão, que é justamente o que o canal veio acabar.
+ *
+ * VD com `campoAtual` usa o valor ATUAL, não o máximo — o que interessa é quanta
+ * Carga a bolha tem na hora de estourar, não quanta caberia. Referência que não
+ * resolve vira 0 e o nome fica visível, para o erro aparecer em vez de sumir.
+ */
+function resolveDadoDaMagia(formula, ch, dt) {
+    if (!formula.includes('[')) return formula;
+    return formula.replace(/\[([^\]]+)\]/g, (bruto, nome) => {
+        const dv = (_sys.derivedValues || []).find(d => d.nome === nome.trim());
+        if (!dv) return bruto;
+        const v = dv.campoAtual
+            ? atualDoVd(ch, { ...dv, key: normChave(dv.nome) })
+            : dt[normChave(dv.nome)];
+        return String(Number(v) || 0);
+    });
+}
+
+/**
+ * ⚔️ A magia que vira golpe (cap. 12 §12.4 e §12.7).
+ *
+ * Só entra quem tem `Ataque direto` marcado E `Dado` preenchido — a flag sozinha
+ * não inventa dano. Isso mantém as outras 80 magias exatamente como estavam: elas
+ * seguem entregando efeito por condição e por texto, sem linha de ataque nenhuma.
+ *
+ * O Alvo sai do VD de Teste da própria magia e JÁ VEM REDUZIDO pelo Domínio —
+ * mesma `redutorDaLinha()` que a ficha usa, para as duas telas nunca divergirem.
+ *
+ * O dano vai pelo canal da Essência escolhida, que é o que decide qual Blindagem
+ * barra (§7). Sem Essência declarada o dano é físico, como o de arma.
+ */
+function linhasAtaqueMagia(win, ch, dt) {
+    const dots = ch.dots || {};
+    const focos = (win.itens || [])
+        .filter(i => i.equipado && i.estadoEquip !== 'armazenado' && !i.parentItemId)
+        .map(i => { const t = tplDoItem(i);
+            return { chave: chaveDaPericiaPorId(i.periciaId ?? t?.periciaId ?? null, _sys?.skills), qualidade: Number(i.qualidade ?? t?.qualidade) || 0 }; })
+        .filter(f => f.chave);
+
+    const linhas = [];
+    for (const [mid, itens] of Object.entries(ch.classModuleData || {})) {
+        const def = _sys.classModulesById?.[mid];
+        if (!def || !Array.isArray(itens)) continue;
+        const campoTeste = (def.schema || []).find(f => f.tipo === 'select_vd');
+        for (const item of itens) {
+            const predef = (def.itensPredefinidos || []).find(p => p.id === item._predefId) || null;
+            const liga = (k) => item[k] ?? predef?.valores?.[k] ?? predef?.[k];
+            if (!(liga('ataqueDireto') === true || liga('ataqueDireto') === 'true')) continue;
+            const dado = resolveDadoDaMagia(String(liga('dado') || '').trim(), ch, dt);
+            if (!dado) continue;
+
+            // Alvo: o VD de Teste da magia, menos o redutor do Domínio.
+            const idTeste = liga(campoTeste?.key);
+            const dvTeste = idTeste ? (_sys.derivedValues || []).find(d => d.id === idTeste) : null;
+            const alvoBase = dvTeste ? Number(dt[normChave(dvTeste.nome)] ?? NaN) : NaN;
+            const red = redutorDaLinha({ mod: def, item, predef, dots, focos, alvoKey: campoTeste?.key, chave: chaveDaPericiaPorId(def.periciaId, _sys?.skills) });
+
+            // Canal: a Essência escolhida. Sem ela, o dano é físico.
+            const idEss = liga('essencia');
+            const dvEss = idEss ? (_sys.derivedValues || []).find(d => d.id === idEss) : null;
+
+            linhas.push({
+                nome: item._predefNome || predef?.nome || item.nome || def.titulo,
+                magia: true, estadoEquip: def.icone || '✨',
+                dano: dado,
+                canais: dvEss ? [{ icone: dvEss.icone, nome: dvEss.nome, total: 0 }] : [],
+                colunas: [],
+                acerto: Number.isFinite(alvoBase) ? alvoBase - (red?.redutor || 0) : null,
+                acertoNome: dvTeste?.nome || '', acertoIcone: dvTeste?.icone || '✨',
+                redutorDominio: red?.redutor || 0, semDominio: !!red?.semDominio,
+                tiposGolpe: [],
+            });
+        }
+    }
     return linhas;
 }
 
@@ -1234,6 +1318,19 @@ export async function linhasDeAtaque(tipo, id) {
         // Corpo" para um arco, que é 0. Agora escolhe pelo tipo da linha, e
         // por isso precisa de `l.distancia` já resolvido.
         l.acerto = acertoDaLinha(l);
+        // 🎓 A perícia é a porta (Livro, p. 8): a peça pertence a uma Perícia de
+        // Arte, e quem não a treinou erra mais. Qualidade acima do nível vira
+        // redutor no Alvo — nunca no dado, que 1d12 mal empunhado ainda é um 1d12.
+        // NPC não tem porta: a régua de criatura é outra (Régua v3).
+        l.periciaId = i?.periciaId ?? tpl?.periciaId ?? null;
+        const chavePorta = chaveDaPericiaPorId(l.periciaId, _sys?.skills);
+        if (tipo !== 'npc' && chavePorta) {
+            const dots = dadosChar(id)?.dots || {};
+            l.dominioNivel = nivelDoDominio(dots, chavePorta);
+            l.redutorDominio = redutorDoDominio(l.qualidade, l.dominioNivel);
+            l.semDominio = !podeUsar(chavePorta, dots);
+            if (l.redutorDominio && l.acerto != null) l.acerto -= l.redutorDominio;
+        }
         // 🏹 Munição que esta arma gasta — vazio quer dizer "não gasta".
         l.tipoProjetil = i?.tipoProjetil?.length ? i.tipoProjetil : (tpl?.tipoProjetil || []);
         // 💀 O que a PEÇA aplica ao acertar (cadastro: "Condições Aplicadas ao
@@ -1304,10 +1401,25 @@ function htmlAtaques(win, fonte) {
 }
 
 /* ---- 📦 Habilidades & Módulos (NPC e personagem) ---- */
-function campoModHtml(ctx, ii, f, item) {
+function campoModHtml(ctx, ii, f, item, red = null) {
     const label = esc(f.label || f.key || '');
     if (f.tipo === 'separador') return `<div class="tb-fwin-sep">${label}</div>`;
     if (f.tipo === 'botao') return '';
+    // ➖ O campo Redutor não se mostra sozinho: ele já saiu subtraído no Alvo.
+    if (f.tipo === 'redutor') return '';
+    // 🎯 Alvo de magia com redutor: mostra a conta, como a ficha mostra.
+    if (f.tipo === 'select_vd' && red) {
+        // O valor de um VD do personagem sai de `derivedTotals`, indexado por
+        // normChave(nome) — nunca por dv.key direto (ver comentário do topo).
+        const dv = (_sys?.derivedValues || []).find(d => d.id === item[f.key]) || null;
+        const base = dv ? Number(dadosChar(ctx.charId)?.derivedTotals?.[normChave(dv.nome)] ?? NaN) : NaN;
+        const conta = red.partes.map(p => `− ${p.valor}`).join(' ');
+        const titulo = red.partes.map(p => `− ${p.valor} (${p.nome})`).join(' · ');
+        return `<div class="tb-fwin-mf" title="${esc(titulo)}"><b>${label}</b> ` +
+            (Number.isFinite(base)
+                ? `<s class="tb-muted">${base}</s> ${esc(conta)} = <b>${base - red.redutor}</b>`
+                : `<span class="tb-muted">${esc(conta)}</span>`) + `</div>`;
+    }
     const base = `data-mod data-mtipo="${ctx.mtipo}" data-mref="${esc(String(ctx.mref))}" data-mii="${ii}"`;
     if (f.tipo === 'checkbox') {
         const v = item[f.key] === true || item[f.key] === 'true';
@@ -1329,10 +1441,24 @@ function blocoModulo(def, itens, ctx) {
     // Campos 🔒 seguem o pré-cadastro (shared/predef-campos.js): a janela não
     // pode mostrar uma versão da habilidade diferente da que a ficha mostra.
     window.PredefCampos?.sincronizarItens(def, itens);
-    const linhas = itens.map((item, ii) => `<div class="tb-fwin-mod-item">
+    // 🎓 O redutor sai da MESMA função que a ficha usa (shared/dominio-redutor.js).
+    // NPC não tem porta: a régua de criatura é outra (Régua v3).
+    const dots = ctx.mtipo === 'npc' ? null : (dadosChar(ctx.charId)?.dots || {});
+    // 🔮 Focos equipados: a perícia responde ao MAIOR entre a Qualidade da magia e
+    // a do foco. A janela lê os mesmos itens que a aba de ataque.
+    const focos = dots ? (_itensPorChave.get(`${ctx.mtipo}:${ctx.charId}`) || [])
+        .filter(i => i.equipado && i.estadoEquip !== 'armazenado' && !i.parentItemId)
+        .map(i => { const t = tplDoItem(i);
+            return { chave: chaveDaPericiaPorId(i.periciaId ?? t?.periciaId ?? null, _sys?.skills), qualidade: Number(i.qualidade ?? t?.qualidade) || 0 }; })
+        .filter(f => f.chave) : [];
+    const linhas = itens.map((item, ii) => {
+        const predef = (def.itensPredefinidos || []).find(p => p.id === item._predefId) || null;
+        const red = dots ? redutorDaLinha({ mod: def, item, predef, dots, focos, chave: chaveDaPericiaPorId(def.periciaId, _sys?.skills) }) : null;
+        return `<div class="tb-fwin-mod-item">
         <div class="tb-fwin-mod-nome">${esc(item._predefNome || item.nome || `${def.titulo} #${ii + 1}`)}</div>
-        ${def.schema.map(f => campoModHtml(ctx, ii, f, item)).join('')}
-    </div>`).join('');
+        ${def.schema.map(f => campoModHtml(ctx, ii, f, item, red)).join('')}
+    </div>`;
+    }).join('');
     return `<div class="tb-fwin-mod"><div class="tb-fwin-mod-head">${esc(def.icone)} ${esc(def.titulo)}</div>${linhas || '<div class="tb-muted">Nenhum item.</div>'}</div>`;
 }
 
@@ -1348,7 +1474,7 @@ function htmlModulos(win, fonte) {
         return (fonte.modulosClasse || []).map((vinc, mi) => {
             const def = _resolveMod ? _resolveMod(vinc, _sys) : null;
             if (!def) return '';
-            return blocoModulo(def, vinc.itens || [], { mtipo: 'npc', mref: mi });
+            return blocoModulo(def, vinc.itens || [], { mtipo: 'npc', mref: mi, charId: win.id });
         }).join('') + (fonte.skills ? `<div class="tb-fwin-pre">${esc(fonte.skills)}</div>` : '');
     }
     // Personagem: classModuleData = { moduleId: itens[] } (gravado pela ficha)
@@ -1357,7 +1483,7 @@ function htmlModulos(win, fonte) {
         .filter(([, its]) => Array.isArray(its) && its.length)
         .map(([mid, its]) => {
             const def = _sys.classModulesById?.[mid];
-            if (def) return blocoModulo(def, its, { mtipo: 'char', mref: mid });
+            if (def) return blocoModulo(def, its, { mtipo: 'char', mref: mid, charId: win.id });
             const itens = its.map((item, ii) => `<div class="tb-fwin-mod-item">
                 <div class="tb-fwin-mod-nome">${esc(item._predefNome || item.nome || item.titulo || '#' + (ii + 1))}</div>
                 ${camposGenericos(item)}</div>`).join('');

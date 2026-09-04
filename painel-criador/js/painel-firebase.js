@@ -7,7 +7,7 @@ import { openMechanicEditor, renderMechanicCard, generatePreviewText, buildMecha
 import {
     CAMPOS_EQUIPAMENTO, normalizaFormaEquipar,
     SECOES_EQUIPAMENTO, htmlBarraFerramentas, ligarFormulario, agruparEmSecoesDOM, atualizarResumo,
-} from '../../shared/equip-campos.js?v=18';
+} from '../../shared/equip-campos.js?v=19';
 import {
     SECOES_CONDICAO, SECOES_CLASSE, SECOES_TRIBO, SECOES_VALOR_DERIVADO,
 } from './cadastro-secoes.js?v=1';
@@ -3113,7 +3113,16 @@ function buildField(field, value, existingData) {
 
     const labelHtml = `<label>${escapeHtml(field.label)} ${field.required ? '<span class="required">*</span>' : ''}</label>`;
 
-    if (field.type === 'select') {
+    if (field.type === 'select_cadastro') {
+        // Opções de um cadastro do sistema (shared/equip-campos.js usa o mesmo tipo com `caches`).
+        const fontes = { skills: skillsCache };
+        const lista = (fontes[field.fonte] || []).filter(x => x.publicado !== false).slice()
+            .sort((a, b) => String(a.categoria || '').localeCompare(String(b.categoria || '')) || String(a.nome || '').localeCompare(String(b.nome || '')));
+        const opts = lista.map(x =>
+            `<option value="${escapeHtml(x.id)}" ${value === x.id ? 'selected' : ''}>${escapeHtml(x.nome)}${x.categoria ? ' · ' + escapeHtml(x.categoria) : ''}</option>`
+        ).join('');
+        wrap.innerHTML = `${labelHtml}<select id="field_${field.key}"><option value="">— Nenhuma —</option>${opts}</select>`;
+    } else if (field.type === 'select') {
         const opts = (field.options || []).map(o =>
             `<option value="${o.value}" ${value === o.value ? 'selected' : ''}>${escapeHtml(o.label)}</option>`
         ).join('');
@@ -5197,6 +5206,8 @@ function _collectSingleModuleData(item) {
         custoExpPorItem: parseInt(item.querySelector('[data-cm-key="custoExpPorItem"]')?.value || '0', 10) || 0,
         custoExpLabel: (item.querySelector('[data-cm-key="custoExpLabel"]')?.value || '').trim(),
         escolaId: (item.querySelector('[data-cm-key="escolaId"]')?.value || '') || null,
+        // A perícia do ramo é a da Escola: a porta e o teto (Livro, p. 10).
+        periciaId: (_escolasCache.find(e => e.id === (item.querySelector('[data-cm-key="escolaId"]')?.value || ''))?.periciaIds || [])[0] || null,
         cadastrarBloqueio: cadastrarBloqueio,
         bloqueioMecanicaIds: bloqueioMecanicaIds,
         limiteFixo: limiteFixo,
@@ -5688,6 +5699,8 @@ window.handleFormSubmit = async function (e) {
         } else if (field.type === 'number') {
             const el = document.getElementById(`field_${field.key}`);
             data[field.key] = el?.value ? Number(el.value) : null;
+        } else if (field.type === 'select_cadastro') {
+            data[field.key] = document.getElementById(`field_${field.key}`)?.value || null;
         } else {
             const el = document.getElementById(`field_${field.key}`);
             data[field.key] = el ? el.value : '';

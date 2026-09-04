@@ -13,7 +13,7 @@
      class-modules-renderer.js é script clássico. O `?.` do lado de lá cobre a
      janela em que o módulo diferido ainda não resolveu. -->
 <script type="module">
-  import * as dominioRedutor from '../shared/dominio-redutor.js?v=1';
+  import * as dominioRedutor from '../shared/dominio-redutor.js?v=2';
   window.LR_DOMINIO = dominioRedutor;
 </script>
 <!-- 📏 Regras do sistema como cadastro (config/regras sobre o padrão). O módulo
@@ -502,7 +502,7 @@
         // window.LRDialogo, que e como os scripts classicos daqui o alcancam.
         import '../shared/dialogo.js?v=2';
         import * as InvMotor from '../shared/inventario-motor.js?v=13';
-        import * as EquipCampos from '../shared/equip-campos.js?v=18';
+        import * as EquipCampos from '../shared/equip-campos.js?v=19';
         // Os construtores de seletor do Painel do Criador: o formulário de item
         // da ficha mostra os MESMOS controles do cadastro de Equipamento.
         // painel-mechanics.js não importa nada — só lê globais window._*Cache.

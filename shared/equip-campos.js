@@ -154,6 +154,10 @@ export const CAMPOS_EQUIPAMENTO = [
     // 🏹 Munição: a arma gasta projétil, e SÓ do tipo certo. As tags são as que
     // o próprio projétil já carrega (Flecha, Virote, Zarabatana), então nada
     // precisa ser recadastrado do lado dele. Vazio = arma que não gasta munição.
+    /* A porta da peça (Livro, p. 8): arma aponta para Arma/Precisão/Disparo/Briga/
+       Arremesso; foco de magia, para a Perícia da Escola. Qualidade acima do nível
+       da perícia vira redutor no Alvo; perícia 0 não usa. Vazio = sem porta. */
+    { key: 'periciaId', label: '🎓 Perícia de Arte (a porta da peça)', type: 'select_cadastro', fonte: 'skills' },
     { key: 'tipoProjetil', label: '🏹 Munição que esta arma gasta (tags do projétil)', type: 'tags', placeholder: 'Ex: Flecha · Virote — vazio = não gasta munição', showWhen: { field: 'tipo', value: 'Arma' } },
     // 🎯 Quanto do que foi disparado dá para catar de volta depois da luta.
     // 0 = sempre quebra; 100 = sempre recupera. Vazio usa o padrão do sistema.
@@ -235,7 +239,7 @@ const HERDA_DO_MODELO = new Set([
     'liga', 'qualidade', 'afiacao', 'reforco', 'blindagemQ0', 'preco', 'formulaDano', 'formulaDano2Maos',
     'valoresDerivadosVinculados', 'statusVitaisVinculados', 'atributosVinculados',
     'periciasVinculadas', 'condicaoIds', 'slotsAdicionais', 'tags', 'tipoGolpe',
-    'equipavelEmGuardado', 'integridadeBase',
+    'equipavelEmGuardado', 'integridadeBase', 'periciaId',
 ]);
 export const herdaDoModelo = (key) => HERDA_DO_MODELO.has(key);
 
@@ -356,6 +360,16 @@ export function htmlCampo(f, valor, { sel, caches, modelo, prefixo = '' } = {}) 
             ${dica && vazio(valor) ? `<small class="inv-form-hint">${esc(dica)}</small>` : ''}</div>`;
     }
 
+    // Select cujas opções vêm de um cadastro (caches[f.fonte]): id no value, nome na tela.
+    if (f.type === 'select_cadastro') {
+        const lista = (caches?.[f.fonte] || []).filter(x => x.publicado !== false).slice()
+            .sort((a, b) => String(a.categoria || '').localeCompare(String(b.categoria || '')) || String(a.nome || '').localeCompare(String(b.nome || '')));
+        const opts = lista.map(x =>
+            `<option value="${esc(x.id)}" ${String(valor ?? '') === String(x.id) ? 'selected' : ''}>${esc(x.nome)}${x.categoria ? ' · ' + esc(x.categoria) : ''}</option>`).join('');
+        const nada = `<option value="">${esc(dica && dica.startsWith('herda') ? '— ' + dica + ' —' : '— Nenhuma —')}</option>`;
+        return `${abre}${rot}<select id="${id}" class="inv-form-select">${nada}${opts}</select></div>`;
+    }
+
     if (f.type === 'select') {
         const opts = (f.options || []).map(o =>
             `<option value="${esc(o.value)}" ${String(valor ?? '') === String(o.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('');
@@ -445,7 +459,7 @@ export const SECOES_EQUIPAMENTO = [
     {
         id: 'combate', icone: '⚔️', titulo: 'Combate',
         dica: 'Dado, alcance e munição. Só preencha o que a peça realmente faz.',
-        campos: ['formulaDano', 'formulaDano2Maos', 'tipoGolpe', 'alcanceM', 'alcanceFator',
+        campos: ['periciaId', 'formulaDano', 'formulaDano2Maos', 'tipoGolpe', 'alcanceM', 'alcanceFator',
             'ignoraLimiteForDisparo', 'tipoProjetil', 'chanceRecuperar'],
     },
     {
