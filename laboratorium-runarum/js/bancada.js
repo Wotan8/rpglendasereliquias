@@ -397,13 +397,8 @@ const LabBancada = (() => {
         .filter(i => /tinta/i.test(norm(i.cat?.nome)) && (Number(state.sel[i.id]) || 0) > 0)
         .map(i => Number(i.cat.qualidadeMaterial || 0)));
 
-    /** O Domínio do ofício (Peculiaridade de 12 EXP). Sem ele, rascunho. */
-    const temDominioDoRamo = () => {
-        const pecs = (window.LabFB.charData?.peculiaridades || window.LabFB.charData?.pecs || []);
-        const alvo = { escripta: 'dominiodeescripta', talha: 'dominiodetalha', tatuagem: 'dominiodetatuagem' }[state.ramo];
-        return (Array.isArray(pecs) ? pecs : Object.values(pecs || {}))
-            .some(p => norm(typeof p === 'string' ? p : (p?.nome || '')).replace(/[^a-z0-9]/g, '').includes(alvo));
-    };
+    /** Núcleo v2: a porta do ofício é a Perícia de Escola (Runomancia ≥ 1). Sem ela, rascunho. */
+    const nivelRunomancia = () => Number(window.LabFB.ctx?.runomancia || 0);
 
     /**
      * ᛟ O circuito auditado virando runa jogável. Toda a régua mora no módulo
@@ -411,17 +406,15 @@ const LabBancada = (() => {
      */
     function blocoDaRuna(runa) {
         const fb = window.LabFB;
-        const periciaDoRamo = { escripta: 'escriptarunica', talha: 'talharunica', tatuagem: 'tatuagemrunica' }[state.ramo];
         return blocoDeCombate({
             nodes: runa.canvas?.nodes || [],
             elementsById: fb.elementsById,
             ct: runa.ct || 0,
             ramo: state.ramo,
-            runomancia: Number(fb.ctx?.runomancia || 0),
-            tetoOficio: fb.ctx?.tetoRunomancia ?? null,
-            pericia: achaDot(periciaDoRamo),
+            runomancia: nivelRunomancia(),
+            pericia: nivelRunomancia(),
             qualidadeTinta: qualidadeTintaSelecionada(),
-            temDominio: temDominioDoRamo(),
+            temDominio: nivelRunomancia() >= 1,
             // Runa vinda do Grimório traz a própria escolha; a que está sendo
             // montada agora usa a da bancada.
             condicoesEscolhidas: runa.condicoesEscolhidas || state.escolhas.condicoes,
